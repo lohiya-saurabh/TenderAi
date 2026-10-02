@@ -1,7 +1,7 @@
 # Project Status & Milestone Tracker
 
-## Current Milestone: Core Domain Vertical Slice Implemented & Verified
-**Status**: COMPLETED (Phase 3 LLD & First Core Slice Tested & Passing)
+## Current Milestone: AI Architecture & Security Foundations
+**Status**: IN PROGRESS (Security Architecture & Isolation Complete; Awaiting User Review)
 
 ---
 
@@ -37,23 +37,29 @@
 5. [ ] **Phase 5: Auth & RBAC**
 6. [ ] **Phase 6: Core Workflow Implementation (Deterministic Ingestion & Extraction Pipeline)**
 7. [ ] **Phase 7: Asynchronous Architecture & Job Queues (SQS / Worker)**
-8. [ ] **Phase 8: AI Architecture & Prompt Engineering / Guardrails**
-9. [ ] **Phase 9: Stateful AI Workflows (LangGraph compliance engine)**
+8. [x] **Phase 8: AI Architecture & Security Foundations** *(Active / In Review)*
+   - Deep dive: LLMs, Structured Output, Tools, RAG Retrieval, AI Workflows vs. Autonomous Agents.
+   - Zero-Trust AI Security: "Application decides what data the model is allowed to see."
+   - Multi-tenant isolation across vector storage, LangGraph state, checkpoints, artifacts, and logs.
+   - Defense against direct/indirect prompt injection, poisoned retrieval, and data exfiltration.
+   - Model provider privacy & data residency (AWS Bedrock ap-south-1 Mumbai, DPDP Act 2023).
+   - Deliverables: `docs/learning/agents.md`, `docs/learning/langgraph.md`, `docs/AI.md`, `docs/AI_SECURITY.md`, `docs/adr/0011-ai-security-and-tenant-isolation.md`.
+9. [ ] **Phase 9: Stateful AI Workflows (LangGraph compliance engine implementation)**
 10. [ ] **Phase 10: Human Review & Auditability UI**
 11. [ ] **Phase 11: Cloud Infrastructure (AWS / Terraform)**
 12. [ ] **Phase 12: Production Deployment & Observability**
 
 ---
 
-## Deliverables for Phase 3
-- `docs/LLD.md`: Low-Level Design covering modules, entities, value objects, use cases, interfaces, DTOs, sequence flows, and simple vs. proposed comparisons.
-- `docs/adr/0008-domain-driven-layered-architecture.md`: DDD layered architecture in NestJS modular monolith.
-- `docs/adr/0009-bid-state-machine-and-optimistic-locking.md`: State machine invariants and optimistic concurrency control.
-- `docs/adr/0010-provenance-value-object-immutability.md`: Immutable Provenance value object for zero ungrounded compliance assertions.
-- `src/`: Complete core domain vertical slice (Bid creation, AI Worker batch ingestion, Human review, OCC, Multi-tenancy guard, Audit logs).
+## Deliverables for AI Architecture & Security
+- `docs/learning/agents.md`: Comprehensive guide explaining LLMs, Structured Outputs, Tools, Retrieval, Workflows, Agents, and Agent Anti-Patterns.
+- `docs/learning/langgraph.md`: Deep dive into cyclic graphs, checkpointing, state persistence, and human-in-the-loop pauses.
+- `docs/AI.md`: Architectural specification of the 4-stage AI evolution, LangGraph Extraction DAG, Pydantic data schemas, and system boundaries.
+- `docs/AI_SECURITY.md`: Comprehensive specification of tenant isolation, scoped retrieval, prompt injection defense, agent tool sandboxing, and safe logging.
+- `docs/adr/0011-ai-security-and-tenant-isolation.md`: Architectural decision record for Zero-Trust AI Security.
 - `docs/STATUS.md`: Tracking progress and stop points.
 
 ---
 
 ## Next Immediate Action
-Review test results and implementation with user, answer domain questions, and wait for confirmation to proceed to Phase 4 (Database Architecture & Multi-Tenancy).
+Review AI Security Architecture, attack paths, and defenses with the user, conduct the Security Mastery Quiz, and wait for confirmation before writing Python/LangGraph worker code.
