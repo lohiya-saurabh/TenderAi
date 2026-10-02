@@ -1,8 +1,35 @@
+# Dependencies & Build Outputs
 node_modules/
 dist/
+build/
 coverage/
 *.log
 .DS_Store
+
+# Environment Variables
 .env
 .env.*
 !.env.example
+
+# Python
+.venv/
+venv/
+ENV/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+.eggs/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# IDE & OS
+.idea/
+.vscode/
+*.swp
+*.swo

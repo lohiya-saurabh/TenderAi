@@ -1,0 +1,72 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: tenderpulse-postgres
+    environment:
+      POSTGRES_USER: tenderpulse
+      POSTGRES_PASSWORD: tenderpulse_dev_password
+      POSTGRES_DB: tenderpulse_db
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./apps/api/src/infrastructure/persistence/schema.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U tenderpulse -d tenderpulse_db']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  localstack:
+    image: localstack/localstack:3.4
+    container_name: tenderpulse-localstack
+    ports:
+      - '4566:4566'
+    environment:
+      - SERVICES=s3,sqs
+      - AWS_DEFAULT_REGION=ap-south-1
+    volumes:
+      - localstack_data:/var/lib/localstack
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: tenderpulse-api
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://tenderpulse:tenderpulse_dev_password@postgres:5432/tenderpulse_db
+      - INTERNAL_SERVICE_KEY=tenderpulse-internal-secret-2026
+      - AWS_REGION=ap-south-1
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  ai:
+    build:
+      context: .
+      dockerfile: apps/ai/Dockerfile
+    container_name: tenderpulse-ai
+    ports:
+      - '8000:8000'
+    environment:
+      - API_GATEWAY_URL=http://api:3000
+      - INTERNAL_SERVICE_KEY=tenderpulse-internal-secret-2026
+    depends_on:
+      - api
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: tenderpulse-web
+    ports:
+      - '8080:80'
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+  localstack_data:

@@ -13,9 +13,10 @@ $$\text{Next Token} \sim P(w_t \mid w_1, w_2, \dots, w_{t-1})$$
 It is a statistical neural network with hundreds of billions of parameters trained on trillions of words. It does **not** "think", it does **not** "know facts", and it possesses **zero deterministic logic**.
 
 ### In TenderPulse AI:
+
 - **What it is great at**: Understanding dense, archaic, bureaucratic English. When an Indian government Standard Bidding Document (SBD) says:
-  > *"The bidder shall, as part of Cover-I, furnish an affidavit of non-blacklisting executed on a non-judicial stamp paper of not less than Rs. 100/- denomination, solemnly affirmed before an Executive Magistrate or Notary Public."*
-  An LLM excels at reading this dense text and understanding that this sentence defines:
+  > _"The bidder shall, as part of Cover-I, furnish an affidavit of non-blacklisting executed on a non-judicial stamp paper of not less than Rs. 100/- denomination, solemnly affirmed before an Executive Magistrate or Notary Public."_
+  > An LLM excels at reading this dense text and understanding that this sentence defines:
   1. An affidavit requirement.
   2. Execution on ₹100 stamp paper.
   3. Attestation by a Notary.
@@ -31,15 +32,19 @@ It is a statistical neural network with hundreds of billions of parameters train
 By default, an LLM outputs unstructured natural language text (strings of Markdown).
 
 ### The Problem without Structured Output:
-If you prompt an LLM: *"Find all required annexures in this tender text"*, it responds with conversational prose:
-> *"Sure! Here are the annexures you need: First, there is Annexure-A which is a declaration. Also don't forget the ₹100 stamp paper mentioned in section 4..."*
+
+If you prompt an LLM: _"Find all required annexures in this tender text"_, it responds with conversational prose:
+
+> _"Sure! Here are the annexures you need: First, there is Annexure-A which is a declaration. Also don't forget the ₹100 stamp paper mentioned in section 4..."_
 
 A software backend cannot reliably parse, validate, or store conversational prose in a PostgreSQL database. Regex parsing breaks as soon as the model rephrases its answer.
 
 ### The Solution: Structured Output
+
 Structured output forces the LLM's token generation to adhere strictly to a **formal schema (JSON Schema / Pydantic model)**. Modern LLM inference engines achieve this via **grammar-constrained decoding**: tokens that violate the JSON syntax or schema are mathematically masked out ($P = 0$) during sampling.
 
 ### In TenderPulse AI:
+
 The LLM is constrained to output our exact TypeScript/Pydantic schema:
 
 ```json
@@ -74,14 +79,16 @@ Now, the output can be directly deserialized into domain entities and inserted i
 A **Tool** is a deterministic function provided to the LLM that allows the model to interact with the outside world, perform exact calculations, or fetch dynamic information.
 
 An LLM cannot run code itself. Instead, the mechanism works as a handshake:
+
 1. We give the LLM a list of tool definitions with descriptions and parameter schemas.
-2. The LLM decides: *"I need to run `calculate_turnover_shortfall` with `{ required: 45000000, actual: 42000000 }`"*.
+2. The LLM decides: _"I need to run `calculate_turnover_shortfall` with `{ required: 45000000, actual: 42000000 }`"_.
 3. The LLM pauses generation and outputs a **Tool Call Request**.
 4. Our application code executes the tool deterministically and sends the **Tool Output** back to the LLM.
 5. The LLM resumes generation using the tool's verified result.
 
 ### In TenderPulse AI:
-- **Rule from AGENTS.md**: *"LLMs must never be the source of truth for calculations."*
+
+- **Rule from AGENTS.md**: _"LLMs must never be the source of truth for calculations."_
 - **Our Tools**:
   - `fetch_page_text(page_number: int)`: Allows the model to pull the exact raw text of a specific page to inspect a clause.
   - `verify_citation(page_number: int, quote: str)`: A deterministic Python string-matching tool that checks if the quoted text actually exists on that page.
@@ -94,16 +101,20 @@ An LLM cannot run code itself. Instead, the mechanism works as a handshake:
 A typical government tender package is 200–400 pages (approx. 150,000–300,000 tokens).
 
 ### Why can't we just paste all 300 pages into a single LLM prompt?
+
 1. **The "Lost in the Middle" Problem**: Research shows that when LLMs process massive context windows (100k+ tokens), recall accuracy degrades sharply for facts buried in the middle of the document. A critical ₹100 stamp paper clause on page 142 gets overlooked.
 2. **Latency & Cost**: Sending 200,000 tokens on every prompt takes 30–60 seconds per call and incurs high inference fees.
 
 ### Retrieval:
+
 Retrieval is the mechanism of searching an indexed store of document chunks (using vector semantic embeddings, BM25 keyword search, or hybrid search) to extract only the **top $K$ relevant chunks** (e.g. 5–10 pages) and feeding them to the LLM.
 
 ### In TenderPulse AI:
+
 Instead of sending all 300 pages at once:
+
 1. We chunk the tender by physical pages and logical sections (Eligibility, General Conditions, Special Conditions, Annexures).
-2. When searching for eligibility thresholds, the retrieval engine queries for *"average annual turnover, similar work experience, net worth"*.
+2. When searching for eligibility thresholds, the retrieval engine queries for _"average annual turnover, similar work experience, net worth"_.
 3. Only the 6 relevant pages are retrieved and passed to the extraction prompt.
 
 ---
@@ -162,30 +173,32 @@ The agent maintains an ongoing thought-action-observation cycle until it conclud
 
 Hype often tempts developers to use autonomous agents for everything. In enterprise SaaS, this is dangerous:
 
-| Problem with Autonomous Agents | Why it matters in TenderPulse AI |
-| :--- | :--- |
-| **Unpredictable Latency & Cost** | An agent might decide to loop 25 times, making 25 LLM API calls and taking 4 minutes for something a single targeted prompt could extract in 5 seconds. |
-| **Risk of Infinite Loops / Drift** | The agent may get sidetracked investigating an irrelevant electrical specification table when asked for legal annexures. |
-| **Non-Deterministic Execution** | One day it checks the stamp paper clause first; another day it skips it entirely because it "thought" it wasn't necessary. |
-| **Lack of Legal Reproducibility** | A contractor cannot have an AI that behaves unpredictably when millions of rupees in bid security are at stake. |
+| Problem with Autonomous Agents     | Why it matters in TenderPulse AI                                                                                                                        |
+| :--------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Unpredictable Latency & Cost**   | An agent might decide to loop 25 times, making 25 LLM API calls and taking 4 minutes for something a single targeted prompt could extract in 5 seconds. |
+| **Risk of Infinite Loops / Drift** | The agent may get sidetracked investigating an irrelevant electrical specification table when asked for legal annexures.                                |
+| **Non-Deterministic Execution**    | One day it checks the stamp paper clause first; another day it skips it entirely because it "thought" it wasn't necessary.                              |
+| **Lack of Legal Reproducibility**  | A contractor cannot have an AI that behaves unpredictably when millions of rupees in bid security are at stake.                                         |
 
 ### The Senior Engineering Rule:
+
 > **Use deterministic workflows whenever the execution steps are known upfront.**
 > **Use agentic loops ONLY where the query path is truly dynamic and unpredictable.**
 
 For TenderPulse AI:
+
 - **Tender Ingestion & Matrix Extraction** is an **AI Workflow** (Pipeline of known steps).
-- **Interactive Risk Exploration** (e.g. *"What happens if our delivery is delayed by 3 weeks under this contract?"*) is an **Agent** (explores clauses across documents dynamically).
+- **Interactive Risk Exploration** (e.g. _"What happens if our delivery is delayed by 3 weeks under this contract?"_) is an **Agent** (explores clauses across documents dynamically).
 
 ---
 
 ## Summary Matrix
 
-| Concept | What it is | Role in TenderPulse AI |
-| :--- | :--- | :--- |
-| **LLM** | Probabilistic text predictor | Natural language reader for dense government tenders. |
-| **Structured Output** | Schema-enforced JSON generation | Guarantees outputs match our TypeScript/Pydantic entities. |
-| **Tool** | Deterministic function called by LLM | Verifies page citations, performs exact math. |
-| **Retrieval (RAG)** | Finding relevant context chunks | Isolates relevant clauses from 300-page tender packages. |
-| **AI Workflow** | Deterministic pipeline calling LLMs | Standard document parsing and compliance extraction. |
-| **Agent** | LLM-driven autonomous control loop | Dynamic contract risk exploration and Q&A. |
+| Concept               | What it is                           | Role in TenderPulse AI                                     |
+| :-------------------- | :----------------------------------- | :--------------------------------------------------------- |
+| **LLM**               | Probabilistic text predictor         | Natural language reader for dense government tenders.      |
+| **Structured Output** | Schema-enforced JSON generation      | Guarantees outputs match our TypeScript/Pydantic entities. |
+| **Tool**              | Deterministic function called by LLM | Verifies page citations, performs exact math.              |
+| **Retrieval (RAG)**   | Finding relevant context chunks      | Isolates relevant clauses from 300-page tender packages.   |
+| **AI Workflow**       | Deterministic pipeline calling LLMs  | Standard document parsing and compliance extraction.       |
+| **Agent**             | LLM-driven autonomous control loop   | Dynamic contract risk exploration and Q&A.                 |

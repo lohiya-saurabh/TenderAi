@@ -29,6 +29,7 @@ Do not silently make major architecture decisions.
 Default: LEARN.
 
 LEARN:
+
 - Teach concepts before implementation.
 - Use the current product as the example.
 - Explain WHY → WHAT → HOW → WHY NOT → TRADE-OFF.
@@ -36,6 +37,7 @@ LEARN:
 - Quiz me after major concepts.
 
 BUILD:
+
 - Briefly explain the agreed design.
 - Implement only the agreed scope.
 - Run tests, typecheck and lint.
@@ -43,6 +45,7 @@ BUILD:
 - STOP.
 
 SHIP:
+
 - Work efficiently on already-approved decisions.
 - Still STOP before major architectural/security changes.
 
@@ -71,6 +74,7 @@ Never switch to BUILD/SHIP on your own.
 AI is an untrusted computation component.
 
 Never rely on an LLM to enforce:
+
 - tenant isolation
 - authorization
 - document access
@@ -82,6 +86,7 @@ Never rely on an LLM to enforce:
 Authorization MUST happen before data reaches a model.
 
 Every AI execution must carry explicit security context containing at minimum:
+
 - tenant_id
 - user_id
 - roles/permissions
@@ -91,6 +96,7 @@ Every AI execution must carry explicit security context containing at minimum:
 - purpose/use-case
 
 All tenant-owned data must remain tenant-scoped, including:
+
 - documents
 - extracted text
 - chunks
@@ -136,6 +142,7 @@ Update `docs/STATUS.md` after every milestone.
 ## Quality bar
 
 The final system must be:
+
 - production deployable
 - secure
 - multi-tenant

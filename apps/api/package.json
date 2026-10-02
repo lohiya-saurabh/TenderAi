@@ -1,0 +1,30 @@
+{
+  "name": "@tenderpulse/api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TenderPulse AI Application API Service",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint 'src/**/*.ts' --max-warnings=0",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@tenderpulse/shared-types": "*",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@tenderpulse/config": "*",
+    "@types/node": "^22.13.9",
+    "@types/uuid": "^10.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.26.0",
+    "@typescript-eslint/parser": "^8.26.0",
+    "eslint": "^9.21.0",
+    "typescript": "^5.8.2",
+    "vitest": "^3.0.7"
+  }
+}

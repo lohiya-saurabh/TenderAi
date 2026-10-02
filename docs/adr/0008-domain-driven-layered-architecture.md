@@ -1,18 +1,23 @@
 # ADR 0008: Domain-Driven Layered Architecture for Modular Monolith
 
 ## Status
+
 Accepted
 
 ## Context
+
 In Phase 2, we decided that NestJS serves as the domain and API boundary for the SaaS platform. We now need to decide on the internal code organization pattern within the NestJS backend.
 
 ### The Problem
+
 - **The "Anemic Controller-Service-DAO" Trap**: In many Node.js backends, controllers parse requests, services contain a mix of business logic, database queries, and third-party API calls, and entities are just dumb data bags without methods. As business rules expand (e.g. valid bid state transitions, multi-tenant checks, stamp paper validation rules, audit logging), services balloon into 2,000-line "god classes" that are untestable, tightly coupled, and impossible to reason about.
 - **Microservices Over-Engineering**: Splitting each business concept (Bid Service, Document Service, Compliance Service, Audit Service) into separate deployable microservices introduces distributed transactions, network latency, docker swarm/K8s operational overhead, and complex contract synchronization for an early-stage SaaS.
 
 ## Decision
+
 We adopt a **Domain-Driven Layered Modular Monolith** inside NestJS.
 Each business domain is an encapsulated NestJS module structured into four clean layers:
+
 1. **Domain Layer**:
    - Pure, framework-agnostic TypeScript.
    - Contains **Entities**, **Value Objects**, **Domain Exceptions**, and **Repository Interfaces**.
@@ -29,10 +34,12 @@ Each business domain is an encapsulated NestJS module structured into four clean
    - NestJS **Controllers**, **Guards**, **Interceptors**, and **DTOs** (Data Transfer Objects with `class-validator`).
 
 ## Alternatives Considered
+
 1. **Flat CRUD Controller-Service Pattern**: Rejected because business rules (e.g. state transitions and compliance validation) leak across services, leading to duplicate authorization and state mutation bugs.
 2. **Independent Microservices**: Rejected as premature over-engineering.
 
 ## Consequences
+
 - **Positive**:
   - High cohesion, low coupling: Domain rules can be unit-tested in isolation without mocking databases or AWS SDKs.
   - Clear boundaries: Switching from Prisma to TypeORM or mock storage to real S3 requires changing only the infrastructure adapter, leaving business logic untouched.

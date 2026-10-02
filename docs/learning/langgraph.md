@@ -13,6 +13,7 @@ Input Text ──> [LLM Prompt 1] ──> [LLM Prompt 2] ──> [JSON Parser] �
 ```
 
 ### Why this breaks in Government Tender Compliance:
+
 1. **No Error Recovery or Cycles**:
    - A linear chain is a one-way pipeline (A $\rightarrow$ B $\rightarrow$ C).
    - If Step B extracts an affidavit requiring a ₹100 stamp paper, but cites page 99, and the verifier checks page 99 and finds no mention of stamp paper, a linear chain **cannot loop back**. It either fails the whole pipeline or outputs unverified data.
@@ -55,6 +56,7 @@ Instead of treating an AI workflow as a rigid pipe, LangGraph treats it as a **S
 ```
 
 ### The 4 Core Primitives of LangGraph:
+
 1. **State (`TypedDict` or Pydantic Model)**:
    A single, central, strongly-typed state object shared across the entire graph. Every node receives the state and returns updates to it.
 2. **Nodes (Python Functions)**:
@@ -87,6 +89,7 @@ class ComplianceGraphState(BaseModel):
 ```
 
 ### The 3 Nodes in our Compliance Loop:
+
 1. **`extract_candidates_node`**:
    The LLM reads the chunk and outputs candidate compliance requirements with proposed page citations.
 2. **`deterministic_verifier_node`**:
@@ -103,12 +106,14 @@ class ComplianceGraphState(BaseModel):
 State persistence (checkpointing) is what separates an experimental script from **production enterprise software**:
 
 ### 1. Fault Tolerance & Resumability
+
 - If a background worker crashes at page 85 of 150 due to an out-of-memory error or server reboot, the task does not restart at page 1.
-- The new worker queries the checkpointer: *"What was the state of job `job_123`?"*
+- The new worker queries the checkpointer: _"What was the state of job `job_123`?"_
 - It loads the checkpoint from page 84 and resumes processing page 85 seamlessly.
 
 ### 2. Time-Travel Debugging & Traceability
-- If a customer reports: *"Why did the system miss the ₹500 stamp paper requirement on Page 44?"*
+
+- If a customer reports: _"Why did the system miss the ₹500 stamp paper requirement on Page 44?"_
 - With checkpointing, developers can load the exact state of the graph at Page 44 and inspect:
   - What was the exact prompt sent?
   - What was the raw model completion?
@@ -116,18 +121,19 @@ State persistence (checkpointing) is what separates an experimental script from 
 - This allows deterministic reproduction and targeted prompt improvement.
 
 ### 3. Human-in-the-Loop Pauses
-- Certain tender clauses are genuinely ambiguous (e.g. *"Bidder must have completed similar work, or submitted consortium MoU"*).
-- The graph can transition to a `PAUSED` state, emit a notification to the Bid Manager, wait 4 hours for the manager to answer *"We are bidding as a solo contractor, not a consortium"*, and resume execution from that exact node.
+
+- Certain tender clauses are genuinely ambiguous (e.g. _"Bidder must have completed similar work, or submitted consortium MoU"_).
+- The graph can transition to a `PAUSED` state, emit a notification to the Bid Manager, wait 4 hours for the manager to answer _"We are bidding as a solo contractor, not a consortium"_, and resume execution from that exact node.
 
 ---
 
 ## Summary: LangChain vs. LangGraph
 
-| Feature | Generic LangChain Chains | LangGraph |
-| :--- | :--- | :--- |
-| **Control Flow** | Directed Acyclic Graph (Linear only) | Cyclic Graph (Loops, retries, branching) |
-| **State Management** | Ephemeral, passed implicitly | Explicit, typed Pydantic state |
-| **Error Handling** | Whole pipeline fails on error | Conditional edge routes to retry node |
-| **Persistence** | None (in-memory only) | Native Checkpointing (PostgreSQL / SQLite) |
-| **Human-in-the-Loop** | Not supported natively | Native pause, inspect, and resume |
-| **Role in TenderPulse AI** | Rejected (ADR 0004) | **Adopted for AI Ingestion Engine** |
+| Feature                    | Generic LangChain Chains             | LangGraph                                  |
+| :------------------------- | :----------------------------------- | :----------------------------------------- |
+| **Control Flow**           | Directed Acyclic Graph (Linear only) | Cyclic Graph (Loops, retries, branching)   |
+| **State Management**       | Ephemeral, passed implicitly         | Explicit, typed Pydantic state             |
+| **Error Handling**         | Whole pipeline fails on error        | Conditional edge routes to retry node      |
+| **Persistence**            | None (in-memory only)                | Native Checkpointing (PostgreSQL / SQLite) |
+| **Human-in-the-Loop**      | Not supported natively               | Native pause, inspect, and resume          |
+| **Role in TenderPulse AI** | Rejected (ADR 0004)                  | **Adopted for AI Ingestion Engine**        |

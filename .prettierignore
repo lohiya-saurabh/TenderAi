@@ -1,0 +1,9 @@
+node_modules
+dist
+coverage
+.git
+.DS_Store
+package-lock.json
+*.pyc
+__pycache__
+.venv
