@@ -3,6 +3,7 @@ import { ValidationException } from '../../../../common/domain/DomainException.j
 import { ComplianceStatus } from '../value-objects/ComplianceStatus.js';
 import { ExecutionRules } from '../value-objects/ExecutionRules.js';
 import { Provenance } from '../value-objects/Provenance.js';
+import { ComplianceItemReviewedEvent } from '../events/ComplianceItemReviewedEvent.js';
 
 export interface CreateComplianceItemProps {
   id: string;
@@ -123,6 +124,7 @@ export class ComplianceItem extends AggregateRoot {
       );
     }
 
+    const previousStatus = this._status.value;
     this._status = newStatus;
     if (notes !== undefined) {
       this._userNotes = notes ? notes.trim() : null;
@@ -132,5 +134,21 @@ export class ComplianceItem extends AggregateRoot {
     }
     this._reviewedAt = new Date();
     this.incrementVersion();
+
+    this.addDomainEvent(
+      new ComplianceItemReviewedEvent(
+        this.id,
+        this._organizationId,
+        {
+          itemId: this.id,
+          bidId: this._bidId,
+          reviewerUserId: this._assignedUserId ?? 'SYSTEM',
+          previousStatus,
+          newStatus: this._status.value,
+          reviewedAt: this._reviewedAt.toISOString(),
+        },
+        this.version
+      )
+    );
   }
 }

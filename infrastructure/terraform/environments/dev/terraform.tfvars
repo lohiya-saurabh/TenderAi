@@ -1,0 +1,5 @@
+aws_region          = "ap-south-1"
+project_name        = "tenderpulse"
+environment         = "dev"
+api_image_uri       = "123456789012.dkr.ecr.ap-south-1.amazonaws.com/tenderpulse/api:dev-latest"
+ai_worker_image_uri = "123456789012.dkr.ecr.ap-south-1.amazonaws.com/tenderpulse/ai-worker:dev-latest"

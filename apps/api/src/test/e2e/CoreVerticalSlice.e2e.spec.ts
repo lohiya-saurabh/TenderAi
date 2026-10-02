@@ -5,6 +5,7 @@ import {
   UnauthorizedTenantAccessException,
 } from '../../common/domain/DomainException.js';
 import { InternalServiceGuard } from '../../common/security/InternalServiceGuard.js';
+import { TenantContextHolder } from '../../common/security/TenantContext.js';
 import { InMemoryAuditRepository } from '../../modules/audit/infrastructure/InMemoryAuditRepository.js';
 import { CreateBidUseCase } from '../../modules/bids/application/CreateBidUseCase.js';
 import { BidsController } from '../../modules/bids/presentation/BidsController.js';
@@ -59,13 +60,17 @@ describe('E2E: Tender Ingestion & Compliance Review Core Vertical Slice', () => 
     // -------------------------------------------------------------
     // Step 1: Contractor creates a new Bid Project
     // -------------------------------------------------------------
-    const createdBid = await bidsController.create(organizationId, bidManagerUserId, {
-      title: 'State Highway Road Widening Package 4',
-      tenderNumber: 'SH-4/PWD/2026/102',
-      tenderingAuthority: 'Maharashtra State PWD',
-      estimatedValueRupees: 85000000, // ₹8.5 Crore
-      submissionDeadline: '2026-11-15T15:00:00.000Z',
-    });
+    const createdBid = await TenantContextHolder.run(
+      { organizationId, userId: bidManagerUserId, role: 'BID_MANAGER' },
+      () =>
+        bidsController.create(organizationId, bidManagerUserId, {
+          title: 'State Highway Road Widening Package 4',
+          tenderNumber: 'SH-4/PWD/2026/102',
+          tenderingAuthority: 'Maharashtra State PWD',
+          estimatedValueRupees: 85000000, // ₹8.5 Crore
+          submissionDeadline: '2026-11-15T15:00:00.000Z',
+        })
+    );
 
     expect(createdBid.id).toBeDefined();
     expect(createdBid.status).toBe('DRAFT');

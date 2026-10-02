@@ -7,6 +7,9 @@
     "apps/*"
   ],
   "scripts": {
+    "dev": "./scripts/dev.sh",
+    "dev:api": "npm run dev -w @tenderpulse/api",
+    "dev:web": "npm run dev -w @tenderpulse/web",
     "build": "npm run build --workspaces --if-present",
     "type-check": "npm run type-check --workspaces --if-present",
     "test": "vitest run tests/ && npm run test --workspaces --if-present",

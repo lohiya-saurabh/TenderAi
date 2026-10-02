@@ -2,6 +2,7 @@ import { AggregateRoot } from '../../../../common/domain/AggregateRoot.js';
 import { ValidationException } from '../../../../common/domain/DomainException.js';
 import { BidStatus } from '../value-objects/BidStatus.js';
 import { Money } from '../value-objects/Money.js';
+import { BidProjectCreatedEvent } from '../events/BidProjectCreatedEvent.js';
 
 export interface CreateBidProjectProps {
   id: string;
@@ -49,6 +50,25 @@ export class BidProject extends AggregateRoot {
     this._estimatedValue = props.estimatedValue;
     this._submissionDeadline = props.submissionDeadline;
     this._status = props.status ?? BidStatus.DRAFT;
+
+    if (!props.status || props.status.equals(BidStatus.DRAFT)) {
+      this.addDomainEvent(
+        new BidProjectCreatedEvent(
+          this.id,
+          this._organizationId,
+          {
+            bidId: this.id,
+            title: this._title,
+            tenderNumber: this._tenderNumber,
+            tenderingAuthority: this._tenderingAuthority,
+            estimatedValueRupees: this._estimatedValue.toRupees(),
+            submissionDeadline: this._submissionDeadline.toISOString(),
+            status: this._status.value,
+          },
+          this.version
+        )
+      );
+    }
   }
 
   public get organizationId(): string {

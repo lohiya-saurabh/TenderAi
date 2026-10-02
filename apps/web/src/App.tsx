@@ -1,75 +1,86 @@
 import React from 'react';
-import { colors } from '@tenderpulse/ui';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './auth/AuthProvider.js';
+import { ProtectedRoute } from './auth/ProtectedRoute.js';
+import { AppShell } from './components/layout/AppShell.js';
+import { LoginPage } from './pages/LoginPage.js';
+import { DashboardPage } from './pages/DashboardPage.js';
+import { CreateBidPage } from './pages/CreateBidPage.js';
+import { BidDetailPage } from './pages/BidDetailPage.js';
+import { ComplianceReviewPage } from './pages/ComplianceReviewPage.js';
+import { AuditHistoryPage } from './pages/AuditHistoryPage.js';
+import { NotFoundPage } from './pages/NotFoundPage.js';
+import { PERMISSIONS } from './utils/permissions.js';
 
 export const App: React.FC = () => {
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        backgroundColor: colors.surface.bg,
-        color: colors.surface.text,
-        padding: '2rem',
-        boxSizing: 'border-box',
-      }}
-    >
-      <header
-        style={{
-          borderBottom: `1px solid ${colors.surface.border}`,
-          paddingBottom: '1.5rem',
-          marginBottom: '2rem',
-        }}
-      >
-        <h1 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 700 }}>TenderPulse AI</h1>
-        <p style={{ margin: '0.5rem 0 0 0', color: colors.surface.muted }}>
-          Indian Government Tender Bid Compliance & Disqualification Prevention
-        </p>
-      </header>
+    <BrowserRouter>
+      <AuthProvider>
+        <Routes>
+          {/* Public Auth Route */}
+          <Route path="/login" element={<LoginPage />} />
 
-      <main>
-        <div
-          style={{
-            backgroundColor: colors.surface.card,
-            border: `1px solid ${colors.surface.border}`,
-            borderRadius: '0.75rem',
-            padding: '1.5rem',
-            maxWidth: '600px',
-          }}
-        >
-          <h2 style={{ marginTop: 0, fontSize: '1.25rem' }}>
-            System Status: Foundations Operational
-          </h2>
-          <p style={{ color: colors.surface.muted, lineHeight: 1.6 }}>
-            Monorepo architecture initialized with decoupled API, AI Worker, and shared design
-            tokens.
-          </p>
-          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
-            <span
-              style={{
-                backgroundColor: colors.status.ready,
-                color: '#ffffff',
-                padding: '0.25rem 0.75rem',
-                borderRadius: '9999px',
-                fontSize: '0.875rem',
-                fontWeight: 600,
-              }}
-            >
-              API: Ready
-            </span>
-            <span
-              style={{
-                backgroundColor: colors.status.pending,
-                color: '#ffffff',
-                padding: '0.25rem 0.75rem',
-                borderRadius: '9999px',
-                fontSize: '0.875rem',
-                fontWeight: 600,
-              }}
-            >
-              AI Engine: Ready
-            </span>
-          </div>
-        </div>
-      </main>
-    </div>
+          {/* Root redirect */}
+          <Route path="/" element={<Navigate to="/bids" replace />} />
+
+          {/* Protected Application Routes inside AppShell */}
+          <Route
+            element={
+              <ProtectedRoute>
+                <AppShell />
+              </ProtectedRoute>
+            }
+          >
+            <Route
+              path="/bids"
+              element={
+                <ProtectedRoute requiredPermission={PERMISSIONS.BIDS_READ}>
+                  <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/bids/new"
+              element={
+                <ProtectedRoute requiredPermission={PERMISSIONS.BIDS_CREATE}>
+                  <CreateBidPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/bids/:id"
+              element={
+                <ProtectedRoute requiredPermission={PERMISSIONS.BIDS_READ}>
+                  <BidDetailPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/bids/:id/compliance/:itemId"
+              element={
+                <ProtectedRoute requiredPermission={PERMISSIONS.BIDS_READ}>
+                  <ComplianceReviewPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/bids/:id/audit"
+              element={
+                <ProtectedRoute requiredPermission={PERMISSIONS.AUDIT_READ}>
+                  <AuditHistoryPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* 404 Fallback */}
+            <Route path="*" element={<NotFoundPage />} />
+          </Route>
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
   );
 };

@@ -1,0 +1,5 @@
+aws_region          = "ap-south-1"
+project_name        = "tenderpulse"
+environment         = "staging"
+api_image_uri       = "123456789012.dkr.ecr.ap-south-1.amazonaws.com/tenderpulse/api:staging-latest"
+ai_worker_image_uri = "123456789012.dkr.ecr.ap-south-1.amazonaws.com/tenderpulse/ai-worker:staging-latest"

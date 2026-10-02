@@ -1,5 +1,13 @@
-from fastapi import FastAPI
+import secrets
+from fastapi import Depends, FastAPI, Header, HTTPException, status
 from pydantic import BaseModel
+
+from tenderpulse_ai.config import settings
+from tenderpulse_ai.pipeline import (
+    DocumentExtractionRequest,
+    DocumentExtractionResponse,
+    ProductionExtractionPipeline,
+)
 
 app = FastAPI(
     title="TenderPulse AI Engine",
@@ -14,6 +22,19 @@ class HealthResponse(BaseModel):
     version: str
 
 
+def verify_internal_key(
+    x_internal_service_key: str | None = Header(None, alias="X-Internal-Service-Key"),
+) -> None:
+    if not x_internal_service_key or not secrets.compare_digest(
+        x_internal_service_key, settings.internal_service_key
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unauthorized internal service call",
+        )
+
+
+
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
     return HealthResponse(
@@ -26,3 +47,14 @@ async def health_check():
 @app.get("/")
 async def root():
     return {"message": "TenderPulse AI Service Operational"}
+
+
+@app.post(
+    "/api/v1/extract",
+    response_model=DocumentExtractionResponse,
+    dependencies=[Depends(verify_internal_key)],
+)
+async def extract_document(request: DocumentExtractionRequest):
+    pipeline = ProductionExtractionPipeline()
+    return await pipeline.execute(request)
+

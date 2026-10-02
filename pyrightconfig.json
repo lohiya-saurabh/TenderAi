@@ -1,0 +1,10 @@
+{
+  "venvPath": "apps/ai",
+  "venv": ".venv",
+  "executionEnvironments": [
+    {
+      "root": "apps/ai",
+      "extraPaths": ["apps/ai/src"]
+    }
+  ]
+}

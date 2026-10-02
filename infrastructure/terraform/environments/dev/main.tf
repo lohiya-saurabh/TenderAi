@@ -1,0 +1,102 @@
+terraform {
+  required_version = ">= 1.7.0"
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.6"
+    }
+  }
+
+  # In production, use remote S3 backend with DynamoDB state locking:
+  # backend "s3" {
+  #   bucket         = "tenderpulse-terraform-state-ap-south-1"
+  #   key            = "environments/dev/terraform.tfstate"
+  #   region         = "ap-south-1"
+  #   dynamodb_table = "tenderpulse-terraform-locks"
+  #   encrypt        = true
+  # }
+}
+
+provider "aws" {
+  region = var.aws_region
+
+  default_tags {
+    tags = {
+      Project     = var.project_name
+      Environment = var.environment
+      ManagedBy   = "Terraform"
+    }
+  }
+}
+
+# 1. Network: 3-Tier Multi-AZ VPC
+module "vpc" {
+  source             = "../../modules/vpc"
+  project_name       = var.project_name
+  environment        = var.environment
+  single_nat_gateway = true # Cost savings for dev environment
+}
+
+# 2. Storage: S3 Document Vault & SPA
+module "s3" {
+  source         = "../../modules/s3"
+  project_name   = var.project_name
+  environment    = var.environment
+  kms_s3_key_arn = module.security.kms_s3_arn
+}
+
+# 3. Queues: SQS Ingestion Queue & DLQ
+module "sqs" {
+  source          = "../../modules/sqs"
+  project_name    = var.project_name
+  environment     = var.environment
+  kms_sqs_key_arn = module.security.kms_sqs_arn
+}
+
+# 4. Security: KMS CMKs, IAM Least Privilege, Secrets Manager, Security Groups
+module "security" {
+  source              = "../../modules/security"
+  project_name        = var.project_name
+  environment         = var.environment
+  vpc_id              = module.vpc.vpc_id
+  s3_vault_bucket_arn = module.s3.tenant_vault_bucket_arn
+  sqs_queue_arn       = module.sqs.ingestion_queue_arn
+}
+
+# 5. Database: Amazon RDS PostgreSQL 16
+module "rds" {
+  source                = "../../modules/rds"
+  project_name          = var.project_name
+  environment           = var.environment
+  db_subnet_group_name  = module.vpc.db_subnet_group_name
+  rds_security_group_id = module.security.rds_security_group_id
+  kms_rds_key_arn       = module.security.kms_rds_arn
+  instance_class        = "db.t4g.micro"
+  allocated_storage     = 20
+  multi_az              = false # Single AZ for dev to optimize cost
+}
+
+# 6. Compute: ECS Fargate Cluster, ALB, NestJS API & FastAPI AI Worker
+module "ecs" {
+  source                      = "../../modules/ecs"
+  project_name                = var.project_name
+  environment                 = var.environment
+  vpc_id                      = module.vpc.vpc_id
+  public_subnet_ids           = module.vpc.public_subnet_ids
+  private_app_subnet_ids      = module.vpc.private_app_subnet_ids
+  alb_security_group_id       = module.security.alb_security_group_id
+  api_security_group_id       = module.security.api_security_group_id
+  ai_worker_security_group_id = module.security.ai_worker_security_group_id
+  ecs_execution_role_arn      = module.security.ecs_execution_role_arn
+  api_task_role_arn           = module.security.api_task_role_arn
+  ai_worker_task_role_arn     = module.security.ai_worker_task_role_arn
+  api_image_uri               = var.api_image_uri
+  ai_worker_image_uri         = var.ai_worker_image_uri
+  app_secrets_arn             = module.security.app_secrets_arn
+  api_desired_count           = 1
+  ai_worker_desired_count     = 1
+}

@@ -9,6 +9,7 @@ import { AuditLog } from '../../audit/domain/entities/AuditLog.js';
 import { IAuditRepository } from '../../audit/domain/repositories/IAuditRepository.js';
 import { IComplianceItemRepository } from '../domain/repositories/IComplianceItemRepository.js';
 import { ComplianceStatus } from '../domain/value-objects/ComplianceStatus.js';
+import { IEventBus } from '../../../common/events/IEventBus.js';
 
 export interface ReviewComplianceItemCommand {
   organizationId: string;
@@ -37,7 +38,8 @@ export class ReviewComplianceItemUseCase {
   constructor(
     private readonly complianceRepository: IComplianceItemRepository,
     private readonly auditRepository: IAuditRepository,
-    private readonly unitOfWork: IUnitOfWork
+    private readonly unitOfWork: IUnitOfWork,
+    private readonly eventBus?: IEventBus
   ) {}
 
   public async execute(command: ReviewComplianceItemCommand): Promise<ReviewComplianceItemResult> {
@@ -85,6 +87,11 @@ export class ReviewComplianceItemUseCase {
         })
       );
     });
+
+    if (this.eventBus) {
+      const events = item.pullDomainEvents();
+      await this.eventBus.publishBatch(events);
+    }
 
     return {
       id: item.id,
