@@ -1,14 +1,66 @@
+import { PDFParse } from 'pdf-parse';
+import fs from 'node:fs';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+
 export interface NormalizedDocumentPage {
   pageNumber: number;
   text: string;
 }
 
 export class DocumentContentNormalizer {
+  private standardFontDataUrl?: string;
+
+  constructor() {
+    try {
+      const candidates = [
+        path.resolve(process.cwd(), 'node_modules/pdfjs-dist/standard_fonts/'),
+        path.resolve(process.cwd(), 'apps/api/node_modules/pdfjs-dist/standard_fonts/'),
+      ];
+      const found = candidates.find((p) => fs.existsSync(p));
+      if (found) {
+        this.standardFontDataUrl = pathToFileURL(found).href.replace(/\/+$/, '') + '/';
+      }
+    } catch {
+      this.standardFontDataUrl = undefined;
+    }
+  }
+
   /**
    * Normalizes raw document text or buffers into clean, structured page representations
    * with guaranteed page numbers and sanitized text blocks.
+   * Supports real binary PDF buffers via PDFParse, form-feed characters (\f), and page markers.
    */
-  public normalize(content: string | Buffer): NormalizedDocumentPage[] {
+  public async normalize(content: string | Buffer): Promise<NormalizedDocumentPage[]> {
+    if (Buffer.isBuffer(content) && content.subarray(0, 4).toString() === '%PDF') {
+      try {
+        const parser = new PDFParse({
+          data: new Uint8Array(content),
+          verbosity: 0,
+          standardFontDataUrl: this.standardFontDataUrl,
+        });
+        const parsed = await parser.getText();
+        if (parsed && Array.isArray(parsed.pages) && parsed.pages.length > 0) {
+          const pages = parsed.pages
+            .map((p, idx) => ({
+              pageNumber: idx + 1,
+              text: this.sanitizePageText(p.text || ''),
+            }))
+            .filter((p) => p.text.length > 0);
+
+          if (pages.length > 0) {
+            return pages;
+          }
+        }
+      } catch (err) {
+        console.warn('[DocumentContentNormalizer] Failed to parse PDF buffer with PDFParse, falling back:', err);
+      }
+    }
+
+    return this.normalizeSync(content);
+  }
+
+  public normalizeSync(content: string | Buffer): NormalizedDocumentPage[] {
     const rawText = typeof content === 'string' ? content : content.toString('utf-8');
 
     if (!rawText || rawText.trim() === '') {

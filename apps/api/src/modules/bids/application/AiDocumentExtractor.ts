@@ -8,6 +8,7 @@ import {
   IDocumentExtractor,
   ExtractedComplianceItem,
 } from './IngestionWorker.js';
+export type { ExtractedComplianceItem };
 import { SecurityContextDto } from '@tenderpulse/shared-types';
 
 export interface RawExtractedItem {
@@ -81,8 +82,96 @@ export class AiDocumentExtractor implements IDocumentExtractor {
       );
     }
 
-    // 2. Normalize content into pages
-    const pages: NormalizedDocumentPage[] = this.normalizer.normalize(rawContent);
+    // 2. Normalize content into pages (supports real binary PDF buffers)
+    const allPages: NormalizedDocumentPage[] = await this.normalizer.normalize(rawContent);
+
+    // If document is large (> 30 pages), execute multi-zone sectional page selection
+    let candidatePages = allPages;
+    if (allPages.length > 30) {
+      const initialPages = allPages.slice(0, 10);
+      const remainingPages = allPages.slice(10);
+
+      const procurementKeywords = [
+        'earnest money',
+        'emd',
+        'bid security',
+        'tender security',
+        'performance security',
+        'performance bank guarantee',
+        'pbg',
+        'bank guarantee',
+        'power of attorney',
+        'consortium',
+        'joint venture',
+        'jv agreement',
+        'board resolution',
+        'authorized signatory',
+        'annual turnover',
+        'net worth',
+        'financial capacity',
+        'solvency',
+        'working capital',
+        'similar work',
+        'past experience',
+        'technical capacity',
+        'technical experience',
+        'personnel',
+        'key expert',
+        'project manager',
+        'equipment',
+        'machinery',
+        'plant and equipment',
+        'validity of bids',
+        'bid validity',
+        'period of validity',
+        'liquidated damages',
+        'delay damages',
+        'defect liability',
+        'litigation',
+        'debarment',
+        'blacklisting',
+        'integrity pact',
+        'conflict of interest',
+        'stamp',
+        'notary',
+        'udin',
+        'local content',
+        'make in india',
+        'ppp-mii',
+        'gst',
+        'gstin',
+        'taxes and duties',
+      ];
+
+      const scoredPages: { page: NormalizedDocumentPage; score: number }[] = [];
+      for (const p of remainingPages) {
+        const textLower = p.text.toLowerCase();
+        let score = 0;
+        for (const kw of procurementKeywords) {
+          if (textLower.includes(kw)) {
+            score++;
+          }
+        }
+        if (score > 0) {
+          scoredPages.push({ page: p, score });
+        }
+      }
+
+      // Sort by score descending and retain top 50 scored pages across BDS, Section 3, and GCC/SCC
+      scoredPages.sort((a, b) => b.score - a.score);
+      const topScored = scoredPages.slice(0, 50).map((s) => s.page);
+
+      // Combine initial orientation pages + top scored pages in natural reading order
+      const combinedMap = new Map<number, NormalizedDocumentPage>();
+      for (const p of initialPages) {
+        combinedMap.set(p.pageNumber, p);
+      }
+      for (const p of topScored) {
+        combinedMap.set(p.pageNumber, p);
+      }
+
+      candidatePages = Array.from(combinedMap.values()).sort((a, b) => a.pageNumber - b.pageNumber);
+    }
 
     // 3. Fallback or verify SecurityContext
     const secCtx: SecurityContextDto = securityContext ?? {
@@ -109,7 +198,7 @@ export class AiDocumentExtractor implements IDocumentExtractor {
       document_id: document.id,
       document_type: document.documentType,
       file_name: document.fileName,
-      pages: pages.map((p) => ({
+      pages: candidatePages.map((p) => ({
         page_number: p.pageNumber,
         text: p.text,
       })),

@@ -21,7 +21,8 @@ export interface CreateTenderDocumentProps {
   organizationId: string;
   documentType: DocumentType;
   fileName: string;
-  s3Key: string;
+  storagePath?: string;
+  s3Key?: string; // Legacy alias for storagePath
   sizeBytes: number;
   mimeType: string;
   checksumSha256: string;
@@ -36,7 +37,7 @@ export class TenderDocument extends AggregateRoot {
   private readonly _organizationId: string;
   private readonly _documentType: DocumentType;
   private readonly _fileName: string;
-  private readonly _s3Key: string;
+  private readonly _storagePath: string;
   private readonly _sizeBytes: number;
   private readonly _mimeType: string;
   private readonly _checksumSha256: string;
@@ -54,8 +55,9 @@ export class TenderDocument extends AggregateRoot {
     if (!props.fileName || props.fileName.trim() === '') {
       throw new ValidationException('File name cannot be empty.');
     }
-    if (!props.s3Key || props.s3Key.trim() === '') {
-      throw new ValidationException('S3 key cannot be empty.');
+    const resolvedPath = props.storagePath || props.s3Key;
+    if (!resolvedPath || resolvedPath.trim() === '') {
+      throw new ValidationException('Storage path cannot be empty.');
     }
     if (!props.sizeBytes || props.sizeBytes <= 0) {
       throw new ValidationException('File size must be greater than 0 bytes.');
@@ -76,7 +78,7 @@ export class TenderDocument extends AggregateRoot {
     this._organizationId = props.organizationId;
     this._documentType = props.documentType;
     this._fileName = props.fileName.trim();
-    this._s3Key = props.s3Key.trim();
+    this._storagePath = resolvedPath.trim();
     this._sizeBytes = props.sizeBytes;
     this._mimeType = props.mimeType;
     this._checksumSha256 = props.checksumSha256.toLowerCase();
@@ -99,8 +101,15 @@ export class TenderDocument extends AggregateRoot {
     return this._fileName;
   }
 
+  public get storagePath(): string {
+    return this._storagePath;
+  }
+
+  /**
+   * @deprecated Use `storagePath` instead for cloud-agnostic code.
+   */
   public get s3Key(): string {
-    return this._s3Key;
+    return this._storagePath;
   }
 
   public get sizeBytes(): number {

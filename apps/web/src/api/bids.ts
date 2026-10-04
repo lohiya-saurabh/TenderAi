@@ -4,7 +4,7 @@
  * CRUD operations and upload workflow for tender bid projects.
  */
 
-import { apiGet, apiPost, type ApiResult } from './client.js';
+import { apiGet, apiPost, apiDelete, type ApiResult } from './client.js';
 
 export interface BidSummary {
   id: string;
@@ -119,3 +119,31 @@ export function getDocumentDownloadUrl(
 ): Promise<ApiResult<DownloadUrlResponse>> {
   return apiGet<DownloadUrlResponse>(`/api/v1/bids/${bidId}/documents/${documentId}/download-url`);
 }
+
+export interface DeleteBidResponse {
+  success: boolean;
+  deletedBidId: string;
+  deletedDocumentsCount: number;
+}
+
+/** Delete a bid project and permanently remove all uploaded documents */
+export function deleteBid(bidId: string): Promise<ApiResult<DeleteBidResponse>> {
+  return apiDelete<DeleteBidResponse>(`/api/v1/bids/${bidId}`);
+}
+
+export interface DeleteDocumentResponse {
+  success: boolean;
+  deletedDocumentId: string;
+  removedCompliancesCount: number;
+}
+
+/** Delete a specific uploaded document and remove associated compliance requirements */
+export function deleteDocument(
+  bidId: string,
+  documentId: string,
+): Promise<ApiResult<DeleteDocumentResponse>> {
+  return apiDelete<DeleteDocumentResponse>(`/api/v1/bids/${bidId}/documents/${documentId}`);
+}
+
+
+

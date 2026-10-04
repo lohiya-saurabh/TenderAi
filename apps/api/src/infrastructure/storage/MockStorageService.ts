@@ -58,4 +58,16 @@ export class MockStorageService implements IStorageService {
   public clear(): void {
     this.objects.clear();
   }
+
+  public async deleteObject(s3Key: string): Promise<void> {
+    this.objects.delete(s3Key);
+  }
+
+  public async deletePrefix(prefix: string): Promise<void> {
+    for (const key of Array.from(this.objects.keys())) {
+      if (key.startsWith(prefix)) {
+        this.objects.delete(key);
+      }
+    }
+  }
 }

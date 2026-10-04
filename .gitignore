@@ -5,11 +5,16 @@ build/
 coverage/
 *.log
 .DS_Store
+data/
+**/data/
 
-# Environment Variables
+# Environment Variables & Keys
 .env
 .env.*
 !.env.example
+*.json.key
+gcp-key.json
+*-key.json
 
 # Python
 .venv/

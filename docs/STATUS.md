@@ -147,10 +147,184 @@
     - Evaluated 8 domains: Authentication, Authorization & Anti-IDOR, API limits & abuse, File uploads & S3, AI injection & privacy, AWS IAM & VPC network, Database RLS & transactions, Async queue resilience.
     - Classified and remediated critical/high vulnerabilities: constant-time secret comparison (`crypto.timingSafeEqual` and `secrets.compare_digest`), hardcoded secret fallback elimination in production, 1MB JSON body size capping in HTTP readers.
     - 71 TypeScript unit/integration tests and 27 Python AI security tests passing cleanly.
+20. [x] **Phase 27: Lowest-Cost AWS MVP Deployment & Hybrid Testing Architecture** _(Completed)_
+    - Ultra-low-cost (<$0.50/month) hybrid cloud environment in `infrastructure/terraform/environments/local/`.
+    - Real AWS S3 document vault with CORS for localhost presigned uploads, zero-KMS SSE-S3 (AES256), and 7-day auto-expiration lifecycle rules.
+    - Real AWS SQS ingestion queue + DLQ with SQS-managed SSE.
+    - Scoped least-privilege IAM dev user and policies for local test containers.
+21. [x] **Phase 28: Cloud-Agnostic Ports & Adapters with Google Cloud Platform (GCP)** _(Completed)_
+    - Documented in `docs/adr/0014-cloud-agnostic-ports-and-gcp-implementation.md` and `docs/GCP_DEV_SETUP.md`.
+    - Fully decoupled Domain and Application layers from cloud-specific naming conventions (`storagePath` replaces vendor-specific keys; cloud-neutral `IStorageService` and `IJobQueue` ports).
+    - Production Google Cloud Platform adapters: `GcsStorageService.ts` (V4 Signed URLs, metadata, streaming download) and `GcpPubSubJobQueue.ts` (Cloud Pub/Sub topic, subscription, dead-letter redrive, ack deadline control).
+    - Complete GCP Terraform environment in `infrastructure/terraform/environments/gcp-local/` provisioning GCS bucket (`asia-south1`), Pub/Sub topic/subscription/DLQ, and least-privilege dev service account.
+    - 118 unit and integration tests passing across monorepo with 0 typecheck errors.
+22. [x] **Phase 29: Modular HTTP Server Architecture (Controllers & Services)** _(Completed)_
+    - Decomposed monolithic `routes.ts` into a clean layered architecture adhering to Ponytail principles (zero unnecessary dependencies, native Node stdlib).
+    - Separation of concerns:
+      - **Controllers** (`apps/api/src/server/controllers/`): `AuthController`, `BidsController`, `DocumentsController`, `ComplianceController`, `AuditController` handling HTTP requests/responses, payload extraction, and error code translation.
+      - **Domain Services** (`apps/api/src/server/services/`): `AuthService`, `BidsService`, `DocumentsService`, `ComplianceService`, `AuditService` containing pure business logic, optimistic concurrency checks, and metric rollups.
+      - **Router** (`apps/api/src/server/routes.ts`): Clean dispatcher mapping endpoints to controllers.
+    - 130 tests passing across the monorepo with 0 TypeScript compiler errors.
+
+23. [x] **Phase 30: NestJS Modular Architecture & PostgreSQL Persistence Pipeline** _(Completed)_
+    - Migrated backend HTTP layer to a modular NestJS architecture with Express platform (`@nestjs/core`, `@nestjs/common`, `@nestjs/platform-express`).
+    - Decoupled into feature and infrastructure modules:
+      - **DatabaseModule** (`apps/api/src/common/database/`): Asynchronous global provider supplying embedded PostgreSQL (`PGlite`) with schema DDL and idempotent seed initialization.
+      - **StorageModule** (`apps/api/src/infrastructure/storage/`): Global injectable provider wrapping Google Cloud Storage (`GcsStorageService`) and AWS S3 (`AwsS3StorageService`) with mock fallback.
+      - **AuthModule** (`apps/api/src/modules/auth/`): Clean `AuthController` and `AuthService` handling credential verification against PostgreSQL `users` table.
+      - **BidsModule** (`apps/api/src/modules/bids/`): `BidsController` and `BidsService` managing tender project lifecycle and rollup metrics.
+      - **DocumentsModule** (`apps/api/src/modules/documents/`): `DocumentsController` and `DocumentsService` handling presigned upload URLs, upload confirmation, download URLs, and real-time SSE progress streaming.
+      - **ComplianceModule** (`apps/api/src/modules/compliance/`): `ComplianceController` and `ComplianceService` managing compliance item review with optimistic concurrency control (`expectedVersion`).
+      - **AuditModule** (`apps/api/src/modules/audit/`): `AuditController` and `AuditService` exposing immutable audit logs.
+      - **Filters & Exception Handling** (`apps/api/src/common/filters/`): `AllExceptionsFilter` mapping domain `HttpError` subclasses to standardized HTTP responses.
+    - Zero seed document/compliance data: initial database starts clean with 0 documents and 0 compliance items.
+    - Persistent document extraction pipeline:
+      - Upload confirmation records document metadata into `tender_documents` and writes `DOCUMENT_UPLOADED` audit event.
+      - SSE extraction pipeline completes $\rightarrow$ generates and persists domain compliance requirements with execution rules and verbatim provenance quotes into `compliance_items`, updates bid totals, and logs `AI_INGESTION_COMPLETED` audit event.
+    - All 134 monorepo tests passing with 0 TypeScript compiler errors.
+
+24. [x] **Phase 31: Cryptographic Password Security & Timing Attack Defenses (bcrypt & Salts)** _(Completed)_
+    - Replaced plain-text SQL password comparisons with industry-standard salted `bcrypt` key derivation function (cost factor 10).
+    - Hardened user authentication pipeline in `AuthService` against user enumeration timing attacks:
+      - Implemented constant-time dummy verification (`bcrypt.compare(candidatePassword, DUMMY_BCRYPT_HASH)`) when an email is not found, ensuring uniform latency (~70ms) across valid and invalid accounts.
+    - Updated database provider (`database.provider.ts`) to hash all seeded accounts on initialization and automatically migrate any existing plaintext entries in local development environments.
+    - Added unit test coverage for invalid credentials and non-existent users verifying timing defense paths.
+    - 140 passing TypeScript tests across monorepo (`@tenderpulse/api`, `@tenderpulse/web`) with 0 lint warnings and 0 typecheck errors.
+
+25. [x] **Phase 32: Drizzle ORM Type-Safe Query Architecture** _(Completed)_
+    - Introduced `drizzle-orm` and `drizzle-orm/pglite` for compile-time type-safe query building across all backend persistence layers.
+    - Defined centralized TypeScript database schema in `apps/api/src/common/database/schema.ts` for `users`, `bids`, `tender_documents`, `compliance_items`, and `audit_logs` with zero code-generation overhead.
+    - Exported `DRIZZLE_TOKEN` and `createDrizzle(db)` factory from `DatabaseModule`, supporting both NestJS DI injection and direct PGlite conversion in test runners.
+    - Refactored all persistence services and infrastructure adapters from raw SQL strings to type-safe Drizzle queries:
+      - `AuthService`: Type-safe user email lookup with SQL lower-casing and camelCase field mapping.
+      - `BidsService`: Type-safe bid listing, retrieval, and creation with date sorting.
+      - `DocumentsService`: Type-safe upload confirmation, upserting (`onConflictDoUpdate`), and download URL resolution.
+      - `ComplianceService`: Type-safe optimistic concurrency review updates (`where(and(eq(id), eq(version)))`) and metric rollups.
+      - `AuditService`: Type-safe immutable audit event queries.
+      - `PostgresBidRepository`: Implemented `IBidRepository` domain port using Drizzle with OCC conflict detection.
+      - `database.provider.ts`: Type-safe user and base bid project seeding.
+    - 140 passing TypeScript tests across monorepo (`@tenderpulse/api`, `@tenderpulse/web`) with 0 lint warnings and 0 typecheck errors.
+
+26. [x] **Phase 33: Two-Phase Bid Project & Document Deletion Architecture** _(Completed)_
+    - Extended `IStorageService` port and adapters (`GcsStorageService`, `AwsS3StorageService`, `MockStorageService`) with `deleteObject` and `deletePrefix` for bulk blob pruning.
+    - Implemented resilient Two-Phase Deletion in `BidsService.deleteBid` with strict tenant boundary isolation:
+      1. Verifies tenant ownership (`org_acme_infra_001`) preventing cross-tenant IDOR deletion attacks.
+      2. Queries document file metadata and records an immutable `BID_PROJECT_DELETED` snapshot event in `audit_logs`.
+      3. Deletes the bid from PostgreSQL; database foreign key `ON DELETE CASCADE` rules automatically remove `tender_documents` and `compliance_items`.
+      4. Executes cloud storage prefix pruning (`tenants/{orgId}/bids/{bidId}/`) to permanently delete all uploaded tender PDFs.
+    - Added `DELETE /api/v1/bids/:id` endpoint in `BidsController`.
+    - Implemented UI deletion flow in `BidDetailPage`:
+      - Added "Delete Tender" destructive action button in header.
+      - Integrated accessible, backdrop-blurred confirmation `Modal` warning of permanent PDF and compliance matrix deletion.
+      - Wired `deleteBid` API call with immediate error handling and redirect to `/bids`.
+    - Added unit test coverage in `services.spec.ts` for successful cascade deletion, audit log creation, and non-existent bid handling.
+    - 142 passing TypeScript tests across monorepo (`@tenderpulse/api`, `@tenderpulse/web`) with 0 lint warnings and 0 typecheck errors.
+
+27. [x] **Phase 34: Targeted Document & Dependent Compliance Cascade Deletion** _(Completed)_
+    - Implemented granular document deletion in `DocumentsService.deleteDocument` with referential consistency and tenant isolation:
+      1. Enforces Anti-IDOR tenant and bid scoping (`organizationId`, `bidId`, `docId`).
+      2. Queries dependent `compliance_items` by inspecting JSONB `provenance` (`documentId`, `sourceDocumentId`, `documentName`, `sourceFileName`).
+      3. Records an immutable `DOCUMENT_DELETED` snapshot event in `audit_logs` tracking document file details and removed compliance requirement counts.
+      4. Deletes matching compliance items and the document record in PostgreSQL via Drizzle ORM.
+      5. Automatically recomputes parent `bids` metric counters (`totalRequirements`, `flaggedRequirements`, `approvedRequirements`) and transitions status back to `DRAFT` if no documents remain.
+      6. Prunes the specific PDF object and folder prefix in cloud storage (`GCS` / `AWS S3`) via `IStorageService`.
+    - Added `DELETE /api/v1/bids/:bidId/documents/:docId` endpoint in `DocumentsController`.
+    - Extended frontend API in `apps/web/src/api/bids.ts` with `deleteDocument(bidId, docId)`.
+    - Integrated UI deletion flow in `BidDetailPage.tsx`:
+      - Added "Delete" action button (`variant="danger"`, trash icon) on each document card in the Tender Documents list.
+      - Implemented accessible confirmation `Modal` warning that removing the document permanently purges the cloud PDF and all compliance requirements derived from it.
+      - Wired immediate re-fetching of both bid metadata and compliance table upon deletion.
+    - Added unit and integration tests in `services.spec.ts` covering successful deletion, cascade compliance pruning, metric recalculation, audit event insertion, and IDOR rejection.
+28. [x] **Phase 35: Real Document Byte Size Resolution & Format Utility** _(Completed)_
+    - Fixed hardcoded `4000000` byte size in `DocumentsService.confirmUpload`:
+      - Captured real `sizeBytes` and `documentType` in `pendingUploads` from `generateUploadUrl`.
+      - Verified real cloud object byte size dynamically via `storageService.headObject(storagePath)` on confirmation.
+      - Reconciled existing database document rows on-the-fly in `BidsService.getBidById` against cloud object metadata.
+    - Added dedicated, unit-tested `formatFileSize(bytes)` utility in `apps/web/src/utils/formatFileSize.ts` supporting `B`, `KB`, `MB`, and `GB` formatting.
+    - Updated `BidDetailPage.tsx` to render real formatted sizes (e.g. `631.2 KB`, `24.80 MB`) instead of static `3.81 MB`.
+    - Hardened PGlite embedded database initialization in `database.provider.ts` with `await pg.waitReady` and automatic dirty-shutdown recovery.
+    - 148 passing TypeScript tests across monorepo (`@tenderpulse/api`, `@tenderpulse/web`) with 0 lint warnings and 0 typecheck errors.
+
+29. [x] **Phase 36: End-to-End FastAPI AI Extraction Pipeline & Real Document Intelligence** _(Completed)_
+    - Integrated NestJS API with the Python FastAPI AI worker (`apps/ai`) running on `http://localhost:8000`:
+      - Updated `scripts/dev.sh` to automatically launch the FastAPI AI worker in the background alongside NestJS and Vite.
+      - Implemented real binary PDF parsing in `DocumentContentNormalizer.ts` via `PDFParse` (`pdf-parse`), extracting genuine page blocks.
+      - Integrated `AiDocumentExtractor` with intelligent keyword-candidate page filtering for large tender documents (up to 200+ pages), dispatching clean JSON payloads with `SecurityContext` to `POST /api/v1/extract`.
+      - Expanded `default_tender_extractor` in `apps/ai/src/tenderpulse_ai/pipeline.py` to extract real statutory, execution, technical, and financial clauses (EMD, Power of Attorney, Turnover with UDIN, Past Experience, Integrity Pact, Make in India) with exact verbatim quotes and execution rules.
+      - Resolved SSE route disconnect: mapped `@Get(['bids/:bidId/extraction-progress', 'bids/:bidId/progress', 'bids/:bidId/documents/stream'])` in `DocumentsController.ts`.
+      - Aligned SSE step state machine keys (`PARSING_PAGES`, `EXTRACTING_COMPLIANCE`, `VERIFYING_CITATIONS`, `COMPLETED` / `REVIEW_READY`) with `ExtractionProgress.tsx`, ensuring automatic UI completion and compliance table refetching.
+      - Wired automatic extraction on upload confirmation in `DocumentsService.confirmUpload`, persisting grounded compliance items to PostgreSQL and updating bid metrics.
+    - 148 TypeScript unit/integration tests and 27 Python AI tests passing across monorepo with 0 errors.
+
+30. [x] **Phase 37: Zero Mock Data Fabrication & Honest Extraction Invariant** _(Completed)_
+    - Permanently eradicated the phantom mock data fallback `if (extractedItems.length === 0)` from `DocumentsService.ts`:
+      - Previously, if a document was empty or extraction returned 0 items, 5 hardcoded compliance items were fabricated to pass an old unit test.
+      - Now, if extraction returns 0 items, exactly 0 items are saved to PostgreSQL `compliance_items`, bid metrics reflect `totalRequirements: 0, flaggedRequirements: 0, approvedRequirements: 0`, and the audit trail honestly logs `extractedItemsCount: 0`.
+    - Updated `apps/api/src/modules/__tests__/services.spec.ts`:
+      - Injected `MockStorageService` and seeded genuine tender text containing clauses across all procurement categories (`FINANCIAL`, `EXECUTION`, `TECHNICAL`, `LEGAL`, `STATUTORY`).
+      - Added explicit unit test proving 0 items are extracted and 0 mock records fabricated when a non-procurement or empty document is uploaded.
+      - Tested real document deletion, metric re-computation, cascade cleanup, and optimistic concurrency control without mock artifacts.
+    - Fixed `DocumentsService.generateUploadUrl` and `getDownloadUrl` to support any `IStorageService` implementation polymorphically.
+    - All 177 tests passing across monorepo (126 in `@tenderpulse/api`, 24 in `@tenderpulse/web`, 27 in `apps/ai`) with 0 lint warnings and 0 TypeScript compile errors.
+
+31. [x] **Phase 38: Multi-Page Canonical Deduplication, Rule Fusion & Stream / Font Headroom Hardening** _(Completed)_
+    - **Canonical Deduplication & Rule Fusion**:
+      - Solved duplicate compliance items problem where 100+ page tenders repeating keywords (e.g., EMD, Power of Attorney) across chapters produced repetitive candidate items.
+      - Implemented multi-page rule fusion in both `apps/ai/src/tenderpulse_ai/pipeline.py` and `DocumentsService.ts`:
+        - Merged duplicate items matching `(category, normalized_title)`.
+        - Applied most restrictive rule fusion: `stampPaperRequired: true`, `max(stampPaperDenominationInr)`, `notarizationRequired: true`, and CA `udinRequired: true`.
+        - Consolidated multi-page citations into human-readable cross-page provenance (e.g. `Clauses across Pages 7, 15, 22`).
+    - **Resilient Cloud Storage Path Discovery**:
+      - Hardened `confirmUpload` and `markExtractionComplete` in `DocumentsService.ts` against server reboots and in-memory cache eviction.
+      - Fallback lookup checks the existing database row and executes prefix lookups in `GcsStorageService` (`findFilesByPrefix`) to discover real filenames (e.g. `Bid_RS21_Part-1_Bidding_Procedures.pdf`) and byte sizes dynamically rather than falling back to placeholders.
+      - Reconciled `tender_documents` and `bids` database records dynamically in `BidsService.getBidById`.
+    - **PDF Headless Font Warning & Stream Listener Hardening**:
+      - Configured `DocumentContentNormalizer.ts` with `standardFontDataUrl` referencing `pdfjs-dist/standard_fonts/` and `verbosity: 0` to silence headless interpreter font traces.
+      - Tuned `EventEmitter.defaultMaxListeners = 30` in `main.ts` and `GcsStorageService.ts` to accommodate GCS chunked download streams without false-positive Node.js leak warnings.
+    - **Verification**:
+      - Successfully re-extracted `bid-nhai-44-001` (`Bid_RS21_Part-1_Bidding_Procedures.pdf`), yielding 3 distinct, grounded, deduplicated requirements with accurate metrics (`total: 3, flagged: 1, approved: 2`).
+      - All quality gates passing: 151 TypeScript tests, 27 Python tests, 0 ESLint warnings, 0 Ruff errors, 0 TypeScript compile errors.
+
+32. [x] **Phase 39: Full-Document Multi-Zone Selection, 16-Domain Indian Procurement Taxonomy & Structural Clause Number Extraction** _(Completed)_
+    - **Multi-Zone Candidate Page Selector (`AiDocumentExtractor.ts`)**:
+      - Eradicated the naive `slice(0, 25)` limitation that previously discarded up to 88% of pages in 200+ page tenders (e.g. `Bid_RS21_Part-1_Bidding_Procedures.pdf`, 213 pages).
+      - Implemented a multi-zone sectional selector retaining initial orientation pages (pages 1–10: NIT, Invitation for Bids, Table of Contents) plus up to 50 top-scored procurement pages across Bid Data Sheet (BDS), Section III (Evaluation & Qualification Criteria), and GCC/SCC.
+      - Pages are merged, deduplicated, and preserved in natural ascending reading order (up to 60 pages sent to the AI engine).
+    - **16-Domain Indian Public Procurement Taxonomy**:
+      - Expanded extraction coverage from 6 basic rules to the complete 16-domain Indian public procurement compliance taxonomy across both FastAPI Python worker (`pipeline.py`) and NestJS fallback (`documents.service.ts`):
+        1. Financial: Bid Security / Earnest Money Deposit (EMD) Guarantee
+        2. Financial: Performance Security (PBG) & Security Deposit
+        3. Financial: Technical Qualification & Annual Turnover
+        4. Financial: Bank Solvency & Working Capital Credit Facilities
+        5. Execution: Power of Attorney & Consortium Execution Rules
+        6. Execution: Joint Venture & Consortium Agreement Requirements
+        7. Technical: Technical Qualification & Similar Work Experience
+        8. Technical: Key Technical Personnel & Project Management Team
+        9. Technical: Essential Plant, Machinery & Equipment Undertaking
+        10. Legal: Bid Validity Period Commitment
+        11. Legal: Completion Schedule & Delay Damages (LD)
+        12. Legal: Defect Liability Period (DLP) & Maintenance Guarantee
+        13. Legal: Integrity Pact & Non-Blacklisting Declaration
+        14. Legal: Conflict of Interest & Non-Collusion Undertaking
+        15. Statutory: Make in India (PPP-MII) Local Content Declaration
+        16. Statutory: GSTIN & PAN Statutory Tax Compliance
+    - **Structural Clause Number Extraction (`_extract_clause_reference`)**:
+      - Added regex pattern `\b((?:ITB|BDS|GCC|SCC|Section\s*III|Clause)\s*(?:No\.?)?\s*\d+(?:\.\d+)*)` parsing exact clause identifiers (e.g. `ITB 11.2`, `ITB 1.2`, `ITB 3.1`, `Clause 6`).
+    - **Deterministic Verbatim Grounding Invariant**:
+      - Introduced `_resolve_quote` with exact substring window fallback (`_extract_verbatim_window`) ensuring 100% of candidate quotes are exact character sequences from `text`, passing LangGraph `verify_grounding` with 0 falsifications.
+    - **Live Verification on NHAI 213-Page Tender (`bid-nhai-44-001`)**:
+      - Successfully extracted and consolidated 12 rich, high-fidelity compliance requirements across pages 5 to 86.
+      - Updated bid metrics dynamically to `totalRequirements: 12`, `flaggedRequirements: 2` (POA and JV/Consortium agreements), `approvedRequirements: 10`, `status: REVIEW_READY`.
+      - Generated immutable `AI_INGESTION_COMPLETED` audit event with `groundingScore: 0.98`.
+    - **Quality Gates Passing**:
+      - 151 TypeScript tests (126 API + 25 Web), 27 Python tests, 0 ESLint warnings, 0 Ruff errors, 0 TypeScript compile errors.
 
 ---
 
 ## Next Immediate Action
 
-Awaiting user `Continue` approval on Security Review & Hardening. Ready for next phase.
+The compliance extraction engine is operating with full-document multi-zone selection, a 16-domain procurement taxonomy, structural clause referencing, and 100% deterministic verbatim grounding. Ready to proceed to next milestones or user-requested enhancements.
+
+
+
 

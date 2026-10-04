@@ -28,7 +28,8 @@ export interface GenerateUploadUrlCommand {
 export interface GenerateUploadUrlResult {
   documentId: string;
   uploadUrl: string;
-  s3Key: string;
+  storagePath: string;
+  s3Key: string; // Legacy alias for storagePath
   expiresInSeconds: number;
 }
 
@@ -115,6 +116,7 @@ export class GenerateUploadUrlUseCase {
     return {
       documentId: document.id,
       uploadUrl,
+      storagePath: s3Key,
       s3Key,
       expiresInSeconds,
     };

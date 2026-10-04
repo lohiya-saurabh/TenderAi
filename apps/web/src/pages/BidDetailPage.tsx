@@ -1,12 +1,20 @@
 import React, { useState, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { getBid, getDocumentDownloadUrl, type BidDetail } from '../api/bids.js';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import {
+  getBid,
+  getDocumentDownloadUrl,
+  deleteBid,
+  deleteDocument,
+  type BidDetail,
+  type BidDocument,
+} from '../api/bids.js';
 import { listComplianceItems, reviewComplianceItem, type ComplianceItem } from '../api/compliance.js';
 import { useApi } from '../hooks/useApi.js';
 import { useAuth } from '../auth/useAuth.js';
 import { PERMISSIONS } from '../utils/permissions.js';
 import { formatCurrency } from '../utils/formatCurrency.js';
 import { formatDate } from '../utils/formatDate.js';
+import { formatFileSize } from '../utils/formatFileSize.js';
 import { BidStatusBadge } from '../components/bid/BidStatusBadge.js';
 import { DocumentUploader } from '../components/bid/DocumentUploader.js';
 import { ComplianceTable } from '../components/compliance/ComplianceTable.js';
@@ -15,10 +23,12 @@ import { StatusBadge } from '../components/common/StatusBadge.js';
 import { Button } from '../components/common/Button.js';
 import { ErrorBanner } from '../components/common/ErrorBanner.js';
 import { LoadingSkeleton } from '../components/common/LoadingSkeleton.js';
+import { Modal } from '../components/common/Modal.js';
 
 export const BidDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const bidId = id || '';
+  const navigate = useNavigate();
 
   const { hasPermission } = useAuth();
   const canUploadDoc = hasPermission(PERMISSIONS.DOCUMENTS_UPLOAD);
@@ -27,6 +37,10 @@ export const BidDetailPage: React.FC = () => {
   const [showUploader, setShowUploader] = useState<boolean>(false);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [docToDelete, setDocToDelete] = useState<BidDocument | null>(null);
+  const [isDeletingDoc, setIsDeletingDoc] = useState<boolean>(false);
 
   // Fetch Bid details
   const fetchBid = useCallback(() => getBid(bidId), [bidId]);
@@ -97,6 +111,48 @@ export const BidDetailPage: React.FC = () => {
     }
   };
 
+  const handleDeleteBid = async () => {
+    setIsDeleting(true);
+    setActionError(null);
+    try {
+      const res = await deleteBid(bidId);
+      if (res.ok) {
+        navigate('/bids');
+      } else {
+        setActionError(res.error.message || 'Failed to delete bid project.');
+        setIsDeleting(false);
+        setShowDeleteModal(false);
+      }
+    } catch {
+      setActionError('Network error while attempting to delete bid project.');
+      setIsDeleting(false);
+      setShowDeleteModal(false);
+    }
+  };
+
+  const handleDeleteDocument = async () => {
+    if (!docToDelete) return;
+    setIsDeletingDoc(true);
+    setActionError(null);
+    try {
+      const res = await deleteDocument(bidId, docToDelete.id);
+      if (res.ok) {
+        setDocToDelete(null);
+        setIsDeletingDoc(false);
+        refetchBid();
+        refetchCompliance();
+      } else {
+        setActionError(res.error.message || 'Failed to remove document.');
+        setIsDeletingDoc(false);
+        setDocToDelete(null);
+      }
+    } catch {
+      setActionError('Network error while attempting to remove document.');
+      setIsDeletingDoc(false);
+      setDocToDelete(null);
+    }
+  };
+
   if (bidLoading) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -124,13 +180,23 @@ export const BidDetailPage: React.FC = () => {
           <Link to="/bids" style={{ color: 'var(--color-surface-muted)', fontSize: '0.9rem' }}>
             ← Back to Bids Dashboard
           </Link>
-          {canViewAudit && (
-            <Link to={`/bids/${bidId}/audit`}>
-              <Button variant="secondary" size="sm" icon={<span>📜</span>}>
-                View Audit Trail
-              </Button>
-            </Link>
-          )}
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+            {canViewAudit && (
+              <Link to={`/bids/${bidId}/audit`}>
+                <Button variant="secondary" size="sm" icon={<span>📜</span>}>
+                  View Audit Trail
+                </Button>
+              </Link>
+            )}
+            <Button
+              variant="danger"
+              size="sm"
+              icon={<span>🗑️</span>}
+              onClick={() => setShowDeleteModal(true)}
+            >
+              Delete Tender
+            </Button>
+          </div>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
@@ -237,17 +303,28 @@ export const BidDetailPage: React.FC = () => {
                       {doc.fileName}
                     </div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--color-surface-muted)' }}>
-                      {doc.documentType} • {(doc.fileSizeBytes / (1024 * 1024)).toFixed(2)} MB •{' '}
+                      {doc.documentType} • {formatFileSize(doc.fileSizeBytes)} •{' '}
                       Uploaded {formatDate(doc.uploadedAt)}
                     </div>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <StatusBadge status={doc.status} size="sm" />
                   <Button variant="ghost" size="sm" onClick={() => handleDownload(doc.id)}>
                     Download ⬇
                   </Button>
+                  {canUploadDoc && (
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      onClick={() => setDocToDelete(doc)}
+                      icon={<span>🗑️</span>}
+                      title="Delete document and associated compliance requirements"
+                    >
+                      Delete
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}
@@ -283,6 +360,107 @@ export const BidDetailPage: React.FC = () => {
           />
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => !isDeleting && setShowDeleteModal(false)}
+        title="Delete Tender Project"
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+            <Button
+              variant="secondary"
+              onClick={() => setShowDeleteModal(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleDeleteBid}
+              isLoading={isDeleting}
+              icon={<span>🗑️</span>}
+            >
+              Yes, Delete Permanently
+            </Button>
+          </div>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', color: 'var(--color-surface-text)' }}>
+          <p style={{ margin: 0 }}>
+            Are you sure you want to delete <strong>{bid.title}</strong> (<em>{bid.tenderNumber}</em>)?
+          </p>
+          <div
+            style={{
+              padding: '0.85rem 1rem',
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid var(--color-danger)',
+              borderRadius: 'var(--radius-md)',
+              fontSize: '0.85rem',
+              lineHeight: 1.5,
+              color: 'var(--color-danger)',
+            }}
+          >
+            <strong>⚠️ Warning:</strong> This operation is permanent and irreversible. It will:
+            <ul style={{ margin: '0.5rem 0 0 1.25rem', padding: 0 }}>
+              <li>Permanently purge all uploaded tender documents and PDFs from cloud storage</li>
+              <li>Delete all AI-extracted compliance requirements and grounded provenance citations</li>
+              <li>Record an immutable deletion audit event in the system audit log</li>
+            </ul>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete Document Confirmation Modal */}
+      <Modal
+        isOpen={Boolean(docToDelete)}
+        onClose={() => !isDeletingDoc && setDocToDelete(null)}
+        title="Remove Tender Document"
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+            <Button
+              variant="secondary"
+              onClick={() => setDocToDelete(null)}
+              disabled={isDeletingDoc}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleDeleteDocument}
+              isLoading={isDeletingDoc}
+              icon={<span>🗑️</span>}
+            >
+              Yes, Remove Document
+            </Button>
+          </div>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', color: 'var(--color-surface-text)' }}>
+          <p style={{ margin: 0 }}>
+            Are you sure you want to remove <strong>{docToDelete?.fileName}</strong>?
+          </p>
+          <div
+            style={{
+              padding: '0.85rem 1rem',
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid var(--color-danger)',
+              borderRadius: 'var(--radius-md)',
+              fontSize: '0.85rem',
+              lineHeight: 1.5,
+              color: 'var(--color-danger)',
+            }}
+          >
+            <strong>⚠️ Warning:</strong> This operation will:
+            <ul style={{ margin: '0.5rem 0 0 1.25rem', padding: 0 }}>
+              <li>Permanently delete this PDF document from cloud storage</li>
+              <li>Purge all AI-extracted compliance requirements derived from this document</li>
+              <li>Recalculate and update the tender project requirement counters</li>
+              <li>Record an immutable deletion audit event in the system audit log</li>
+            </ul>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

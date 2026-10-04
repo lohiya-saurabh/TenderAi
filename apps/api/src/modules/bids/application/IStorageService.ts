@@ -6,18 +6,23 @@ export interface HeadObjectResult {
 
 export interface IStorageService {
   generatePresignedUploadUrl(
-    s3Key: string,
+    storagePath: string,
     contentType: string,
     expiresInSeconds?: number
   ): Promise<string>;
 
   generatePresignedDownloadUrl(
-    s3Key: string,
+    storagePath: string,
     downloadFileName: string,
     expiresInSeconds?: number
   ): Promise<string>;
 
-  headObject(s3Key: string): Promise<HeadObjectResult>;
+  headObject(storagePath: string): Promise<HeadObjectResult>;
 
-  getObject(s3Key: string): Promise<string | Buffer | null>;
+  getObject(storagePath: string): Promise<string | Buffer | null>;
+
+  deleteObject(storagePath: string): Promise<void>;
+
+  deletePrefix(prefix: string): Promise<void>;
 }
+

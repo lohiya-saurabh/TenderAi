@@ -1,4 +1,5 @@
 import secrets
+
 from fastapi import Depends, FastAPI, Header, HTTPException, status
 from pydantic import BaseModel
 

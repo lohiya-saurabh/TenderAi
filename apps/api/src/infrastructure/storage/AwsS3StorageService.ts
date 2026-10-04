@@ -1,0 +1,167 @@
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+  HeadObjectCommand,
+  DeleteObjectCommand,
+  DeleteObjectsCommand,
+  ListObjectsV2Command,
+  NotFound,
+  NoSuchKey,
+} from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import {
+  IStorageService,
+  HeadObjectResult,
+} from '../../modules/bids/application/IStorageService.js';
+
+export interface AwsS3StorageConfig {
+  bucketName: string;
+  region?: string;
+  endpoint?: string;
+  forcePathStyle?: boolean;
+  credentials?: {
+    accessKeyId: string;
+    secretAccessKey: string;
+  };
+}
+
+export class AwsS3StorageService implements IStorageService {
+  private readonly s3Client: S3Client;
+  private readonly bucketName: string;
+
+  constructor(config: AwsS3StorageConfig) {
+    this.bucketName = config.bucketName;
+    this.s3Client = new S3Client({
+      region: config.region || process.env.AWS_REGION || 'ap-south-1',
+      endpoint: config.endpoint || process.env.S3_ENDPOINT || undefined,
+      forcePathStyle: config.forcePathStyle ?? (Boolean(config.endpoint || process.env.S3_ENDPOINT)),
+      credentials: config.credentials || (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY ? {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      } : undefined),
+    });
+  }
+
+  public async generatePresignedUploadUrl(
+    s3Key: string,
+    contentType: string,
+    expiresInSeconds = 900
+  ): Promise<string> {
+    const command = new PutObjectCommand({
+      Bucket: this.bucketName,
+      Key: s3Key,
+      ContentType: contentType,
+    });
+
+    return getSignedUrl(this.s3Client, command, {
+      expiresIn: expiresInSeconds,
+    });
+  }
+
+  public async generatePresignedDownloadUrl(
+    s3Key: string,
+    downloadFileName: string,
+    expiresInSeconds = 300
+  ): Promise<string> {
+    const encodedFileName = encodeURIComponent(downloadFileName);
+    const command = new GetObjectCommand({
+      Bucket: this.bucketName,
+      Key: s3Key,
+      ResponseContentDisposition: `attachment; filename="${encodedFileName}"`,
+    });
+
+    return getSignedUrl(this.s3Client, command, {
+      expiresIn: expiresInSeconds,
+    });
+  }
+
+  public async headObject(s3Key: string): Promise<HeadObjectResult> {
+    try {
+      const command = new HeadObjectCommand({
+        Bucket: this.bucketName,
+        Key: s3Key,
+      });
+
+      const response = await this.s3Client.send(command);
+      return {
+        exists: true,
+        sizeBytes: response.ContentLength ?? 0,
+        checksumSha256: response.ChecksumSHA256,
+      };
+    } catch (error: unknown) {
+      if (
+        error instanceof NotFound ||
+        error instanceof NoSuchKey ||
+        (typeof error === 'object' && error !== null && 'name' in error && (error.name === 'NotFound' || error.name === 'NoSuchKey')) ||
+        (typeof error === 'object' && error !== null && '$metadata' in error && (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode === 404)
+      ) {
+        return { exists: false, sizeBytes: 0 };
+      }
+      throw error;
+    }
+  }
+
+  public async getObject(s3Key: string): Promise<string | Buffer | null> {
+    try {
+      const command = new GetObjectCommand({
+        Bucket: this.bucketName,
+        Key: s3Key,
+      });
+
+      const response = await this.s3Client.send(command);
+      if (!response.Body) {
+        return null;
+      }
+
+      const byteArray = await response.Body.transformToByteArray();
+      return Buffer.from(byteArray);
+    } catch (error: unknown) {
+      if (
+        error instanceof NotFound ||
+        error instanceof NoSuchKey ||
+        (typeof error === 'object' && error !== null && 'name' in error && (error.name === 'NotFound' || error.name === 'NoSuchKey')) ||
+        (typeof error === 'object' && error !== null && '$metadata' in error && (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode === 404)
+      ) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  public async deleteObject(s3Key: string): Promise<void> {
+    try {
+      await this.s3Client.send(
+        new DeleteObjectCommand({
+          Bucket: this.bucketName,
+          Key: s3Key,
+        }),
+      );
+    } catch (err) {
+      console.warn(`[AwsS3StorageService] Failed to delete object ${s3Key}:`, err);
+    }
+  }
+
+  public async deletePrefix(prefix: string): Promise<void> {
+    try {
+      const list = await this.s3Client.send(
+        new ListObjectsV2Command({
+          Bucket: this.bucketName,
+          Prefix: prefix,
+        }),
+      );
+
+      if (list.Contents && list.Contents.length > 0) {
+        const objects = list.Contents.filter((obj) => obj.Key).map((obj) => ({ Key: obj.Key! }));
+        await this.s3Client.send(
+          new DeleteObjectsCommand({
+            Bucket: this.bucketName,
+            Delete: { Objects: objects },
+          }),
+        );
+      }
+    } catch (err) {
+      console.warn(`[AwsS3StorageService] Failed to delete prefix ${prefix}:`, err);
+    }
+  }
+}

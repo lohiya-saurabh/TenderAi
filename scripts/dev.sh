@@ -27,9 +27,18 @@ cleanup() {
 }
 trap cleanup SIGINT SIGTERM EXIT
 
-# 2. Start Backend API Server on Port 3000
+# 2. Start FastAPI AI Worker on Port 8000
+echo -e "${GREEN}🧠 Starting FastAPI AI Worker on http://localhost:8000...${NC}"
+./apps/ai/.venv/bin/uvicorn tenderpulse_ai.main:app --port 8000 --app-dir apps/ai/src &
+AI_PID=$!
+
+# 3. Start TypeScript Watcher & Backend API Server on Port 3000
+echo -e "${BLUE}👀 Starting TypeScript compiler in watch mode...${NC}"
+npx tsc -w --preserveWatchOutput -p apps/api/tsconfig.json &
+TSC_PID=$!
+
 echo -e "${GREEN}🌐 Starting Backend API on http://localhost:3000...${NC}"
-node apps/api/dist/server.js &
+node --watch-path=apps/api/dist apps/api/dist/main.js &
 API_PID=$!
 
 # Wait a moment for API to bind to port

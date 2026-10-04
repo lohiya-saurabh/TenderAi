@@ -48,7 +48,6 @@ export function useApi<T>(
 
   useEffect(() => {
     execute();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 
   const setData = (updater: React.SetStateAction<T | null>) => {

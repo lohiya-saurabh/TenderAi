@@ -13,6 +13,12 @@ export class InMemoryBidRepository implements IBidRepository {
     return bid;
   }
 
+  public async findAllByOrganization(organizationId: string): Promise<BidProject[]> {
+    return Array.from(this.bids.values()).filter(
+      (bid) => bid.organizationId === organizationId,
+    );
+  }
+
   public async save(bid: BidProject): Promise<void> {
     this.bids.set(bid.id, bid);
   }
