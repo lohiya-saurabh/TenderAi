@@ -10,6 +10,11 @@ from tenderpulse_ai.agent import (
     default_requirement_model,
 )
 from tenderpulse_ai.config import settings
+from tenderpulse_ai.decision import (
+    BidDecisionAgent,
+    BidDecisionRequest,
+    BidDecisionResponse,
+)
 from tenderpulse_ai.pipeline import (
     DocumentExtractionRequest,
     DocumentExtractionResponse,
@@ -81,4 +86,16 @@ async def analyze_requirements(request: AgentInput):
         model_fn=default_requirement_model,
     )
     return await agent.analyze(request)
+
+
+@app.post(
+    "/api/v1/agent/bid-decision",
+    response_model=BidDecisionResponse,
+    dependencies=[Depends(verify_internal_key)],
+)
+async def analyze_bid_decision(request: BidDecisionRequest):
+    """Bid/No-Bid Decision Intelligence Agent: evaluates company profile against tender."""
+    agent = BidDecisionAgent()
+    return await agent.evaluate(request)
+
 

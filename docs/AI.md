@@ -580,3 +580,108 @@ Events are **strictly reference-only** (ADR 0013). Never include raw document qu
 - **SECURITY IMPLICATIONS**:
   The agent cannot access other tenants' documents because `ScopedRetrievalTool` validates `tenant_id` and `document_id` against the `SecurityContext` that the application layer resolves from the authenticated caller (the agent itself never evaluates identity). Audit events are strictly reference-only and contain zero customer data.
 
+---
+
+## 8. Bid / No-Bid Decision Workflow & Agent (PROMPT 13)
+
+The `BidDecisionAgent` (`apps/ai/src/tenderpulse_ai/decision/`) answers the pivotal commercial question:
+> **"Should my company pursue this tender?"**
+
+Instead of building a non-transparent "prediction" or statistical classifier that guesses win probability, the system strictly separates **deterministic mathematical eligibility**, **AI-assisted interpretation**, **commercial risk analysis**, and **human authority**.
+
+```
+                         [BidDecisionRequest]
+                                   │
+                                   ▼
+        1. Security Context Validation (tenant isolation, purpose guard)
+                                   │
+                                   ▼
+   ┌─────────────────────────────────────────────────────────────────┐
+   │             2. DETERMINISTIC ELIGIBILITY EVALUATOR              │
+   │    Pure functions, worst-state-wins, zero hallucination:        │
+   │    • Debarment / Statutory   • Financial Turnover               │
+   │    • Past Experience (7 yr)  • Geographic Fit (Region)          │
+   │    • Certifications (Expiry) • OEM Authorizations (MAF)         │
+   │    • Key Personnel / Staff   • Equipment & Machinery            │
+   │    • Mandatory Securities    • Execution Rules (Stamp/Notary)   │
+   └───────────────────────────────┬─────────────────────────────────┘
+                                   │
+                                   ▼
+   ┌─────────────────────────────────────────────────────────────────┐
+   │                  3. COMMERCIAL RISK ANALYZER                    │
+   │    • Timeline pressure (Days to deadline: ≤3d Critical, ≤7d High)│
+   │    • Capital lock-in (EMD ~2% of estimated value)               │
+   │    • Onerous Liquidated Damages & Penalty clauses               │
+   └───────────────────────────────┬─────────────────────────────────┘
+                                   │
+                                   ▼
+   ┌─────────────────────────────────────────────────────────────────┐
+   │               4. AI-ASSISTED INTERPRETATION LAYER               │
+   │    • Synthesize reasons to pursue and reasons not to pursue     │
+   │    • Contextualize ambiguous clauses and uncertain areas        │
+   │    • INVARIANT: Model CANNOT alter the deterministic verdict    │
+   └───────────────────────────────┬─────────────────────────────────┘
+                                   │
+                                   ▼
+   ┌─────────────────────────────────────────────────────────────────┐
+   │                   5. HUMAN JUDGMENT BOUNDARY                    │
+   │    • Emits AI_PROPOSED recommendation (readiness score: 0.0-1.0)│
+   │    • Full dual-provenance evidence citations                    │
+   │    • Mandatory human confirmation (Bid Manager sign-off)        │
+   └─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 8.1 The Four Separated Concerns
+
+| Concern | Substrate | Invariant & Responsibility |
+|:---|:---|:---|
+| **1. Deterministic Eligibility** | Pure Python functions ([evaluator.py](file:///Users/belikesaurabh/main/TenderAi/apps/ai/src/tenderpulse_ai/decision/evaluator.py)) | Compares facts against criteria. Any `HARD_ELIGIBILITY` shortfall $\rightarrow$ `NO_GO`. Any `SUBMISSION_MANDATORY` gap $\rightarrow$ `CONDITIONAL_GO`. Zero model judgment. |
+| **2. AI Interpretation** | Guarded model synthesis ([agent.py](file:///Users/belikesaurabh/main/TenderAi/apps/ai/src/tenderpulse_ai/decision/agent.py)) | Explains nuances, summarizes strengths, maps ambiguous tender clauses. **The LLM cannot alter the computed verdict.** |
+| **3. Risk Analysis** | Commercial rule engine ([risks.py](file:///Users/belikesaurabh/main/TenderAi/apps/ai/src/tenderpulse_ai/decision/risks.py)) | Analyzes working capital lock-in (EMD), liquidated damages caps, and tight execution/submission schedules. |
+| **4. Human Judgment** | Human gate (`ReviewTask` / `ConfirmBidDecisionUseCase`) | The system outputs state `AI_PROPOSED`. Human bid manager retains legal and commercial sign-off authority (`CONFIRMED` or `OVERRIDDEN`). |
+
+---
+
+### 8.2 The Nine Evaluated Factors
+
+1. **Eligibility & Statutory**: Checks for active debarment or blacklisting across Central/State procurement portals (`is_blacklisted`). Active debarment generates an immediate hard disqualifier. Validates GSTIN, PAN, and UDYAM registrations.
+2. **Financial Turnover**: Compares company's verified financial turnover records (`turnover_records`) against the tender's threshold in ₹ Crores. Computes exact shortfalls (`delta`) with CA UDIN verification references.
+3. **Past Project Experience**: Scans completed projects within the standard 7-year lookback window from the bid submission date. Verifies contract value, completion dates, and work-type tags.
+4. **Geographic Capability**: Tests whether the project location state is in the company's registered operational footprint (`operating_regions`). If absent, surfaces an acquisition gap item for local consortium/partnering.
+5. **Certifications**: Tests presence of mandatory standards (ISO 9001, ISO 14001, CMMI) and validates that the certificate expiry date is on or after the **bid submission deadline** (point-in-time validity).
+6. **OEM Authorization**: Validates manufacturer authorization forms (MAF) for specified equipment lines, checking active validity through the submission deadline.
+7. **Key Personnel / Staffing**: Evaluates deployment of qualified technical personnel (Project Managers, Safety Officers, Resident Engineers) meeting minimum experience years.
+8. **Equipment & Machinery**: Evaluates plant and machinery inventory (batching plants, transit mixers, cranes), checking ownership/lease status and quantities.
+9. **Other Mandatory Requirements**: Flags mandatory EMD guarantees, stamp paper denomination requirements (e.g. ₹100), notarization rules, and declarations.
+
+---
+
+### 8.3 Structured Output Contract
+
+The `BidDecisionResponse` decomposes recommendations into actionable categories:
+- **`reasons_to_pursue`**: Verified competitive advantages (e.g. turnover comfortably exceeds threshold, strong 7-year track record in same state, active ISO 9001 certificate).
+- **`reasons_not_to_pursue`**: Disqualifiers, financial shortfalls, or high commercial risks.
+- **`missing_information`**: Structured `GapItem` list (missing machinery records, unverified certificates) with suggested remediation actions and deadlines.
+- **`hard_disqualifiers`**: Concrete non-compliances that prevent participation (e.g. turnover below minimum, expired mandatory certificate, active debarment).
+- **`uncertain_areas`**: Propagated ambiguity flags from `TenderRequirementAgent` (vague quantifiers, missing dates, numeric contradictions).
+- **`evidence_citations`**: Dual-provenance links connecting tender clause coordinates (document ID, page, clause reference, verbatim quote) to company capability evidence document IDs.
+
+---
+
+### 8.4 Engineering Decisions (Deep-Dive)
+
+- **WHY NOT a machine learning win-probability prediction model?**
+  A machine learning model predicting "78% chance of winning" is dangerous and unexplainable in public procurement. It hallucinates eligibility, cannot explain *why* a contractor is disqualified, cannot read CA certificates, and gives false confidence. Contractors lose EMD deposits on binary eligibility defects, not statistical probabilities.
+- **HOW is auditability guaranteed?**
+  Every claim carries dual provenance: the tender requirement clause citation is paired with the company's capability entry ID and evidence document ID.
+- **TRADE-OFFS**:
+  Strict point-in-time certificate validity rejects certificates expiring even 1 day before the tender deadline. While strict, this reflects Indian procurement reality where tenders reject bids with near-expiry documents at technical opening.
+- **FAILURE MODES**:
+  - Missing company records $\rightarrow$ Surfaces as `missing_information` / `GapItem`, driving profile completion rather than an opaque failure.
+  - Model offline $\rightarrow$ Deterministic engine generates full recommendation and reasons via template fallback with zero interruption.
+- **SECURITY IMPLICATIONS**:
+  The decision engine operates on pinned, immutable company profile versions (`profile_version_id`) and verified security contexts. Corporate secrets and proprietary financials are never emitted to audit logs.
+
+

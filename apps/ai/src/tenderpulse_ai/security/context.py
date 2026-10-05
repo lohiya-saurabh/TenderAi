@@ -18,7 +18,12 @@ class SecurityContext(BaseModel):
     permissions: list[str] = Field(default_factory=list, description="Explicit caller permissions")
     allowed_document_ids: list[str] = Field(..., min_length=1, description="Explicit whitelist of authorized document IDs")
     allowed_source_ids: list[str] = Field(default_factory=list, description="Whitelisted public procurement portal sources")
-    purpose: Literal["COMPLIANCE_EXTRACTION", "CORRIGENDUM_ANALYSIS", "PROPOSAL_DRAFTING"] = Field(
+    purpose: Literal[
+        "COMPLIANCE_EXTRACTION",
+        "CORRIGENDUM_ANALYSIS",
+        "PROPOSAL_DRAFTING",
+        "BID_DECISION",
+    ] = Field(
         default="COMPLIANCE_EXTRACTION",
-        description="Explicit business purpose of the AI invocation"
+        description="Explicit business purpose of the AI invocation",
     )
