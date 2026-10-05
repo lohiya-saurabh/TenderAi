@@ -684,4 +684,86 @@ The `BidDecisionResponse` decomposes recommendations into actionable categories:
 - **SECURITY IMPLICATIONS**:
   The decision engine operates on pinned, immutable company profile versions (`profile_version_id`) and verified security contexts. Corporate secrets and proprietary financials are never emitted to audit logs.
 
+---
+
+## 9. Human-in-the-Loop (HITL) as a First-Class Business Capability (PROMPT 15)
+
+In high-stakes enterprise procurement, AI recommendations without a governed human verification loop introduce catastrophic legal and commercial risk. The AI system is explicitly empowered to output **`REVIEW_REQUIRED`** rather than guessing or making unjustified assumptions.
+
+### 9.1 The Six AI Review Triggers
+
+| Trigger Code | Cause | Concrete Procurement Example |
+| :--- | :--- | :--- |
+| **`AMBIGUOUS_REQUIREMENT`** | Vague quantifiers or missing thresholds | *"Bidder must demonstrate substantial experience in elevated viaduct construction"* (no km or ₹ threshold stated). |
+| **`CONFLICTING_EVIDENCE`** | Contradictory documents or data sets | Company profile contains two disparate CA certificates for FY24 turnover (₹80 Cr vs ₹45 Cr). |
+| **`UNCLEAR_ELIGIBILITY`** | Borderline score without hard disqualifiers | Readiness score lands in the 0.50–0.70 ambiguity window; partial evidence exists for non-critical criteria. |
+| **`INSUFFICIENT_CONFIDENCE`** | AI extraction confidence score < 0.75 | Poor OCR scan or paraphrased clause results in confidence score of 0.62 for a mandatory bank guarantee rule. |
+| **`POSSIBLE_DISQUALIFICATION`** | Critical commercial risk or potential debarment | Clause stipulates 15% uncapped Liquidated Damages or debarment alert requires human legal clarification. |
+| **`CONTRADICTORY_DOCUMENTS`** | Mismatching dates or corrigendum conflicts | Tender submission deadline is dated in the past or conflicts with technical corrigendum dates. |
+
+---
+
+### 9.2 The Nine Architectural Pillars of Human Review
+
+```
+[ AI Output / Agent Pipeline ]
+         │
+         │  verdict == REVIEW_REQUIRED
+         ▼
+[ Review Task Created ] (Version 1, Evidence Package, SLA Deadline, Role Assignment)
+         │
+         ├─── Reviewer Claims Task (Optimistic Concurrency Control: v1 -> v2)
+         ├─── Reviewer Adds Notes / Comments (Collaborative Threading: v2 -> v3)
+         ├─── Reviewer Escalates Task (Target Role Reassigned: v3 -> v4)
+         │
+         ▼
+[ Human Decision Submitted ]
+   ├─► CONFIRM  (Agrees with AI recommendation / resolves review deferral)
+   └─► OVERRIDE (Reverses AI verdict; MANDATES audit-grade justification ≥ 10 chars)
+         │
+         ▼
+[ Immutable Audit Trail Recorded ] (HUMAN_DECISION_APPLIED, Reviewer ID, Role, Justification)
+         │
+         ▼
+[ Workflow Continuation ] (LangGraph Command(resume=...) or DecisionState.CONFIRMED / OVERRIDDEN)
+```
+
+1. **Reviewer Roles & RBAC**:
+   - `BID_MANAGER`: Operational triage and checklist management.
+   - `LEGAL_COUNSEL`: Evaluates statutory debarment, blacklist status, stamp paper validity, and contract indemnity liabilities.
+   - `FINANCIAL_CONTROLLER`: Evaluates turnover shortfalls, Working Capital lock-in, and EMD bank guarantees.
+   - `TECHNICAL_LEAD`: Evaluates technical experience classification, OEM authorizations, and equipment specs.
+   - `BID_DIRECTOR`: Executive authority capable of signing off high commercial risks and overriding AI/deterministic NO-GO verdicts.
+
+2. **Review Lifecycle States**:
+   `PENDING` $\rightarrow$ `IN_REVIEW` $\rightarrow$ (`ESCALATED` $\mid$ `REASSIGNED`) $\rightarrow$ `COMPLETED` $\mid$ `EXPIRED` $\mid$ `CANCELLED`.
+
+3. **Optimistic Concurrency Control (OCC)**:
+   Every `HumanReviewTask` carries an integer `version` initialized to 1. All mutating operations (`claim`, `comment`, `reassign`, `escalate`, `submit_review`) require an `expected_version`. If a concurrent reviewer modified the task in the background, a `ReviewConcurrencyConflictException` (HTTP 409) is raised, preventing lost update anomalies.
+
+4. **Comments & Collaborative Threading**:
+   Reviewers can append `ReviewComment` records with author ID, role, timestamp, tagged clause, and text without closing the task, maintaining a complete deliberation history.
+
+5. **Evidence Visibility Package**:
+   The reviewer is presented with a complete side-by-side evidence package:
+   - Verbatim tender clause quote with document ID, page number, and clause reference.
+   - Corresponding company profile fact (turnover record, CA certificate UDIN, experience entry).
+   - Concrete ambiguity flag or conflict note.
+
+6. **Distinguishability: Human Decision vs AI Recommendation**:
+   The system never blurs who decided what:
+   - `original_ai_verdict` and `ai_recommendation` are preserved immutably.
+   - `is_override`: Explicit boolean flag.
+   - If `is_override == True`, an `override_justification` of at least 10 characters is **strictly enforced** by schema validation. Silent reversals are architecturally impossible.
+
+7. **Audit Events**:
+   Immutable audit records capture every transition (`HUMAN_REVIEW_TASK_CREATED`, `HUMAN_REVIEW_TASK_CLAIMED`, `HUMAN_REVIEW_COMMENT_ADDED`, `HUMAN_REVIEW_TASK_ESCALATED`, `HUMAN_DECISION_APPLIED`) with timestamp, tenant ID, user ID, role, version, and rationale.
+
+8. **Reassignment & Escalation**:
+   Allows shifting workload to an equivalent reviewer within the same tenant or formally escalating to `LEGAL_COUNSEL` or `BID_DIRECTOR` with automated reason capture.
+
+9. **SLA & Deadline Handling**:
+   Tender submission deadlines are hard cutoffs. The workflow calculates `sla_deadline` (e.g. 24 hours prior to submission deadline) and classifies urgency (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`). If current time surpasses the deadline, the task automatically transitions to `EXPIRED` and blocks standard resolution.
+
+
 

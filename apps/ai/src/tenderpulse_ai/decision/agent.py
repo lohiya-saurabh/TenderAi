@@ -10,7 +10,11 @@ from tenderpulse_ai.decision.risks import CommercialRiskAnalyzer
 from tenderpulse_ai.decision.schemas import (
     BidDecisionRequest,
     BidDecisionResponse,
+    BidDecisionVerdict,
     DecisionState,
+    ReviewTriggerReason,
+    ReviewTriggerType,
+    RiskItem,
 )
 from tenderpulse_ai.security.context import SecurityContext
 from tenderpulse_ai.security.exceptions import AISecurityException
@@ -127,22 +131,43 @@ class BidDecisionAgent:
                     )
                 )
 
-        record(
-            "BID_DECISION_PROPOSED",
-            {
-                "verdict": outcome.verdict.value,
-                "readiness_score": outcome.readiness_score,
-                "state": DecisionState.AI_PROPOSED.value,
-            },
+        # 4. Scan Review Triggers (Ambiguity, conflicting evidence, unclear eligibility, etc.)
+        review_triggers = self._scan_review_triggers(
+            request=request,
+            outcome=outcome,
+            commercial_risks=commercial_risks,
         )
 
-        # 4. Assemble Final Response
+        final_verdict = outcome.verdict
+        final_state = DecisionState.AI_PROPOSED
+
+        if request.require_human_review and review_triggers:
+            final_verdict = BidDecisionVerdict.REVIEW_REQUIRED
+            final_state = DecisionState.UNDER_REVIEW
+            record(
+                "BID_DECISION_REVIEW_REQUIRED",
+                {
+                    "triggers_count": len(review_triggers),
+                    "trigger_types": [t.trigger_type.value for t in review_triggers],
+                },
+            )
+        else:
+            record(
+                "BID_DECISION_PROPOSED",
+                {
+                    "verdict": outcome.verdict.value,
+                    "readiness_score": outcome.readiness_score,
+                    "state": DecisionState.AI_PROPOSED.value,
+                },
+            )
+
+        # 5. Assemble Final Response
         response = BidDecisionResponse(
             tender_id=request.tender_id,
             company_id=request.company_profile.company_id,
             profile_version_id=request.company_profile.profile_version_id,
-            verdict=outcome.verdict,
-            state=DecisionState.AI_PROPOSED,
+            verdict=final_verdict,
+            state=final_state,
             readiness_score=outcome.readiness_score,
             reasons_to_pursue=outcome.reasons_to_pursue,
             reasons_not_to_pursue=all_reasons_not_to_pursue,
@@ -151,10 +176,11 @@ class BidDecisionAgent:
             uncertain_areas=outcome.uncertain_areas,
             commercial_risks=commercial_risks,
             evidence_citations=outcome.evidence_citations,
+            review_triggers=review_triggers,
             audit_events=audit_events,
         )
 
-        # 5. Persistence Sink (Optional)
+        # 6. Persistence Sink (Optional)
         if self.persistence_sink is not None:
             sink_res = self.persistence_sink(response)
             if inspect.isawaitable(sink_res):
@@ -170,3 +196,85 @@ class BidDecisionAgent:
             )
         if not sec_ctx.tenant_id or not sec_ctx.user_id:
             raise AISecurityException("Security context must specify tenant_id and user_id.")
+
+    def _scan_review_triggers(
+        self,
+        request: BidDecisionRequest,
+        outcome: Any,
+        commercial_risks: list[RiskItem],
+    ) -> list[ReviewTriggerReason]:
+        triggers: list[ReviewTriggerReason] = []
+
+        # 1. Ambiguous requirements
+        for req in request.requirements:
+            if hasattr(req, "ambiguity_flags") and req.ambiguity_flags:
+                for flag in req.ambiguity_flags:
+                    triggers.append(
+                        ReviewTriggerReason(
+                            trigger_type=ReviewTriggerType.AMBIGUOUS_REQUIREMENT,
+                            summary=f"Ambiguous requirement clause: '{req.title}'",
+                            details=f"Ambiguity detected: {flag.detail} (quote: '{flag.quote}')",
+                            clause_reference=req.provenance.clause_reference,
+                            document_id=req.provenance.source_document_id,
+                            confidence_score=req.provenance.confidence_score,
+                        )
+                    )
+
+        # 2. Insufficient confidence
+        for req in request.requirements:
+            if req.provenance and req.provenance.confidence_score < 0.75:
+                triggers.append(
+                    ReviewTriggerReason(
+                        trigger_type=ReviewTriggerType.INSUFFICIENT_CONFIDENCE,
+                        summary=f"Low AI extraction confidence on '{req.title}'",
+                        details=f"Confidence score {req.provenance.confidence_score:.2f} is below 0.75 threshold.",
+                        clause_reference=req.provenance.clause_reference,
+                        document_id=req.provenance.source_document_id,
+                        confidence_score=req.provenance.confidence_score,
+                    )
+                )
+
+        # 3. Conflicting evidence (e.g. multiple turnover records for same financial year)
+        years = [rec.financial_year for rec in request.company_profile.turnover_records]
+        if len(years) != len(set(years)):
+            triggers.append(
+                ReviewTriggerReason(
+                    trigger_type=ReviewTriggerType.CONFLICTING_EVIDENCE,
+                    summary="Conflicting financial turnover records detected",
+                    details="Duplicate financial years detected in company turnover records with divergent figures.",
+                )
+            )
+
+        # 4. Unclear eligibility (borderline readiness score without hard disqualifiers)
+        if not outcome.hard_disqualifiers and 0.50 <= outcome.readiness_score <= 0.70:
+            triggers.append(
+                ReviewTriggerReason(
+                    trigger_type=ReviewTriggerType.UNCLEAR_ELIGIBILITY,
+                    summary="Borderline eligibility readiness score",
+                    details=f"Readiness score {outcome.readiness_score:.2f} is borderline (between 0.50 and 0.70).",
+                )
+            )
+
+        # 5. Possible disqualification (critical commercial risk or uncertain areas)
+        critical_risks = [r for r in commercial_risks if r.severity == "CRITICAL"]
+        if critical_risks:
+            triggers.append(
+                ReviewTriggerReason(
+                    trigger_type=ReviewTriggerType.POSSIBLE_DISQUALIFICATION,
+                    summary="Critical commercial risk posing potential disqualification",
+                    details=f"{len(critical_risks)} critical risks identified (e.g. {critical_risks[0].title}).",
+                )
+            )
+
+        # 6. Contradictory documents (e.g. submission deadline in the past)
+        if request.submission_deadline < datetime.datetime.now(datetime.UTC).date():
+            triggers.append(
+                ReviewTriggerReason(
+                    trigger_type=ReviewTriggerType.CONTRADICTORY_DOCUMENTS,
+                    summary="Tender submission deadline is in the past",
+                    details=f"Submission deadline {request.submission_deadline.isoformat()} has already passed.",
+                )
+            )
+
+        return triggers
+

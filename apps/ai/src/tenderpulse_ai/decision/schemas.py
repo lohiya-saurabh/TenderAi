@@ -16,6 +16,25 @@ class BidDecisionVerdict(str, Enum):
     GO = "GO"
     CONDITIONAL_GO = "CONDITIONAL_GO"
     NO_GO = "NO_GO"
+    REVIEW_REQUIRED = "REVIEW_REQUIRED"
+
+
+class ReviewTriggerType(str, Enum):
+    AMBIGUOUS_REQUIREMENT = "AMBIGUOUS_REQUIREMENT"
+    CONFLICTING_EVIDENCE = "CONFLICTING_EVIDENCE"
+    UNCLEAR_ELIGIBILITY = "UNCLEAR_ELIGIBILITY"
+    INSUFFICIENT_CONFIDENCE = "INSUFFICIENT_CONFIDENCE"
+    POSSIBLE_DISQUALIFICATION = "POSSIBLE_DISQUALIFICATION"
+    CONTRADICTORY_DOCUMENTS = "CONTRADICTORY_DOCUMENTS"
+
+
+class ReviewTriggerReason(BaseModel):
+    trigger_type: ReviewTriggerType
+    summary: str
+    details: str
+    clause_reference: str | None = None
+    document_id: str | None = None
+    confidence_score: float | None = None
 
 
 class DecisionState(str, Enum):
@@ -201,6 +220,7 @@ class BidDecisionRequest(BaseModel):
     project_location_state: str = Field(..., min_length=1)
     requirements: list[RequirementCandidate] = Field(default_factory=list)
     company_profile: CompanyProfileSnapshot
+    require_human_review: bool = False
 
 
 class BidDecisionResponse(BaseModel):
@@ -217,5 +237,6 @@ class BidDecisionResponse(BaseModel):
     uncertain_areas: list[UncertaintyItem] = Field(default_factory=list)
     commercial_risks: list[RiskItem] = Field(default_factory=list)
     evidence_citations: list[EvidenceCitation] = Field(default_factory=list)
+    review_triggers: list[ReviewTriggerReason] = Field(default_factory=list)
     audit_events: list[dict[str, Any]] = Field(default_factory=list)
     error: str | None = None
