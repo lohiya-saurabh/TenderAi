@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Bell,
@@ -17,18 +17,22 @@ import {
   triggerNotificationScan,
   type NotificationItem,
 } from '../../api/notifications.js';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+} from '../ui/dropdown-menu.js';
 import { Button } from '../ui/button.js';
 import { Badge } from '../ui/badge.js';
 import { Spinner } from '../common/Spinner.js';
 
 export const NotificationBell: React.FC = () => {
   const navigate = useNavigate();
-  const [isOpen, setIsOpen] = useState(false);
+  const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const [scanning, setScanning] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -44,32 +48,11 @@ export const NotificationBell: React.FC = () => {
 
   useEffect(() => {
     void fetchNotifications();
-    // Poll every 45s for fresh alerts
     const interval = setInterval(() => {
       void fetchNotifications();
     }, 45000);
     return () => clearInterval(interval);
   }, [fetchNotifications]);
-
-  // Handle outside click & Escape key
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsOpen(false);
-    };
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      document.addEventListener('keydown', handleKeyDown);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen]);
 
   const handleMarkAsRead = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -84,7 +67,8 @@ export const NotificationBell: React.FC = () => {
     }
   };
 
-  const handleMarkAllRead = async () => {
+  const handleMarkAllRead = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     try {
       setLoading(true);
       await markAllNotificationsAsRead();
@@ -97,7 +81,8 @@ export const NotificationBell: React.FC = () => {
     }
   };
 
-  const handleTriggerScan = async () => {
+  const handleTriggerScan = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     try {
       setScanning(true);
       await triggerNotificationScan();
@@ -107,7 +92,7 @@ export const NotificationBell: React.FC = () => {
     }
   };
 
-  const handleNotificationClick = async (notif: NotificationItem) => {
+  const handleNotificationClick = (notif: NotificationItem) => {
     if (!notif.isRead) {
       void markNotificationAsRead(notif.id);
       setNotifications((prev) =>
@@ -115,7 +100,7 @@ export const NotificationBell: React.FC = () => {
       );
       setUnreadCount((prev) => Math.max(0, prev - 1));
     }
-    setIsOpen(false);
+    setOpen(false);
 
     // Deep-link to relevant screen if metadata has bidId
     if (notif.metadata?.bidId && typeof notif.metadata.bidId === 'string') {
@@ -151,125 +136,122 @@ export const NotificationBell: React.FC = () => {
   };
 
   return (
-    <div className="relative" ref={menuRef}>
-      {/* Bell Trigger Button */}
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="relative h-9 w-9 text-muted-foreground hover:text-foreground"
-        onClick={() => {
-          setIsOpen(!isOpen);
-          if (!isOpen) void fetchNotifications();
-        }}
-        aria-label="View notifications"
-        aria-expanded={isOpen}
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="relative h-8 w-8 px-0 border-border/60 hover:bg-accent hover:text-accent-foreground transition-colors"
+          aria-label="View notifications"
+        >
+          <Bell className="h-4 w-4 text-muted-foreground" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground shadow-sm">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent
+        align="end"
+        sideOffset={8}
+        className="w-80 sm:w-96 p-0 border border-border bg-[#121215] shadow-2xl z-50 text-foreground overflow-hidden"
       >
-        <Bell className="h-4.5 w-4.5" />
-        {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
-            {unreadCount > 9 ? '9+' : unreadCount}
-          </span>
-        )}
-      </Button>
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-[#18181b]">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-sm text-foreground">Notifications</span>
+            {unreadCount > 0 && (
+              <Badge variant="secondary" className="text-xs px-1.5 py-0 h-5">
+                {unreadCount} new
+              </Badge>
+            )}
+          </div>
 
-      {/* Popover Dropdown Panel */}
-      {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 rounded-lg border border-border bg-popover shadow-xl z-50 text-popover-foreground animate-in fade-in-50 zoom-in-95 duration-100">
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-sm">Notifications</span>
-              {unreadCount > 0 && (
-                <Badge variant="secondary" className="text-xs px-1.5 py-0 h-5">
-                  {unreadCount} new
-                </Badge>
-              )}
-            </div>
+          <div className="flex items-center gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+              onClick={handleTriggerScan}
+              disabled={scanning}
+              title="Scan for imminent deadlines"
+            >
+              {scanning ? <Spinner size="sm" className="h-3 w-3" /> : <RefreshCw className="h-3 w-3" />}
+            </Button>
 
-            <div className="flex items-center gap-1">
+            {unreadCount > 0 && (
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
-                onClick={handleTriggerScan}
-                disabled={scanning}
-                title="Scan for imminent deadlines"
+                className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                onClick={handleMarkAllRead}
+                disabled={loading}
+                title="Mark all as read"
               >
-                {scanning ? <Spinner size="sm" className="h-3 w-3" /> : <RefreshCw className="h-3 w-3" />}
+                <CheckCheck className="h-3.5 w-3.5" />
+                <span>Mark all read</span>
               </Button>
-
-              {unreadCount > 0 && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-                  onClick={handleMarkAllRead}
-                  disabled={loading}
-                  title="Mark all as read"
-                >
-                  <CheckCheck className="h-3.5 w-3.5" />
-                  <span>Mark all read</span>
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {/* List Content */}
-          <div className="max-h-[380px] overflow-y-auto divide-y divide-border/60">
-            {notifications.length === 0 ? (
-              <div className="p-8 text-center text-xs text-muted-foreground">
-                <Bell className="mx-auto h-8 w-8 mb-2 opacity-40" />
-                <p className="font-medium text-foreground">No notifications yet</p>
-                <p className="mt-1">Deadline reminders and review alerts will appear here.</p>
-              </div>
-            ) : (
-              notifications.map((notif) => (
-                <div
-                  key={notif.id}
-                  onClick={() => void handleNotificationClick(notif)}
-                  className={`flex items-start gap-3 p-3.5 text-xs transition-colors cursor-pointer hover:bg-muted/50 ${
-                    !notif.isRead ? 'bg-muted/20' : 'opacity-80'
-                  }`}
-                >
-                  {renderCategoryIcon(notif.category)}
-
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <div className="flex items-center justify-between gap-1">
-                      <p className={`font-medium truncate ${!notif.isRead ? 'text-foreground font-semibold' : 'text-foreground'}`}>
-                        {notif.title}
-                      </p>
-                      <span className="text-[10px] text-muted-foreground shrink-0">
-                        {formatTimeAgo(notif.createdAt)}
-                      </span>
-                    </div>
-
-                    <p className="text-muted-foreground line-clamp-2 leading-relaxed">
-                      {notif.message}
-                    </p>
-                  </div>
-
-                  {!notif.isRead && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 text-muted-foreground hover:text-foreground shrink-0"
-                      onClick={(e) => void handleMarkAsRead(notif.id, e)}
-                      title="Mark as read"
-                      aria-label="Mark notification as read"
-                    >
-                      <Check className="h-3 w-3" />
-                    </Button>
-                  )}
-                </div>
-              ))
             )}
           </div>
         </div>
-      )}
-    </div>
+
+        {/* List Content */}
+        <div className="max-h-[380px] overflow-y-auto divide-y divide-border/60 bg-[#121215]">
+          {notifications.length === 0 ? (
+            <div className="p-8 text-center text-xs text-muted-foreground">
+              <Bell className="mx-auto h-8 w-8 mb-2 opacity-40 text-muted-foreground" />
+              <p className="font-medium text-foreground">No notifications yet</p>
+              <p className="mt-1">Deadline reminders and review alerts will appear here.</p>
+            </div>
+          ) : (
+            notifications.map((notif) => (
+              <div
+                key={notif.id}
+                onClick={() => handleNotificationClick(notif)}
+                className={`flex items-start gap-3 p-3.5 text-xs transition-colors cursor-pointer hover:bg-[#1a1a1f] ${
+                  !notif.isRead ? 'bg-[#18181f]/80' : 'opacity-75'
+                }`}
+              >
+                {renderCategoryIcon(notif.category)}
+
+                <div className="flex-1 min-w-0 space-y-1">
+                  <div className="flex items-center justify-between gap-1">
+                    <p className={`truncate ${!notif.isRead ? 'text-foreground font-semibold' : 'text-zinc-300 font-medium'}`}>
+                      {notif.title}
+                    </p>
+                    <span className="text-[10px] text-muted-foreground shrink-0">
+                      {formatTimeAgo(notif.createdAt)}
+                    </span>
+                  </div>
+
+                  <p className="text-muted-foreground line-clamp-2 leading-relaxed">
+                    {notif.message}
+                  </p>
+                </div>
+
+                {!notif.isRead && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-muted-foreground hover:text-foreground shrink-0"
+                    onClick={(e) => void handleMarkAsRead(notif.id, e)}
+                    title="Mark as read"
+                    aria-label="Mark notification as read"
+                  >
+                    <Check className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };
