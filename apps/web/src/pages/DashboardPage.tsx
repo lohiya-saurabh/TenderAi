@@ -5,11 +5,10 @@ import { useApi } from '../hooks/useApi.js';
 import { useBidComplianceItems } from '../hooks/useBidComplianceItems.js';
 import { useAuth } from '../auth/useAuth.js';
 import { PERMISSIONS } from '../utils/permissions.js';
-import { Button } from '../components/common/Button.js';
+import { Button } from '../components/ui/button.js';
+import { Skeleton } from '../components/ui/skeleton.js';
 import { ErrorBanner, ErrorState } from '../components/common/ErrorBanner.js';
-import { LoadingSkeleton } from '../components/common/LoadingSkeleton.js';
-import { PageHeader } from '../components/common/PageLayout.js';
-import { PlusCircleIcon } from '../components/common/Icons.js';
+import { Plus } from 'lucide-react';
 import { DashboardKpiStrip } from '../components/dashboard/DashboardKpiStrip.js';
 import { ActionRequiredCard } from '../components/dashboard/ActionRequiredCard.js';
 import { CompanyReadinessCard } from '../components/dashboard/CompanyReadinessCard.js';
@@ -23,14 +22,10 @@ export const DashboardPage: React.FC = () => {
   const { data: bids, isLoading, error, refetch } = useApi<BidSummary[]>(listBids);
   const { hasPermission } = useAuth();
 
-  // Clause-level compliance items for every active bid (parallel, existing API)
   const { itemsByBid, isLoading: complianceLoading } = useBidComplianceItems(bids);
-
-  // Workflow status filter shared between the Bid Pipeline card and the Tender List
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
 
   const canCreateBid = hasPermission(PERMISSIONS.BIDS_CREATE);
-
   const allBids = bids || [];
 
   const stages = useMemo(() => computePipelineStages(allBids), [allBids]);
@@ -39,7 +34,6 @@ export const DashboardPage: React.FC = () => {
     [allBids],
   );
 
-  // Selecting a pipeline stage filters the Tender List and scrolls to it
   const handleSelectStage = (status: string) => {
     setSelectedStatus(status);
     document
@@ -48,24 +42,28 @@ export const DashboardPage: React.FC = () => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+    <div className="flex flex-col gap-6">
       {/* 1. Page Header */}
-      <PageHeader
-        title="Bid Dashboard"
-        subtitle="What is happening with my bids — blockers, pipeline stage, deadlines, and tender readiness at a glance"
-        actions={
-          canCreateBid ? (
-            <Link to="/bids/new" style={{ textDecoration: 'none' }}>
-              <Button variant="primary" startIcon={<PlusCircleIcon size={16} />}>
-                New Bid Project
-              </Button>
-            </Link>
-          ) : undefined
-        }
-      />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            Bid Dashboard
+          </h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+            What is happening with my bids — blockers, pipeline stage, deadlines, and tender readiness at a glance
+          </p>
+        </div>
 
-      {/* Error state: surface the failure honestly — never render the
-          "no tenders" empty state when the API actually failed */}
+        {canCreateBid && (
+          <Link to="/bids/new" className="no-underline shrink-0">
+            <Button variant="default" size="sm" className="gap-1.5 shadow-sm">
+              <Plus className="h-4 w-4" />
+              New Bid Project
+            </Button>
+          </Link>
+        )}
+      </div>
+
       {error && <ErrorBanner message={error.message} onRetry={refetch} />}
 
       {error ? (
@@ -78,17 +76,11 @@ export const DashboardPage: React.FC = () => {
         <>
           {/* 2. Executive KPI Strip */}
           {isLoading ? (
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                gap: 'var(--space-4)',
-              }}
-            >
-              <LoadingSkeleton height="95px" borderRadius="var(--radius-lg)" />
-              <LoadingSkeleton height="95px" borderRadius="var(--radius-lg)" />
-              <LoadingSkeleton height="95px" borderRadius="var(--radius-lg)" />
-              <LoadingSkeleton height="95px" borderRadius="var(--radius-lg)" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <Skeleton className="h-24 rounded-lg" />
+              <Skeleton className="h-24 rounded-lg" />
+              <Skeleton className="h-24 rounded-lg" />
+              <Skeleton className="h-24 rounded-lg" />
             </div>
           ) : (
             <DashboardKpiStrip bids={allBids} />
@@ -96,24 +88,12 @@ export const DashboardPage: React.FC = () => {
 
           {/* 3. Attention row: Action Required + Upcoming Deadlines */}
           {isLoading ? (
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
-                gap: 'var(--space-4)',
-              }}
-            >
-              <LoadingSkeleton height="300px" borderRadius="var(--radius-lg)" />
-              <LoadingSkeleton height="300px" borderRadius="var(--radius-lg)" />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <Skeleton className="h-72 rounded-lg" />
+              <Skeleton className="h-72 rounded-lg" />
             </div>
           ) : allBids.length > 0 ? (
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
-                gap: 'var(--space-4)',
-              }}
-            >
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               <ActionRequiredCard
                 bids={allBids}
                 complianceByBid={itemsByBid}
@@ -125,7 +105,7 @@ export const DashboardPage: React.FC = () => {
 
           {/* 4. Bid Pipeline */}
           {isLoading ? (
-            <LoadingSkeleton height="180px" borderRadius="var(--radius-lg)" />
+            <Skeleton className="h-44 rounded-lg" />
           ) : allBids.length > 0 ? (
             <BidPipelineCard
               stages={stages}
@@ -135,7 +115,7 @@ export const DashboardPage: React.FC = () => {
             />
           ) : null}
 
-          {/* 5. Tender List — the core list workflow */}
+          {/* 5. Tender List */}
           <TenderListSection
             bids={allBids}
             isLoading={isLoading}
@@ -145,7 +125,7 @@ export const DashboardPage: React.FC = () => {
             canCreateBid={canCreateBid}
           />
 
-          {/* 6. Company Readiness (honest missing-API state) */}
+          {/* 6. Company Readiness */}
           {!isLoading && <CompanyReadinessCard />}
 
           {/* 7. Documented Missing APIs Disclosure */}

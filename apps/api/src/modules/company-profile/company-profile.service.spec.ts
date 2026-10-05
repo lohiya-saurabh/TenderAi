@@ -54,7 +54,7 @@ describe('CompanyProfileService — versioned capability profile', () => {
 
   beforeEach(async () => {
     db = new PGlite();
-    await initDatabase(db);
+    await initDatabase(db, { seedFullProfile: false });
     drizzleDb = createDrizzle(db);
     service = new CompanyProfileService(drizzleDb);
   });

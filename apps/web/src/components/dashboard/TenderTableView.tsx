@@ -3,20 +3,27 @@ import { Link } from 'react-router-dom';
 import type { BidSummary } from '../../api/bids.js';
 import { deleteBid } from '../../api/bids.js';
 import {
-  TableContainer,
   Table,
   TableHead,
   TableBody,
   TableRow,
   TableHeader,
   TableCell,
-} from '../common/Table.js';
+} from '../ui/table.js';
+import { Button } from '../ui/button.js';
+import { Progress } from '../ui/progress.js';
+import { Skeleton } from '../ui/skeleton.js';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '../ui/dialog.js';
 import { StatusBadge } from '../common/StatusBadge.js';
 import { RiskBadge } from '../common/RiskBadge.js';
-import { Button } from '../common/Button.js';
-import { Modal } from '../common/Modal.js';
 import { Tooltip } from '../common/Tooltip.js';
-import { LoadingSkeleton } from '../common/LoadingSkeleton.js';
 import {
   ChevronRightIcon,
   ChevronLeftIcon,
@@ -44,23 +51,20 @@ import {
   type SortKey,
   SORTABLE_COLUMNS,
 } from './tenderListData.js';
+import { cn } from '../../lib/utils.js';
 
 export interface TenderTableViewProps {
-  /** Filtered + sorted full list (the table slices pages internally) */
   bids: BidSummary[];
-  /** Total bid count before filtering, for the pagination summary */
   totalCount: number;
   sortKey: SortKey;
   sortDirection: SortDirection;
   onSortChange: (key: SortKey) => void;
-  /** Invoked after a successful delete so the parent refetches the list */
   onDeleted?: () => void;
   canDelete: boolean;
 }
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50] as const;
 
-/** Column widths that sum to 100% for consistent layout. */
 const COLUMN_WIDTHS: Record<ColumnKey, string> = {
   tender: '20%',
   organization: '13%',
@@ -77,21 +81,10 @@ const COLUMN_WIDTHS: Record<ColumnKey, string> = {
 const NOT_EVALUATED_TOOLTIP =
   'No bid decision evaluated yet — run Bid/No-Bid from the tender detail page';
 
-/** "Not evaluated" placeholder for signals the backend does not expose. */
 function NotEvaluatedCell(): React.ReactElement {
   return (
     <Tooltip content={NOT_EVALUATED_TOOLTIP} position="top">
-      <span
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '0.3rem',
-          color: 'var(--color-surface-subtle)',
-          fontSize: 'var(--text-2xs)',
-          whiteSpace: 'nowrap',
-          cursor: 'help',
-        }}
-      >
+      <span className="inline-flex items-center gap-1 text-muted-foreground text-[11px] whitespace-nowrap cursor-help">
         <MissingIcon size={12} />
         Not evaluated
       </span>
@@ -99,38 +92,34 @@ function NotEvaluatedCell(): React.ReactElement {
   );
 }
 
-/**
- * Table-shaped skeleton that mirrors the column layout. Keeps the
- * visual structure during initial load and prevents layout shift.
- */
 export const TenderTableSkeleton: React.FC<{
   visibleColumns: ColumnKey[];
   rows?: number;
 }> = ({ visibleColumns, rows = 8 }) => (
-  <TableContainer bordered aria-busy="true" aria-label="Loading tenders">
-    <Table compact>
-      <TableHead>
+  <div className="rounded-lg border border-border bg-card overflow-hidden shadow-xs">
+    <Table>
+      <TableHeader>
         <TableRow>
           {visibleColumns.map((column) => (
-            <TableHeader key={column} width={COLUMN_WIDTHS[column]}>
-              <LoadingSkeleton height="12px" width="70%" borderRadius="var(--radius-sm)" />
-            </TableHeader>
+            <TableHead key={column} style={{ width: COLUMN_WIDTHS[column] }}>
+              <Skeleton className="h-3 w-16" />
+            </TableHead>
           ))}
         </TableRow>
-      </TableHead>
+      </TableHeader>
       <TableBody>
         {Array.from({ length: rows }).map((_, rowIndex) => (
           <TableRow key={rowIndex}>
             {visibleColumns.map((column) => (
-              <TableCell key={column} align={column === 'value' || column === 'actions' ? 'right' : 'left'}>
-                <LoadingSkeleton height="12px" width={column === 'actions' ? '40%' : '60%'} borderRadius="var(--radius-sm)" />
+              <TableCell key={column} className={column === 'value' || column === 'actions' ? 'text-right' : 'text-left'}>
+                <Skeleton className={cn('h-3.5', column === 'actions' ? 'w-12 ml-auto' : 'w-24')} />
               </TableCell>
             ))}
           </TableRow>
         ))}
       </TableBody>
     </Table>
-  </TableContainer>
+  </div>
 );
 
 interface SortableHeaderProps {
@@ -154,54 +143,44 @@ function SortableHeader({
 
   if (!columnSortKey) {
     return (
-      <TableHeader align={align} width={COLUMN_WIDTHS[columnKey]}>
+      <TableHead className={cn(align === 'right' && 'text-right', 'text-xs font-semibold uppercase tracking-wider')} style={{ width: COLUMN_WIDTHS[columnKey] }}>
         {label}
-      </TableHeader>
+      </TableHead>
     );
   }
 
   const isActive = sortKey === columnSortKey;
 
   return (
-    <TableHeader
-      align={align}
-      width={COLUMN_WIDTHS[columnKey]}
+    <TableHead
+      className={cn(align === 'right' && 'text-right', 'text-xs font-semibold uppercase tracking-wider')}
+      style={{ width: COLUMN_WIDTHS[columnKey] }}
       aria-sort={isActive ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
     >
       <button
         type="button"
         onClick={() => onSortChange(columnSortKey)}
         title={`Sort by ${label}`}
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '0.25rem',
-          background: 'none',
-          border: 'none',
-          padding: 0,
-          cursor: 'pointer',
-          font: 'inherit',
-          color: isActive ? 'var(--color-primary-400)' : 'inherit',
-          textTransform: 'inherit',
-          letterSpacing: 'inherit',
-        }}
+        className={cn(
+          'inline-flex items-center gap-1 bg-transparent border-0 p-0 font-inherit cursor-pointer transition-colors',
+          isActive ? 'text-primary font-bold' : 'text-muted-foreground hover:text-foreground'
+        )}
       >
         {label}
         {isActive &&
           (sortDirection === 'asc' ? (
-            <ChevronUpIcon size={12} color="var(--color-primary-400)" />
+            <ChevronUpIcon size={12} className="text-primary" />
           ) : (
-            <ChevronDownIcon size={12} color="var(--color-primary-400)" />
+            <ChevronDownIcon size={12} className="text-primary" />
           ))}
       </button>
-    </TableHeader>
+    </TableHead>
   );
 }
 
-/** Deadline cell with days-left urgency coloring. Invalid dates render "—". */
 function DeadlineCell({ bid, nowMs }: { bid: BidSummary; nowMs: number }) {
   if (!isValidDeadline(bid.submissionDeadline)) {
-    return <span style={{ color: 'var(--color-surface-subtle)' }}>—</span>;
+    return <span className="text-muted-foreground">—</span>;
   }
 
   const { daysLeft, urgency } = getDeadlineInfo(bid.submissionDeadline!, nowMs);
@@ -211,80 +190,56 @@ function DeadlineCell({ bid, nowMs }: { bid: BidSummary; nowMs: number }) {
       ? 'Window closed'
       : `${daysLeft} day${daysLeft === 1 ? '' : 's'} left`;
 
-  const color =
+  const colorClass =
     urgency === 'urgent'
-      ? 'var(--color-danger)'
+      ? 'text-destructive'
       : urgency === 'soon'
-        ? 'var(--color-warning)'
+        ? 'text-amber-400'
         : urgency === 'passed'
-          ? 'var(--color-surface-subtle)'
-          : 'var(--color-surface-muted)';
+          ? 'text-muted-foreground'
+          : 'text-muted-foreground';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-      <span style={{ fontSize: 'var(--text-xs)', fontWeight: 500, whiteSpace: 'nowrap' }}>
+    <div className="flex flex-col gap-0.5">
+      <span className="text-xs font-medium whitespace-nowrap text-foreground">
         {formatDate(bid.submissionDeadline!)}
       </span>
-      <span style={{ fontSize: 'var(--text-2xs)', fontWeight: 600, color, whiteSpace: 'nowrap' }}>
+      <span className={cn('text-[10px] font-bold uppercase tracking-wider whitespace-nowrap', colorClass)}>
         {label}
       </span>
     </div>
   );
 }
 
-/** Readiness cell: approved/total progress bar (null = pending intake). */
 function ReadinessCell({ bid }: { bid: BidSummary }) {
   const { total, approved, pct } = computeReadiness(bid);
 
   if (total === 0) {
     return (
-      <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-subtle)' }}>
+      <span className="text-[11px] text-muted-foreground">
         Pending intake
       </span>
     );
   }
 
-  const barColor =
+  const indicatorClass =
     pct !== null && pct >= 80
-      ? 'var(--color-success)'
+      ? 'bg-emerald-500'
       : pct !== null && pct >= 50
-        ? 'var(--color-warning)'
-        : 'var(--color-primary-500)';
+        ? 'bg-amber-500'
+        : 'bg-primary';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', width: '96px' }}>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          fontSize: 'var(--text-2xs)',
-          fontWeight: 600,
-        }}
-      >
-        <span style={{ color: pct !== null && pct >= 80 ? 'var(--color-success)' : 'var(--color-surface-text)' }}>
+    <div className="flex flex-col gap-1 w-24">
+      <div className="flex justify-between text-[10px] font-semibold">
+        <span className={pct !== null && pct >= 80 ? 'text-emerald-400' : 'text-foreground'}>
           {pct}%
         </span>
-        <span style={{ color: 'var(--color-surface-muted)' }}>
+        <span className="text-muted-foreground">
           {approved}/{total}
         </span>
       </div>
-      <div
-        style={{
-          height: '4px',
-          backgroundColor: 'var(--color-surface-border)',
-          borderRadius: 'var(--radius-full)',
-          overflow: 'hidden',
-        }}
-      >
-        <div
-          style={{
-            height: '100%',
-            width: `${pct ?? 0}%`,
-            backgroundColor: barColor,
-            borderRadius: 'var(--radius-full)',
-          }}
-        />
-      </div>
+      <Progress value={pct ?? 0} indicatorColor={indicatorClass} className="h-1.5 bg-muted" />
     </div>
   );
 }
@@ -304,12 +259,10 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(PAGE_SIZE_OPTIONS[0]);
 
-  // Delete flow state
   const [deleteTarget, setDeleteTarget] = useState<BidSummary | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  // Reset to the first page whenever the filtered/sorted list changes
   useEffect(() => {
     setPage(1);
   }, [bids]);
@@ -340,40 +293,25 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
         return (
           <Link
             to={`/bids/${bid.id}`}
-            style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', textDecoration: 'none' }}
+            className="flex flex-col gap-0.5 no-underline group"
           >
-            <span
-              style={{
-                fontSize: 'var(--text-sm)',
-                fontWeight: 600,
-                color: 'var(--color-surface-text)',
-                lineHeight: 1.3,
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-primary-400)')}
-              onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-surface-text)')}
-            >
+            <span className="text-xs font-semibold text-foreground leading-snug group-hover:text-primary transition-colors">
               {bid.title}
             </span>
-            <span
-              style={{
-                fontSize: 'var(--text-2xs)',
-                fontFamily: 'var(--font-mono)',
-                color: 'var(--color-surface-muted)',
-              }}
-            >
+            <span className="text-[10px] font-mono text-muted-foreground">
               № {bid.tenderNumber}
             </span>
           </Link>
         );
       case 'organization':
         return (
-          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-text)', fontWeight: 500 }}>
+          <span className="text-xs text-foreground font-medium truncate block">
             {bid.tenderingAuthority}
           </span>
         );
       case 'value':
         return (
-          <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-surface-text)', whiteSpace: 'nowrap' }}>
+          <span className="text-xs font-semibold text-foreground whitespace-nowrap tabular-nums">
             {bid.estimatedValueRupees ? formatCurrency(bid.estimatedValueRupees) : '—'}
           </span>
         );
@@ -398,15 +336,16 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
         return <ReadinessCell bid={bid} />;
       case 'actions':
         return (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.25rem' }}>
-            <Link to={`/bids/${bid.id}`}>
-              <Button variant="ghost" size="sm">
+          <div className="flex items-center justify-end gap-1">
+            <Link to={`/bids/${bid.id}`} className="no-underline">
+              <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
                 {getRowActionLabel(bid.status)}
               </Button>
             </Link>
             {canDelete && (
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => {
                   setDeleteError(null);
                   setDeleteTarget(bid);
@@ -414,31 +353,11 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
                 disabled={isDeleting}
                 aria-label={`Delete ${bid.title}`}
                 title="Delete tender project"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.25rem',
-                  background: 'transparent',
-                  border: '1px solid transparent',
-                  borderRadius: 'var(--radius-sm)',
-                  color: 'var(--color-surface-subtle)',
-                  cursor: isDeleting ? 'wait' : 'pointer',
-                  padding: '0.3rem 0.5rem',
-                  fontSize: 'var(--text-xs)',
-                  transition: 'all var(--transition-fast)',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = 'var(--color-danger)';
-                  e.currentTarget.style.backgroundColor = 'var(--color-danger-bg)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = 'var(--color-surface-subtle)';
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                }}
+                className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
               >
-                <TrashIcon size={12} />
+                <TrashIcon size={12} className="mr-1" />
                 Delete
-              </button>
+              </Button>
             )}
           </div>
         );
@@ -446,11 +365,11 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column' }}>
-      <TableContainer bordered>
-        <Table compact>
-          <TableHead>
-            <TableRow>
+    <div className="flex flex-col">
+      <div className="rounded-lg border border-border bg-card overflow-hidden shadow-xs">
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent border-b border-border bg-muted/40">
               <SortableHeader
                 label="Tender"
                 columnKey="tender"
@@ -492,12 +411,14 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
                 onSortChange={onSortChange}
               />
               {visibleColumns.includes('fit') && (
-                <TableHeader width={COLUMN_WIDTHS.fit}>Fit</TableHeader>
+                <TableHead style={{ width: COLUMN_WIDTHS.fit }} className="text-xs font-semibold uppercase tracking-wider">
+                  Fit
+                </TableHead>
               )}
               {visibleColumns.includes('recommendation') && (
-                <TableHeader width={COLUMN_WIDTHS.recommendation}>
+                <TableHead style={{ width: COLUMN_WIDTHS.recommendation }} className="text-xs font-semibold uppercase tracking-wider">
                   Recommendation
-                </TableHeader>
+                </TableHead>
               )}
               {visibleColumns.includes('risk') && (
                 <SortableHeader
@@ -515,17 +436,17 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
                 sortDirection={sortDirection}
                 onSortChange={onSortChange}
               />
-              <TableHeader width={COLUMN_WIDTHS.actions} align="right">
+              <TableHead style={{ width: COLUMN_WIDTHS.actions }} className="text-right text-xs font-semibold uppercase tracking-wider">
                 Actions
-              </TableHeader>
+              </TableHead>
             </TableRow>
-          </TableHead>
+          </TableHeader>
 
           <TableBody>
             {pageBids.map((bid) => (
-              <TableRow key={bid.id}>
+              <TableRow key={bid.id} className="border-b border-border/60 hover:bg-accent/40">
                 {visibleColumns.map((column) => (
-                  <TableCell key={column} align={column === 'value' || column === 'actions' ? 'right' : 'left'}>
+                  <TableCell key={column} className={cn(column === 'value' || column === 'actions' ? 'text-right' : 'text-left', 'py-3')}>
                     {renderCell(bid, column)}
                   </TableCell>
                 ))}
@@ -533,39 +454,18 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
             ))}
           </TableBody>
         </Table>
-      </TableContainer>
+      </div>
 
       {/* Pagination bar */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: 'var(--space-3)',
-          padding: '0.7rem 1rem',
-          backgroundColor: 'var(--color-surface-card)',
-          border: '1px solid var(--color-surface-border)',
-          borderTop: 'none',
-          borderRadius: '0 0 var(--radius-lg) var(--radius-lg)',
-        }}
-      >
-        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)' }}>
+      <div className="flex items-center justify-between flex-wrap gap-3 p-3 bg-card border border-border border-t-0 rounded-b-lg text-xs text-muted-foreground shadow-xs">
+        <span>
           Showing {range.start}–{range.end} of {bids.length}
           {bids.length !== totalCount ? ` (filtered from ${totalCount})` : ''}
         </span>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+        <div className="flex items-center gap-3 flex-wrap">
           {/* Page size */}
-          <label
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              fontSize: 'var(--text-xs)',
-              color: 'var(--color-surface-muted)',
-            }}
-          >
+          <label className="flex items-center gap-1.5">
             <span>Rows:</span>
             <select
               value={pageSize}
@@ -573,15 +473,7 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
                 setPageSize(Number(e.target.value));
                 setPage(1);
               }}
-              style={{
-                backgroundColor: 'var(--color-surface-input)',
-                color: 'var(--color-surface-text)',
-                border: '1px solid var(--color-surface-border)',
-                borderRadius: 'var(--radius-sm)',
-                padding: '0.25rem 0.5rem',
-                fontSize: 'var(--text-xs)',
-                cursor: 'pointer',
-              }}
+              className="h-7 rounded-md border border-input bg-background px-2 text-xs text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
               aria-label="Rows per page"
             >
               {PAGE_SIZE_OPTIONS.map((option) => (
@@ -593,106 +485,82 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
           </label>
 
           {/* Page numbers */}
-          <nav style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }} aria-label="Pagination">
-            <button
-              type="button"
+          <nav className="flex items-center gap-1" aria-label="Pagination">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-7 w-7"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={safePage <= 1}
               aria-label="Previous page"
-              style={{
-                background: 'transparent',
-                border: '1px solid var(--color-surface-border)',
-                borderRadius: 'var(--radius-sm)',
-                color: safePage <= 1 ? 'var(--color-surface-subtle)' : 'var(--color-surface-text)',
-                cursor: safePage <= 1 ? 'default' : 'pointer',
-                padding: '0.25rem 0.4rem',
-                display: 'inline-flex',
-              }}
             >
-              <ChevronLeftIcon size={14} />
-            </button>
+              <ChevronLeftIcon size={13} />
+            </Button>
 
             {getPageNumbers(safePage, totalPages).map((pageItem, index) =>
               pageItem === 'ellipsis' ? (
-                <span
-                  key={`ellipsis-${index}`}
-                  style={{ color: 'var(--color-surface-subtle)', padding: '0 0.15rem', fontSize: 'var(--text-xs)' }}
-                >
+                <span key={`ellipsis-${index}`} className="px-1 text-muted-foreground">
                   …
                 </span>
               ) : (
-                <button
+                <Button
                   key={pageItem}
-                  type="button"
+                  variant={pageItem === safePage ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-7 min-w-[28px] px-2 text-xs"
                   onClick={() => setPage(pageItem)}
                   aria-current={pageItem === safePage ? 'page' : undefined}
-                  style={{
-                    minWidth: '28px',
-                    background: pageItem === safePage ? 'var(--color-primary-600)' : 'transparent',
-                    border: '1px solid var(--color-surface-border)',
-                    borderRadius: 'var(--radius-sm)',
-                    color: pageItem === safePage ? '#ffffff' : 'var(--color-surface-text)',
-                    cursor: 'pointer',
-                    padding: '0.25rem 0.5rem',
-                    fontSize: 'var(--text-xs)',
-                    fontWeight: pageItem === safePage ? 600 : 400,
-                  }}
                 >
                   {pageItem}
-                </button>
+                </Button>
               ),
             )}
 
-            <button
-              type="button"
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-7 w-7"
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={safePage >= totalPages}
               aria-label="Next page"
-              style={{
-                background: 'transparent',
-                border: '1px solid var(--color-surface-border)',
-                borderRadius: 'var(--radius-sm)',
-                color: safePage >= totalPages ? 'var(--color-surface-subtle)' : 'var(--color-surface-text)',
-                cursor: safePage >= totalPages ? 'default' : 'pointer',
-                padding: '0.25rem 0.4rem',
-                display: 'inline-flex',
-              }}
             >
-              <ChevronRightIcon size={14} />
-            </button>
+              <ChevronRightIcon size={13} />
+            </Button>
           </nav>
         </div>
       </div>
 
-      {/* Delete confirmation modal */}
-      <Modal
-        isOpen={deleteTarget !== null}
-        onClose={() => !isDeleting && setDeleteTarget(null)}
-        title="Delete Tender Project"
-        description="This action is permanent and cannot be undone."
-        footer={
-          <>
+      {/* Delete confirmation dialog using shadcn Dialog */}
+      <Dialog open={deleteTarget !== null} onOpenChange={(open) => !open && !isDeleting && setDeleteTarget(null)}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Delete Tender Project</DialogTitle>
+            <DialogDescription>
+              This action is permanent and cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2 text-sm text-foreground">
+            <p>
+              Are you sure you want to delete <strong>{deleteTarget?.title}</strong>?
+            </p>
+            <p className="text-xs text-muted-foreground">
+              This permanently removes the tender project, all uploaded documents,
+              and the derived compliance matrix. Cloud storage objects are pruned.
+            </p>
+            {deleteError && <ErrorBanner message={deleteError} />}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="secondary" onClick={() => setDeleteTarget(null)} disabled={isDeleting}>
               Cancel
             </Button>
-            <Button variant="danger" onClick={confirmDelete} isLoading={isDeleting}>
-              Yes, Delete Permanently
+            <Button variant="destructive" onClick={confirmDelete} disabled={isDeleting}>
+              {isDeleting ? 'Deleting…' : 'Yes, Delete Permanently'}
             </Button>
-          </>
-        }
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-          <p style={{ margin: 0, lineHeight: 'var(--leading-normal)' }}>
-            Are you sure you want to delete{' '}
-            <strong>{deleteTarget?.title}</strong>?
-          </p>
-          <p style={{ margin: 0, fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)', lineHeight: 'var(--leading-normal)' }}>
-            This permanently removes the tender project, all uploaded documents,
-            and the derived compliance matrix. Cloud storage objects are pruned.
-          </p>
-          {deleteError && <ErrorBanner message={deleteError} />}
-        </div>
-      </Modal>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

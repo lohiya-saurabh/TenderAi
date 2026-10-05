@@ -8,16 +8,9 @@ export const AppShell: React.FC = () => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   return (
-    <div
-      className="app-shell-root"
-      style={{
-        display: 'flex',
-        minHeight: '100vh',
-        backgroundColor: 'var(--color-surface-bg)',
-      }}
-    >
+    <div className="flex min-h-screen bg-background text-foreground">
       {/* Desktop Sidebar */}
-      <div className="desktop-sidebar-container">
+      <div className="hidden md:flex flex-col shrink-0 sticky top-0 h-screen z-30">
         <Sidebar isCollapsed={isSidebarCollapsed} />
       </div>
 
@@ -30,33 +23,14 @@ export const AppShell: React.FC = () => {
       )}
 
       {/* Main App Workspace */}
-      <div
-        className="app-main-workspace"
-        style={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          minWidth: 0,
-          minHeight: '100vh',
-        }}
-      >
+      <div className="flex flex-1 flex-col min-w-0 min-h-screen">
         <Header
           onToggleMobileSidebar={() => setIsMobileSidebarOpen(true)}
           isSidebarCollapsed={isSidebarCollapsed}
           onToggleSidebarCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         />
 
-        <main
-          className="app-main-content"
-          style={{
-            flex: 1,
-            width: '100%',
-            maxWidth: 'var(--content-max-width)',
-            margin: '0 auto',
-            padding: '1.5rem 2rem',
-            boxSizing: 'border-box',
-          }}
-        >
+        <main className="flex-1 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
           <Outlet />
         </main>
       </div>

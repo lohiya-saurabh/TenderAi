@@ -34,6 +34,29 @@ export interface CompanyProfileView {
   versions: CompanyProfileVersionView[];
 }
 
+export interface ExpiringCertificateItem {
+  entryId: string;
+  type: 'CERTIFICATION' | 'OEM_AUTHORIZATION';
+  name: string;
+  issuingAuthority: string;
+  validFrom: string;
+  validTo: string | null;
+  daysRemaining: number | null;
+  isExpired: boolean;
+  isUrgent: boolean;
+  evidenceDocumentId: string;
+}
+
+export interface ExpiringCertificatesResult {
+  organizationId: string;
+  activeProfileVersionId: string | null;
+  evaluatedAt: string;
+  filterWithinDays: number;
+  totalExpiringCount: number;
+  totalExpiredCount: number;
+  certificates: ExpiringCertificateItem[];
+}
+
 @Injectable()
 export class CompanyProfileService {
   private readonly db: DrizzleDb;
@@ -64,6 +87,106 @@ export class CompanyProfileService {
       : null;
 
     return { active, versions: views };
+  }
+
+  /**
+   * Identifies certifications and OEM authorizations expiring within the specified window.
+   */
+  public async getExpiringCertificates(withinDays = 90): Promise<ExpiringCertificatesResult> {
+    const orgId = this.requireOrg();
+    const now = new Date();
+    const profile = await this.getProfile();
+
+    if (!profile.active || !profile.active.payload) {
+      return {
+        organizationId: orgId,
+        activeProfileVersionId: null,
+        evaluatedAt: now.toISOString(),
+        filterWithinDays: withinDays,
+        totalExpiringCount: 0,
+        totalExpiredCount: 0,
+        certificates: [],
+      };
+    }
+
+    const payload = profile.active.payload;
+    const certs: ExpiringCertificateItem[] = [];
+
+    if (Array.isArray(payload.certifications)) {
+      for (const c of payload.certifications) {
+        let daysRemaining: number | null = null;
+        let isExpired = false;
+        let isUrgent = false;
+
+        if (c.valid_to) {
+          const target = new Date(c.valid_to);
+          if (!Number.isNaN(target.getTime())) {
+            daysRemaining = Math.ceil((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            isExpired = daysRemaining < 0;
+            isUrgent = daysRemaining >= 0 && daysRemaining <= 30;
+          }
+        }
+
+        if (daysRemaining !== null && daysRemaining <= withinDays) {
+          certs.push({
+            entryId: c.entry_id,
+            type: 'CERTIFICATION',
+            name: c.standard_name,
+            issuingAuthority: c.issuing_body,
+            validFrom: c.valid_from,
+            validTo: c.valid_to ?? null,
+            daysRemaining,
+            isExpired,
+            isUrgent,
+            evidenceDocumentId: c.evidence_document_id,
+          });
+        }
+      }
+    }
+
+    if (Array.isArray(payload.oem_authorizations)) {
+      for (const oem of payload.oem_authorizations) {
+        let daysRemaining: number | null = null;
+        let isExpired = false;
+        let isUrgent = false;
+
+        if (oem.valid_to) {
+          const target = new Date(oem.valid_to);
+          if (!Number.isNaN(target.getTime())) {
+            daysRemaining = Math.ceil((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            isExpired = daysRemaining < 0;
+            isUrgent = daysRemaining >= 0 && daysRemaining <= 30;
+          }
+        }
+
+        if (daysRemaining !== null && daysRemaining <= withinDays) {
+          certs.push({
+            entryId: oem.entry_id,
+            type: 'OEM_AUTHORIZATION',
+            name: `${oem.oem_name} Authorization`,
+            issuingAuthority: oem.oem_name,
+            validFrom: oem.valid_from,
+            validTo: oem.valid_to,
+            daysRemaining,
+            isExpired,
+            isUrgent,
+            evidenceDocumentId: oem.evidence_document_id,
+          });
+        }
+      }
+    }
+
+    certs.sort((a, b) => (a.daysRemaining ?? 999999) - (b.daysRemaining ?? 999999));
+
+    return {
+      organizationId: orgId,
+      activeProfileVersionId: profile.active.id,
+      evaluatedAt: now.toISOString(),
+      filterWithinDays: withinDays,
+      totalExpiringCount: certs.filter((c) => !c.isExpired).length,
+      totalExpiredCount: certs.filter((c) => c.isExpired).length,
+      certificates: certs,
+    };
   }
 
   /** Fetch a specific immutable version by id (tenant-scoped). */

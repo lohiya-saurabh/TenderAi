@@ -2,6 +2,7 @@ import React from 'react';
 import type { AuditEvent } from '../../api/audit.js';
 import { formatDateTime } from '../../utils/formatDate.js';
 import { EmptyState } from '../common/EmptyState.js';
+import { History } from 'lucide-react';
 
 export interface AuditTimelineProps {
   events: AuditEvent[];
@@ -11,7 +12,7 @@ export const AuditTimeline: React.FC<AuditTimelineProps> = ({ events }) => {
   if (events.length === 0) {
     return (
       <EmptyState
-        icon="📜"
+        icon={<History size={32} className="text-muted-foreground" />}
         title="No audit events recorded"
         description="Every lifecycle transition and human review action on this bid will appear here in chronological order."
       />

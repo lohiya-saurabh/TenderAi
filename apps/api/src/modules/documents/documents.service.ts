@@ -98,15 +98,22 @@ export class DocumentsService {
       documentType,
     });
 
+    const protocol = hostHeader && !hostHeader.includes('localhost') && !hostHeader.includes('127.0.0.1') ? 'https' : 'http';
+    const fallbackLocalUploadUrl = `${protocol}://${hostHeader || 'localhost:3000'}/api/v1/mock-upload/${bidId}/${docId}/${encodeURIComponent(fileName)}`;
+
     let uploadUrl: string;
     if (this.storageService) {
       try {
         uploadUrl = await this.storageService.generatePresignedUploadUrl(storagePath, contentType, 900);
+        // If mock storage returned a mock domain that cannot resolve via public DNS, route to local mock upload endpoint
+        if (uploadUrl.includes('mock-s3.tenderpulse.local') || uploadUrl.includes('.local/')) {
+          uploadUrl = fallbackLocalUploadUrl;
+        }
       } catch {
-        uploadUrl = `http://${hostHeader || 'localhost:3000'}/api/v1/mock-upload/${bidId}/${docId}/${encodeURIComponent(fileName)}`;
+        uploadUrl = fallbackLocalUploadUrl;
       }
     } else {
-      uploadUrl = `http://${hostHeader || 'localhost:3000'}/api/v1/mock-upload/${bidId}/${docId}/${encodeURIComponent(fileName)}`;
+      uploadUrl = fallbackLocalUploadUrl;
     }
 
     return {
@@ -307,7 +314,8 @@ export class DocumentsService {
       }
     }
 
-    const downloadUrl = `http://${hostHeader || 'localhost:3000'}/api/v1/mock-download/${bidId}/${docId}/${encodeURIComponent(fileName)}`;
+    const protocol = hostHeader && !hostHeader.includes('localhost') && !hostHeader.includes('127.0.0.1') ? 'https' : 'http';
+    const downloadUrl = `${protocol}://${hostHeader || 'localhost:3000'}/api/v1/mock-download/${bidId}/${docId}/${encodeURIComponent(fileName)}`;
     return {
       downloadUrl,
       expiresInSeconds: 3600,

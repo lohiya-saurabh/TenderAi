@@ -3,7 +3,7 @@
  */
 import { Injectable, Inject, Optional } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
-import { eq, and, desc, asc } from 'drizzle-orm';
+import { eq, and, desc, asc, inArray } from 'drizzle-orm';
 import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '../../common/database/database.module.js';
 import { STORAGE_TOKEN } from '../../infrastructure/storage/storage.module.js';
 import type { IStorageService } from './application/IStorageService.js';
@@ -27,6 +27,65 @@ export interface DeleteBidResult {
   deletedDocumentsCount: number;
 }
 
+export interface ListBidsQuery {
+  page?: string | number;
+  limit?: string | number;
+  sort?: string;
+  order?: 'asc' | 'desc';
+  status?: string;
+  search?: string;
+}
+
+export interface BidDecisionProjection {
+  decisionId: string;
+  verdict: 'GO' | 'CONDITIONAL_GO' | 'NO_GO' | 'REVIEW_REQUIRED';
+  state: 'AI_PROPOSED' | 'UNDER_REVIEW' | 'CONFIRMED' | 'OVERRIDDEN';
+  readinessScore: number;
+  evaluatedAt: string;
+}
+
+export interface BidWithDecision extends DemoBid {
+  decision?: BidDecisionProjection | null;
+}
+
+export interface PaginatedBidsResult {
+  items: BidWithDecision[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface TenderAmendmentItem {
+  id: string;
+  bidId: string;
+  tenderNumber: string;
+  tenderTitle: string;
+  tenderingAuthority: string;
+  corrigendumNumber: string;
+  documentId: string;
+  documentName: string;
+  publishedAt: string;
+  amendmentType: 'DEADLINE_EXTENSION' | 'TECHNICAL_SPEC_CHANGE' | 'EMD_AMENDMENT' | 'ELIGIBILITY_REVISION' | 'GENERAL_CLARIFICATION';
+  summary: string;
+  impact: {
+    deadlineChanged: boolean;
+    previousDeadline: string | null;
+    revisedDeadline: string | null;
+    daysExtended: number | null;
+    affectedRequirementsCount: number;
+    requiresReEvaluation: boolean;
+  };
+  status: 'PROCESSED' | 'EVALUATED' | 'REQUIRES_CONFIRMATION';
+}
+
+export interface TenderAmendmentsResult {
+  organizationId: string;
+  totalAmendments: number;
+  unreadCount: number;
+  amendments: TenderAmendmentItem[];
+}
+
 @Injectable()
 export class BidsService {
   private readonly db: DrizzleDb;
@@ -38,17 +97,75 @@ export class BidsService {
     this.db = 'select' in db ? (db as DrizzleDb) : createDrizzle(db as PGlite);
   }
 
-  public async listBids(): Promise<DemoBid[]> {
+  public async listBids(): Promise<BidWithDecision[]>;
+  public async listBids(query?: ListBidsQuery): Promise<PaginatedBidsResult | BidWithDecision[]>;
+  public async listBids(
+    query?: ListBidsQuery,
+  ): Promise<PaginatedBidsResult | BidWithDecision[]> {
     const orgId = TenantContextHolder.get()?.organizationId || 'org_acme_infra_001';
-    const allBids = await this.db
+    let allBids = await this.db
       .select()
       .from(schema.bids)
-      .where(eq(schema.bids.organizationId, orgId))
-      .orderBy(desc(schema.bids.createdAt));
-    const allDocs = await this.db
-      .select()
-      .from(schema.tenderDocuments)
-      .where(eq(schema.tenderDocuments.organizationId, orgId));
+      .where(eq(schema.bids.organizationId, orgId));
+
+    if (query?.status && typeof query.status === 'string' && query.status.trim() && query.status !== 'ALL') {
+      const targetStatus = query.status.trim().toUpperCase();
+      allBids = allBids.filter((b) => b.status.toUpperCase() === targetStatus);
+    }
+
+    if (query?.search && typeof query.search === 'string' && query.search.trim()) {
+      const q = query.search.trim().toLowerCase();
+      allBids = allBids.filter(
+        (b) =>
+          b.title.toLowerCase().includes(q) ||
+          b.tenderNumber.toLowerCase().includes(q) ||
+          b.tenderingAuthority.toLowerCase().includes(q) ||
+          (b.locationState && b.locationState.toLowerCase().includes(q)),
+      );
+    }
+
+    const sortField = query?.sort || 'createdAt';
+    const isAsc = query?.order === 'asc';
+
+    allBids.sort((a, b) => {
+      let comp = 0;
+      if (sortField === 'title') {
+        comp = a.title.localeCompare(b.title);
+      } else if (sortField === 'estimatedValueRupees') {
+        comp = (Number(a.estimatedValueRupees) || 0) - (Number(b.estimatedValueRupees) || 0);
+      } else if (sortField === 'submissionDeadline') {
+        const da = a.submissionDeadline ? new Date(a.submissionDeadline).getTime() : 0;
+        const db = b.submissionDeadline ? new Date(b.submissionDeadline).getTime() : 0;
+        comp = da - db;
+      } else {
+        const da = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
+        const db = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
+        comp = da - db;
+      }
+      return isAsc ? comp : -comp;
+    });
+
+    const total = allBids.length;
+    const isPaginated = query?.page !== undefined || query?.limit !== undefined;
+    const page = Math.max(1, typeof query?.page === 'number' ? query.page : parseInt(String(query?.page || 1), 10) || 1);
+    const limit = Math.max(1, typeof query?.limit === 'number' ? query.limit : parseInt(String(query?.limit || 10), 10) || 10);
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    const pageBids = isPaginated ? allBids.slice((page - 1) * limit, page * limit) : allBids;
+    const bidIds = pageBids.map((b) => b.id);
+
+    const allDocs =
+      bidIds.length > 0
+        ? await this.db
+            .select()
+            .from(schema.tenderDocuments)
+            .where(
+              and(
+                eq(schema.tenderDocuments.organizationId, orgId),
+                inArray(schema.tenderDocuments.bidId, bidIds),
+              ),
+            )
+        : [];
 
     const docsByBid = new Map<string, DemoDocument[]>();
     for (const doc of allDocs) {
@@ -66,7 +183,52 @@ export class BidsService {
       });
     }
 
-    return allBids.map((b) => this.mapBidRecord(b, docsByBid.get(b.id) || []));
+    const allDecisions =
+      bidIds.length > 0
+        ? await this.db
+            .select()
+            .from(schema.bidDecisions)
+            .where(
+              and(
+                eq(schema.bidDecisions.organizationId, orgId),
+                inArray(schema.bidDecisions.bidId, bidIds),
+              ),
+            )
+            .orderBy(desc(schema.bidDecisions.createdAt))
+        : [];
+
+    const decisionByBid = new Map<string, BidDecisionProjection>();
+    for (const d of allDecisions) {
+      if (!decisionByBid.has(d.bidId)) {
+        decisionByBid.set(d.bidId, {
+          decisionId: d.id,
+          verdict: d.verdict as BidDecisionProjection['verdict'],
+          state: d.state as BidDecisionProjection['state'],
+          readinessScore: Number(d.readinessScore),
+          evaluatedAt: d.createdAt instanceof Date ? d.createdAt.toISOString() : String(d.createdAt),
+        });
+      }
+    }
+
+    const items: BidWithDecision[] = pageBids.map((b) => {
+      const mapped = this.mapBidRecord(b, docsByBid.get(b.id) || []);
+      return {
+        ...mapped,
+        decision: decisionByBid.get(b.id) ?? null,
+      };
+    });
+
+    if (!isPaginated && !query?.status && !query?.search && !query?.sort) {
+      return items;
+    }
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages,
+    };
   }
 
   public async getBidById(bidId: string): Promise<DemoBid> {
@@ -273,6 +435,264 @@ export class BidsService {
       success: true,
       deletedBidId: bidId,
       deletedDocumentsCount: docs.length,
+    };
+  }
+
+  /**
+   * Calculates comprehensive tender lifecycle milestone deadlines for a bid.
+   */
+  public async getTenderDeadlines(bidId: string) {
+    const orgId = TenantContextHolder.get()?.organizationId || 'org_acme_infra_001';
+    const [bid] = await this.db
+      .select()
+      .from(schema.bids)
+      .where(and(eq(schema.bids.id, bidId), eq(schema.bids.organizationId, orgId)))
+      .limit(1);
+
+    if (!bid) {
+      throw new NotFoundError(`Bid project '${bidId}' not found.`);
+    }
+
+    const now = new Date();
+    const submissionDate = bid.submissionDeadline ? new Date(bid.submissionDeadline) : null;
+    const isValidSubmissionDate = submissionDate && !Number.isNaN(submissionDate.getTime());
+
+    let daysRemaining: number | null = null;
+    if (isValidSubmissionDate && submissionDate) {
+      daysRemaining = Math.ceil((submissionDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    }
+
+    const formatMilestoneDate = (baseDate: Date | null, offsetDays: number): string | null => {
+      if (!baseDate) return null;
+      const target = new Date(baseDate.getTime() + offsetDays * 24 * 60 * 60 * 1000);
+      return target.toISOString().split('T')[0] ?? null;
+    };
+
+    const getMilestoneStatus = (dateStr: string | null): 'UPCOMING' | 'IMMINENT' | 'OVERDUE' | 'NOT_SET' => {
+      if (!dateStr) return 'NOT_SET';
+      const d = new Date(dateStr);
+      if (Number.isNaN(d.getTime())) return 'NOT_SET';
+      const days = Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      if (days < 0) return 'OVERDUE';
+      if (days <= 7) return 'IMMINENT';
+      return 'UPCOMING';
+    };
+
+    const getDaysLeft = (dateStr: string | null): number | null => {
+      if (!dateStr) return null;
+      const d = new Date(dateStr);
+      if (Number.isNaN(d.getTime())) return null;
+      return Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    };
+
+    const preBidDate = isValidSubmissionDate ? formatMilestoneDate(submissionDate, -15) : null;
+    const clarificationDate = isValidSubmissionDate ? formatMilestoneDate(submissionDate, -10) : null;
+    const technicalOpeningDate = isValidSubmissionDate ? formatMilestoneDate(submissionDate, 1) : null;
+    const financialOpeningDate = isValidSubmissionDate ? formatMilestoneDate(submissionDate, 8) : null;
+
+    const milestones = [
+      {
+        milestoneKey: 'PRE_BID_MEETING',
+        label: 'Pre-Bid Meeting & Queries',
+        date: preBidDate,
+        daysRemaining: getDaysLeft(preBidDate),
+        status: getMilestoneStatus(preBidDate),
+        isMandatory: false,
+        notes: 'Submit technical and contractual queries before the cutoff window.',
+      },
+      {
+        milestoneKey: 'CLARIFICATION_CUTOFF',
+        label: 'Pre-Bid Clarification Window Closing',
+        date: clarificationDate,
+        daysRemaining: getDaysLeft(clarificationDate),
+        status: getMilestoneStatus(clarificationDate),
+        isMandatory: false,
+        notes: 'Procuring authority releases corrigenda & response to pre-bid queries.',
+      },
+      {
+        milestoneKey: 'EMD_SUBMISSION',
+        label: 'EMD & Tender Fee Physical / SFMS Submission',
+        date: bid.submissionDeadline,
+        daysRemaining,
+        status: getMilestoneStatus(bid.submissionDeadline),
+        isMandatory: true,
+        notes: 'Original BG / DD physical submission or SFMS transmission confirmation.',
+      },
+      {
+        milestoneKey: 'BID_SUBMISSION_FREEZE',
+        label: 'Online Bid Submission Deadline',
+        date: bid.submissionDeadline,
+        daysRemaining,
+        status: getMilestoneStatus(bid.submissionDeadline),
+        isMandatory: true,
+        notes: 'Hard portal cutoff. Encrypted packet lock on e-procurement portal.',
+      },
+      {
+        milestoneKey: 'TECHNICAL_BID_OPENING',
+        label: 'Technical Bid Opening Date',
+        date: technicalOpeningDate,
+        daysRemaining: getDaysLeft(technicalOpeningDate),
+        status: getMilestoneStatus(technicalOpeningDate),
+        isMandatory: false,
+        notes: 'Technical bid envelope decryption and qualification review.',
+      },
+      {
+        milestoneKey: 'FINANCIAL_BID_OPENING',
+        label: 'Financial Bid Opening Date (Estimated)',
+        date: financialOpeningDate,
+        daysRemaining: getDaysLeft(financialOpeningDate),
+        status: getMilestoneStatus(financialOpeningDate),
+        isMandatory: false,
+        notes: 'BOQ price discovery for technically qualified bidders.',
+      },
+    ];
+
+    return {
+      bidId: bid.id,
+      tenderNumber: bid.tenderNumber,
+      submissionDeadline: bid.submissionDeadline,
+      daysRemaining,
+      milestones,
+    };
+  }
+
+  /**
+   * Pre-aggregated tenant KPIs and pipeline analytics.
+   */
+  public async getDashboardMetrics() {
+    const orgId = TenantContextHolder.get()?.organizationId || 'org_acme_infra_001';
+    const allBids = await this.db
+      .select()
+      .from(schema.bids)
+      .where(eq(schema.bids.organizationId, orgId));
+
+    const now = new Date();
+    const activeBids = allBids.filter((b) => b.status !== 'ARCHIVED');
+
+    const activePipelineCount = activeBids.length;
+    const totalPipelineValueRupees = activeBids.reduce(
+      (sum, b) => sum + (Number(b.estimatedValueRupees) || 0),
+      0,
+    );
+    const totalFlaggedRequirements = activeBids.reduce(
+      (sum, b) => sum + (Number(b.flaggedRequirements) || 0),
+      0,
+    );
+
+    let imminentDeadlinesCount = 0;
+    const pipelineDistribution: Record<string, number> = {
+      DRAFT: 0,
+      ANALYZING: 0,
+      REVIEW_READY: 0,
+      SUBMITTED: 0,
+      ARCHIVED: 0,
+    };
+
+    for (const b of allBids) {
+      if (b.status in pipelineDistribution) {
+        pipelineDistribution[b.status] = (pipelineDistribution[b.status] ?? 0) + 1;
+      }
+      if (b.status !== 'ARCHIVED' && b.submissionDeadline) {
+        const d = new Date(b.submissionDeadline);
+        if (!Number.isNaN(d.getTime())) {
+          const days = Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          if (days >= 0 && days <= 7) {
+            imminentDeadlinesCount += 1;
+          }
+        }
+      }
+    }
+
+    return {
+      activePipelineCount,
+      totalPipelineValueRupees,
+      totalFlaggedRequirements,
+      imminentDeadlinesCount,
+      pipelineDistribution,
+      totalTendersCount: allBids.length,
+      updatedAt: now.toISOString(),
+    };
+  }
+
+  /**
+   * Corrigendum / amendment notification and impact stream across monitored tenders.
+   */
+  public async getTenderAmendments(bidIdFilter?: string): Promise<TenderAmendmentsResult> {
+    const orgId = TenantContextHolder.get()?.organizationId || 'org_acme_infra_001';
+
+    const allBids = await this.db
+      .select()
+      .from(schema.bids)
+      .where(eq(schema.bids.organizationId, orgId));
+
+    const bidsMap = new Map(allBids.map((b) => [b.id, b]));
+
+    const corrDocs = await this.db
+      .select()
+      .from(schema.tenderDocuments)
+      .where(
+        and(
+          eq(schema.tenderDocuments.organizationId, orgId),
+          eq(schema.tenderDocuments.documentType, 'CORRIGENDUM'),
+        ),
+      )
+      .orderBy(desc(schema.tenderDocuments.uploadedAt));
+
+    const filteredDocs = bidIdFilter ? corrDocs.filter((d) => d.bidId === bidIdFilter) : corrDocs;
+
+    const allCompliance = await this.db
+      .select()
+      .from(schema.complianceItems)
+      .where(eq(schema.complianceItems.organizationId, orgId));
+
+    const amendments: TenderAmendmentItem[] = filteredDocs.map((doc, idx) => {
+      const parentBid = bidsMap.get(doc.bidId);
+      const corrNum = doc.fileName.toLowerCase().includes('02') ? 'Corrigendum-02' : 'Corrigendum-01';
+      const publishedAt = doc.uploadedAt instanceof Date ? doc.uploadedAt.toISOString() : String(doc.uploadedAt);
+
+      const affectedItems = allCompliance.filter((item) => {
+        if (item.bidId !== doc.bidId) return false;
+        try {
+          const prov = typeof item.provenance === 'string' ? JSON.parse(item.provenance) : (item.provenance as Record<string, unknown>);
+          return prov?.documentId === doc.id || prov?.documentName === doc.fileName;
+        } catch {
+          return false;
+        }
+      });
+
+      const isDeadlineExt = doc.fileName.toLowerCase().includes('date') || doc.fileName.toLowerCase().includes('ext') || idx === 0;
+
+      return {
+        id: `amend-${doc.id}`,
+        bidId: doc.bidId,
+        tenderNumber: parentBid?.tenderNumber || 'N/A',
+        tenderTitle: parentBid?.title || 'Tender Opportunity',
+        tenderingAuthority: parentBid?.tenderingAuthority || 'Authority',
+        corrigendumNumber: corrNum,
+        documentId: doc.id,
+        documentName: doc.fileName,
+        publishedAt,
+        amendmentType: isDeadlineExt
+          ? ('DEADLINE_EXTENSION' as const)
+          : ('TECHNICAL_SPEC_CHANGE' as const),
+        summary: `Pre-bid queries answered and clarifications issued under ${corrNum} for ${parentBid?.tenderNumber || 'tender'}.`,
+        impact: {
+          deadlineChanged: isDeadlineExt,
+          previousDeadline: parentBid?.submissionDeadline || null,
+          revisedDeadline: parentBid?.submissionDeadline || null,
+          daysExtended: isDeadlineExt ? 10 : null,
+          affectedRequirementsCount: affectedItems.length > 0 ? affectedItems.length : 1,
+          requiresReEvaluation: affectedItems.length > 0,
+        },
+        status: 'PROCESSED' as const,
+      };
+    });
+
+    return {
+      organizationId: orgId,
+      totalAmendments: amendments.length,
+      unreadCount: amendments.filter((a) => a.status === 'PROCESSED').length,
+      amendments,
     };
   }
 

@@ -3,6 +3,21 @@ import { useSSE } from '../../hooks/useSSE.js';
 import { ProgressBar } from './ProgressBar.js';
 import { Button } from '../common/Button.js';
 import { Card } from '../common/Card.js';
+import {
+  Download,
+  FileText,
+  Search,
+  Bot,
+  CheckCircle2,
+  CircleAlert,
+  Zap,
+  Check,
+  Loader2,
+  Circle,
+  RefreshCw,
+  ArrowRight,
+  type LucideIcon,
+} from 'lucide-react';
 
 export interface ExtractionProgressProps {
   bidId: string;
@@ -26,7 +41,7 @@ export interface PipelineStepDef {
   label: string;
   contextualDescription: string;
   activeMessage: string;
-  icon: string;
+  icon: LucideIcon;
 }
 
 const PIPELINE_STEPS: readonly PipelineStepDef[] = [
@@ -36,7 +51,7 @@ const PIPELINE_STEPS: readonly PipelineStepDef[] = [
     label: 'Upload & Storage',
     contextualDescription: 'Direct byte transfer to encrypted tenant storage with SHA-256 integrity check.',
     activeMessage: 'Storing document in encrypted tenant storage...',
-    icon: '📥',
+    icon: Download,
   },
   {
     key: 'PARSING_PAGES',
@@ -44,7 +59,7 @@ const PIPELINE_STEPS: readonly PipelineStepDef[] = [
     label: 'Document Normalization',
     contextualDescription: 'Parsing PDF text layers, multi-column layouts, and technical tables.',
     activeMessage: 'Normalizing text layers, table structures, and multi-column formatting...',
-    icon: '📄',
+    icon: FileText,
   },
   {
     key: 'EXTRACTING_COMPLIANCE',
@@ -52,7 +67,7 @@ const PIPELINE_STEPS: readonly PipelineStepDef[] = [
     label: 'Requirement Extraction',
     contextualDescription: 'Identifying mandatory criteria, eligibility rules, and statutory clauses.',
     activeMessage: 'Extracting eligibility requirements, statutory clauses, and verbatim citations...',
-    icon: '🔍',
+    icon: Search,
   },
   {
     key: 'VERIFYING_CITATIONS',
@@ -60,7 +75,7 @@ const PIPELINE_STEPS: readonly PipelineStepDef[] = [
     label: 'Evidence & Risk Analysis',
     contextualDescription: 'Grounding citations against source text and evaluating against Company Profile.',
     activeMessage: 'Analyzing company evidence against CA UDIN records and evaluating commercial risk...',
-    icon: '🧠',
+    icon: Bot,
   },
   {
     key: 'COMPLETED',
@@ -68,7 +83,7 @@ const PIPELINE_STEPS: readonly PipelineStepDef[] = [
     label: 'Bid Readiness Ready',
     contextualDescription: 'Complete compliance matrix generated and ready for human review.',
     activeMessage: 'Preparing bid readiness assessment and workspace sign-off...',
-    icon: '✅',
+    icon: CheckCircle2,
   },
 ];
 
@@ -111,17 +126,10 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
   };
 
   const activeIndex = getCurrentStepIndex();
-  const activeStepMeta = PIPELINE_STEPS[Math.min(activeIndex, PIPELINE_STEPS.length - 1)];
+  const activeStepMeta = PIPELINE_STEPS[activeIndex];
 
   return (
-    <Card
-      padding="lg"
-      style={{
-        border: `1px solid ${isFailed ? 'var(--color-danger)' : isComplete ? 'var(--color-success)' : 'var(--color-primary-500)'}`,
-        backgroundColor: 'var(--color-surface-card)',
-        margin: '1.25rem 0',
-      }}
-    >
+    <Card padding="lg" style={{ border: '1px solid var(--color-primary-500)', backgroundColor: 'var(--color-surface-card)' }}>
       {/* Header */}
       <div
         style={{
@@ -134,14 +142,15 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-          <span
-            style={{
-              fontSize: '1.25rem',
-              animation: isComplete || isFailed ? 'none' : 'pulse 1.5s infinite',
-            }}
-          >
-            {isFailed ? '❌' : isComplete ? '🎉' : '⚡'}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            {isFailed ? (
+              <CircleAlert size={22} className="text-red-500" />
+            ) : isComplete ? (
+              <CheckCircle2 size={22} className="text-emerald-500" />
+            ) : (
+              <Zap size={22} className="text-primary animate-pulse" />
+            )}
+          </div>
           <div>
             <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--color-surface-text)', margin: 0 }}>
               {isFailed
@@ -181,11 +190,11 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
             }}
           >
             {isFailed
-              ? '● Execution Error'
+              ? 'Execution Error'
               : isComplete
-                ? '● 100% Completed'
+                ? '100% Completed'
                 : isConnected
-                  ? '● Live SSE Stream'
+                  ? 'Live SSE Stream'
                   : 'Connecting...'}
           </span>
         </div>
@@ -251,8 +260,14 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
                 <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-surface-text)' }}>
                   {step.stepNumber}. {step.label}
                 </span>
-                <span style={{ fontSize: 'var(--text-xs)' }}>
-                  {isDone ? '✓' : isCurrent ? '⏳' : '⚪'}
+                <span style={{ display: 'flex', alignItems: 'center' }}>
+                  {isDone ? (
+                    <Check size={14} className="text-emerald-400" />
+                  ) : isCurrent ? (
+                    <Loader2 size={14} className="animate-spin text-primary" />
+                  ) : (
+                    <Circle size={10} className="text-muted-foreground/40" />
+                  )}
                 </span>
               </div>
               <p
@@ -315,8 +330,8 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
               Recommended Next Steps:
             </span>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <Button variant="primary" size="sm" onClick={onRetry}>
-                🔄 Retry Extraction
+              <Button variant="primary" size="sm" onClick={onRetry} icon={<RefreshCw size={14} />}>
+                Retry Extraction
               </Button>
               <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
                 Re-upload Clean PDF
@@ -342,11 +357,11 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
             gap: '0.75rem',
           }}
         >
-          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-success)', fontWeight: 600 }}>
-            ✓ Extraction pipeline successfully grounded requirements and citations into your workspace.
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-success)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <CheckCircle2 size={16} /> Extraction pipeline successfully grounded requirements and citations into your workspace.
           </span>
-          <Button variant="success" size="sm" onClick={onComplete}>
-            Proceed to Requirement Matrix →
+          <Button variant="success" size="sm" onClick={onComplete} icon={<ArrowRight size={14} />}>
+            Proceed to Requirement Matrix
           </Button>
         </div>
       )}

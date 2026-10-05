@@ -9,6 +9,7 @@ import {
   CloseIcon,
   ShieldLockIcon,
 } from '../common/Icons.js';
+import { cn } from '../../lib/utils.js';
 
 export interface SidebarProps {
   isCollapsed?: boolean;
@@ -23,7 +24,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const { hasPermission } = useAuth();
 
-  // Escape key handler for mobile drawer
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isMobileOpen && onCloseMobile) {
@@ -40,7 +40,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     };
   }, [isMobileOpen, onCloseMobile]);
 
-  // Strictly supported product routes
   const navItems = [
     {
       to: '/bids',
@@ -64,100 +63,41 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const sidebarContent = (
     <aside
-      className={`app-sidebar ${isCollapsed ? 'sidebar-collapsed' : ''}`}
-      style={{
-        width: isCollapsed ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-width)',
-        backgroundColor: 'var(--color-surface-card)',
-        borderRight: '1px solid var(--color-surface-border)',
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        minHeight: '100vh',
-        transition: 'width var(--transition-base)',
-        flexShrink: 0,
-        boxSizing: 'border-box',
-      }}
+      className={cn(
+        'flex flex-col h-screen max-h-screen bg-card border-r border-border transition-[width] duration-200 shrink-0 box-border select-none overflow-x-hidden',
+        isCollapsed ? 'w-[68px]' : 'w-[260px]'
+      )}
     >
       {/* Brand header */}
       <div
-        style={{
-          height: 'var(--header-height)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: isCollapsed ? 'center' : 'space-between',
-          padding: isCollapsed ? '0' : '0 1.25rem',
-          borderBottom: '1px solid var(--color-surface-border)',
-          gap: '0.75rem',
-          boxSizing: 'border-box',
-        }}
+        className={cn(
+          'h-16 flex items-center border-b border-border gap-3 box-border',
+          isCollapsed ? 'justify-center px-0' : 'justify-between px-5'
+        )}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-          <div
-            style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: 'var(--radius-md)',
-              backgroundColor: 'var(--color-primary-600)',
-              border: '1px solid var(--color-primary-500)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#ffffff',
-              fontWeight: 700,
-              fontSize: '0.9rem',
-              letterSpacing: '0.04em',
-              flexShrink: 0,
-            }}
-          >
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-7 h-7 rounded-md bg-primary text-primary-foreground font-bold text-xs flex items-center justify-center tracking-wider shrink-0 shadow-sm">
             TP
           </div>
 
           {!isCollapsed && (
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span
-                style={{
-                  fontSize: 'var(--text-sm)',
-                  fontWeight: 700,
-                  color: 'var(--color-surface-text)',
-                  letterSpacing: '0.04em',
-                  textTransform: 'uppercase',
-                  lineHeight: 1.2,
-                }}
-              >
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-bold tracking-wider text-foreground uppercase leading-tight truncate">
                 TenderPulse
               </span>
-              <span
-                style={{
-                  fontSize: 'var(--text-2xs)',
-                  color: 'var(--color-primary-300)',
-                  fontWeight: 500,
-                  letterSpacing: '0.02em',
-                  lineHeight: 1.2,
-                }}
-              >
-                Intelligence & Readiness
+              <span className="text-[10px] text-muted-foreground font-medium leading-tight truncate">
+                Intelligence &amp; Readiness
               </span>
             </div>
           )}
         </div>
 
-        {/* Mobile close button */}
         {onCloseMobile && (
           <button
             type="button"
-            className="mobile-close-btn"
+            className="md:hidden text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-accent"
             onClick={onCloseMobile}
             aria-label="Close navigation"
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--color-surface-muted)',
-              cursor: 'pointer',
-              padding: '0.35rem',
-              display: 'none', // Controlled via CSS media query
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
           >
             <CloseIcon size={18} />
           </button>
@@ -165,27 +105,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Navigation items list */}
-      <nav
-        aria-label="Main Navigation"
-        style={{
-          padding: isCollapsed ? '1rem 0.4rem' : '1.25rem 0.65rem',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.25rem',
-          flex: 1,
-        }}
-      >
+      <nav aria-label="Main Navigation" className="p-3 flex flex-col gap-1 flex-1 overflow-y-auto overflow-x-hidden no-scrollbar">
         {!isCollapsed && (
-          <div
-            style={{
-              padding: '0 0.75rem 0.5rem',
-              fontSize: 'var(--text-2xs)',
-              fontWeight: 600,
-              color: 'var(--color-surface-subtle)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-            }}
-          >
+          <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
             Platform
           </div>
         )}
@@ -202,38 +124,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 end={item.to === '/bids'}
                 onClick={onCloseMobile}
                 title={isCollapsed ? item.label : undefined}
-                style={({ isActive }) => ({
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: isCollapsed ? 'center' : 'flex-start',
-                  gap: '0.75rem',
-                  padding: isCollapsed ? '0.65rem 0' : '0.55rem 0.75rem',
-                  borderRadius: 'var(--radius-sm)',
-                  color: isActive ? 'var(--color-surface-text)' : 'var(--color-surface-muted)',
-                  backgroundColor: isActive ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
-                  borderLeft: isActive
-                    ? '3px solid var(--color-primary-500)'
-                    : '3px solid transparent',
-                  fontWeight: isActive ? 600 : 500,
-                  fontSize: 'var(--text-sm)',
-                  transition: 'all var(--transition-fast)',
-                  textDecoration: 'none',
-                })}
+                className={({ isActive }) =>
+                  cn(
+                    'flex items-center gap-3 rounded-md px-3 py-2 text-xs font-medium transition-colors',
+                    isCollapsed ? 'justify-center px-0' : 'justify-start',
+                    isActive
+                      ? 'bg-accent text-accent-foreground font-semibold border border-border shadow-xs'
+                      : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
+                  )
+                }
               >
                 {({ isActive }) => (
                   <>
                     <span
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: isActive ? 'var(--color-primary-400)' : 'var(--color-surface-muted)',
-                        flexShrink: 0,
-                      }}
+                      className={cn(
+                        'shrink-0 flex items-center justify-center',
+                        isActive ? 'text-primary' : 'text-muted-foreground'
+                      )}
                     >
-                      <Icon size={18} />
+                      <Icon size={16} />
                     </span>
-                    {!isCollapsed && <span>{item.label}</span>}
+                    {!isCollapsed && <span className="truncate">{item.label}</span>}
                   </>
                 )}
               </NavLink>
@@ -242,91 +153,40 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </nav>
 
       {/* Footer / System Status */}
-      <div
-        style={{
-          padding: isCollapsed ? '0.75rem 0.25rem' : '0.85rem 1rem',
-          borderTop: '1px solid var(--color-surface-border)',
-          backgroundColor: 'var(--color-surface-card-subtle)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.35rem',
-        }}
-      >
+      <div className="p-3 border-t border-border bg-card/50 flex flex-col gap-1.5">
         {!isCollapsed ? (
           <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-              <span
-                style={{
-                  width: '7px',
-                  height: '7px',
-                  borderRadius: '50%',
-                  backgroundColor: 'var(--color-status-pass-text)',
-                  display: 'inline-block',
-                }}
-                aria-hidden="true"
-              />
-              <span
-                style={{
-                  fontSize: 'var(--text-2xs)',
-                  fontWeight: 600,
-                  color: 'var(--color-surface-text)',
-                  letterSpacing: '0.02em',
-                }}
-              >
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
+              <span className="text-[11px] font-semibold text-foreground tracking-wide">
                 Production v2.0
               </span>
             </div>
-            <div
-              style={{
-                fontSize: '0.65rem',
-                color: 'var(--color-surface-subtle)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.3rem',
-              }}
-            >
-              <ShieldLockIcon size={11} color="var(--color-surface-subtle)" />
+            <div className="text-[10px] text-muted-foreground flex items-center gap-1.5">
+              <ShieldLockIcon size={11} className="text-muted-foreground" />
               <span>Multi-Tenant RBAC Active</span>
             </div>
           </>
         ) : (
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <span
-              style={{
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                backgroundColor: 'var(--color-status-pass-text)',
-              }}
-              title="System Online: v2.0"
-            />
+          <div className="flex justify-center">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" title="System Online: v2.0" />
           </div>
         )}
       </div>
     </aside>
   );
 
-  // If mobile and drawer is open, render with backdrop overlay
   if (isMobileOpen) {
     return (
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Navigation drawer"
-        className="mobile-sidebar-overlay"
-        style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(15, 23, 42, 0.75)',
-          backdropFilter: 'blur(4px)',
-          zIndex: 'var(--z-index-drawer)' as unknown as number,
-          display: 'flex',
-        }}
+        className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex md:hidden"
         onClick={onCloseMobile}
       >
         <div
-          className="slide-in-right"
-          style={{ width: '280px', height: '100%', backgroundColor: 'var(--color-surface-card)' }}
+          className="w-[280px] h-full bg-card"
           onClick={(e) => e.stopPropagation()}
         >
           {sidebarContent}
@@ -335,6 +195,5 @@ export const Sidebar: React.FC<SidebarProps> = ({
     );
   }
 
-  // Normal desktop sidebar
   return sidebarContent;
 };

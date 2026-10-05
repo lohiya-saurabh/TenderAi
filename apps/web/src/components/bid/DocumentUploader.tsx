@@ -3,6 +3,7 @@ import { generateUploadUrl, confirmDocumentUpload } from '../../api/bids.js';
 import { Button } from '../common/Button.js';
 import { ErrorBanner } from '../common/ErrorBanner.js';
 import { ProgressBar } from '../progress/ProgressBar.js';
+import { Upload, X } from 'lucide-react';
 
 export interface DocumentUploaderProps {
   bidId: string;
@@ -112,33 +113,55 @@ export const DocumentUploader: React.FC<DocumentUploaderProps> = ({
       setUploadProgress(25);
       setUploadMessage(`Streaming ${file.name} to encrypted tenant storage...`);
 
-      // 2. Direct S3 Upload via XMLHttpRequest for real byte progress tracking
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open('PUT', uploadUrl);
-        xhr.setRequestHeader('Content-Type', file.type || 'application/pdf');
+      // Determine initial upload target (normalize dummy/unresolved mock domains to local endpoint)
+      let targetUploadUrl = uploadUrl;
+      const localFallbackEndpoint = `/api/v1/mock-upload/${bidId}/${documentId}/${encodeURIComponent(file.name)}`;
+      if (targetUploadUrl.includes('mock-s3.tenderpulse.local') || targetUploadUrl.includes('.local/')) {
+        targetUploadUrl = localFallbackEndpoint;
+      }
 
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable) {
-            const percentComplete = 25 + Math.round((e.loaded / e.total) * 55);
-            setUploadProgress(percentComplete);
-            const mbUploaded = (e.loaded / (1024 * 1024)).toFixed(1);
-            const mbTotal = (e.total / (1024 * 1024)).toFixed(1);
-            setUploadMessage(`Uploading to storage: ${mbUploaded} MB / ${mbTotal} MB (${percentComplete}%)`);
-          }
-        };
+      // Helper function to stream upload bytes via XMLHttpRequest for real progress tracking
+      const executeUpload = (url: string): Promise<void> => {
+        return new Promise<void>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('PUT', url);
+          xhr.setRequestHeader('Content-Type', file.type || 'application/pdf');
 
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            resolve();
-          } else {
-            reject(new Error(`Storage transfer failed with HTTP status ${xhr.status}`));
-          }
-        };
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+              const percentComplete = 25 + Math.round((e.loaded / e.total) * 55);
+              setUploadProgress(percentComplete);
+              const mbUploaded = (e.loaded / (1024 * 1024)).toFixed(1);
+              const mbTotal = (e.total / (1024 * 1024)).toFixed(1);
+              setUploadMessage(`Uploading to storage: ${mbUploaded} MB / ${mbTotal} MB (${percentComplete}%)`);
+            }
+          };
 
-        xhr.onerror = () => reject(new Error('Network error during file upload to object storage.'));
-        xhr.send(file);
-      });
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve();
+            } else {
+              reject(new Error(`Storage transfer failed with HTTP status ${xhr.status}`));
+            }
+          };
+
+          xhr.onerror = () => reject(new Error('Network error during file upload to object storage.'));
+          xhr.send(file);
+        });
+      };
+
+      // 2. Direct S3/GCS Upload with automatic fallback to local endpoint if cloud endpoint is unreachable
+      try {
+        await executeUpload(targetUploadUrl);
+      } catch (uploadErr) {
+        if (targetUploadUrl !== localFallbackEndpoint) {
+          console.warn('[DocumentUploader] Direct cloud upload failed, attempting local mock storage fallback:', uploadErr);
+          setUploadMessage('Falling back to local storage endpoint...');
+          await executeUpload(localFallbackEndpoint);
+        } else {
+          throw uploadErr;
+        }
+      }
 
       setUploadProgress(85);
       setUploadMessage('Confirming storage checksum and registering with extraction worker...');
@@ -186,8 +209,8 @@ export const DocumentUploader: React.FC<DocumentUploaderProps> = ({
           </p>
         </div>
         {onCancel && (
-          <Button variant="ghost" size="sm" onClick={onCancel} disabled={isUploading}>
-            ✕ Close
+          <Button variant="ghost" size="sm" onClick={onCancel} disabled={isUploading} icon={<X size={14} />}>
+            Close
           </Button>
         )}
       </div>
@@ -255,7 +278,7 @@ export const DocumentUploader: React.FC<DocumentUploaderProps> = ({
           onChange={handleFileChange}
           disabled={isUploading}
         />
-        <span style={{ fontSize: '2rem' }}>📄</span>
+        <Upload size={36} className="text-primary/70" />
         {file ? (
           <div>
             <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-surface-text)' }}>

@@ -60,7 +60,7 @@ export const Tabs: React.FC<TabsProps> = ({
     <div
       role="tablist"
       aria-label={ariaLabel}
-      className={`tabs-nav tabs-${variant} ${className}`}
+      className={`tabs-nav tabs-${variant} no-scrollbar ${className}`}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -70,6 +70,8 @@ export const Tabs: React.FC<TabsProps> = ({
         backgroundColor: isLine ? 'transparent' : 'var(--color-surface-card-subtle)',
         borderRadius: isLine ? '0' : 'var(--radius-md)',
         overflowX: 'auto',
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none',
         ...style,
       }}
     >

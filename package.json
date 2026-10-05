@@ -18,6 +18,8 @@
     "format:check": "prettier --check '**/*.{ts,tsx,json,md}'"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.6.4",
     "prettier": "^3.5.2",
     "typescript": "^5.8.2",
     "vitest": "^3.0.7"

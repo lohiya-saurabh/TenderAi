@@ -11,6 +11,7 @@ import {
   NotApplicableIcon,
   type IconProps,
 } from '../common/Icons.js';
+import { Lock, Info } from 'lucide-react';
 import type { ComplianceItem } from '../../api/compliance.js';
 
 export interface ReviewActionsProps {
@@ -109,9 +110,15 @@ export const ReviewActions: React.FC<ReviewActionsProps> = ({
           padding: '0.5rem 0.75rem',
           borderRadius: 'var(--radius-md)',
           border: '1px dashed var(--color-surface-border)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.4rem',
         }}
       >
-        🔒 Read-only view. Adjudication requires <code>compliance:review</code> permission.
+        <Lock size={14} className="shrink-0" />
+        <span>
+          Read-only view. Adjudication requires <code>compliance:review</code> permission.
+        </span>
       </div>
     );
   }
@@ -320,9 +327,15 @@ export const ReviewActions: React.FC<ReviewActionsProps> = ({
                 padding: '0.5rem 0.75rem',
                 borderRadius: 'var(--radius-sm)',
                 borderLeft: '3px solid var(--color-primary-500)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
               }}
             >
-              ℹ️ This adjudication is recorded immutably in the compliance audit ledger with your user credentials and timestamp.
+              <Info size={14} className="text-primary shrink-0" />
+              <span>
+                This adjudication is recorded immutably in the compliance audit ledger with your user credentials and timestamp.
+              </span>
             </div>
           </div>
         </Modal>

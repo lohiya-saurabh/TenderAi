@@ -78,9 +78,39 @@ export interface CompanyProfileView {
   versions: CompanyProfileVersion[];
 }
 
+export interface ExpiringCertificateItem {
+  entryId: string;
+  type: 'CERTIFICATION' | 'OEM_AUTHORIZATION';
+  name: string;
+  issuingAuthority: string;
+  validFrom: string;
+  validTo: string | null;
+  daysRemaining: number | null;
+  isExpired: boolean;
+  isUrgent: boolean;
+  evidenceDocumentId: string;
+}
+
+export interface ExpiringCertificatesResponse {
+  organizationId: string;
+  activeProfileVersionId: string | null;
+  evaluatedAt: string;
+  filterWithinDays: number;
+  totalExpiringCount: number;
+  totalExpiredCount: number;
+  certificates: ExpiringCertificateItem[];
+}
+
 /** Active profile + version history */
 export function getCompanyProfile(): Promise<ApiResult<CompanyProfileView>> {
   return apiGet<CompanyProfileView>('/api/v1/company-profile');
+}
+
+/** Fetch expiring certificates and licenses within the specified days window */
+export function getExpiringCertificates(
+  withinDays = 90,
+): Promise<ApiResult<ExpiringCertificatesResponse>> {
+  return apiGet<ExpiringCertificatesResponse>(`/api/v1/company-profile/expiring-certificates?withinDays=${withinDays}`);
 }
 
 /** Pin a new immutable profile version and make it active (ADMIN only) */

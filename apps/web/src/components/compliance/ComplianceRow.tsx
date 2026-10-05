@@ -6,6 +6,7 @@ import { Badge, type BadgeVariant } from '../common/Badge.js';
 import { Button } from '../common/Button.js';
 import { Card } from '../common/Card.js';
 import { ChevronRightIcon, ChevronDownIcon } from '../common/Icons.js';
+import { FileText } from 'lucide-react';
 import { ExecutionRulesCard } from './ExecutionRulesCard.js';
 import { ReviewActions } from './ReviewActions.js';
 import { EvidenceTraceabilityChain } from './EvidenceTraceabilityChain.js';
@@ -242,7 +243,7 @@ export const ComplianceRow: React.FC<ComplianceRowProps> = ({
             }}
             title="Inspect source clause citation"
           >
-            <span>📄</span>
+            <FileText size={12} className="shrink-0 text-muted-foreground" />
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               p.{sourcePage}
             </span>

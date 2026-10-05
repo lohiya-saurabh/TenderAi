@@ -2,9 +2,9 @@ import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import type { BidSummary } from '../../api/bids.js';
 import type { ComplianceItem } from '../../api/compliance.js';
-import { Card, CardHeader, CardTitle, CardContent } from '../common/Card.js';
-import { Badge } from '../common/Badge.js';
-import { LoadingSkeleton } from '../common/LoadingSkeleton.js';
+import { Card, CardHeader, CardTitle, CardContent } from '../ui/card.js';
+import { Badge } from '../ui/badge.js';
+import { Skeleton } from '../ui/skeleton.js';
 import {
   AlertCircleIcon,
   WarningIcon,
@@ -19,46 +19,45 @@ import {
   type ActionItem,
   type ActionItemType,
 } from './dashboardData.js';
+import { cn } from '../../lib/utils.js';
 
 export interface ActionRequiredCardProps {
   bids: BidSummary[];
-  /** Clause-level compliance items keyed by bid ID (from useBidComplianceItems) */
   complianceByBid: Record<string, ComplianceItem[]>;
-  /** True while per-bid compliance items are still being fetched */
   isLoadingCompliance?: boolean;
 }
 
 const MAX_VISIBLE_ITEMS = 5;
 
-const CATEGORY_BADGE_VARIANT: Record<ComplianceItem['category'], 'info' | 'primary' | 'warning' | 'danger' | 'neutral'> = {
+const CATEGORY_BADGE_VARIANT: Record<ComplianceItem['category'], 'info' | 'default' | 'warning' | 'destructive' | 'secondary'> = {
   FINANCIAL: 'info',
-  TECHNICAL: 'primary',
+  TECHNICAL: 'default',
   LEGAL: 'warning',
-  STATUTORY: 'danger',
-  EXECUTION: 'neutral',
-  COMMERCIAL: 'neutral',
+  STATUTORY: 'destructive',
+  EXECUTION: 'secondary',
+  COMMERCIAL: 'secondary',
 };
 
 function ActionIcon({ item }: { item: ActionItem }) {
   switch (item.type as ActionItemType) {
     case 'FLAGGED_REQUIREMENT':
-      return <AlertCircleIcon size={16} color="var(--color-danger)" />;
+      return <AlertCircleIcon size={16} className="text-destructive" />;
     case 'REVIEW_REQUIRED':
-      return <ReviewRequiredIcon size={16} color="var(--color-warning)" />;
+      return <ReviewRequiredIcon size={16} className="text-amber-400" />;
     case 'EXTRACTION_IN_PROGRESS':
-      return <SpinnerIcon size={16} color="var(--color-info)" />;
+      return <SpinnerIcon size={16} className="text-blue-400" />;
     case 'IMMINENT_DEADLINE':
-      return <WarningIcon size={16} color="var(--color-warning)" />;
+      return <WarningIcon size={16} className="text-amber-400" />;
     case 'DRAFT_INCOMPLETE':
     default:
-      return <MissingIcon size={16} color="var(--color-info)" />;
+      return <MissingIcon size={16} className="text-blue-400" />;
   }
 }
 
-function urgencyBorder(urgency: ActionItem['urgency']): string {
-  if (urgency === 'critical') return 'var(--color-danger-border)';
-  if (urgency === 'high') return 'var(--color-warning-border)';
-  return 'var(--color-surface-border)';
+function urgencyBorderClass(urgency: ActionItem['urgency']): string {
+  if (urgency === 'critical') return 'border-destructive/40 hover:border-destructive/60';
+  if (urgency === 'high') return 'border-amber-500/40 hover:border-amber-500/60';
+  return 'border-border hover:border-muted-foreground/30';
 }
 
 export const ActionRequiredCard: React.FC<ActionRequiredCardProps> = ({
@@ -72,144 +71,88 @@ export const ActionRequiredCard: React.FC<ActionRequiredCardProps> = ({
   );
 
   return (
-    <Card variant="default" padding="md">
-      <CardHeader
-        action={
-          <Badge
-            variant={actionItems.length > 0 ? 'warning' : 'success'}
-            size="sm"
-          >
-            {actionItems.length} {actionItems.length === 1 ? 'Action' : 'Actions'}
-          </Badge>
-        }
-      >
-        <CardTitle as="h3">Action Required</CardTitle>
-        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)' }}>
-          Flagged clauses, reviews, in-flight extraction, and imminent deadlines
-        </p>
+    <Card className="shadow-xs">
+      <CardHeader className="flex flex-row items-center justify-between pb-3">
+        <div>
+          <CardTitle className="text-base font-semibold">Action Required</CardTitle>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Flagged clauses, reviews, in-flight extraction, and imminent deadlines
+          </p>
+        </div>
+        <Badge
+          variant={actionItems.length > 0 ? 'warning' : 'success'}
+          className="font-medium"
+        >
+          {actionItems.length} {actionItems.length === 1 ? 'Action' : 'Actions'}
+        </Badge>
       </CardHeader>
 
       <CardContent>
         {isLoadingCompliance && actionItems.length === 0 ? (
-          <LoadingSkeleton height="64px" count={3} borderRadius="var(--radius-md)" />
+          <div className="space-y-2">
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
+          </div>
         ) : actionItems.length === 0 ? (
-          <div
-            style={{
-              padding: '1.5rem',
-              backgroundColor: 'var(--color-surface-card-subtle)',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--color-surface-border)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-            }}
-          >
-            <span
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: '50%',
-                backgroundColor: 'var(--color-success-bg)',
-                color: 'var(--color-success)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
+          <div className="p-4 rounded-lg bg-card/60 border border-border flex items-center gap-3">
+            <span className="w-8 h-8 rounded-full bg-emerald-500/15 text-emerald-400 flex items-center justify-center shrink-0">
               <CheckIcon size={16} />
             </span>
             <div>
-              <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-surface-text)' }}>
+              <div className="text-sm font-semibold text-foreground">
                 No Urgent Blockers
               </div>
-              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)' }}>
+              <div className="text-xs text-muted-foreground">
                 All active tenders are on schedule with zero unreviewed critical flags.
               </div>
             </div>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+          <div className="flex flex-col gap-2">
             {actionItems.slice(0, MAX_VISIBLE_ITEMS).map((item) => (
               <Link
                 key={item.id}
                 to={item.actionUrl}
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  justifyContent: 'space-between',
-                  padding: '0.75rem 0.85rem',
-                  borderRadius: 'var(--radius-md)',
-                  backgroundColor: 'var(--color-surface-card-subtle)',
-                  border: `1px solid ${urgencyBorder(item.urgency)}`,
-                  textDecoration: 'none',
-                  transition: 'background-color var(--transition-fast)',
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-surface-card-hover)')}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-surface-card-subtle)')}
+                className={cn(
+                  'flex items-start justify-between p-3 rounded-lg bg-card/60 border transition-colors hover:bg-accent/50',
+                  urgencyBorderClass(item.urgency)
+                )}
               >
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', minWidth: 0 }}>
-                  <span style={{ marginTop: '0.15rem', flexShrink: 0, display: 'inline-flex' }}>
+                <div className="flex items-start gap-2.5 min-w-0">
+                  <span className="mt-0.5 shrink-0 inline-flex">
                     <ActionIcon item={item} />
                   </span>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-surface-text)' }}>
+                  <div className="flex flex-col min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-semibold text-foreground">
                         {item.headline}
                       </span>
                       {item.category && (
-                        <Badge variant={CATEGORY_BADGE_VARIANT[item.category]} size="sm">
+                        <Badge variant={CATEGORY_BADGE_VARIANT[item.category]} className="text-[10px] px-1.5 py-0">
                           {item.category}
                         </Badge>
                       )}
-                      <span
-                        style={{
-                          fontSize: 'var(--text-2xs)',
-                          fontFamily: 'var(--font-mono)',
-                          color: 'var(--color-surface-muted)',
-                        }}
-                      >
+                      <span className="text-[10px] font-mono text-muted-foreground">
                         № {item.tenderNumber}
                       </span>
                     </div>
 
-                    <p
-                      style={{
-                        fontSize: 'var(--text-xs)',
-                        color: 'var(--color-surface-muted)',
-                        marginTop: '0.15rem',
-                        lineHeight: 1.3,
-                      }}
-                    >
+                    <p className="text-xs text-muted-foreground mt-0.5 leading-snug line-clamp-2">
                       {item.description}
                     </p>
                   </div>
                 </div>
 
-                <span
-                  style={{
-                    color: 'var(--color-surface-subtle)',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    marginLeft: '0.5rem',
-                    flexShrink: 0,
-                  }}
-                >
+                <span className="text-muted-foreground/60 inline-flex items-center ml-2 shrink-0">
                   <ChevronRightIcon size={14} />
                 </span>
               </Link>
             ))}
 
             {actionItems.length > MAX_VISIBLE_ITEMS && (
-              <div
-                style={{
-                  fontSize: 'var(--text-2xs)',
-                  color: 'var(--color-surface-subtle)',
-                  textAlign: 'center',
-                  paddingTop: '0.25rem',
-                }}
-              >
+              <div className="text-[11px] text-muted-foreground text-center pt-1 font-medium">
                 +{actionItems.length - MAX_VISIBLE_ITEMS} more action
                 {actionItems.length - MAX_VISIBLE_ITEMS === 1 ? '' : 's'} across your tenders
               </div>

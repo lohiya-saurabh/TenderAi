@@ -1,8 +1,8 @@
 /**
  * BidsController — NestJS controller for bid project endpoints with RBAC guards.
  */
-import { Controller, Get, Post, Delete, Param, Body, HttpCode } from '@nestjs/common';
-import { BidsService } from './bids.service.js';
+import { Controller, Get, Post, Delete, Param, Query, Body, HttpCode } from '@nestjs/common';
+import { BidsService, type ListBidsQuery } from './bids.service.js';
 import { ComplianceService } from '../compliance/compliance.service.js';
 import { GetBidDecisionUseCase } from './application/GetBidDecisionUseCase.js';
 import { RequirePermission } from '../../common/security/decorators/permissions.decorator.js';
@@ -19,8 +19,8 @@ export class BidsController {
 
   @Get()
   @RequirePermission(Permissions.BIDS_READ)
-  async list() {
-    return this.bidsService.listBids();
+  async list(@Query() query?: ListBidsQuery) {
+    return this.bidsService.listBids(query);
   }
 
   @Get(':id')
@@ -109,6 +109,30 @@ export class BidsController {
   @RequirePermission(Permissions.BIDS_READ)
   async getReadiness(@Param('id') id: string) {
     return this.complianceService.getReadinessRollup(id);
+  }
+
+  @Get(':id/evidence-matches')
+  @RequirePermission(Permissions.BIDS_READ)
+  async getEvidenceMatches(@Param('id') id: string) {
+    return this.complianceService.getEvidenceMatches(id);
+  }
+
+  @Get(':id/risk-findings')
+  @RequirePermission(Permissions.BIDS_READ)
+  async getRiskFindings(@Param('id') id: string) {
+    return this.complianceService.getRiskFindings(id);
+  }
+
+  @Get(':id/deadlines')
+  @RequirePermission(Permissions.BIDS_READ)
+  async getDeadlines(@Param('id') id: string) {
+    return this.bidsService.getTenderDeadlines(id);
+  }
+
+  @Get(':id/amendments')
+  @RequirePermission(Permissions.BIDS_READ)
+  async getAmendments(@Param('id') id: string) {
+    return this.bidsService.getTenderAmendments(id);
   }
 
   private toDecisionWire(decision: Awaited<ReturnType<GetBidDecisionUseCase['evaluate']>>) {

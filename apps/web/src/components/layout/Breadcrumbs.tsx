@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ChevronRightIcon } from '../common/Icons.js';
+import { ChevronRight } from 'lucide-react';
 
 interface BreadcrumbSegment {
   label: string;
@@ -56,63 +56,27 @@ export const Breadcrumbs: React.FC = () => {
   const breadcrumbs = getBreadcrumbs();
 
   return (
-    <nav aria-label="Breadcrumbs" style={{ display: 'flex', alignItems: 'center' }}>
-      <ol
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.4rem',
-          listStyle: 'none',
-          padding: 0,
-          margin: 0,
-          fontSize: 'var(--text-xs)',
-          lineHeight: 1,
-        }}
-      >
+    <nav aria-label="Breadcrumbs" className="flex items-center">
+      <ol className="flex items-center gap-1.5 list-none p-0 m-0 text-xs leading-none text-muted-foreground">
         {breadcrumbs.map((crumb, idx) => {
           const isLast = idx === breadcrumbs.length - 1;
 
           return (
-            <li
-              key={idx}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-              }}
-            >
+            <li key={idx} className="inline-flex items-center gap-1.5">
               {idx > 0 && (
-                <span
-                  style={{
-                    color: 'var(--color-surface-subtle)',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                  }}
-                  aria-hidden="true"
-                >
-                  <ChevronRightIcon size={12} />
-                </span>
+                <ChevronRight className="h-3 w-3 text-muted-foreground/60 shrink-0" aria-hidden="true" />
               )}
               {isLast || !crumb.to ? (
                 <span
                   aria-current={isLast ? 'page' : undefined}
-                  style={{
-                    color: isLast ? 'var(--color-surface-text)' : 'var(--color-surface-muted)',
-                    fontWeight: isLast ? 600 : 500,
-                  }}
+                  className={isLast ? 'font-semibold text-foreground' : 'text-muted-foreground'}
                 >
                   {crumb.label}
                 </span>
               ) : (
                 <Link
                   to={crumb.to}
-                  style={{
-                    color: 'var(--color-surface-muted)',
-                    transition: 'color var(--transition-fast)',
-                    textDecoration: 'none',
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-primary-400)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-surface-muted)')}
+                  className="hover:text-foreground transition-colors font-medium"
                 >
                   {crumb.label}
                 </Link>

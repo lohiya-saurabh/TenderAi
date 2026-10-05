@@ -13,6 +13,7 @@ import {
   Get,
   Post,
   Param,
+  Query,
   Body,
   HttpCode,
 } from '@nestjs/common';
@@ -30,6 +31,14 @@ export class CompanyProfileController {
   @RequirePermission(Permissions.BIDS_READ)
   async getProfile() {
     return this.companyProfileService.getProfile();
+  }
+
+  @Get('expiring-certificates')
+  @RequirePermission(Permissions.BIDS_READ)
+  async getExpiringCertificates(@Query('withinDays') withinDays?: string) {
+    const parsed = withinDays ? parseInt(withinDays, 10) : 90;
+    const days = Number.isNaN(parsed) ? 90 : parsed;
+    return this.companyProfileService.getExpiringCertificates(days);
   }
 
   @Get('versions/:versionId')

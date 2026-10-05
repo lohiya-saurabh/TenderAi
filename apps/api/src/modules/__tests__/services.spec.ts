@@ -6,8 +6,11 @@ import { BidsService } from '../bids/bids.service.js';
 import { DocumentsService } from '../documents/documents.service.js';
 import { ComplianceService } from '../compliance/compliance.service.js';
 import { AuditService } from '../audit/audit.service.js';
+import { CompanyProfileService } from '../company-profile/company-profile.service.js';
 import { MockStorageService } from '../../infrastructure/storage/MockStorageService.js';
+import type { IStorageService } from '../bids/application/IStorageService.js';
 import { UnauthorizedError, NotFoundError, ConflictError } from '../../common/errors/errors.js';
+import { TenantContextHolder } from '../../common/security/TenantContext.js';
 
 describe('NestJS Feature Modules: Services Unit Tests', () => {
   let db: PGlite;
@@ -16,6 +19,7 @@ describe('NestJS Feature Modules: Services Unit Tests', () => {
   let documentsService: DocumentsService;
   let complianceService: ComplianceService;
   let auditService: AuditService;
+  let companyProfileService: CompanyProfileService;
   let mockStorage: MockStorageService;
 
   const sampleTenderContent = `--- PAGE 1 ---
@@ -45,6 +49,7 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
     documentsService = new DocumentsService(db, mockStorage);
     complianceService = new ComplianceService(db);
     auditService = new AuditService(db);
+    companyProfileService = new CompanyProfileService(db);
   });
 
   describe('AuthService', () => {
@@ -82,6 +87,7 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
   describe('BidsService', () => {
     it('should list all demo bids', async () => {
       const bids = await bidsService.listBids();
+      expect(Array.isArray(bids)).toBe(true);
       expect(bids.length).toBeGreaterThan(0);
     });
 
@@ -161,14 +167,34 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
   });
 
   describe('DocumentsService', () => {
-    it('should generate presigned upload URL when storage service is configured', async () => {
+    it('should generate presigned upload URL when cloud storage service is configured', async () => {
+      const cloudStorage: IStorageService = {
+        generatePresignedUploadUrl: async () => 'https://vault.s3.ap-south-1.amazonaws.com/doc.pdf?X-Amz-Signature=test',
+        generatePresignedDownloadUrl: async () => 'https://vault.s3.ap-south-1.amazonaws.com/doc.pdf?sig=test',
+        headObject: async () => ({ exists: true, sizeBytes: 100 }),
+        getObject: async () => Buffer.from('test'),
+        deleteObject: async () => {},
+        deletePrefix: async () => {},
+      };
+      const cloudDocService = new DocumentsService(db, cloudStorage);
+      const res = await cloudDocService.generateUploadUrl(
+        'bid-cpwd-gov-002',
+        'tender_doc.pdf',
+        'application/pdf'
+      );
+      expect(res.documentId).toMatch(/^doc-/);
+      expect(res.uploadUrl).toContain('vault.s3.ap-south-1.amazonaws.com');
+      expect(res.storagePath).toContain('tenants/org_acme_infra_001/bids/bid-cpwd-gov-002');
+    });
+
+    it('should route mock storage to working local mock-upload endpoint', async () => {
       const res = await documentsService.generateUploadUrl(
         'bid-cpwd-gov-002',
         'tender_doc.pdf',
         'application/pdf'
       );
       expect(res.documentId).toMatch(/^doc-/);
-      expect(res.uploadUrl).toContain('mock-s3.tenderpulse.local');
+      expect(res.uploadUrl).toContain('/api/v1/mock-upload/');
       expect(res.storagePath).toContain('tenants/org_acme_infra_001/bids/bid-cpwd-gov-002');
     });
 
@@ -367,6 +393,120 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
       expect(updated.version).toBe(currentVersion + 1);
       expect(updated.status).toBe('READY');
       expect(updated.reviewNotes).toBe('Unit test verified');
+    });
+
+    it('should get evidence matches with coverage rollup', async () => {
+      const result = await complianceService.getEvidenceMatches('bid-nhai-44-001');
+      expect(result.bidId).toBe('bid-nhai-44-001');
+      expect(result.totalRequirements).toBeGreaterThan(0);
+      expect(result.matches.length).toBe(result.totalRequirements);
+      expect(typeof result.coveragePct).toBe('number');
+
+      const firstMatch = result.matches[0]!;
+      expect(firstMatch.complianceItemId).toBeDefined();
+      expect(firstMatch.tenderCitation).toBeDefined();
+      expect(['MATCHED', 'UNMATCHED', 'PARTIAL', 'EXPIRED']).toContain(firstMatch.matchStatus);
+    });
+
+    it('should get consolidated statutory and commercial risk findings', async () => {
+      const result = await complianceService.getRiskFindings('bid-nhai-44-001');
+      expect(result.bidId).toBe('bid-nhai-44-001');
+      expect(result.tenderNumber).toBeDefined();
+      expect(result.summary).toBeDefined();
+      expect(typeof result.summary.totalRisks).toBe('number');
+      expect(Array.isArray(result.statutoryRisks)).toBe(true);
+      expect(Array.isArray(result.commercialRisks)).toBe(true);
+    });
+  });
+
+  describe('BidsService Lifecycle Deadlines & Metrics', () => {
+    it('should compute tender lifecycle deadlines', async () => {
+      const deadlines = await bidsService.getTenderDeadlines('bid-nhai-44-001');
+      expect(deadlines.bidId).toBe('bid-nhai-44-001');
+      expect(Array.isArray(deadlines.milestones)).toBe(true);
+      expect(deadlines.milestones.length).toBe(6);
+
+      const milestoneKeys = deadlines.milestones.map((m) => m.milestoneKey);
+      expect(milestoneKeys).toContain('PRE_BID_MEETING');
+      expect(milestoneKeys).toContain('CLARIFICATION_CUTOFF');
+      expect(milestoneKeys).toContain('EMD_SUBMISSION');
+      expect(milestoneKeys).toContain('BID_SUBMISSION_FREEZE');
+      expect(milestoneKeys).toContain('TECHNICAL_BID_OPENING');
+      expect(milestoneKeys).toContain('FINANCIAL_BID_OPENING');
+    });
+
+    it('should compute aggregated dashboard metrics for tenant', async () => {
+      const metrics = await bidsService.getDashboardMetrics();
+      expect(metrics.activePipelineCount).toBeGreaterThan(0);
+      expect(typeof metrics.totalPipelineValueRupees).toBe('number');
+      expect(typeof metrics.totalFlaggedRequirements).toBe('number');
+      expect(metrics.pipelineDistribution).toBeDefined();
+      expect(typeof metrics.pipelineDistribution.DRAFT).toBe('number');
+    });
+
+    it('should support server-side pagination, status filtering, and search in listBids', async () => {
+      const paginated = await bidsService.listBids({ page: 1, limit: 2, sort: 'createdAt', order: 'desc' });
+      expect('items' in paginated).toBe(true);
+      if ('items' in paginated) {
+        expect(paginated.page).toBe(1);
+        expect(paginated.limit).toBe(2);
+        expect(paginated.items.length).toBeLessThanOrEqual(2);
+        expect(paginated.total).toBeGreaterThan(0);
+        expect(paginated.totalPages).toBeGreaterThan(0);
+      }
+
+      // Filter by status
+      const reviewReady = await bidsService.listBids({ status: 'REVIEW_READY' });
+      if ('items' in reviewReady) {
+        expect(reviewReady.items.every((b) => b.status === 'REVIEW_READY')).toBe(true);
+      }
+
+      // Keyword search
+      const searched = await bidsService.listBids({ search: 'NHAI' });
+      if ('items' in searched) {
+        expect(searched.items.length).toBeGreaterThan(0);
+        expect(searched.items[0]!.title.toLowerCase().includes('nh') || searched.items[0]!.tenderingAuthority.includes('NHAI')).toBe(true);
+      }
+    });
+
+    it('should list corrigendum and amendment notifications with impact analysis', async () => {
+      const amendments = await bidsService.getTenderAmendments();
+      expect(amendments.organizationId).toBe('org_acme_infra_001');
+      expect(Array.isArray(amendments.amendments)).toBe(true);
+      expect(typeof amendments.totalAmendments).toBe('number');
+      if (amendments.amendments.length > 0) {
+        const first = amendments.amendments[0]!;
+        expect(first.id).toBeDefined();
+        expect(first.bidId).toBeDefined();
+        expect(first.corrigendumNumber).toBeDefined();
+        expect(first.impact).toBeDefined();
+        expect(typeof first.impact.deadlineChanged).toBe('boolean');
+      }
+    });
+  });
+
+  describe('CompanyProfileService Expiring Certificates', () => {
+    it('should list certificates and OEM authorizations with remaining validity', async () => {
+      await TenantContextHolder.run(
+        {
+          organizationId: 'org_acme_infra_001',
+          userId: 'usr_bid_mgr_01',
+          role: 'BID_MANAGER',
+        },
+        async () => {
+          const expiring = await companyProfileService.getExpiringCertificates(3650);
+          expect(expiring.organizationId).toBe('org_acme_infra_001');
+          expect(expiring.activeProfileVersionId).toBeDefined();
+          expect(Array.isArray(expiring.certificates)).toBe(true);
+          expect(expiring.certificates.length).toBeGreaterThan(0);
+
+          const firstCert = expiring.certificates[0]!;
+          expect(firstCert.entryId).toBeDefined();
+          expect(firstCert.name).toBeDefined();
+          expect(typeof firstCert.daysRemaining).toBe('number');
+          expect(typeof firstCert.isExpired).toBe('boolean');
+        },
+      );
     });
   });
 

@@ -4,6 +4,7 @@ import { Button } from '../common/Button.js';
 import { StatusBadge } from '../common/StatusBadge.js';
 import { Badge } from '../common/Badge.js';
 import { Card } from '../common/Card.js';
+import { Bot } from 'lucide-react';
 import type { AssessmentRationale } from '../../api/compliance.js';
 
 export interface AssessmentPanelProps {
@@ -153,7 +154,7 @@ export const AssessmentPanel: React.FC<AssessmentPanelProps> = ({
                 padding: '1.5rem 0',
               }}
             >
-              <div style={{ fontSize: 'var(--text-3xl)', opacity: 0.7 }}>🧠</div>
+              <Bot size={36} className="text-muted-foreground" />
               <div style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--font-semibold)' as unknown as number, color: 'var(--color-surface-text)' }}>
                 Assessment Rationale Not Generated
               </div>

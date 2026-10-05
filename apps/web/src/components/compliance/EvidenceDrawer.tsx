@@ -4,6 +4,7 @@ import { Button } from '../common/Button.js';
 import { StatusBadge } from '../common/StatusBadge.js';
 import { Badge } from '../common/Badge.js';
 import { Card } from '../common/Card.js';
+import { FileWarning } from 'lucide-react';
 import type { CompanyEvidence, Provenance, SourceCitation, AssessmentRationale } from '../../api/compliance.js';
 
 export interface EvidenceDrawerProps {
@@ -123,7 +124,7 @@ export const EvidenceDrawer: React.FC<EvidenceDrawerProps> = ({
               </p>
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
                 <Button variant="ghost" size="sm" onClick={handleCopyQuote} style={{ fontSize: 'var(--text-2xs)' }}>
-                  {copied ? '✓ Copied' : 'Copy Citation'}
+                  {copied ? 'Copied' : 'Copy Citation'}
                 </Button>
               </div>
             </div>
@@ -204,8 +205,8 @@ export const EvidenceDrawer: React.FC<EvidenceDrawerProps> = ({
                 fontSize: 'var(--text-xs)',
               }}
             >
-              <div style={{ color: 'var(--color-danger)', fontWeight: 600, marginBottom: '0.2rem' }}>
-                📄 Missing Evidence Document
+              <div style={{ color: 'var(--color-danger)', fontWeight: 600, marginBottom: '0.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
+                <FileWarning size={14} /> Missing Evidence Document
               </div>
               <p style={{ color: 'var(--color-surface-muted)', margin: 0 }}>
                 No matching verified credential exists in your Company Capability Vault. Attach an evidence file to satisfy this clause.

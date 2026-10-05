@@ -6,6 +6,7 @@ import {
   type BaseCapabilityItem,
   getDaysUntilExpiry,
 } from './companyProfileData.js';
+import { AlertTriangle, FileText } from 'lucide-react';
 
 export interface KeyValueField {
   label: string;
@@ -137,9 +138,13 @@ export const CapabilityItemCard: React.FC<CapabilityItemCardProps> = ({
             border: '1px solid rgba(245, 158, 11, 0.25)',
             borderRadius: 'var(--radius-sm)',
             padding: '0.4rem 0.65rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem',
           }}
         >
-          ⚠️ {item.verificationNotes}
+          <AlertTriangle size={14} className="shrink-0" />
+          <span>{item.verificationNotes}</span>
         </div>
       )}
 
@@ -156,7 +161,7 @@ export const CapabilityItemCard: React.FC<CapabilityItemCardProps> = ({
       >
         {item.evidenceDocName ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <span style={{ fontSize: 'var(--text-xs)' }}>📄</span>
+            <FileText size={14} className="text-muted-foreground shrink-0" />
             <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)' }}>
               Linked Evidence:{' '}
               <strong style={{ color: 'var(--color-surface-text)', fontFamily: 'var(--font-mono)' }}>

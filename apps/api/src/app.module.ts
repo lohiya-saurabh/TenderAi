@@ -12,6 +12,7 @@ import { DocumentsModule } from './modules/documents/documents.module.js';
 import { ComplianceModule } from './modules/compliance/compliance.module.js';
 import { AuditModule } from './modules/audit/audit.module.js';
 import { CompanyProfileModule } from './modules/company-profile/company-profile.module.js';
+import { DashboardModule } from './modules/dashboard/dashboard.module.js';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { CompanyProfileModule } from './modules/company-profile/company-profile.
     ComplianceModule,
     AuditModule,
     CompanyProfileModule,
+    DashboardModule,
   ],
 })
 export class AppModule {}

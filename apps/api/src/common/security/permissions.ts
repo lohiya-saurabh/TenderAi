@@ -73,7 +73,12 @@ export const ROLE_PERMISSIONS: Record<UserRole, ReadonlySet<Permission>> = {
   INTERNAL_WORKER: new Set<Permission>([Permissions.COMPLIANCE_BULK_INGEST]),
 };
 
-export function hasPermission(role: UserRole, permission: Permission): boolean {
-  const allowed = ROLE_PERMISSIONS[role];
+export function hasPermission(role: string, permission: Permission): boolean {
+  if (!role) return false;
+  const normalized = role.toUpperCase().replace(/[\s-]/g, '_');
+  if (normalized === 'COMPLIANCE_OFFICER') {
+    return ROLE_PERMISSIONS.REVIEWER.has(permission);
+  }
+  const allowed = ROLE_PERMISSIONS[normalized as UserRole];
   return allowed ? allowed.has(permission) : false;
 }

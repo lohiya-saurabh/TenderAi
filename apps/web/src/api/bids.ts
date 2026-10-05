@@ -22,6 +22,30 @@ export interface BidSummary {
   approvedRequirements?: number;
   createdAt: string;
   updatedAt: string;
+  decision?: {
+    decisionId: string;
+    verdict: 'GO' | 'CONDITIONAL_GO' | 'NO_GO' | 'REVIEW_REQUIRED';
+    state: string;
+    readinessScore: number;
+    evaluatedAt: string;
+  } | null;
+}
+
+export interface ListBidsQuery {
+  page?: number;
+  limit?: number;
+  sort?: string;
+  order?: 'asc' | 'desc';
+  status?: string;
+  search?: string;
+}
+
+export interface PaginatedBidsResponse {
+  items: BidSummary[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 export interface BidDetail extends BidSummary {
@@ -84,9 +108,24 @@ export interface DownloadUrlResponse {
   expiresInSeconds: number;
 }
 
-/** List all bids for current tenant */
-export function listBids(): Promise<ApiResult<BidSummary[]>> {
-  return apiGet<BidSummary[]>('/api/v1/bids');
+/** List all bids for current tenant with optional server-side pagination, sorting & filters */
+export function listBids(): Promise<ApiResult<BidSummary[]>>;
+export function listBids(query: ListBidsQuery): Promise<ApiResult<PaginatedBidsResponse>>;
+export function listBids(
+  query?: ListBidsQuery,
+): Promise<ApiResult<BidSummary[] | PaginatedBidsResponse>> {
+  if (!query) {
+    return apiGet<BidSummary[]>('/api/v1/bids');
+  }
+  const params = new URLSearchParams();
+  if (query.page !== undefined) params.set('page', String(query.page));
+  if (query.limit !== undefined) params.set('limit', String(query.limit));
+  if (query.sort) params.set('sort', query.sort);
+  if (query.order) params.set('order', query.order);
+  if (query.status) params.set('status', query.status);
+  if (query.search) params.set('search', query.search);
+  const qs = params.toString();
+  return apiGet<PaginatedBidsResponse>(`/api/v1/bids${qs ? `?${qs}` : ''}`);
 }
 
 /** Get a single bid by ID with document list */
@@ -213,6 +252,206 @@ export function deleteDocument(
   documentId: string,
 ): Promise<ApiResult<DeleteDocumentResponse>> {
   return apiDelete<DeleteDocumentResponse>(`/api/v1/bids/${bidId}/documents/${documentId}`);
+}
+
+// ---------------------------------------------------------------------------
+// Tender Lifecycle Milestones & Countdown Deadlines
+// ---------------------------------------------------------------------------
+
+export interface TenderMilestone {
+  milestoneKey: string;
+  label: string;
+  date: string | null;
+  daysRemaining: number | null;
+  status: 'UPCOMING' | 'IMMINENT' | 'OVERDUE' | 'NOT_SET';
+  isMandatory: boolean;
+  notes: string;
+}
+
+export interface TenderDeadlinesResponse {
+  bidId: string;
+  tenderNumber: string;
+  submissionDeadline: string | null;
+  daysRemaining: number | null;
+  milestones: TenderMilestone[];
+}
+
+/** Get lifecycle milestone deadlines and countdown status for a bid */
+export function getTenderDeadlines(
+  bidId: string,
+): Promise<ApiResult<TenderDeadlinesResponse>> {
+  return apiGet<TenderDeadlinesResponse>(`/api/v1/bids/${bidId}/deadlines`);
+}
+
+// ---------------------------------------------------------------------------
+// Pre-aggregated Dashboard KPIs
+// ---------------------------------------------------------------------------
+
+export interface DashboardMetricsResponse {
+  activePipelineCount: number;
+  totalPipelineValueRupees: number;
+  totalFlaggedRequirements: number;
+  imminentDeadlinesCount: number;
+  pipelineDistribution: Record<string, number>;
+  totalTendersCount: number;
+  updatedAt: string;
+}
+
+/** Get pre-aggregated tenant KPIs and pipeline analytics */
+export function getDashboardMetrics(): Promise<ApiResult<DashboardMetricsResponse>> {
+  return apiGet<DashboardMetricsResponse>('/api/v1/dashboard/metrics');
+}
+
+// ---------------------------------------------------------------------------
+// Evidence Matches & Grounding
+// ---------------------------------------------------------------------------
+
+export interface EvidenceMatchItem {
+  complianceItemId: string;
+  category: string;
+  requirementTitle: string;
+  description: string;
+  status: string;
+  matchStatus: 'MATCHED' | 'UNMATCHED' | 'PARTIAL' | 'EXPIRED';
+  tenderCitation: {
+    documentId?: string;
+    documentName?: string;
+    pageNumber?: number;
+    sectionOrClause?: string;
+    verbatimQuote?: string;
+    confidenceScore?: number;
+  };
+  companyEvidence: {
+    id?: string;
+    title?: string;
+    docType?: string;
+    documentName?: string;
+    status?: string;
+    udinNumber?: string;
+    expiryDate?: string | null;
+    notes?: string;
+  } | null;
+  executionRules?: {
+    stampPaperRequired?: boolean;
+    stampPaperDenominationInr?: number | null;
+    notarizationRequired?: boolean;
+    udinRequired?: boolean;
+    signingAuthorityRank?: string;
+  };
+}
+
+export interface EvidenceMatchesResponse {
+  bidId: string;
+  totalRequirements: number;
+  totalMatched: number;
+  totalPartial: number;
+  totalUnmatched: number;
+  coveragePct: number;
+  matches: EvidenceMatchItem[];
+}
+
+/** Get company-side proof cross-referencing and coverage rollup for a bid */
+export function getEvidenceMatches(
+  bidId: string,
+): Promise<ApiResult<EvidenceMatchesResponse>> {
+  return apiGet<EvidenceMatchesResponse>(`/api/v1/bids/${bidId}/evidence-matches`);
+}
+
+// ---------------------------------------------------------------------------
+// Consolidated Statutory and Commercial Risk Radar
+// ---------------------------------------------------------------------------
+
+export interface StatutoryRiskItem {
+  complianceItemId: string;
+  category: string;
+  title: string;
+  level: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  summary: string;
+  financialImpactRupees: number;
+  mitigationAdvice: string | null;
+  clauseCitation: string | null;
+  executionConstraints: string[];
+}
+
+export interface CommercialRiskItem {
+  riskId?: string;
+  category: string;
+  title?: string;
+  summary: string;
+  level: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  mitigationAdvice?: string | null;
+  source: 'BID_DECISION' | 'REQUIREMENT_MATRIX';
+}
+
+export interface RiskFindingsResponse {
+  bidId: string;
+  tenderNumber: string;
+  summary: {
+    totalRisks: number;
+    criticalCount: number;
+    highSeverityCount: number;
+    mediumSeverityCount: number;
+    lowSeverityCount: number;
+    statutoryComplianceRiskCount: number;
+    commercialRiskCount: number;
+    estimatedFinancialExposureRupees: number;
+  };
+  statutoryRisks: StatutoryRiskItem[];
+  commercialRisks: CommercialRiskItem[];
+  hardDisqualifiers: string[];
+  uncertainAreas: string[];
+  reviewTriggers: string[];
+  evaluatedAt: string;
+}
+
+/** Get consolidated statutory, execution, and commercial risk radar for a bid */
+export function getRiskFindings(
+  bidId: string,
+): Promise<ApiResult<RiskFindingsResponse>> {
+  return apiGet<RiskFindingsResponse>(`/api/v1/bids/${bidId}/risk-findings`);
+}
+
+// ---------------------------------------------------------------------------
+// Corrigendum & Tender Amendment Notification Stream
+// ---------------------------------------------------------------------------
+
+export interface TenderAmendmentItem {
+  id: string;
+  bidId: string;
+  tenderNumber: string;
+  tenderTitle: string;
+  tenderingAuthority: string;
+  corrigendumNumber: string;
+  documentId: string;
+  documentName: string;
+  publishedAt: string;
+  amendmentType: 'DEADLINE_EXTENSION' | 'TECHNICAL_SPEC_CHANGE' | 'EMD_AMENDMENT' | 'ELIGIBILITY_REVISION' | 'GENERAL_CLARIFICATION';
+  summary: string;
+  impact: {
+    deadlineChanged: boolean;
+    previousDeadline: string | null;
+    revisedDeadline: string | null;
+    daysExtended: number | null;
+    affectedRequirementsCount: number;
+    requiresReEvaluation: boolean;
+  };
+  status: 'PROCESSED' | 'EVALUATED' | 'REQUIRES_CONFIRMATION';
+}
+
+export interface TenderAmendmentsResponse {
+  organizationId: string;
+  totalAmendments: number;
+  unreadCount: number;
+  amendments: TenderAmendmentItem[];
+}
+
+/** Get corrigendum / amendment notification and impact stream across monitored tenders */
+export function getTenderAmendments(
+  bidId?: string,
+): Promise<ApiResult<TenderAmendmentsResponse>> {
+  return apiGet<TenderAmendmentsResponse>(
+    `/api/v1/tenders/amendments${bidId ? `?bidId=${bidId}` : ''}`,
+  );
 }
 
 

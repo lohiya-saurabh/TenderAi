@@ -1,11 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import type { BidSummary } from '../../api/bids.js';
-import { Card, CardHeader, CardTitle, CardContent } from '../common/Card.js';
-import { Badge } from '../common/Badge.js';
+import { Card, CardHeader, CardTitle, CardContent } from '../ui/card.js';
+import { Badge } from '../ui/badge.js';
 import { WarningIcon, ChevronRightIcon } from '../common/Icons.js';
 import { formatDate } from '../../utils/formatDate.js';
 import { formatCurrency } from '../../utils/formatCurrency.js';
+import { cn } from '../../lib/utils.js';
 
 export interface UpcomingDeadlinesCardProps {
   bids: BidSummary[];
@@ -26,40 +27,29 @@ export const UpcomingDeadlinesCard: React.FC<UpcomingDeadlinesCardProps> = ({ bi
     .sort((a, b) => a.deadlineMs - b.deadlineMs);
 
   return (
-    <Card variant="default" padding="md">
-      <CardHeader
-        action={
-          <Badge variant="neutral" size="sm">
-            {datedBids.length} Scheduled
-          </Badge>
-        }
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <WarningIcon size={16} color="var(--color-warning)" />
-          <CardTitle as="h3">Upcoming Tender Deadlines</CardTitle>
+    <Card className="shadow-xs">
+      <CardHeader className="flex flex-row items-center justify-between pb-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <WarningIcon size={16} className="text-amber-400" />
+            <CardTitle className="text-base font-semibold">Upcoming Tender Deadlines</CardTitle>
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Submission closing dates ordered chronologically for bidding operations
+          </p>
         </div>
-        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)' }}>
-          Submission closing dates ordered chronologically for bidding operations
-        </p>
+        <Badge variant="secondary" className="font-medium">
+          {datedBids.length} Scheduled
+        </Badge>
       </CardHeader>
 
       <CardContent>
         {datedBids.length === 0 ? (
-          <div
-            style={{
-              padding: '1.25rem',
-              textAlign: 'center',
-              backgroundColor: 'var(--color-surface-card-subtle)',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--color-surface-border)',
-              color: 'var(--color-surface-muted)',
-              fontSize: 'var(--text-xs)',
-            }}
-          >
+          <div className="p-4 text-center rounded-lg bg-card/60 border border-border text-muted-foreground text-xs">
             No active tenders with pending submission deadlines.
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+          <div className="flex flex-col gap-2">
             {datedBids.slice(0, 4).map((bid) => {
               const isUrgent = bid.daysLeft <= 3 && bid.daysLeft > 0;
               const isImminent = bid.daysLeft <= 7 && bid.daysLeft > 3;
@@ -69,58 +59,35 @@ export const UpcomingDeadlinesCard: React.FC<UpcomingDeadlinesCardProps> = ({ bi
                 <Link
                   key={bid.id}
                   to={`/bids/${bid.id}`}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '0.65rem 0.85rem',
-                    borderRadius: 'var(--radius-md)',
-                    backgroundColor: 'var(--color-surface-card-subtle)',
-                    border: isUrgent
-                      ? '1px solid var(--color-danger-border)'
-                      : '1px solid var(--color-surface-border)',
-                    textDecoration: 'none',
-                    transition: 'all var(--transition-fast)',
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-surface-card-hover)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-surface-card-subtle)')}
+                  className={cn(
+                    'flex items-center justify-between p-2.5 rounded-lg bg-card/60 border transition-colors hover:bg-accent/50',
+                    isUrgent ? 'border-destructive/40 hover:border-destructive/60' : 'border-border'
+                  )}
                 >
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0 }}>
-                    <span
-                      style={{
-                        fontSize: 'var(--text-xs)',
-                        fontWeight: 600,
-                        color: 'var(--color-surface-text)',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        maxWidth: '260px',
-                      }}
-                    >
+                  <div className="flex flex-col gap-0.5 min-w-0 pr-2">
+                    <span className="text-xs font-semibold text-foreground truncate max-w-[260px]">
                       {bid.title}
                     </span>
-                    <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)', display: 'flex', gap: '0.4rem' }}>
+                    <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 truncate">
                       <span>{bid.tenderingAuthority}</span>
                       <span>•</span>
                       <span>{bid.estimatedValueRupees ? formatCurrency(bid.estimatedValueRupees) : 'Value TBD'}</span>
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
-                    <div style={{ textAlign: 'right' }}>
+                  <div className="flex items-center gap-2.5 shrink-0">
+                    <div className="text-right">
                       <div
-                        style={{
-                          fontSize: 'var(--text-2xs)',
-                          fontWeight: 700,
-                          color: isPassed
-                            ? 'var(--color-surface-subtle)'
+                        className={cn(
+                          'text-[10px] font-bold uppercase tracking-wider',
+                          isPassed
+                            ? 'text-muted-foreground'
                             : isUrgent
-                              ? 'var(--color-danger)'
+                              ? 'text-destructive'
                               : isImminent
-                                ? 'var(--color-warning)'
-                                : 'var(--color-surface-text)',
-                          textTransform: 'uppercase',
-                        }}
+                                ? 'text-amber-400'
+                                : 'text-foreground'
+                        )}
                       >
                         {isPassed
                           ? 'Window Closed'
@@ -128,12 +95,12 @@ export const UpcomingDeadlinesCard: React.FC<UpcomingDeadlinesCardProps> = ({ bi
                             ? '1 day left'
                             : `${bid.daysLeft} days left`}
                       </div>
-                      <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-subtle)' }}>
+                      <div className="text-[10px] text-muted-foreground">
                         {formatDate(bid.submissionDeadline!)}
                       </div>
                     </div>
 
-                    <ChevronRightIcon size={14} color="var(--color-surface-subtle)" />
+                    <ChevronRightIcon size={14} className="text-muted-foreground/60" />
                   </div>
                 </Link>
               );

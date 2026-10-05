@@ -7,6 +7,7 @@ import {
   type FullCompanyProfile,
   computeProfileHealth,
 } from './companyProfileData.js';
+import { Zap, Building2, Check, CheckCircle2, FolderArchive, Plus, RefreshCw } from 'lucide-react';
 
 export interface CompanyProfileHeaderProps {
   profile: FullCompanyProfile;
@@ -48,7 +49,7 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-          <span style={{ fontSize: '1.25rem' }}>⚡</span>
+          <Zap size={20} className="text-primary" />
           <div>
             <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-surface-text)' }}>
               Maintain your company information once and reuse it across tenders.
@@ -63,8 +64,8 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
           <Badge variant="primary" size="sm">
             {profile.profileVersion}
           </Badge>
-          <Button variant="outline" size="sm" onClick={() => setIsPublishModalOpen(true)}>
-            🔄 Publish Version
+          <Button variant="outline" size="sm" onClick={() => setIsPublishModalOpen(true)} icon={<RefreshCw size={14} />}>
+            Publish Version
           </Button>
         </div>
       </div>
@@ -75,19 +76,21 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
           {/* Company Details */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
-              <span style={{ fontSize: '1.6rem' }}>🏢</span>
+              <Building2 size={24} className="text-primary" />
               <h1 style={{ fontSize: 'var(--text-xl)', fontWeight: 700, color: 'var(--color-surface-text)', margin: 0 }}>
                 {profile.companyName}
               </h1>
-              <Badge variant="success" size="sm">
-                ● Active Dossier
+              <Badge variant="success" size="sm" dot>
+                Active Dossier
               </Badge>
               <Badge variant="neutral" size="sm">
                 MSME {profile.msmeCategory}
               </Badge>
               {!profile.isBlacklisted && (
                 <Badge variant="success" size="sm">
-                  ✓ Clean Non-Debarment Record
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <Check size={12} /> Clean Non-Debarment Record
+                  </span>
                 </Badge>
               )}
             </div>
@@ -107,11 +110,11 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
 
           {/* Action Station */}
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <Button variant="secondary" size="sm" onClick={onOpenVault}>
-              📁 Evidence Vault ({profile.evidenceVault.length})
+            <Button variant="secondary" size="sm" onClick={onOpenVault} icon={<FolderArchive size={14} />}>
+              Evidence Vault ({profile.evidenceVault.length})
             </Button>
-            <Button variant="primary" size="sm" onClick={onAddCredential}>
-              + Add Capability
+            <Button variant="primary" size="sm" onClick={onAddCredential} icon={<Plus size={14} />}>
+              Add Capability
             </Button>
           </div>
         </div>
@@ -224,8 +227,8 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: 'var(--text-sm)' }}>
             {publishSuccess ? (
-              <div style={{ color: 'var(--color-success)', textAlign: 'center', padding: '1rem' }}>
-                ✓ Profile Version v2.5 published and pinned successfully!
+              <div style={{ color: 'var(--color-success)', textAlign: 'center', padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                <CheckCircle2 size={16} /> Profile Version v2.5 published and pinned successfully!
               </div>
             ) : (
               <>

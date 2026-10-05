@@ -74,6 +74,9 @@ export const complianceItems = pgTable('compliance_items', {
   version: integer('version').notNull().default(1),
   executionRules: jsonb('execution_rules').notNull(),
   provenance: jsonb('provenance').notNull(),
+  companyEvidence: jsonb('company_evidence'),
+  risk: jsonb('risk'),
+  rationale: jsonb('rationale'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

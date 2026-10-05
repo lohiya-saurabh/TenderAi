@@ -1,34 +1,20 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React from 'react';
 import { useAuth } from '../../auth/useAuth.js';
-import { LogoutIcon, ChevronDownIcon, ShieldLockIcon } from '../common/Icons.js';
-import { Badge } from '../common/Badge.js';
+import { LogOut, ShieldCheck } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../ui/dropdown-menu.js';
+import { Avatar, AvatarFallback } from '../ui/avatar.js';
+import { Badge } from '../ui/badge.js';
+import { Button } from '../ui/button.js';
 
 export const UserAccountMenu: React.FC = () => {
   const { user, logout } = useAuth();
-  const [isOpen, setIsOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleOutsideClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        setIsOpen(false);
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleOutsideClick);
-      document.addEventListener('keydown', handleKeyDown);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleOutsideClick);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen]);
 
   const getInitials = (name?: string, email?: string): string => {
     if (name) {
@@ -47,193 +33,68 @@ export const UserAccountMenu: React.FC = () => {
   const initials = getInitials(user?.name, user?.email);
 
   return (
-    <div ref={menuRef} style={{ position: 'relative' }}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        aria-haspopup="true"
-        aria-expanded={isOpen}
-        aria-label="User account menu"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.65rem',
-          background: isOpen ? 'var(--color-surface-card-hover)' : 'transparent',
-          border: '1px solid var(--color-surface-border)',
-          borderRadius: 'var(--radius-md)',
-          padding: '0.35rem 0.65rem',
-          cursor: 'pointer',
-          transition: 'all var(--transition-fast)',
-          color: 'var(--color-surface-text)',
-        }}
-      >
-        {/* User avatar circle */}
-        <div
-          style={{
-            width: '28px',
-            height: '28px',
-            borderRadius: 'var(--radius-sm)',
-            backgroundColor: 'var(--color-primary-700)',
-            color: '#ffffff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 'var(--text-xs)',
-            fontWeight: 700,
-            letterSpacing: '0.02em',
-            flexShrink: 0,
-          }}
-          aria-hidden="true"
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 gap-2 px-2 border-border/60 hover:bg-accent hover:text-accent-foreground transition-colors"
+          aria-label="User account menu"
         >
-          {initials}
-        </div>
-
-        <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column' }}>
-          <span
-            style={{
-              fontSize: 'var(--text-xs)',
-              fontWeight: 600,
-              color: 'var(--color-surface-text)',
-              lineHeight: 1.2,
-            }}
-          >
-            {user?.name || user?.email || 'Authenticated User'}
-          </span>
-          <span
-            style={{
-              fontSize: 'var(--text-2xs)',
-              color: 'var(--color-surface-muted)',
-              lineHeight: 1.2,
-            }}
-          >
-            {user?.role?.replace(/_/g, ' ') || 'User'}
-          </span>
-        </div>
-
-        <ChevronDownIcon
-          size={14}
-          color="var(--color-surface-muted)"
-          style={{
-            transform: isOpen ? 'rotate(180deg)' : 'none',
-            transition: 'transform var(--transition-fast)',
-          }}
-        />
-      </button>
-
-      {/* Account Dropdown Menu */}
-      {isOpen && (
-        <div
-          role="menu"
-          aria-orientation="vertical"
-          className="scale-in"
-          style={{
-            position: 'absolute',
-            top: 'calc(100% + 6px)',
-            right: 0,
-            width: '260px',
-            backgroundColor: 'var(--color-surface-card)',
-            border: '1px solid var(--color-surface-border)',
-            borderRadius: 'var(--radius-md)',
-            boxShadow: 'var(--shadow-lg)',
-            zIndex: 'var(--z-index-dropdown)' as unknown as number,
-            padding: '0.5rem 0',
-            overflow: 'hidden',
-          }}
-        >
-          {/* User profile header */}
-          <div
-            style={{
-              padding: '0.75rem 1rem',
-              borderBottom: '1px solid var(--color-surface-border)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.25rem',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-surface-text)' }}>
+          <Avatar className="h-5 w-5 rounded-full border border-border/50">
+            <AvatarFallback className="text-[10px] font-bold bg-primary text-primary-foreground">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
+          <div className="hidden sm:flex flex-col text-left text-xs leading-none">
+            <span className="font-medium text-foreground truncate max-w-[120px]">
+              {user?.name || user?.email || 'Authenticated User'}
+            </span>
+          </div>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-64" align="end" forceMount>
+        <DropdownMenuLabel className="font-normal p-3">
+          <div className="flex flex-col space-y-1.5">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-foreground leading-none">
                 {user?.name || 'Account'}
-              </span>
-              <Badge variant="primary" size="sm">
+              </p>
+              <Badge variant="secondary" className="text-[10px] font-medium uppercase px-1.5 py-0.5">
                 {user?.role?.replace(/_/g, ' ') || 'User'}
               </Badge>
             </div>
-            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)', wordBreak: 'break-all' }}>
+            <p className="text-xs text-muted-foreground truncate">
               {user?.email}
-            </span>
+            </p>
           </div>
-
-          {/* Tenant / Organization Info */}
-          <div
-            style={{
-              padding: '0.65rem 1rem',
-              borderBottom: '1px solid var(--color-surface-border)',
-              backgroundColor: 'var(--color-surface-card-subtle)',
-              fontSize: 'var(--text-xs)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.2rem',
-            }}
-          >
-            <span style={{ color: 'var(--color-surface-muted)', fontSize: 'var(--text-2xs)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Organization Tenant
-            </span>
-            <span style={{ fontWeight: 500, color: 'var(--color-surface-text)' }}>
-              {user?.organizationName || 'Default Organization'}
-            </span>
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-2xs)', color: 'var(--color-surface-subtle)' }}>
-              ID: {user?.organizationId || 'org_acme_infra_001'}
-            </span>
-          </div>
-
-          {/* Security status */}
-          <div
-            style={{
-              padding: '0.6rem 1rem',
-              borderBottom: '1px solid var(--color-surface-border)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              fontSize: 'var(--text-xs)',
-              color: 'var(--color-surface-muted)',
-            }}
-          >
-            <ShieldLockIcon size={14} color="var(--color-status-pass-text)" />
-            <span>HMAC-SHA256 Token Session</span>
-          </div>
-
-          {/* Sign Out Action */}
-          <div style={{ padding: '0.35rem 0.5rem 0.15rem' }}>
-            <button
-              role="menuitem"
-              onClick={() => {
-                setIsOpen(false);
-                logout();
-              }}
-              style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.6rem',
-                padding: '0.55rem 0.75rem',
-                borderRadius: 'var(--radius-sm)',
-                backgroundColor: 'transparent',
-                border: 'none',
-                color: 'var(--color-danger)',
-                fontSize: 'var(--text-xs)',
-                fontWeight: 500,
-                cursor: 'pointer',
-                textAlign: 'left',
-                transition: 'background-color var(--transition-fast)',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-danger-bg)')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-            >
-              <LogoutIcon size={15} color="var(--color-danger)" />
-              <span>Sign Out</span>
-            </button>
-          </div>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <div className="px-3 py-2 bg-muted/40 text-xs">
+          <p className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider mb-0.5">
+            Organization Tenant
+          </p>
+          <p className="font-medium text-foreground truncate">
+            {user?.organizationName || 'Default Organization'}
+          </p>
+          <p className="font-mono text-[10px] text-muted-foreground mt-0.5">
+            ID: {user?.organizationId || 'org_acme_infra_001'}
+          </p>
         </div>
-      )}
-    </div>
+        <DropdownMenuSeparator />
+        <div className="px-3 py-1.5 flex items-center gap-2 text-xs text-muted-foreground">
+          <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+          <span>HMAC-SHA256 Token Session</span>
+        </div>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => logout()}
+          className="text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer"
+        >
+          <LogOut className="mr-2 h-4 w-4" />
+          <span>Sign Out</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };

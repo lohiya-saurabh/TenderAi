@@ -15,6 +15,7 @@ import { EvidenceDrawer } from '../components/compliance/EvidenceDrawer.js';
 import { SourceCitationDrawer } from '../components/compliance/SourceCitationDrawer.js';
 import { AssessmentPanel } from '../components/compliance/AssessmentPanel.js';
 import { ChevronLeftIcon } from '../components/common/Icons.js';
+import { Check, X, Bot, AlertTriangle, FileWarning } from 'lucide-react';
 
 export const ComplianceReviewPage: React.FC = () => {
   const { id: bidId = '', itemId = '' } = useParams<{ id: string; itemId: string }>();
@@ -167,18 +168,22 @@ export const ComplianceReviewPage: React.FC = () => {
             justifyContent: 'space-between',
           }}
         >
-          <span>✓ {actionSuccess}</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Check size={16} /> {actionSuccess}
+          </span>
           <button
             onClick={() => setActionSuccess(null)}
-            style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontWeight: 600 }}
+            style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+            aria-label="Close"
           >
-            ✕
+            <X size={16} />
           </button>
         </div>
       )}
 
       {/* Review Stage Flow Progression Header */}
       <div
+        className="no-scrollbar"
         style={{
           backgroundColor: 'var(--color-surface-bg)',
           border: '1px solid var(--color-surface-border)',
@@ -188,6 +193,8 @@ export const ComplianceReviewPage: React.FC = () => {
           alignItems: 'center',
           justifyContent: 'space-between',
           overflowX: 'auto',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
           gap: '0.75rem',
           fontSize: 'var(--text-xs)',
           color: 'var(--color-surface-muted)',
@@ -376,7 +383,7 @@ export const ComplianceReviewPage: React.FC = () => {
               }
               style={{ flexShrink: 0, fontSize: 'var(--text-2xs)' }}
             >
-              {copiedQuote ? '✓ Copied' : 'Copy Quote'}
+              {copiedQuote ? 'Copied' : 'Copy Quote'}
             </Button>
           </div>
         </div>
@@ -481,8 +488,8 @@ export const ComplianceReviewPage: React.FC = () => {
               textAlign: 'center',
             }}
           >
-            <div style={{ color: 'var(--color-danger)', fontWeight: 600, fontSize: 'var(--text-sm)', marginBottom: '0.25rem' }}>
-              📄 No Matching Company Evidence Linked
+            <div style={{ color: 'var(--color-danger)', fontWeight: 600, fontSize: 'var(--text-sm)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+              <FileWarning size={16} /> No Matching Company Evidence Linked
             </div>
             <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)', margin: '0 0 0.75rem' }}>
               The system could not find an uploaded credential matching this requirement in your Company Profile.
@@ -510,8 +517,8 @@ export const ComplianceReviewPage: React.FC = () => {
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-primary-300)' }}>
-              🧠 Stage 4 • What did the AI conclude?
+            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-primary-300)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Bot size={16} /> Stage 4 • What did the AI conclude?
             </span>
             <span
               style={{
@@ -635,8 +642,8 @@ export const ComplianceReviewPage: React.FC = () => {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.6rem' }}>
-          <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-warning)' }}>
-            ⚠️ Stage 5 • Why is human review required?
+          <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-warning)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <AlertTriangle size={16} /> Stage 5 • Why is human review required?
           </span>
         </div>
 

@@ -1,38 +1,53 @@
 import React from 'react';
 import type { ExecutionRules } from '../../api/compliance.js';
 import { formatCurrency } from '../../utils/formatCurrency.js';
+import {
+  FileText,
+  Scale,
+  Search,
+  FileSignature,
+  Landmark,
+  type LucideIcon,
+} from 'lucide-react';
 
 export interface ExecutionRulesCardProps {
   executionRules: ExecutionRules;
 }
 
+interface ExecutionRuleItem {
+  label: string;
+  active: boolean;
+  detail: string;
+  icon: LucideIcon;
+}
+
 export const ExecutionRulesCard: React.FC<ExecutionRulesCardProps> = ({ executionRules }) => {
-  const items = [
+  const items: ExecutionRuleItem[] = [
     {
       label: 'Non-Judicial Stamp Paper',
       active: executionRules.stampPaperRequired,
       detail: executionRules.stampPaperDenominationInr
         ? `Denomination: ${formatCurrency(executionRules.stampPaperDenominationInr)}`
         : 'Required (Denomination as per state act)',
-      icon: '📜',
+      icon: FileText,
     },
     {
       label: 'Notarization / Attestation',
       active: executionRules.notarizationRequired,
       detail: executionRules.notarizationRequired ? 'Public Notary / Oath Commissioner' : 'Not mandatory',
-      icon: '⚖️',
+      icon: Scale,
     },
     {
       label: 'CA Certificate & UDIN',
       active: executionRules.udinRequired,
       detail: executionRules.udinRequired ? '18-digit UDIN mandatory for CA certs' : 'Not mandatory',
-      icon: '🔍',
+      icon: Search,
     },
     {
       label: 'Authorized Signatory',
       active: Boolean(executionRules.signingAuthorityRank),
       detail: executionRules.signingAuthorityRank || 'Authorized Representative',
-      icon: '✍️',
+      icon: FileSignature,
     },
   ];
 
@@ -46,7 +61,7 @@ export const ExecutionRulesCard: React.FC<ExecutionRulesCardProps> = ({ executio
       }}
     >
       <h4 style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-surface-text)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-        <span>🏛️</span> Indian Tender Execution & Statutory Rules
+        <Landmark size={16} className="text-primary" /> Indian Tender Execution & Statutory Rules
       </h4>
 
       <div
@@ -56,33 +71,36 @@ export const ExecutionRulesCard: React.FC<ExecutionRulesCardProps> = ({ executio
           gap: '0.75rem',
         }}
       >
-        {items.map((item, idx) => (
-          <div
-            key={idx}
-            style={{
-              padding: '0.75rem',
-              borderRadius: 'var(--radius-md)',
-              backgroundColor: item.active ? 'rgba(99, 102, 241, 0.08)' : 'var(--color-surface-bg)',
-              border: `1px solid ${item.active ? 'rgba(99, 102, 241, 0.25)' : 'var(--color-surface-border)'}`,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.25rem' }}>
-              <span>{item.icon}</span>
-              <span
-                style={{
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  color: item.active ? 'var(--color-primary-100)' : 'var(--color-surface-muted)',
-                }}
-              >
-                {item.label}
-              </span>
+        {items.map((item, idx) => {
+          const IconComponent = item.icon;
+          return (
+            <div
+              key={idx}
+              style={{
+                padding: '0.75rem',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: item.active ? 'rgba(99, 102, 241, 0.08)' : 'var(--color-surface-bg)',
+                border: `1px solid ${item.active ? 'rgba(99, 102, 241, 0.25)' : 'var(--color-surface-border)'}`,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.25rem' }}>
+                <IconComponent size={14} className={item.active ? 'text-primary' : 'text-muted-foreground'} />
+                <span
+                  style={{
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    color: item.active ? 'var(--color-primary-100)' : 'var(--color-surface-muted)',
+                  }}
+                >
+                  {item.label}
+                </span>
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--color-surface-muted)' }}>
+                {item.detail}
+              </div>
             </div>
-            <div style={{ fontSize: '0.75rem', color: item.active ? 'var(--color-surface-text)' : 'var(--color-surface-subtle)' }}>
-              {item.detail}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

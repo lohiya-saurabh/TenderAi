@@ -2,11 +2,37 @@ import React, { useState } from 'react';
 import type { CompanyCapabilityProfile } from '../../types/workflow.js';
 import { formatCurrency } from '../../utils/formatCurrency.js';
 import { Button } from '../common/Button.js';
+import {
+  Building2,
+  Download,
+  Edit3,
+  FileText,
+  TrendingUp,
+  Briefcase,
+  Award,
+  Check,
+  Paperclip,
+  Info,
+  type LucideIcon,
+} from 'lucide-react';
 
 export interface CompanyProfileSectionProps {
   profile: CompanyCapabilityProfile;
   onUpdateProfile?: (updated: CompanyCapabilityProfile) => void;
 }
+
+interface WorkflowTabDef {
+  id: 'REGISTRATIONS' | 'FINANCIALS' | 'EXPERIENCE' | 'CERTIFICATIONS';
+  label: string;
+  icon: LucideIcon;
+}
+
+const TABS: readonly WorkflowTabDef[] = [
+  { id: 'REGISTRATIONS', label: 'Statutory & Registrations', icon: FileText },
+  { id: 'FINANCIALS', label: 'Audited Turnover & UDIN', icon: TrendingUp },
+  { id: 'EXPERIENCE', label: 'Past Experience & Work Orders', icon: Briefcase },
+  { id: 'CERTIFICATIONS', label: 'Certifications & OEM', icon: Award },
+];
 
 export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ profile }) => {
   const [activeTab, setActiveTab] = useState<'REGISTRATIONS' | 'FINANCIALS' | 'EXPERIENCE' | 'CERTIFICATIONS'>('REGISTRATIONS');
@@ -27,8 +53,8 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
-            <span style={{ fontSize: '1.75rem' }}>🏢</span>
-            <h3 style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--color-surface-text)' }}>
+            <Building2 size={24} className="text-primary shrink-0" />
+            <h3 style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--color-surface-text)', margin: 0 }}>
               {profile.companyName}
             </h3>
             <span
@@ -51,10 +77,10 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
         </div>
 
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <Button variant="secondary" size="sm" icon={<span>📥</span>}>
+          <Button variant="secondary" size="sm" icon={<Download size={14} />}>
             Export Profile
           </Button>
-          <Button variant="primary" size="sm" icon={<span>✏️</span>}>
+          <Button variant="primary" size="sm" icon={<Edit3 size={14} />}>
             Edit Credentials
           </Button>
         </div>
@@ -62,36 +88,33 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid var(--color-surface-border)' }}>
-        {(
-          [
-            { id: 'REGISTRATIONS', label: 'Statutory & Registrations', icon: '📜' },
-            { id: 'FINANCIALS', label: 'Audited Turnover & UDIN', icon: '💰' },
-            { id: 'EXPERIENCE', label: 'Past Experience & Work Orders', icon: '🏗️' },
-            { id: 'CERTIFICATIONS', label: 'Certifications & OEM', icon: '🏅' },
-          ] as const
-        ).map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.65rem 1rem',
-              border: 'none',
-              borderBottom: activeTab === tab.id ? '2px solid var(--color-primary-500)' : '2px solid transparent',
-              backgroundColor: 'transparent',
-              color: activeTab === tab.id ? 'var(--color-primary-100)' : 'var(--color-surface-muted)',
-              fontSize: '0.85rem',
-              fontWeight: activeTab === tab.id ? 600 : 500,
-              cursor: 'pointer',
-              transition: 'all var(--transition-fast)',
-            }}
-          >
-            <span>{tab.icon}</span>
-            <span>{tab.label}</span>
-          </button>
-        ))}
+        {TABS.map((tab) => {
+          const IconComponent = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.65rem 1rem',
+                border: 'none',
+                borderBottom: isActive ? '2px solid var(--color-primary-500)' : '2px solid transparent',
+                backgroundColor: 'transparent',
+                color: isActive ? 'var(--color-primary-100)' : 'var(--color-surface-muted)',
+                fontSize: '0.85rem',
+                fontWeight: isActive ? 600 : 500,
+                cursor: 'pointer',
+                transition: 'all var(--transition-fast)',
+              }}
+            >
+              <IconComponent size={14} />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Tab Content 1: Registrations */}
@@ -102,8 +125,8 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
             <div style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--color-surface-text)', fontFamily: 'var(--font-mono)' }}>
               {profile.registrations.gstin}
             </div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--color-success)', marginTop: '0.25rem' }}>
-              ✓ Active Regular Taxpayer (Maharashtra)
+            <div style={{ fontSize: '0.75rem', color: 'var(--color-success)', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+              <Check size={12} /> Active Regular Taxpayer (Maharashtra)
             </div>
           </div>
 
@@ -122,8 +145,8 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
             <div style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--color-primary-500)', fontFamily: 'var(--font-mono)' }}>
               {profile.registrations.udyamNumber}
             </div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--color-success)', marginTop: '0.25rem' }}>
-              ✓ Category: {profile.registrations.msmeCategory} Enterprise (Eligible for EMD Waivers)
+            <div style={{ fontSize: '0.75rem', color: 'var(--color-success)', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+              <Check size={12} /> Category: {profile.registrations.msmeCategory} Enterprise (Eligible for EMD Waivers)
             </div>
           </div>
 
@@ -179,8 +202,8 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
                   </div>
                 )}
                 {t.evidenceDocName && (
-                  <div style={{ fontSize: '0.75rem', color: 'var(--color-surface-muted)', marginTop: '0.25rem' }}>
-                    📎 {t.evidenceDocName}
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-surface-muted)', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <Paperclip size={12} /> {t.evidenceDocName}
                   </div>
                 )}
               </div>
@@ -195,9 +218,15 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
               borderRadius: 'var(--radius-md)',
               fontSize: '0.85rem',
               color: 'var(--color-surface-text)',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '0.5rem',
             }}
           >
-            <strong>💡 Why CA UDIN matters:</strong> Under Indian public procurement rules (IREPS, GeM, CPPP), any financial turnover or net worth certificate lacking a verified Unique Document Identification Number (UDIN) results in mandatory technical disqualification.
+            <Info size={16} className="text-primary shrink-0" style={{ marginTop: '0.15rem' }} />
+            <div>
+              <strong>Why CA UDIN matters:</strong> Under Indian public procurement rules (IREPS, GeM, CPPP), any financial turnover or net worth certificate lacking a verified Unique Document Identification Number (UDIN) results in mandatory technical disqualification.
+            </div>
           </div>
         </div>
       )}
@@ -252,8 +281,8 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
                   {formatCurrency(exp.contractValueRupees)}
                 </div>
                 {exp.completionCertificateDocName && (
-                  <span style={{ fontSize: '0.75rem', color: 'var(--color-success)', backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '0.2rem 0.5rem', borderRadius: 'var(--radius-sm)' }}>
-                    ✓ Cert Verified: {exp.completionCertificateDocName}
+                  <span style={{ fontSize: '0.75rem', color: 'var(--color-success)', backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '0.2rem 0.5rem', borderRadius: 'var(--radius-sm)', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <Check size={12} /> Cert Verified: {exp.completionCertificateDocName}
                   </span>
                 )}
               </div>

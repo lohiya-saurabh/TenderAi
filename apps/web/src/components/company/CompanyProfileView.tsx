@@ -10,6 +10,7 @@ import {
   type CapabilitySectionId,
   type CapabilityStatus,
 } from './companyProfileData.js';
+import { Search, X, Check, CheckCircle2, Lock, FileText, FileSpreadsheet } from 'lucide-react';
 
 export interface CompanyProfileViewProps {
   profile: FullCompanyProfile;
@@ -59,7 +60,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: '1 1 240px' }}>
-          <span style={{ color: 'var(--color-surface-muted)', fontSize: 'var(--text-sm)' }}>🔍</span>
+          <Search size={14} className="text-muted-foreground" />
           <input
             type="text"
             placeholder="Search credentials, UDINs, standards, or work orders..."
@@ -78,9 +79,10 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              style={{ background: 'none', border: 'none', color: 'var(--color-surface-muted)', cursor: 'pointer', fontSize: 'var(--text-xs)' }}
+              style={{ background: 'none', border: 'none', color: 'var(--color-surface-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+              aria-label="Clear search"
             >
-              ✕
+              <X size={14} />
             </button>
           )}
         </div>
@@ -156,8 +158,8 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
               </div>
               <div>
                 <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)' }}>Statutory Debarment Status</span>
-                <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-success)' }}>
-                  ✓ Clean / Not Debarred by any Govt Ministry
+                <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-success)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <Check size={14} /> Clean / Not Debarred by any Govt Ministry
                 </div>
               </div>
               <div>
@@ -176,7 +178,9 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
               <div style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--color-primary-300)', marginTop: '0.25rem' }}>
                 ₹14.83 Crores
               </div>
-              <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-success)' }}>✓ All audited with ICAI UDIN</span>
+              <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-success)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                <Check size={12} /> All audited with ICAI UDIN
+              </span>
             </Card>
 
             <Card padding="md">
@@ -200,7 +204,9 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
               <div style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--color-primary-300)', marginTop: '0.25rem' }}>
                 {profile.evidenceVault.length} Documents
               </div>
-              <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-success)' }}>✓ Tamper-proof hash checked</span>
+              <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-success)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                <Check size={12} /> Tamper-proof hash checked
+              </span>
             </Card>
           </div>
         </div>
@@ -279,7 +285,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                   { label: 'Audited Annual Turnover', value: `₹${to.turnoverInrCrores.toFixed(2)} Crores`, highlight: true },
                   { label: 'Computed Net Worth', value: `₹${to.netWorthInrCrores.toFixed(2)} Crores` },
                   { label: 'Profit After Tax (PAT)', value: to.profitAfterTaxCrores ? `₹${to.profitAfterTaxCrores.toFixed(2)} Crores` : 'N/A' },
-                  { label: 'ICAI CA UDIN', value: `${to.caUdin} ${to.isUdinValidated ? '✓ (Validated)' : ''}`, isMono: true, highlight: true },
+                  { label: 'ICAI CA UDIN', value: `${to.caUdin} ${to.isUdinValidated ? '(Validated)' : ''}`, isMono: true, highlight: true },
                   { label: 'Chartered Accountant Firm', value: `${to.caFirmName} (Mem #${to.caMembershipNo})` },
                 ]}
               />
@@ -403,7 +409,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                 { label: 'Technical Qualification', value: emp.qualification },
                 { label: 'Experience in Sector', value: `${emp.experienceYears} Years` },
                 { label: 'EPFO UAN Reference', value: emp.epfoUan || 'N/A', isMono: true },
-                { label: 'Key Personnel Status', value: emp.isKeyPersonnel ? '✓ Designated Key Personnel' : 'Supporting Staff' },
+                { label: 'Key Personnel Status', value: emp.isKeyPersonnel ? 'Designated Key Personnel' : 'Supporting Staff' },
               ]}
             />
           ))}
@@ -467,9 +473,15 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
               padding: '0.85rem 1rem',
               fontSize: 'var(--text-xs)',
               color: 'var(--color-surface-text)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
             }}
           >
-            🔒 <strong>Tamper-Proof Evidence Vault</strong>: All source documents are verified with SHA-256 cryptographic hashes and automatically attached to qualifying tender bids.
+            <Lock size={16} className="text-primary shrink-0" />
+            <div>
+              <strong>Tamper-Proof Evidence Vault</strong>: All source documents are verified with SHA-256 cryptographic hashes and automatically attached to qualifying tender bids.
+            </div>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -478,7 +490,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                      <span style={{ fontSize: '1.25rem' }}>📄</span>
+                      <FileText size={16} className="text-muted-foreground" />
                       <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-surface-text)', fontFamily: 'var(--font-mono)' }}>
                         {doc.fileName}
                       </strong>
@@ -556,7 +568,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                 gap: '0.75rem',
               }}
             >
-              <span style={{ fontSize: '2.5rem' }}>📑</span>
+              <FileSpreadsheet size={48} className="text-muted-foreground" />
               <span style={{ fontWeight: 600, color: 'var(--color-surface-text)' }}>
                 {selectedDocPreview}
               </span>
@@ -586,8 +598,8 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
           }
         >
           {addSuccess ? (
-            <div style={{ color: 'var(--color-success)', textAlign: 'center', padding: '1.5rem', fontWeight: 600 }}>
-              ✓ Capability added to persistent dossier!
+            <div style={{ color: 'var(--color-success)', textAlign: 'center', padding: '1.5rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+              <CheckCircle2 size={18} /> Capability added to persistent dossier!
             </div>
           ) : (
             <form onSubmit={handleAddSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

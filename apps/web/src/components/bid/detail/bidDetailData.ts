@@ -77,6 +77,110 @@ export function mapVerdict(verdict: BidVerdict): BidRecommendation {
   }
 }
 
+export function formatReasonItem(r: unknown): string | null {
+  if (!r) return null;
+  if (typeof r === 'string') return r;
+  if (typeof r === 'object') {
+    const obj = r as Record<string, any>;
+    const title = obj.title || obj.category || obj.name || '';
+    const detail = obj.detail || obj.reason || obj.summary || obj.description || '';
+    if (title && detail) return `${title}: ${detail}`;
+    if (detail) return detail;
+    if (title) return title;
+    try {
+      return JSON.stringify(obj);
+    } catch {
+      return null;
+    }
+  }
+  return String(r);
+}
+
+export function formatDisqualifierItem(d: unknown): string | null {
+  if (!d) return null;
+  if (typeof d === 'string') return d;
+  if (typeof d === 'object') {
+    const obj = d as Record<string, any>;
+    const title = obj.title || obj.requirement_title || obj.requirementTitle || '';
+    const reason = obj.reason || obj.shortfall_detail || obj.shortfallDetail || obj.detail || '';
+    const shortfall = obj.shortfallDetail || obj.shortfall_detail || obj.clauseReference || obj.clause_reference || '';
+    if (title && reason) {
+      return `${title}: ${reason}${shortfall && shortfall !== reason ? ` (${shortfall})` : ''}`;
+    }
+    if (reason) return shortfall && shortfall !== reason ? `${reason} (${shortfall})` : reason;
+    if (title) return title;
+    try {
+      return JSON.stringify(obj);
+    } catch {
+      return null;
+    }
+  }
+  return String(d);
+}
+
+export function formatMissingItem(g: unknown): string | null {
+  if (!g) return null;
+  if (typeof g === 'string') return g;
+  if (typeof g === 'object') {
+    const obj = g as Record<string, any>;
+    const title = obj.title || obj.requirement_title || obj.requirementTitle || '';
+    const missing = obj.missingFactor || obj.missing_factor || obj.detail || obj.reason || '';
+    const action = obj.suggestedAction || obj.suggested_action || obj.mitigation || '';
+    if (title && missing) {
+      return `${title}: ${missing}${action ? ` — ${action}` : ''}`;
+    }
+    if (missing) return action ? `${missing} — ${action}` : missing;
+    if (title) return title;
+    try {
+      return JSON.stringify(obj);
+    } catch {
+      return null;
+    }
+  }
+  return String(g);
+}
+
+export function formatUncertainItem(u: unknown): string | null {
+  if (!u) return null;
+  if (typeof u === 'string') return u;
+  if (typeof u === 'object') {
+    const obj = u as Record<string, any>;
+    const title = obj.title || obj.clauseReference || obj.clause_reference || obj.ambiguityType || '';
+    const detail = obj.detail || obj.quote || obj.recommendedClarification || obj.recommended_clarification || obj.summary || '';
+    if (title && detail) return `${title}: ${detail}`;
+    if (detail) return detail;
+    if (title) return title;
+    try {
+      return JSON.stringify(obj);
+    } catch {
+      return null;
+    }
+  }
+  return String(u);
+}
+
+export function formatCommercialRiskItem(r: unknown): string | null {
+  if (!r) return null;
+  if (typeof r === 'string') return r;
+  if (typeof r === 'object') {
+    const obj = r as Record<string, any>;
+    const title = obj.title || (obj.category ? String(obj.category).replace(/_/g, ' ') : '') || (obj.level ? `${obj.level} Risk` : (obj.severity ? `${obj.severity} Risk` : ''));
+    const detail = obj.detail || obj.summary || obj.description || '';
+    const advice = obj.mitigationAdvice || obj.mitigation_advice || obj.mitigation || '';
+    if (title && detail && advice) return `${title}: ${detail} [${advice}]`;
+    if (title && detail) return `${title}: ${detail}`;
+    if (detail && advice) return `${detail} [${advice}]`;
+    if (detail) return detail;
+    if (title) return title;
+    try {
+      return JSON.stringify(obj);
+    } catch {
+      return null;
+    }
+  }
+  return String(r);
+}
+
 /**
  * Extract human-readable reasons from the decision response.
  * Combines reasonsToPursue, reasonsNotToPursue, hardDisqualifiers,
@@ -85,53 +189,35 @@ export function mapVerdict(verdict: BidVerdict): BidRecommendation {
 export function extractReasons(decision: BidDecisionSummary): string[] {
   const reasons: string[] = [];
 
-  if (decision.reasonsToPursue && decision.reasonsToPursue.length > 0) {
-    decision.reasonsToPursue.forEach((r) => {
-      if (typeof r === 'string') reasons.push(`✓ ${r}`);
-      else if (r && typeof r === 'object' && 'reason' in r) reasons.push(`✓ ${(r as { reason: string }).reason}`);
-      else reasons.push(`✓ ${JSON.stringify(r)}`);
-    });
-  }
+  (decision.reasonsToPursue ?? []).forEach((r) => {
+    const formatted = formatReasonItem(r);
+    if (formatted) reasons.push(formatted);
+  });
 
-  if (decision.hardDisqualifiers && decision.hardDisqualifiers.length > 0) {
-    decision.hardDisqualifiers.forEach((r) => {
-      if (typeof r === 'string') reasons.push(`✗ ${r} (hard disqualifier)`);
-      else if (r && typeof r === 'object' && 'reason' in r) reasons.push(`✗ ${(r as { reason: string }).reason} (hard disqualifier)`);
-      else reasons.push(`✗ ${JSON.stringify(r)} (hard disqualifier)`);
-    });
-  }
+  (decision.hardDisqualifiers ?? []).forEach((d) => {
+    const formatted = formatDisqualifierItem(d);
+    if (formatted) reasons.push(`${formatted} (hard disqualifier)`);
+  });
 
-  if (decision.reasonsNotToPursue && decision.reasonsNotToPursue.length > 0) {
-    decision.reasonsNotToPursue.forEach((r) => {
-      if (typeof r === 'string') reasons.push(`✗ ${r}`);
-      else if (r && typeof r === 'object' && 'reason' in r) reasons.push(`✗ ${(r as { reason: string }).reason}`);
-      else reasons.push(`✗ ${JSON.stringify(r)}`);
-    });
-  }
+  (decision.reasonsNotToPursue ?? []).forEach((r) => {
+    const formatted = formatReasonItem(r);
+    if (formatted) reasons.push(formatted);
+  });
 
-  if (decision.missingInformation && decision.missingInformation.length > 0) {
-    decision.missingInformation.forEach((r) => {
-      if (typeof r === 'string') reasons.push(`? ${r} (missing information)`);
-      else if (r && typeof r === 'object' && 'detail' in r) reasons.push(`? ${(r as { detail: string }).detail} (missing information)`);
-      else reasons.push(`? ${JSON.stringify(r)} (missing information)`);
-    });
-  }
+  (decision.missingInformation ?? []).forEach((g) => {
+    const formatted = formatMissingItem(g);
+    if (formatted) reasons.push(`${formatted} (missing information)`);
+  });
 
-  if (decision.uncertainAreas && decision.uncertainAreas.length > 0) {
-    decision.uncertainAreas.forEach((r) => {
-      if (typeof r === 'string') reasons.push(`? ${r} (uncertain)`);
-      else if (r && typeof r === 'object' && 'detail' in r) reasons.push(`? ${(r as { detail: string }).detail} (uncertain)`);
-      else reasons.push(`? ${JSON.stringify(r)} (uncertain)`);
-    });
-  }
+  (decision.uncertainAreas ?? []).forEach((u) => {
+    const formatted = formatUncertainItem(u);
+    if (formatted) reasons.push(`${formatted} (uncertain)`);
+  });
 
-  if (decision.commercialRisks && decision.commercialRisks.length > 0) {
-    decision.commercialRisks.forEach((r) => {
-      if (typeof r === 'string') reasons.push(`⚠ ${r} (commercial risk)`);
-      else if (r && typeof r === 'object' && 'detail' in r) reasons.push(`⚠ ${(r as { detail: string }).detail} (commercial risk)`);
-      else reasons.push(`⚠ ${JSON.stringify(r)} (commercial risk)`);
-    });
-  }
+  (decision.commercialRisks ?? []).forEach((r) => {
+    const formatted = formatCommercialRiskItem(r);
+    if (formatted) reasons.push(`${formatted} (commercial risk)`);
+  });
 
   return reasons;
 }
@@ -158,11 +244,12 @@ export function toBidDecision(apiDecision: BidDecisionSummary): BidDecision {
     reviewTriggers: apiDecision.reviewTriggers,
     evaluatedAt: apiDecision.evaluatedAt,
     evaluatedFactors:
-      apiDecision.reasonsToPursue.length +
-      apiDecision.reasonsNotToPursue.length +
-      apiDecision.hardDisqualifiers.length +
-      apiDecision.missingInformation.length +
-      apiDecision.commercialRisks.length,
+      (apiDecision.reasonsToPursue?.length ?? 0) +
+      (apiDecision.reasonsNotToPursue?.length ?? 0) +
+      (apiDecision.hardDisqualifiers?.length ?? 0) +
+      (apiDecision.missingInformation?.length ?? 0) +
+      (apiDecision.uncertainAreas?.length ?? 0) +
+      (apiDecision.commercialRisks?.length ?? 0),
   };
 }
 
@@ -308,6 +395,7 @@ export function getDeadlineBufferDays(bid: BidDetail, nowMs: number): number | n
 // ---------------------------------------------------------------------------
 
 /** Wire format from GET/POST /api/v1/bids/:id/bid-decision (BidsController.toDecisionWire) */
+/** Wire format from GET/POST /api/v1/bids/:id/bid-decision (BidsController.toDecisionWire) */
 export interface ApiBidDecisionSummary {
   decisionId: string;
   bidId: string;
@@ -316,14 +404,14 @@ export interface ApiBidDecisionSummary {
   state: 'AI_PROPOSED' | 'UNDER_REVIEW' | 'CONFIRMED' | 'OVERRIDDEN';
   readinessScore: number;
   evaluatedAt: string;
-  reasonsToPursue: Array<{ title: string; detail: string; category: string; evidence?: unknown }>;
-  reasonsNotToPursue: Array<{ title: string; detail: string; category: string; evidence?: unknown }>;
-  hardDisqualifiers: Array<{ title: string; reason: string; clauseReference: string; shortfallDetail: string; evidence?: unknown }>;
-  missingInformation: Array<{ title: string; missingFactor: string; suggestedAction: string; severity: string; deadlineDate?: string; evidence?: unknown }>;
-  uncertainAreas: Array<{ clauseReference: string; ambiguityType: string; quote: string; recommendedClarification: string }>;
-  commercialRisks: Array<{ title: string; severity: string; category: string; detail: string; mitigationAdvice: string }>;
-  evidenceCitations: unknown[];
-  reviewTriggers: unknown[];
+  reasonsToPursue?: Array<unknown>;
+  reasonsNotToPursue?: Array<unknown>;
+  hardDisqualifiers?: Array<unknown>;
+  missingInformation?: Array<unknown>;
+  uncertainAreas?: Array<unknown>;
+  commercialRisks?: Array<unknown>;
+  evidenceCitations?: unknown[];
+  reviewTriggers?: unknown[];
 }
 
 /**
@@ -331,7 +419,7 @@ export interface ApiBidDecisionSummary {
  * `BidDecision` type. The engine uses GO/CONDITIONAL_GO/NO_GO/REVIEW_REQUIRED;
  * the web surfaces PURSUE/DO_NOT_PURSUE/REVIEW_REQUIRED.
  *
- * All reasons are flattened into a single evidence-backed string list.
+ * All reasons are flattened into a single evidence-backed string list without `undefined` artifacts.
  */
 export function mapApiDecisionToBidDecision(
   api: ApiBidDecisionSummary,
@@ -344,13 +432,37 @@ export function mapApiDecisionToBidDecision(
     REVIEW_REQUIRED: 'REVIEW_REQUIRED',
   };
 
-  const allReasons: string[] = [
-    ...api.reasonsToPursue.map((r) => `${r.title}: ${r.detail}`),
-    ...api.reasonsNotToPursue.map((r) => `${r.title}: ${r.detail}`),
-    ...api.hardDisqualifiers.map((d) => `${d.title}: ${d.reason} (${d.shortfallDetail})`),
-    ...api.missingInformation.map((g) => `${g.title}: ${g.missingFactor} — ${g.suggestedAction}`),
-    ...api.commercialRisks.map((r) => `${r.title}: ${r.detail} [${r.mitigationAdvice}]`),
-  ];
+  const allReasons: string[] = [];
+
+  (api.reasonsToPursue ?? []).forEach((r) => {
+    const formatted = formatReasonItem(r);
+    if (formatted) allReasons.push(formatted);
+  });
+
+  (api.reasonsNotToPursue ?? []).forEach((r) => {
+    const formatted = formatReasonItem(r);
+    if (formatted) allReasons.push(formatted);
+  });
+
+  (api.hardDisqualifiers ?? []).forEach((d) => {
+    const formatted = formatDisqualifierItem(d);
+    if (formatted) allReasons.push(formatted);
+  });
+
+  (api.missingInformation ?? []).forEach((g) => {
+    const formatted = formatMissingItem(g);
+    if (formatted) allReasons.push(formatted);
+  });
+
+  (api.uncertainAreas ?? []).forEach((u) => {
+    const formatted = formatUncertainItem(u);
+    if (formatted) allReasons.push(formatted);
+  });
+
+  (api.commercialRisks ?? []).forEach((r) => {
+    const formatted = formatCommercialRiskItem(r);
+    if (formatted) allReasons.push(formatted);
+  });
 
   return {
     bidId: api.bidId,
@@ -370,10 +482,11 @@ export function mapApiDecisionToBidDecision(
     reviewTriggers: api.reviewTriggers,
     evaluatedAt: api.evaluatedAt,
     evaluatedFactors:
-      api.reasonsToPursue.length +
-      api.reasonsNotToPursue.length +
-      api.hardDisqualifiers.length +
-      api.missingInformation.length +
-      api.commercialRisks.length,
+      (api.reasonsToPursue?.length ?? 0) +
+      (api.reasonsNotToPursue?.length ?? 0) +
+      (api.hardDisqualifiers?.length ?? 0) +
+      (api.missingInformation?.length ?? 0) +
+      (api.uncertainAreas?.length ?? 0) +
+      (api.commercialRisks?.length ?? 0),
   };
 }

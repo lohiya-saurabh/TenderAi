@@ -1,23 +1,37 @@
 import { InvalidStateTransitionException } from '../../../../common/domain/DomainException.js';
 
 export type BidStatusEnum =
-  'DRAFT' | 'QUEUED' | 'PROCESSING' | 'REVIEW_READY' | 'FINALIZED' | 'FAILED';
+  | 'DRAFT'
+  | 'QUEUED'
+  | 'PROCESSING'
+  | 'ANALYZING'
+  | 'REVIEW_READY'
+  | 'FINALIZED'
+  | 'SUBMITTED'
+  | 'ARCHIVED'
+  | 'FAILED';
 
 export class BidStatus {
   public static readonly DRAFT = new BidStatus('DRAFT');
   public static readonly QUEUED = new BidStatus('QUEUED');
   public static readonly PROCESSING = new BidStatus('PROCESSING');
+  public static readonly ANALYZING = new BidStatus('ANALYZING');
   public static readonly REVIEW_READY = new BidStatus('REVIEW_READY');
   public static readonly FINALIZED = new BidStatus('FINALIZED');
+  public static readonly SUBMITTED = new BidStatus('SUBMITTED');
+  public static readonly ARCHIVED = new BidStatus('ARCHIVED');
   public static readonly FAILED = new BidStatus('FAILED');
 
   private static readonly VALID_TRANSITIONS: Record<BidStatusEnum, BidStatusEnum[]> = {
-    DRAFT: ['QUEUED'],
-    QUEUED: ['PROCESSING', 'FAILED'],
+    DRAFT: ['QUEUED', 'PROCESSING', 'ANALYZING'],
+    QUEUED: ['PROCESSING', 'ANALYZING', 'FAILED'],
     PROCESSING: ['REVIEW_READY', 'FAILED'],
-    REVIEW_READY: ['FINALIZED', 'QUEUED'], // 'QUEUED' allowed if user re-uploads revised tender package
-    FAILED: ['QUEUED'], // retry
-    FINALIZED: [], // terminal state
+    ANALYZING: ['REVIEW_READY', 'FAILED'],
+    REVIEW_READY: ['FINALIZED', 'SUBMITTED', 'QUEUED', 'ANALYZING'], // 'QUEUED' allowed if user re-uploads revised tender package
+    FAILED: ['QUEUED', 'ANALYZING', 'PROCESSING'], // retry
+    FINALIZED: ['SUBMITTED', 'ARCHIVED'],
+    SUBMITTED: ['ARCHIVED'],
+    ARCHIVED: [],
   };
 
   private readonly _value: BidStatusEnum;

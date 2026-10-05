@@ -8,6 +8,7 @@ import {
   SidebarExpandIcon,
   BuildingOfficeIcon,
 } from '../common/Icons.js';
+import { Button } from '../ui/button.js';
 
 export interface HeaderProps {
   onToggleMobileSidebar?: () => void;
@@ -23,82 +24,40 @@ export const Header: React.FC<HeaderProps> = ({
   const { user } = useAuth();
 
   return (
-    <header
-      className="app-header"
-      style={{
-        height: 'var(--header-height)',
-        backgroundColor: 'var(--color-surface-card)',
-        borderBottom: '1px solid var(--color-surface-border)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0 1.5rem',
-        position: 'sticky',
-        top: 0,
-        zIndex: 'var(--z-index-sticky)' as unknown as number,
-        gap: '1rem',
-      }}
-    >
+    <header className="sticky top-0 z-40 h-16 w-full border-b border-border bg-card/95 backdrop-blur-xs flex items-center justify-between px-4 md:px-6 gap-4 overflow-x-hidden no-scrollbar">
       {/* Left section: Navigation toggles & Breadcrumbs */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+      <div className="flex items-center gap-3 min-w-0">
         {/* Mobile Hamburger toggle button */}
         {onToggleMobileSidebar && (
-          <button
+          <Button
             type="button"
-            className="mobile-nav-toggle"
+            variant="outline"
+            size="icon"
+            className="md:hidden h-8 w-8 text-foreground"
             onClick={onToggleMobileSidebar}
             aria-label="Open navigation menu"
-            style={{
-              background: 'transparent',
-              border: '1px solid var(--color-surface-border)',
-              borderRadius: 'var(--radius-sm)',
-              padding: '0.35rem',
-              color: 'var(--color-surface-text)',
-              cursor: 'pointer',
-              display: 'none', // Controlled via CSS media query
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
           >
-            <MenuIcon size={18} />
-          </button>
+            <MenuIcon size={16} />
+          </Button>
         )}
 
         {/* Desktop Sidebar Collapse toggle */}
         {onToggleSidebarCollapse && (
-          <button
+          <Button
             type="button"
-            className="desktop-sidebar-toggle"
+            variant="ghost"
+            size="icon"
+            className="hidden md:inline-flex h-8 w-8 text-muted-foreground hover:text-foreground"
             onClick={onToggleSidebarCollapse}
             aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            style={{
-              background: 'transparent',
-              border: '1px solid var(--color-surface-border)',
-              borderRadius: 'var(--radius-sm)',
-              padding: '0.35rem',
-              color: 'var(--color-surface-muted)',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all var(--transition-fast)',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = 'var(--color-surface-text)';
-              e.currentTarget.style.borderColor = 'var(--color-surface-border-light)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = 'var(--color-surface-muted)';
-              e.currentTarget.style.borderColor = 'var(--color-surface-border)';
-            }}
           >
             {isSidebarCollapsed ? (
               <SidebarExpandIcon size={16} />
             ) : (
               <SidebarCollapseIcon size={16} />
             )}
-          </button>
+          </Button>
         )}
 
         {/* Dynamic Breadcrumbs */}
@@ -106,33 +65,11 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Right section: Tenant badge & User Account dropdown */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
+      <div className="flex items-center gap-3 shrink-0">
         {/* Tenant Organization Indicator */}
-        <div
-          className="tenant-indicator"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.45rem',
-            padding: '0.3rem 0.65rem',
-            borderRadius: 'var(--radius-md)',
-            backgroundColor: 'var(--color-surface-bg)',
-            border: '1px solid var(--color-surface-border)',
-            fontSize: 'var(--text-xs)',
-            color: 'var(--color-surface-muted)',
-          }}
-        >
-          <BuildingOfficeIcon size={14} color="var(--color-primary-400)" />
-          <span
-            style={{
-              color: 'var(--color-surface-text)',
-              fontWeight: 500,
-              maxWidth: '180px',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
+        <div className="hidden sm:inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-background border border-border text-xs text-muted-foreground">
+          <BuildingOfficeIcon size={13} className="text-primary" />
+          <span className="text-foreground font-medium max-w-[180px] truncate">
             {user?.organizationName || 'Default Organization'}
           </span>
         </div>

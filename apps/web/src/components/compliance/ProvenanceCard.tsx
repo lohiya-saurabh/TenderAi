@@ -1,4 +1,5 @@
 import React from 'react';
+import { MapPin } from 'lucide-react';
 import type { Provenance } from '../../api/compliance.js';
 
 export interface ProvenanceCardProps {
@@ -19,7 +20,7 @@ export const ProvenanceCard: React.FC<ProvenanceCardProps> = ({ provenance }) =>
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
         <h4 style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-surface-text)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-          <span>📍</span> Source Citation & Grounding Proof
+          <MapPin size={16} className="text-primary shrink-0" /> Source Citation & Grounding Proof
         </h4>
         <div
           style={{

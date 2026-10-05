@@ -32,7 +32,7 @@ export const WORKFLOW_STAGES: WorkflowStageMeta[] = [
     label: 'Company Profile',
     shortLabel: 'Profile',
     description: 'Verify your company registrations, audited turnover & past work credentials',
-    icon: '🏢',
+    icon: 'Building2',
   },
   {
     id: 'tender-intake',
@@ -41,7 +41,7 @@ export const WORKFLOW_STAGES: WorkflowStageMeta[] = [
     label: 'Tender Intake & Documents',
     shortLabel: 'Documents',
     description: 'Upload NIT, BOQ, Technical Specs, Corrigenda, and Special Conditions',
-    icon: '📥',
+    icon: 'Upload',
   },
   {
     id: 'tender-overview',
@@ -50,7 +50,7 @@ export const WORKFLOW_STAGES: WorkflowStageMeta[] = [
     label: 'Tender Overview',
     shortLabel: 'Overview',
     description: 'Authority, estimated value, EMD amount, duration, and contract type',
-    icon: '📄',
+    icon: 'FileText',
   },
   {
     id: 'key-deadlines',
@@ -59,7 +59,7 @@ export const WORKFLOW_STAGES: WorkflowStageMeta[] = [
     label: 'Key Deadlines',
     shortLabel: 'Deadlines',
     description: 'Pre-bid meeting, clarification window, bid submission, and technical opening',
-    icon: '⏰',
+    icon: 'Calendar',
   },
   {
     id: 'eligibility-summary',
@@ -68,7 +68,7 @@ export const WORKFLOW_STAGES: WorkflowStageMeta[] = [
     label: 'Eligibility Summary',
     shortLabel: 'Eligibility',
     description: '9-factor traffic-light check: statutory, turnover, past experience, and OEM',
-    icon: '🚦',
+    icon: 'CheckSquare',
   },
   {
     id: 'bid-decision',
@@ -77,7 +77,7 @@ export const WORKFLOW_STAGES: WorkflowStageMeta[] = [
     label: 'Bid / No-Bid Recommendation',
     shortLabel: 'Verdict',
     description: 'Clear verdict, commercial reasons to pursue, disqualifiers, and action plan',
-    icon: '🎯',
+    icon: 'Target',
   },
   {
     id: 'requirement-matrix',
@@ -86,7 +86,7 @@ export const WORKFLOW_STAGES: WorkflowStageMeta[] = [
     label: 'Requirement Matrix',
     shortLabel: 'Requirements',
     description: 'Filterable compliance clauses, stamp paper rules, notarization, and CA UDIN',
-    icon: '📋',
+    icon: 'ListChecks',
   },
   {
     id: 'evidence-mapping',
@@ -95,7 +95,7 @@ export const WORKFLOW_STAGES: WorkflowStageMeta[] = [
     label: 'Evidence Mapping',
     shortLabel: 'Evidence',
     description: 'Dual-sided verification: verbatim tender clause side-by-side with corporate proof',
-    icon: '🔍',
+    icon: 'Files',
   },
   {
     id: 'commercial-risks',
@@ -104,7 +104,7 @@ export const WORKFLOW_STAGES: WorkflowStageMeta[] = [
     label: 'Commercial & Legal Risks',
     shortLabel: 'Risks',
     description: 'Liquidated damages caps, cash lock-in (EMD + PBG), and price escalation',
-    icon: '⚠️',
+    icon: 'TriangleAlert',
   },
   {
     id: 'missing-evidence',
@@ -113,7 +113,7 @@ export const WORKFLOW_STAGES: WorkflowStageMeta[] = [
     label: 'Missing Evidence (Gaps)',
     shortLabel: 'Gaps',
     description: 'Actionable checklist of certificates and undertakings to acquire before deadline',
-    icon: '🧩',
+    icon: 'Puzzle',
   },
   {
     id: 'human-review',
@@ -122,7 +122,7 @@ export const WORKFLOW_STAGES: WorkflowStageMeta[] = [
     label: 'Human Review & Sign-Off',
     shortLabel: 'Review',
     description: 'Specialist role confirmation, comment threading, and OCC versioning',
-    icon: '✍️',
+    icon: 'ClipboardCheck',
   },
   {
     id: 'bid-readiness',
@@ -131,7 +131,7 @@ export const WORKFLOW_STAGES: WorkflowStageMeta[] = [
     label: 'Bid Readiness Score',
     shortLabel: 'Readiness',
     description: 'Weighted 4-pillar readiness breakdown (Evidence, Risk, Deadlines, Cash flow)',
-    icon: '📊',
+    icon: 'BarChart3',
   },
   {
     id: 'submission-prep',
@@ -140,7 +140,7 @@ export const WORKFLOW_STAGES: WorkflowStageMeta[] = [
     label: 'Submission Preparation',
     shortLabel: 'Submission',
     description: 'Two-Cover checklist: Technical Cover (₹100 stamp papers) vs Financial BOQ',
-    icon: '🚀',
+    icon: 'Send',
   },
 ];
 

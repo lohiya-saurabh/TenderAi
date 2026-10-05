@@ -4,6 +4,7 @@
 import { Module } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
 import { BidsController } from './bids.controller.js';
+import { TendersController } from './tenders.controller.js';
 import { BidsService } from './bids.service.js';
 import { BID_REPOSITORY_TOKEN } from './domain/repositories/IBidRepository.js';
 import { PostgresBidRepository } from '../../infrastructure/persistence/PostgresBidRepository.js';
@@ -14,7 +15,7 @@ import { AiDecisionClient } from './application/AiDecisionClient.js';
 
 @Module({
   imports: [ComplianceModule],
-  controllers: [BidsController],
+  controllers: [BidsController, TendersController],
   providers: [
     BidsService,
     GetBidDecisionUseCase,

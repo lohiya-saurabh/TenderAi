@@ -22,7 +22,7 @@ export const SourceCitationDrawer: React.FC<SourceCitationDrawerProps> = ({
   onClose,
 }) => {
   const [copied, setCopied] = useState(false);
-  const confidencePercent = Math.round((citation.confidenceScore || provenance.confidenceScore || 0) * 100);
+  const confidencePercent = Math.round(((citation?.confidenceScore ?? provenance?.confidenceScore) || 0) * 100);
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -34,10 +34,10 @@ export const SourceCitationDrawer: React.FC<SourceCitationDrawerProps> = ({
     }
   };
 
-  const documentTitle = citation.document || provenance.documentName || 'NIT Tender Document';
-  const pageNum = citation.page || provenance.pageNumber || 1;
-  const sectionName = citation.section || provenance.sectionOrClause || 'Not specified';
-  const quoteText = citation.verbatimQuote || provenance.verbatimQuote || '';
+  const documentTitle = citation?.document || provenance?.documentName || 'NIT Tender Document';
+  const pageNum = citation?.page || provenance?.pageNumber || 1;
+  const sectionName = citation?.section || provenance?.sectionOrClause || 'Not specified';
+  const quoteText = citation?.verbatimQuote || provenance?.verbatimQuote || '';
 
   return (
     <Drawer

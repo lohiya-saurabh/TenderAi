@@ -44,3 +44,11 @@ __pycache__/
 graphify-out/
 **/graphify-out/
 
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+/e2e/screenshots/
+

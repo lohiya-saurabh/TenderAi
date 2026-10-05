@@ -164,7 +164,7 @@ describe('GetBidDecisionUseCase — bid/no-bid evaluation pipeline', () => {
 
   beforeEach(async () => {
     db = new PGlite();
-    await initDatabase(db);
+    await initDatabase(db, { seedFullProfile: false, seedBidsAndCompliance: false });
     drizzleDb = createDrizzle(db);
     fakeClient = new FakeAiDecisionClient(cannedResponse());
     // Structural typing: the fake satisfies the AiDecisionClient contract.

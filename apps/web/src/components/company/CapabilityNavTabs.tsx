@@ -1,4 +1,19 @@
 import React from 'react';
+import {
+  Building2,
+  FileText,
+  Award,
+  TrendingUp,
+  Briefcase,
+  Layers,
+  Handshake,
+  Users,
+  Wrench,
+  MapPin,
+  FolderArchive,
+  AlertTriangle,
+  type LucideIcon,
+} from 'lucide-react';
 import type { CapabilitySectionId, FullCompanyProfile } from './companyProfileData.js';
 
 export interface CapabilityNavTabsProps {
@@ -10,7 +25,7 @@ export interface CapabilityNavTabsProps {
 interface SectionTabDef {
   id: CapabilitySectionId;
   label: string;
-  icon: string;
+  icon: LucideIcon;
   count: (p: FullCompanyProfile) => number;
   hasWarning?: (p: FullCompanyProfile) => boolean;
 }
@@ -19,70 +34,70 @@ const SECTION_TABS: readonly SectionTabDef[] = [
   {
     id: 'overview',
     label: 'Company Overview',
-    icon: '🏢',
+    icon: Building2,
     count: () => 1,
   },
   {
     id: 'registrations',
     label: 'Registrations',
-    icon: '📜',
+    icon: FileText,
     count: (p) => p.registrations.length,
     hasWarning: (p) => p.registrations.some((r) => r.status === 'EXPIRING_SOON' || r.status === 'EXPIRED'),
   },
   {
     id: 'certifications',
     label: 'Certifications',
-    icon: '🏅',
+    icon: Award,
     count: (p) => p.certifications.length,
     hasWarning: (p) => p.certifications.some((c) => c.status === 'EXPIRING_SOON' || c.status === 'EXPIRED'),
   },
   {
     id: 'financials',
     label: 'Financials & UDIN',
-    icon: '💰',
+    icon: TrendingUp,
     count: (p) => p.turnoverRecords.length + p.solvencyRecords.length,
   },
   {
     id: 'experience',
     label: 'Past Experience',
-    icon: '🏗️',
+    icon: Briefcase,
     count: (p) => p.pastExperience.length,
   },
   {
     id: 'projects',
     label: 'Major Projects',
-    icon: '📋',
+    icon: Layers,
     count: (p) => p.projects.length,
   },
   {
     id: 'oem',
     label: 'OEM Relationships',
-    icon: '🤝',
+    icon: Handshake,
     count: (p) => p.oemAuthorizations.length,
   },
   {
     id: 'employees',
     label: 'Key Personnel',
-    icon: '👷',
+    icon: Users,
     count: (p) => p.employees.length,
   },
   {
     id: 'equipment',
     label: 'Plant & Equipment',
-    icon: '🚜',
+    icon: Wrench,
     count: (p) => p.equipment.length,
     hasWarning: (p) => p.equipment.some((eq) => eq.status === 'EXPIRING_SOON'),
   },
   {
     id: 'geography',
     label: 'Geographic Coverage',
-    icon: '🗺️',
+    icon: MapPin,
     count: (p) => p.geographicCoverage.length,
   },
   {
     id: 'evidence',
     label: 'Evidence Vault',
-    icon: '📁',
+    icon: FolderArchive,
     count: (p) => p.evidenceVault.length,
   },
 ];
@@ -93,20 +108,24 @@ export const CapabilityNavTabs: React.FC<CapabilityNavTabsProps> = ({
   profile,
 }) => {
   return (
-    <div
+    <nav
+      aria-label="Company Capability Sections"
+      className="no-scrollbar"
       style={{
         display: 'flex',
         overflowX: 'auto',
         gap: '0.4rem',
         padding: '0.25rem 0',
         borderBottom: '1px solid var(--color-surface-border)',
-        scrollbarWidth: 'thin',
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none',
       }}
     >
       {SECTION_TABS.map((tab) => {
         const isActive = activeSection === tab.id;
         const itemCount = tab.count(profile);
         const warn = tab.hasWarning?.(profile);
+        const IconComponent = tab.icon;
 
         return (
           <button
@@ -130,10 +149,13 @@ export const CapabilityNavTabs: React.FC<CapabilityNavTabsProps> = ({
               transition: 'all var(--transition-fast)',
             }}
           >
-            <span>{tab.icon}</span>
+            <IconComponent size={14} className={isActive ? 'text-primary' : 'text-muted-foreground'} />
             <span>{tab.label}</span>
             <span
               style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.2rem',
                 fontSize: 'var(--text-2xs)',
                 fontWeight: 600,
                 padding: '0.1rem 0.4rem',
@@ -152,11 +174,11 @@ export const CapabilityNavTabs: React.FC<CapabilityNavTabsProps> = ({
               }}
             >
               {itemCount}
-              {warn && ' ⚠️'}
+              {warn && <AlertTriangle size={10} className="text-amber-400 shrink-0" />}
             </span>
           </button>
         );
       })}
-    </div>
+    </nav>
   );
 };

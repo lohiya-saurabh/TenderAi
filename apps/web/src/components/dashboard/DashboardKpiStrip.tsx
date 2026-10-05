@@ -1,7 +1,7 @@
 import React from 'react';
 import type { BidSummary } from '../../api/bids.js';
 import { formatCurrency } from '../../utils/formatCurrency.js';
-import { Card } from '../common/Card.js';
+import { Card } from '../ui/card.js';
 import {
   TendersIcon,
   AlertCircleIcon,
@@ -35,108 +35,95 @@ export const DashboardKpiStrip: React.FC<DashboardKpiStripProps> = ({ bids }) =>
   });
 
   return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-        gap: 'var(--space-4)',
-      }}
-    >
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
       {/* 1. Active Pipeline Count */}
-      <Card variant="default" padding="sm" style={{ borderLeft: '4px solid var(--color-primary-500)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-          <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-surface-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+      <Card className="border-t-2 border-t-primary p-4 shadow-xs">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
             Active Pipeline
           </span>
-          <span style={{ color: 'var(--color-primary-400)' }}>
-            <TendersIcon size={16} />
+          <span className="text-primary">
+            <TendersIcon size={15} />
           </span>
         </div>
-        <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, color: 'var(--color-surface-text)', lineHeight: 1.2 }}>
+        <div className="text-2xl font-bold text-foreground leading-tight tabular-nums">
           {activeBids.length}
         </div>
-        <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-subtle)', marginTop: '0.35rem' }}>
-          {bids.filter((b) => b.status === 'REVIEW_READY').length} ready for human review
+        <div className="text-[11px] text-muted-foreground mt-1">
+          <strong className="text-foreground font-semibold">
+            {bids.filter((b) => b.status === 'REVIEW_READY').length}
+          </strong>{' '}
+          ready for review
         </div>
       </Card>
 
       {/* 2. Total Contract Value */}
-      <Card variant="default" padding="sm" style={{ borderLeft: '4px solid var(--color-success)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-          <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-surface-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            Total Value (INR)
+      <Card className="border-t-2 border-t-emerald-500 p-4 shadow-xs">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+            Pipeline Value (INR)
           </span>
-          <span style={{ color: 'var(--color-success)' }}>
-            <CheckIcon size={16} />
+          <span className="text-emerald-400">
+            <CheckIcon size={15} />
           </span>
         </div>
-        <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, color: 'var(--color-surface-text)', lineHeight: 1.2 }}>
+        <div className="text-2xl font-bold text-foreground leading-tight tabular-nums">
           {formatCurrency(totalValue)}
         </div>
-        <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-subtle)', marginTop: '0.35rem' }}>
-          Across {activeBids.length} prospective tenders
+        <div className="text-[11px] text-muted-foreground mt-1">
+          Across {activeBids.length} active opportunities
         </div>
       </Card>
 
       {/* 3. Action Required Items */}
       <Card
-        variant="default"
-        padding="sm"
-        style={{
-          borderLeft: totalFlagged > 0 ? '4px solid var(--color-danger)' : '4px solid var(--color-surface-border)',
-        }}
+        className={`p-4 shadow-xs ${
+          totalFlagged > 0 ? 'border-t-2 border-t-destructive' : 'border-t-2 border-t-border'
+        }`}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-          <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-surface-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
             Compliance Flags
           </span>
-          <span style={{ color: totalFlagged > 0 ? 'var(--color-danger)' : 'var(--color-surface-subtle)' }}>
-            <AlertCircleIcon size={16} />
+          <span className={totalFlagged > 0 ? 'text-destructive' : 'text-muted-foreground'}>
+            <AlertCircleIcon size={15} />
           </span>
         </div>
         <div
-          style={{
-            fontSize: 'var(--text-2xl)',
-            fontWeight: 700,
-            color: totalFlagged > 0 ? 'var(--color-danger)' : 'var(--color-surface-text)',
-            lineHeight: 1.2,
-          }}
+          className={`text-2xl font-bold leading-tight tabular-nums ${
+            totalFlagged > 0 ? 'text-destructive' : 'text-foreground'
+          }`}
         >
           {totalFlagged}
         </div>
-        <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-subtle)', marginTop: '0.35rem' }}>
-          {totalFlagged > 0 ? 'Clauses requiring verification or proof' : 'No disqualifying flags'}
+        <div className="text-[11px] text-muted-foreground mt-1">
+          {totalFlagged > 0 ? 'Clauses requiring proof or waiver' : 'Zero disqualifying flags'}
         </div>
       </Card>
 
       {/* 4. Urgent Deadlines (< 7 days) */}
       <Card
-        variant="default"
-        padding="sm"
-        style={{
-          borderLeft: urgentDeadlines.length > 0 ? '4px solid var(--color-warning)' : '4px solid var(--color-surface-border)',
-        }}
+        className={`p-4 shadow-xs ${
+          urgentDeadlines.length > 0 ? 'border-t-2 border-t-amber-500' : 'border-t-2 border-t-border'
+        }`}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-          <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-surface-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
             Imminent Deadlines
           </span>
-          <span style={{ color: urgentDeadlines.length > 0 ? 'var(--color-warning)' : 'var(--color-surface-subtle)' }}>
-            <WarningIcon size={16} />
+          <span className={urgentDeadlines.length > 0 ? 'text-amber-400' : 'text-muted-foreground'}>
+            <WarningIcon size={15} />
           </span>
         </div>
         <div
-          style={{
-            fontSize: 'var(--text-2xl)',
-            fontWeight: 700,
-            color: urgentDeadlines.length > 0 ? 'var(--color-warning)' : 'var(--color-surface-text)',
-            lineHeight: 1.2,
-          }}
+          className={`text-2xl font-bold leading-tight tabular-nums ${
+            urgentDeadlines.length > 0 ? 'text-amber-400' : 'text-foreground'
+          }`}
         >
           {urgentDeadlines.length}
         </div>
-        <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-subtle)', marginTop: '0.35rem' }}>
-          Submissions due within 7 days
+        <div className="text-[11px] text-muted-foreground mt-1">
+          Submissions closing within 7 days
         </div>
       </Card>
     </div>
