@@ -419,3 +419,149 @@ def build_compliance_graph(checkpointer: PostgresSaver):
 1. **Zero Repeated LLM Invocations**: Because every state transition is snapshotted to PostgreSQL, crashed workers resume at the failed node, saving cloud inference costs.
 2. **Deterministic Auditability**: Regulators or customers requesting proof of why a clause was flagged can view the exact checkpoint state and verification logs.
 3. **Graceful Human Oversight**: Complex clauses do not crash the pipeline; they transition to `AWAITING_HUMAN_REVIEW`, allowing the rest of the 200-page document to continue processing concurrently.
+
+---
+
+## 7. LangGraph Through the Tender Workflow — The Critical Determination
+
+> **The rule:** LangGraph is a tool with a specific job description, not a default. If a step has no model, no cycle, and no mid-run human pause, LangGraph adds cost and complexity with zero benefit. The product workflow below is **not one LangGraph graph** — it is an orchestration of services, and LangGraph powers only the sub-workflows that earn it.
+
+### 7.1 The 8-Step Product Workflow: Who Executes Each Step?
+
+| # | Product Step | Substrate | Why |
+|:--|:-------------|:----------|:----|
+| 1 | Load Tender Context | **Plain service** (NestJS worker) | DB reads only. No model, no cycle, no interruption. A LangGraph node would checkpoint-serialize state for nothing. |
+| 2 | Extract Requirements | **LangGraph** ✅ | LLM extraction → deterministic verification → **feedback retry cycle** → human escalation. The cycle is the justification. |
+| 3 | Retrieve Company Evidence | **Plain deterministic service** | Per ADR 0019/0021: retrieval is deterministic, tenant-scoped, pinned-profile. No LLM ⇒ no graph. |
+| 4 | Analyze Match | **Pure functions** (EligibilityEngine) | ADR 0019: pure evaluators. No state, no cycles, no AI. |
+| 5 | Deterministic Validation | **Pure functions** | Expiry/tier/conflict policies are total functions — unit-tested directly, no graph harness needed. |
+| 6 | Risk Analysis | **Split**: extraction sub-graph (LangGraph) + evaluation (pure functions) | Only the text-understanding part needs the model; LD%/DLP/EMD-affordability math is deterministic. |
+| 7 | Human Review | **LangGraph** (with a caveat ⚠️) | `interrupt()`/`Command(resume=...)` earns its place when in-flight graph state (retrieved chunks, retry history) must survive a multi-day wait, or when the human's edit must re-enter model reasoning. A *terminal* decision (approve → persist) can alternatively be a plain async `ReviewTask` + `PATCH` API — see §7.4. |
+| 8 | Final Assessment | **Deterministic rollup** (plain code) | ADR 0021: the assessment is engine-computed; the AI explanation is a single guarded call, not a graph. |
+
+**The three conditions that justify LangGraph** (any one suffices):
+
+1. **Cycles with feedback** — the model's output is verified by deterministic code and fed back for targeted re-prompting. A plain DAG cannot loop.
+2. **Durable mid-run resumption** — a workflow that pauses for hours/days must not re-run expensive upstream nodes (every LLM call costs money and latency).
+3. **Human-in-the-loop inside reasoning** — the human decision merges back into graph state and flows into subsequent nodes.
+
+If none apply → a plain service or SQS-driven `WorkflowRun` (ADR 0018) is simpler, cheaper, and more testable. **Do not use LangGraph merely because it is in the technology stack.**
+
+### 7.2 The 11 Concepts, Taught on the Real Workflow
+
+The production implementation lives in `apps/ai/src/tenderpulse_ai/workflow/` (`state.py`, `nodes.py`, `graph.py`). Each concept below is the abstract primitive → its tender meaning → the real code.
+
+**1. Graph** — the workflow definition: a typed state schema + nodes + edges, compiled into an executable.
+*Tender:* `build_compliance_workflow_graph(ctx)` builds the **Tender Compliance Extraction & Verification Loop**. The graph is the *definition*; compiling it (`workflow.compile(checkpointer=...)`) produces the runnable. One graph = one bounded workflow (per document), never the whole product.
+
+**2. Nodes** — units of execution, `f: S → ΔS` (state in, partial state update out). Two kinds, strictly bifurcated:
+- **Reasoning nodes** (invoke the LLM): `model_extraction`
+- **Deterministic nodes** (pure code): `scoped_retrieval`, `deterministic_verification`, `targeted_refine`, `persistence`
+- **Boundary nodes**: `escalate_human_review`, `human_review`
+
+*Tender example:* `deterministic_verification_node` normalizes the page text and checks every candidate's verbatim quote as an exact substring — zero AI, running *inside* the graph because it must gate the cycle.
+
+**3. Edges** — fixed, deterministic transitions:
+```
+START → scoped_retrieval → model_extraction → deterministic_verification
+targeted_refine → model_extraction          ← the cycle
+escalate_human_review → human_review → persistence → END
+```
+
+**4. State** — the typed shared context (`ComplianceWorkflowState`, a `TypedDict`). Nodes never mutate in place; they return partial updates. **Reducers** control merge semantics: `verified_items: Annotated[list, operator.add]` *appends* across loop iterations (so retry-round verified items accumulate), while plain fields like `retry_count` *overwrite*.
+*Tender fields:* `security_context` (frozen tenant boundary), `raw_page_text`, `extracted_candidates`, `verified_items`, `unverified_items`, `retry_count`, `error_feedback`, `audit_events` (also a reducer — the audit trail accumulates across the whole run).
+
+**5. Checkpoints** — full state snapshots at every node boundary, keyed by `thread_id`.
+*Tender:* `thread_id = f"tenant_{tenant_id}:bid_{bid_id}:run_{workflow_run_id}"` — tenant-partitioned by construction. Dev/tests use `MemorySaver`; production uses `PostgresSaver` (PostgreSQL, RLS-enforced).
+
+**6. Branching** — conditional edges: `route_verification_outcome(state)` inspects state and returns the next node:
+```python
+if len(unverified) == 0:        return "persistence"
+elif retry_count < 2:           return "targeted_refine"
+else:                           return "escalate_human_review"
+```
+Routing is a **pure function of state** — deterministic, unit-testable, never model-governed.
+
+**7. Retries** — two distinct tiers:
+- **Transient retries**: HTTP 429/503 from the LLM provider → exponential backoff inside `StructuredLLMClient`.
+- **Semantic retries** (the graph cycle): verification fails → `targeted_refine` increments `retry_count` and records `error_feedback` ("Quote '₹500 stamp paper' not found on page 42") → the cycle re-enters `model_extraction`, which injects the feedback into the prompt ("PRIOR VERIFICATION FEEDBACK (CORRECT THIS): …"). **Bounded: `retry_count < 2`.** Unbounded loops are the classic agent failure mode; the bound is what makes this a workflow, not an agent.
+
+**8. Persistence** — two meanings, both real:
+- **Checkpoint persistence**: `PostgresSaver` writes state snapshots (crash recovery, resumption).
+- **Business persistence**: the `persistence` node pushes `VerifiedComplianceItem`s to the API persistence sink → NestJS `BulkIngestComplianceUseCase` → PostgreSQL `compliance_items` in one ACID transaction.
+
+**9. Human interruption** — the dynamic `interrupt(payload)` inside `human_review_node`:
+```python
+interrupt_payload = {
+    "thread_id": ..., "tenant_id": ..., "bid_id": ..., "document_id": ...,
+    "unverified_items": [...], "failure_reasons": state["error_feedback"],
+}
+raw_review_response = interrupt(interrupt_payload)   # execution pauses HERE
+```
+The caller receives `__interrupt__` with the payload; a `HumanReviewTask` is created; the worker thread is released (no blocked connections). State is durably checkpointed at the pause boundary.
+
+**10. Resuming workflows** — days later, the reviewer's decision resumes the *same* thread:
+```python
+resumed = await graph.ainvoke(Command(resume=action_payload.model_dump()), config=config)
+```
+Execution continues *inside* `human_review_node`, immediately after the `interrupt()` call. The node then: (a) validates `review_action.tenant_id == security_context.tenant_id` else raises `CrossTenantReviewException`; (b) applies the decision — APPROVE promotes unverified items as `HUMAN_APPROVED`, EDIT promotes the corrected item as `HUMAN_EDITED`, REJECT discards; (c) flows the merged `verified_items` into `persistence`. No upstream node re-runs — zero repeated LLM cost.
+
+**11. Failure handling** — four layers:
+- **Per-document isolation**: one corrupt/encrypted PDF fails only its graph run; the package completes with per-document statuses (ADR 0018).
+- **Bounded semantic retries** (§7) then escalation — a hard clause becomes a human task, never a crash.
+- **WorkflowRun state machine + DLQ**: poison-pill runs (repeated worker crashes) route to the dead-letter queue with lease locks and visibility timeouts — the outer orchestration, not the graph, owns retry-of-the-whole-run.
+- **Honest zero-extraction**: an empty document yields zero items, never fabricated mock data.
+
+### 7.3 The First LangGraph Workflow: Conceptual Design
+
+**TenderRequirementExtractionWorkflow** — runs once per (BidCase, TenderDocument) after upload confirmation, triggered by the SQS ingestion job:
+
+```
+ START
+   │
+   ▼
+[scoped_retrieval]   deterministic: tenant-scoped chunks + physical page text
+   │                   (tools validate document_id ∈ allowed_document_ids)
+   ▼
+[model_extraction]   LLM, structured output schema; error_feedback injected on re-entry
+   │
+   ▼
+[deterministic_verification]   pure code: exact-substring grounding + execution-rule invariants
+   │
+   ▼
+ ┌──────────────────────────────┐
+ │ route_verification_outcome   │   (pure function of state)
+ └──────────────────────────────┘
+   │ all verified            │ unverified & retry < 2      │ unverified & retry ≥ 2
+   ▼                         ▼ (cycle back)                ▼
+[persistence]        [targeted_refine] → model_extraction  [escalate_human_review]
+   │                                                        │
+   │                                                        ▼
+   │                                            [human_review] ← interrupt(payload)
+   │                                                        │ Command(resume=decision)
+   ▼                                                        ▼
+ END ◄────────────────────────────────────────────── [persistence] → END
+```
+
+**State schema** (what flows): security context (frozen), document coordinates, raw page text, retrieved chunks, extracted candidates, verified items (append-reducer), unverified items, retry counter, error feedback, accumulated audit events.
+
+**Invariants:**
+- The model's output schema **cannot express a verdict or a computation** (ADR 0019) — it emits candidates only.
+- Every persisted item carries a verbatim quote that survived exact-substring verification, or a `HUMAN_APPROVED`/`HUMAN_EDITED` provenance trail.
+- Routing is deterministic code; the model never chooses the next node.
+- `thread_id` embeds tenant + bid + run: checkpoints are tenant-isolated by construction.
+
+### 7.4 Why a Normal Service Suffices for the Rest — The Trade-off Table
+
+| Concern | Everything in LangGraph | Deterministic steps as plain services/pure functions (our choice) |
+|:--------|:------------------------|:-------------------------------------------------------------------|
+| Checkpoint cost | Every step serialized, even trivial DB reads | Only AI-bearing runs checkpoint |
+| Testability | Every step needs a graph harness | Pure functions unit-tested in milliseconds |
+| Blast radius | Routing bug can loop or stall the whole 8 steps | Bug contained to its layer |
+| Tenant isolation | Company financials would flow through the AI service graph — violates ADR 0011/0013/0019/0021 | Match/validation run in the NestJS worker; company data never enters the AI boundary |
+| Ops complexity | One graph to debug, version, and replay | Deterministic core replayable without a checkpointer |
+| Human review | `interrupt()` always available | `interrupt()` reserved for pauses that genuinely need mid-run state; terminal decisions use the plain async `ReviewTask` + `PATCH` API (`ReviewComplianceItemUseCase`) |
+
+**The honest caveat on Human Review:** our current `human_review` node uses `interrupt()` because the wait can be multi-day and the in-flight state (retrieved chunks, retry history, unverified items) is expensive to reconstruct. If a future review decision is purely terminal (approve/reject → persist, no re-entry into model reasoning), the simpler substrate — async task + API patch + event — is sufficient and preferred. LangGraph earns the pause only when the pause must preserve reasoning context.
+
+*Note: §5 above is the original first-principles design sketch; the production implementation it describes now lives in `apps/ai/src/tenderpulse_ai/workflow/` with the same node names and routing logic.*
