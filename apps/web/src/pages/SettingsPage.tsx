@@ -1,7 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth.js';
 import { useCompany } from '../context/CompanyContext.js';
+import {
+  getWorkspaceSettings,
+  updateWorkspaceSettings,
+  type NotificationPreferences,
+  type WorkspaceSettings,
+} from '../api/settings.js';
+import { listTeamMembers, inviteTeamMember, type TeamMember } from '../api/teams.js';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs.js';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card.js';
 import { Badge } from '../components/ui/badge.js';
@@ -21,7 +28,10 @@ import {
   ExternalLink,
   ShieldCheck,
   Lock,
-  Info,
+  UserPlus,
+  CheckCircle2,
+  Mail,
+  User,
 } from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {
@@ -35,17 +45,121 @@ export const SettingsPage: React.FC = () => {
     setSearchParams({ tab: value });
   };
 
-  // Local notification preference states
-  const [notifyDeadlines, setNotifyDeadlines] = useState(true);
-  const [notifyEvidenceExpiry, setNotifyEvidenceExpiry] = useState(true);
-  const [notifyReviewRequests, setNotifyReviewRequests] = useState(true);
-  const [notifyHighRiskFlags, setNotifyHighRiskFlags] = useState(true);
+  // Workspace settings state
+  const [workspaceSettings, setWorkspaceSettings] = useState<WorkspaceSettings | null>(null);
+  const [notifications, setNotifications] = useState<NotificationPreferences>({
+    notifyDeadlines: true,
+    notifyEvidenceExpiry: true,
+    notifyReviewRequests: true,
+    notifyHighRiskFlags: true,
+  });
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [settingsSuccess, setSettingsSuccess] = useState(false);
+
+  // Team members state
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [isTeamLoading, setIsTeamLoading] = useState(false);
+  const [isInvitingMember, setIsInvitingMember] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteName, setInviteName] = useState('');
+  const [inviteRole, setInviteRole] = useState('BID_MANAGER');
+  const [isSubmittingInvite, setIsSubmittingInvite] = useState(false);
+  const [inviteSuccess, setInviteSuccess] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
 
   // New Company form in Company tab
   const [isAddingCompany, setIsAddingCompany] = useState(false);
   const [newCompanyName, setNewCompanyName] = useState('');
   const [newGstin, setNewGstin] = useState('');
   const [isSubmittingCompany, setIsSubmittingCompany] = useState(false);
+
+  // Load workspace settings on mount
+  useEffect(() => {
+    const fetchSettings = async () => {
+      const res = await getWorkspaceSettings();
+      if (res.ok) {
+        setWorkspaceSettings(res.data);
+        if (res.data.notificationPreferences) {
+          setNotifications(res.data.notificationPreferences);
+        }
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  // Load team members when team tab is active
+  useEffect(() => {
+    if (activeTab === 'team') {
+      const fetchTeam = async () => {
+        setIsTeamLoading(true);
+        const res = await listTeamMembers();
+        if (res.ok) {
+          setTeamMembers(res.data);
+        }
+        setIsTeamLoading(false);
+      };
+      fetchTeam();
+    }
+  }, [activeTab]);
+
+  const handleToggleNotification = async (key: keyof NotificationPreferences, value: boolean) => {
+    const updated = { ...notifications, [key]: value };
+    setNotifications(updated);
+    setIsSavingSettings(true);
+
+    const res = await updateWorkspaceSettings({
+      notificationPreferences: updated,
+    });
+
+    setIsSavingSettings(false);
+    if (res.ok) {
+      setWorkspaceSettings(res.data);
+      setSettingsSuccess(true);
+      setTimeout(() => setSettingsSuccess(false), 2500);
+    }
+  };
+
+  const handleSelectDefaultCompany = async (companyId: string) => {
+    setSelectedCompanyId(companyId);
+    const res = await updateWorkspaceSettings({
+      defaultCompanyId: companyId,
+    });
+    if (res.ok) {
+      setWorkspaceSettings(res.data);
+      setSettingsSuccess(true);
+      setTimeout(() => setSettingsSuccess(false), 2500);
+    }
+  };
+
+  const handleInviteMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteEmail.trim() || !inviteName.trim()) {
+      setInviteError('Name and valid email are required.');
+      return;
+    }
+
+    setIsSubmittingInvite(true);
+    setInviteError(null);
+
+    const res = await inviteTeamMember({
+      email: inviteEmail.trim(),
+      name: inviteName.trim(),
+      role: inviteRole,
+    });
+
+    setIsSubmittingInvite(false);
+
+    if (res.ok) {
+      setTeamMembers((prev) => [...prev, res.data]);
+      setInviteSuccess(true);
+      setInviteEmail('');
+      setInviteName('');
+      setIsInvitingMember(false);
+      setTimeout(() => setInviteSuccess(false), 3500);
+    } else {
+      setInviteError(res.error.message || 'Failed to provision team member.');
+    }
+  };
 
   const handleCreateCompany = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,7 +188,7 @@ export const SettingsPage: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Workspace &amp; System Settings</h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-            Configure tenant workspace parameters, multi-company entities, security policies, and alerts
+            Configure tenant workspace parameters, team members, multi-company entities, and alerts
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -83,6 +197,14 @@ export const SettingsPage: React.FC = () => {
           </Badge>
         </div>
       </div>
+
+      {/* Global Feedback Banner */}
+      {settingsSuccess && (
+        <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 flex items-center gap-2 text-xs font-medium">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          <span>Workspace preferences saved and synchronized to PostgreSQL.</span>
+        </div>
+      )}
 
       {/* 2. Settings Tabs Navigation */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
@@ -126,7 +248,7 @@ export const SettingsPage: React.FC = () => {
                   <Label htmlFor="workspaceName">Workspace Name</Label>
                   <Input
                     id="workspaceName"
-                    value={user?.organizationName || 'Acme Infrastructure Workspace'}
+                    value={workspaceSettings?.organizationName || user?.organizationName || 'Acme Infrastructure Workspace'}
                     disabled
                     className="bg-muted/40 text-muted-foreground cursor-not-allowed"
                   />
@@ -139,7 +261,7 @@ export const SettingsPage: React.FC = () => {
                   <Label htmlFor="tenantId">Tenant Organization ID</Label>
                   <Input
                     id="tenantId"
-                    value={user?.organizationId || 'org_acme_infra_001'}
+                    value={workspaceSettings?.organizationId || user?.organizationId || 'org_acme_infra_001'}
                     disabled
                     className="bg-muted/40 font-mono text-muted-foreground cursor-not-allowed"
                   />
@@ -164,7 +286,7 @@ export const SettingsPage: React.FC = () => {
                       <button
                         key={company.id}
                         type="button"
-                        onClick={() => setSelectedCompanyId(company.id)}
+                        onClick={() => handleSelectDefaultCompany(company.id)}
                         className={`p-3 rounded-lg border text-left transition-all flex items-start justify-between ${
                           isSelected
                             ? 'bg-primary/10 border-primary text-foreground ring-1 ring-primary'
@@ -224,7 +346,7 @@ export const SettingsPage: React.FC = () => {
             <CardHeader>
               <CardTitle className="text-base font-semibold">Tender Alert Preferences</CardTitle>
               <CardDescription className="text-xs">
-                Control in-app status banners and critical procurement timeline alerts
+                Control in-app status banners and critical procurement timeline alerts (Persisted to Database)
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -240,8 +362,9 @@ export const SettingsPage: React.FC = () => {
                   </div>
                   <Switch
                     id="notifyDeadlines"
-                    checked={notifyDeadlines}
-                    onCheckedChange={setNotifyDeadlines}
+                    checked={notifications.notifyDeadlines}
+                    onCheckedChange={(val) => handleToggleNotification('notifyDeadlines', val)}
+                    disabled={isSavingSettings}
                   />
                 </div>
 
@@ -256,8 +379,9 @@ export const SettingsPage: React.FC = () => {
                   </div>
                   <Switch
                     id="notifyEvidenceExpiry"
-                    checked={notifyEvidenceExpiry}
-                    onCheckedChange={setNotifyEvidenceExpiry}
+                    checked={notifications.notifyEvidenceExpiry}
+                    onCheckedChange={(val) => handleToggleNotification('notifyEvidenceExpiry', val)}
+                    disabled={isSavingSettings}
                   />
                 </div>
 
@@ -272,8 +396,9 @@ export const SettingsPage: React.FC = () => {
                   </div>
                   <Switch
                     id="notifyReviewRequests"
-                    checked={notifyReviewRequests}
-                    onCheckedChange={setNotifyReviewRequests}
+                    checked={notifications.notifyReviewRequests}
+                    onCheckedChange={(val) => handleToggleNotification('notifyReviewRequests', val)}
+                    disabled={isSavingSettings}
                   />
                 </div>
 
@@ -288,20 +413,10 @@ export const SettingsPage: React.FC = () => {
                   </div>
                   <Switch
                     id="notifyHighRiskFlags"
-                    checked={notifyHighRiskFlags}
-                    onCheckedChange={setNotifyHighRiskFlags}
+                    checked={notifications.notifyHighRiskFlags}
+                    onCheckedChange={(val) => handleToggleNotification('notifyHighRiskFlags', val)}
+                    disabled={isSavingSettings}
                   />
-                </div>
-              </div>
-
-              <div className="p-3.5 rounded-lg bg-accent/40 border border-border flex items-start gap-2.5 text-xs">
-                <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                <div className="space-y-0.5 text-muted-foreground">
-                  <span className="font-semibold text-foreground">Backend Notification Infrastructure Note</span>
-                  <p>
-                    In-app visual status alerts are active immediately. Outbound automated email and webhook dispatch
-                    endpoints are planned for the upcoming notification service milestone.
-                  </p>
                 </div>
               </div>
             </CardContent>
@@ -383,75 +498,166 @@ export const SettingsPage: React.FC = () => {
         </TabsContent>
 
         {/* ================================================================= */}
-        {/* TAB 4: TEAM & RBAC PERMISSIONS */}
+        {/* TAB 4: TEAM & RBAC MEMBERS */}
         {/* ================================================================= */}
         <TabsContent value="team" className="space-y-6 mt-0">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base font-semibold">Tenant Role-Based Access Control (RBAC)</CardTitle>
-              <CardDescription className="text-xs">
-                Permission matrix and functional responsibilities across your procurement team
-              </CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+              <div>
+                <CardTitle className="text-base font-semibold">Tenant Team Members &amp; RBAC</CardTitle>
+                <CardDescription className="text-xs">
+                  Manage users provisioned in {user?.organizationName || 'your workspace'} ({teamMembers.length} Members)
+                </CardDescription>
+              </div>
+              {!isInvitingMember && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => setIsInvitingMember(true)}
+                  className="gap-1.5 text-xs"
+                >
+                  <UserPlus className="h-3.5 w-3.5" />
+                  Invite Member
+                </Button>
+              )}
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="p-3.5 rounded-lg bg-muted/30 border border-border flex items-center justify-between">
-                <div>
-                  <span className="text-xs font-semibold text-foreground">Your Active Assigned Role</span>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Assigned within {user?.organizationName || 'Default Workspace'}
-                  </p>
+              {/* Invite Success Feedback */}
+              {inviteSuccess && (
+                <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 flex items-center gap-2 text-xs font-medium">
+                  <CheckCircle2 className="h-4 w-4 shrink-0" />
+                  <span>Team member provisioned and saved to PostgreSQL successfully.</span>
                 </div>
-                <Badge variant="secondary" className="text-xs font-semibold uppercase px-2.5 py-1">
-                  {user?.role?.replace(/_/g, ' ') || 'User'}
-                </Badge>
-              </div>
+              )}
 
-              <div className="space-y-3">
-                <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">
-                  Supported Tenant Roles &amp; Scopes
-                </h4>
-
-                <div className="space-y-2 text-xs">
-                  <div className="p-3 rounded-lg border border-border bg-card space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-foreground">ADMIN</span>
-                      <span className="font-mono text-[10px] text-primary">Wildcard Scopes (*)</span>
-                    </div>
-                    <p className="text-muted-foreground">
-                      Full workspace administration, tender project creation, deletion, and company capability publishing.
-                    </p>
+              {/* Invite Member Form */}
+              {isInvitingMember && (
+                <form
+                  onSubmit={handleInviteMember}
+                  className="p-4 rounded-lg bg-muted/40 border border-border space-y-4"
+                >
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-semibold text-foreground">Provision New Team Member</h4>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsInvitingMember(false)}
+                      className="text-xs h-7"
+                    >
+                      Cancel
+                    </Button>
                   </div>
 
-                  <div className="p-3 rounded-lg border border-border bg-card space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-foreground">BID_MANAGER</span>
-                      <span className="font-mono text-[10px] text-primary">bids:create, bids:update, compliance:review</span>
+                  {inviteError && (
+                    <div className="p-2.5 rounded bg-destructive/10 border border-destructive/30 text-destructive text-xs">
+                      {inviteError}
                     </div>
-                    <p className="text-muted-foreground">
-                      Creates tender projects, uploads tender NIT volumes, and manages compliance matrices.
-                    </p>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="memberName">Full Name *</Label>
+                      <Input
+                        id="memberName"
+                        value={inviteName}
+                        onChange={(e) => setInviteName(e.target.value)}
+                        placeholder="e.g. Priya Sharma"
+                        disabled={isSubmittingInvite}
+                        autoFocus
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="memberEmail">Email Address *</Label>
+                      <Input
+                        id="memberEmail"
+                        type="email"
+                        value={inviteEmail}
+                        onChange={(e) => setInviteEmail(e.target.value)}
+                        placeholder="e.g. priya@acmeinfra.com"
+                        disabled={isSubmittingInvite}
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="memberRole">Assigned Role *</Label>
+                      <select
+                        id="memberRole"
+                        value={inviteRole}
+                        onChange={(e) => setInviteRole(e.target.value)}
+                        disabled={isSubmittingInvite}
+                        className="w-full h-9 px-3 rounded-md border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      >
+                        <option value="BID_MANAGER">Bid Manager</option>
+                        <option value="LEGAL_COUNSEL">Legal Counsel</option>
+                        <option value="FINANCIAL_CONTROLLER">Financial Controller</option>
+                        <option value="TECHNICAL_LEAD">Technical Lead</option>
+                        <option value="VIEWER">Viewer</option>
+                        <option value="ADMIN">Admin</option>
+                      </select>
+                    </div>
                   </div>
 
-                  <div className="p-3 rounded-lg border border-border bg-card space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-foreground">LEGAL_COUNSEL &amp; FINANCIAL_CONTROLLER</span>
-                      <span className="font-mono text-[10px] text-primary">bids:read, compliance:review</span>
-                    </div>
-                    <p className="text-muted-foreground">
-                      Performs formal Human-in-the-Loop review sign-offs with mandatory audit justifications.
-                    </p>
+                  <div className="flex justify-end gap-2 pt-1">
+                    <Button
+                      type="submit"
+                      variant="default"
+                      size="sm"
+                      disabled={isSubmittingInvite || !inviteEmail.trim() || !inviteName.trim()}
+                    >
+                      {isSubmittingInvite ? 'Provisioning...' : 'Add Team Member'}
+                    </Button>
                   </div>
+                </form>
+              )}
 
-                  <div className="p-3 rounded-lg border border-border bg-card space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-foreground">VIEWER</span>
-                      <span className="font-mono text-[10px] text-muted-foreground">bids:read</span>
+              {/* Team Members List */}
+              <div className="space-y-2">
+                {isTeamLoading ? (
+                  <p className="text-xs text-muted-foreground py-4 text-center">Loading team members...</p>
+                ) : teamMembers.length > 0 ? (
+                  teamMembers.map((member) => (
+                    <div
+                      key={member.id}
+                      className="p-3.5 rounded-lg border border-border bg-card flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
+                          <User className="h-4 w-4" />
+                        </div>
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-foreground text-xs">{member.name}</span>
+                            <Badge variant="secondary" className="text-[10px] uppercase font-semibold">
+                              {member.role.replace(/_/g, ' ')}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                            <Mail className="h-3 w-3" />
+                            <span>{member.email}</span>
+                            {member.phone && <span>• {member.phone}</span>}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {member.permissions.slice(0, 3).map((p) => (
+                          <span key={p} className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border">
+                            {p}
+                          </span>
+                        ))}
+                        {member.permissions.length > 3 && (
+                          <span className="text-[10px] font-mono text-muted-foreground">
+                            +{member.permissions.length - 3}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <p className="text-muted-foreground">
-                      Read-only inspection of tenders, compliance matrices, and readiness scores.
-                    </p>
-                  </div>
-                </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-muted-foreground py-4 text-center">No team members found.</p>
+                )}
               </div>
             </CardContent>
           </Card>

@@ -9,6 +9,7 @@ export const users = pgTable('users', {
   email: text('email').unique().notNull(),
   password: text('password').notNull(),
   name: text('name').notNull(),
+  phone: text('phone'),
   role: text('role').notNull(),
   permissions: jsonb('permissions').notNull().$type<string[]>(),
   organizationId: text('organization_id').notNull(),
@@ -17,6 +18,22 @@ export const users = pgTable('users', {
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
+
+export const tenantSettings = pgTable('tenant_settings', {
+  id: text('id').primaryKey(),
+  organizationId: text('organization_id').unique().notNull(),
+  defaultCompanyId: text('default_company_id'),
+  notificationPreferences: jsonb('notification_preferences').notNull().$type<{
+    notifyDeadlines: boolean;
+    notifyEvidenceExpiry: boolean;
+    notifyReviewRequests: boolean;
+    notifyHighRiskFlags: boolean;
+  }>(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type TenantSetting = typeof tenantSettings.$inferSelect;
+export type NewTenantSetting = typeof tenantSettings.$inferInsert;
 
 export const companies = pgTable('companies', {
   id: text('id').primaryKey(),

@@ -79,10 +79,19 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
       email TEXT UNIQUE NOT NULL,
       password TEXT NOT NULL,
       name TEXT NOT NULL,
+      phone TEXT,
       role TEXT NOT NULL,
       permissions JSONB NOT NULL,
       organization_id TEXT NOT NULL,
       organization_name TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS tenant_settings (
+      id TEXT PRIMARY KEY,
+      organization_id TEXT UNIQUE NOT NULL,
+      default_company_id TEXT,
+      notification_preferences JSONB NOT NULL DEFAULT '{"notifyDeadlines": true, "notifyEvidenceExpiry": true, "notifyReviewRequests": true, "notifyHighRiskFlags": true}',
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
     CREATE TABLE IF NOT EXISTS companies (

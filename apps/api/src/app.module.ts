@@ -14,6 +14,9 @@ import { AuditModule } from './modules/audit/audit.module.js';
 import { CompanyProfileModule } from './modules/company-profile/company-profile.module.js';
 import { CompaniesModule } from './modules/companies/companies.module.js';
 import { DashboardModule } from './modules/dashboard/dashboard.module.js';
+import { UsersModule } from './modules/users/users.module.js';
+import { SettingsModule } from './modules/settings/settings.module.js';
+import { TeamsModule } from './modules/teams/teams.module.js';
 
 @Module({
   imports: [
@@ -32,6 +35,9 @@ import { DashboardModule } from './modules/dashboard/dashboard.module.js';
     CompanyProfileModule,
     CompaniesModule,
     DashboardModule,
+    UsersModule,
+    SettingsModule,
+    TeamsModule,
   ],
 })
 export class AppModule {}

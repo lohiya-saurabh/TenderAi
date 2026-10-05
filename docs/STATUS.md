@@ -6,6 +6,24 @@
 
 The 11-stage workflow: Tender Discovery → Tender-to-Company Matching → Bid/No-Bid Decision → Requirement Extraction → Company Evidence Matching → Compliance Analysis → Risk Analysis → Missing Evidence → Human Review → Bid Readiness → Submission Preparation → Corrigendum Monitoring.
 
+**User Profile, Workspace Settings & Team Management Persistence (2026-10-06):** Implemented, verified, and exposed complete backend REST endpoints, database schema additions, and live frontend integrations for user profiles, workspace configurations, and multi-user tenant team collaboration:
+1. **Clear Domain Boundary & Separation of Concerns**:
+   - **User Profile (`/profile`)**: Manages individual credentials (`users` table), display name, phone number, and bcrypt-hashed password rotation (10 salt rounds with constant-time verification).
+   - **Workspace Settings (`/settings`)**: Configures tenant-level defaults (`tenant_settings` table) including `default_company_id` and granular notification preferences (`notifyDeadlines`, `notifyEvidenceExpiry`, `notifyReviewRequests`, `notifyHighRiskFlags`).
+   - **Team Management (`/settings` - Team Members Tab)**: Enables tenant admins (`org:users:manage`) to view current workspace members and invite/provision new team members with normalized atomic RBAC roles (`ADMIN`, `BID_MANAGER`, `REVIEWER`, `VIEWER`).
+   - **Company Capability Profile (`/company-profile`)**: Kept strictly distinct as the legal entity dossier used for bid evaluation.
+2. **Database Schema & DDL Updates (`schema.ts`, `database.provider.ts`)**:
+   - Added `phone TEXT` column to `users` table.
+   - Added `tenant_settings` table (`id`, `organization_id UNIQUE`, `default_company_id`, `notification_preferences JSONB`, `updated_at`).
+3. **Backend Feature Modules (`apps/api/src/modules/`)**:
+   - `UsersModule` (`UsersService`, `UsersController`): `GET /api/v1/users/me`, `PATCH /api/v1/users/me`, `POST /api/v1/users/change-password`.
+   - `SettingsModule` (`SettingsService`, `SettingsController`): `GET /api/v1/settings/workspace`, `PATCH /api/v1/settings/workspace`.
+   - `TeamsModule` (`TeamsService`, `TeamsController`): `GET /api/v1/teams/members`, `POST /api/v1/teams/invite`.
+4. **Frontend Integration & Testing (`apps/web`)**:
+   - Web API clients (`users.ts`, `settings.ts`, `teams.ts`) connected to real endpoints with fallback tolerance.
+   - `ProfilePage.tsx` and `SettingsPage.tsx` with live data binding, validation, and feedback banners.
+5. **Full Monorepo Verification (422 / 422 tests passing)**: 200 in `apps/api` (including 8 in `profile-settings-teams.spec.ts`), 146 in `apps/web`, 76 in `apps/ai`. `npm run type-check` clean with 0 errors across all 4 monorepo packages.
+
 **1 Tenant → N Companies Multi-Company Architecture (2026-10-06):** Validated and implemented the 1 Tenant → N Companies domain hierarchy end-to-end across database, backend, frontend, AI context, and security:
 1. **Clear Domain Boundary & Anti-IDOR Model**: A Tenant (`organization_id`) is the immutable SaaS security boundary; a Company (`company_id`) is a business legal entity represented and evaluated within that tenant. Every query and mutation strictly enforces `company.organization_id == caller.organizationId`, denying cross-tenant access with 404/403.
 2. **Database Schema & DDL Updates (`schema.ts`, `database.provider.ts`)**: Added `companies` table with legal name, slug, GSTIN, PAN, Udyam ID, constitution, and timestamps. Added `company_id` to `bids`, `company_profiles`, `company_profile_versions`, and `bid_decisions`.

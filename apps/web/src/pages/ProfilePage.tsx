@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth.js';
+import { getMe, updateMe, changePassword, type UserProfile } from '../api/users.js';
 import { Avatar, AvatarFallback } from '../components/ui/avatar.js';
 import { Badge } from '../components/ui/badge.js';
 import { Button } from '../components/ui/button.js';
@@ -17,15 +18,57 @@ import {
   Edit2,
   KeyRound,
   Layers,
+  Key,
 } from 'lucide-react';
 
 export const ProfilePage: React.FC = () => {
   const { user } = useAuth();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Edit profile state
   const [isEditing, setIsEditing] = useState(false);
-  const [nameInput, setNameInput] = useState(user?.name || '');
+  const [nameInput, setNameInput] = useState('');
+  const [phoneInput, setPhoneInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Change password state
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      setIsLoading(true);
+      const res = await getMe();
+      if (res.ok) {
+        setProfile(res.data);
+        setNameInput(res.data.name);
+        setPhoneInput(res.data.phone || '');
+      } else if (user) {
+        setProfile({
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          phone: null,
+          role: user.role,
+          permissions: user.permissions,
+          organizationId: user.organizationId,
+          organizationName: user.organizationName,
+        });
+        setNameInput(user.name);
+      }
+      setIsLoading(false);
+    };
+
+    fetchProfile();
+  }, [user]);
 
   const getInitials = (name?: string, email?: string): string => {
     if (name) {
@@ -41,7 +84,10 @@ export const ProfilePage: React.FC = () => {
     return 'TP';
   };
 
-  const initials = getInitials(user?.name, user?.email);
+  const displayName = profile?.name || user?.name || 'Authenticated User';
+  const displayEmail = profile?.email || user?.email || '';
+  const displayRole = profile?.role || user?.role || 'User';
+  const initials = getInitials(displayName, displayEmail);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,19 +99,58 @@ export const ProfilePage: React.FC = () => {
     setIsSaving(true);
     setSaveError(null);
 
-    try {
-      // Update local authenticated user state in session storage
+    const res = await updateMe({
+      name: nameInput.trim(),
+      phone: phoneInput.trim() || undefined,
+    });
+
+    setIsSaving(false);
+
+    if (res.ok) {
+      setProfile(res.data);
+      // Synchronize in-memory auth storage
       if (user) {
-        const updatedUser = { ...user, name: nameInput.trim() };
-        localStorage.setItem('tp_user_profile', JSON.stringify(updatedUser));
+        const updated = { ...user, name: res.data.name };
+        localStorage.setItem('tp_user_profile', JSON.stringify(updated));
       }
       setSaveSuccess(true);
       setIsEditing(false);
       setTimeout(() => setSaveSuccess(false), 3000);
-    } catch {
-      setSaveError('Failed to update profile settings.');
-    } finally {
-      setIsSaving(false);
+    } else {
+      setSaveError(res.error.message || 'Failed to update profile settings.');
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentPassword) {
+      setPasswordError('Current password is required.');
+      return;
+    }
+    if (newPassword.length < 8) {
+      setPasswordError('New password must be at least 8 characters long.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New passwords do not match.');
+      return;
+    }
+
+    setIsSubmittingPassword(true);
+    setPasswordError(null);
+
+    const res = await changePassword({ currentPassword, newPassword });
+    setIsSubmittingPassword(false);
+
+    if (res.ok) {
+      setPasswordSuccess(true);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setIsChangingPassword(false);
+      setTimeout(() => setPasswordSuccess(false), 4000);
+    } else {
+      setPasswordError(res.error.message || 'Failed to update password.');
     }
   };
 
@@ -95,8 +180,8 @@ export const ProfilePage: React.FC = () => {
         <div className="space-y-0.5">
           <span className="font-semibold text-foreground">Personal Profile vs Company Dossier</span>
           <p className="text-muted-foreground leading-relaxed">
-            This page represents your individual authenticated user profile. To manage legal business entity
-            registrations, CA UDIN certificates, financial turnover, or past work experience, visit the{' '}
+            This page represents your individual user identity. To manage company registrations,
+            GSTINs, CA UDIN certificates, or past contracts, visit the{' '}
             <Link to="/company-profile" className="text-primary hover:underline font-medium inline-flex items-center gap-0.5">
               Company Capability Profile
               <ExternalLink className="h-3 w-3" />
@@ -106,16 +191,22 @@ export const ProfilePage: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. Success / Error Feedback */}
+      {/* 3. Feedback Messages */}
       {saveSuccess && (
         <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 flex items-center gap-2 text-xs font-medium">
           <CheckCircle2 className="h-4 w-4 shrink-0" />
-          <span>Profile changes updated successfully for the current session.</span>
+          <span>Profile changes saved and persisted to backend successfully.</span>
         </div>
       )}
       {saveError && (
         <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-xs font-medium">
           {saveError}
+        </div>
+      )}
+      {passwordSuccess && (
+        <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 flex items-center gap-2 text-xs font-medium">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          <span>Password changed and encrypted with bcrypt successfully.</span>
         </div>
       )}
 
@@ -133,10 +224,12 @@ export const ProfilePage: React.FC = () => {
               variant="outline"
               size="sm"
               onClick={() => {
-                setNameInput(user?.name || '');
+                setNameInput(displayName);
+                setPhoneInput(profile?.phone || '');
                 setIsEditing(true);
               }}
               className="gap-1.5 text-xs"
+              disabled={isLoading}
             >
               <Edit2 className="h-3.5 w-3.5" />
               Edit Information
@@ -153,13 +246,13 @@ export const ProfilePage: React.FC = () => {
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <span className="text-base font-semibold text-foreground">
-                  {user?.name || 'Authenticated User'}
+                  {displayName}
                 </span>
                 <Badge variant="secondary" className="text-[10px] uppercase font-semibold">
-                  {user?.role?.replace(/_/g, ' ') || 'User'}
+                  {displayRole.replace(/_/g, ' ')}
                 </Badge>
               </div>
-              <p className="text-xs text-muted-foreground">{user?.email}</p>
+              <p className="text-xs text-muted-foreground">{displayEmail}</p>
               <p className="text-[10px] text-muted-foreground font-mono">
                 Avatar initials derived from verified name
               </p>
@@ -183,12 +276,23 @@ export const ProfilePage: React.FC = () => {
               </div>
 
               <div className="space-y-1.5">
+                <Label htmlFor="phoneField">Phone Number (Optional)</Label>
+                <Input
+                  id="phoneField"
+                  value={phoneInput}
+                  onChange={(e) => setPhoneInput(e.target.value)}
+                  placeholder="e.g. +91 98765 43210"
+                  disabled={isSaving}
+                />
+              </div>
+
+              <div className="space-y-1.5">
                 <Label htmlFor="emailReadonly">Email Address</Label>
                 <Input
                   id="emailReadonly"
-                  value={user?.email || ''}
+                  value={displayEmail}
                   disabled
-                  className="bg-muted text-muted-foreground cursor-not-allowed"
+                  className="bg-muted text-muted-foreground cursor-not-allowed font-mono text-xs"
                 />
                 <span className="text-[10px] text-muted-foreground">
                   Email address is bound to your SaaS tenant authentication identity
@@ -221,35 +325,134 @@ export const ProfilePage: React.FC = () => {
                 <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                   Full Name
                 </span>
-                <p className="font-medium text-foreground">{user?.name || '—'}</p>
+                <p className="font-medium text-foreground">{displayName}</p>
               </div>
 
               <div className="p-3 rounded-lg bg-muted/30 border border-border/60 space-y-1">
                 <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                   Email Address
                 </span>
-                <p className="font-medium text-foreground">{user?.email || '—'}</p>
+                <p className="font-medium text-foreground">{displayEmail}</p>
+              </div>
+
+              <div className="p-3 rounded-lg bg-muted/30 border border-border/60 space-y-1">
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  Phone Number
+                </span>
+                <p className="font-medium text-foreground">{profile?.phone || 'Not provided'}</p>
               </div>
 
               <div className="p-3 rounded-lg bg-muted/30 border border-border/60 space-y-1">
                 <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                   Assigned Workspace Role
                 </span>
-                <p className="font-medium text-foreground">{user?.role?.replace(/_/g, ' ') || '—'}</p>
-              </div>
-
-              <div className="p-3 rounded-lg bg-muted/30 border border-border/60 space-y-1">
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  User Identification Key
-                </span>
-                <p className="font-mono text-foreground">{user?.id || 'usr_anonymous'}</p>
+                <p className="font-medium text-foreground">{displayRole.replace(/_/g, ' ')}</p>
               </div>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* 5. Tenant Workspace & RBAC Permissions Card */}
+      {/* 5. Password & Authentication Security Card */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+          <div>
+            <CardTitle className="text-base font-semibold">Security &amp; Password</CardTitle>
+            <CardDescription className="text-xs">
+              Manage your bcrypt-encrypted password credentials
+            </CardDescription>
+          </div>
+          {!isChangingPassword && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setPasswordError(null);
+                setIsChangingPassword(true);
+              }}
+              className="gap-1.5 text-xs"
+            >
+              <Key className="h-3.5 w-3.5" />
+              Change Password
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {isChangingPassword ? (
+            <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
+              {passwordError && (
+                <div className="p-2.5 rounded bg-destructive/10 border border-destructive/30 text-destructive text-xs">
+                  {passwordError}
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <Label htmlFor="currPass">Current Password *</Label>
+                <Input
+                  id="currPass"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  disabled={isSubmittingPassword}
+                  autoFocus
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="newPass">New Password (min 8 characters) *</Label>
+                <Input
+                  id="newPass"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  disabled={isSubmittingPassword}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="confPass">Confirm New Password *</Label>
+                <Input
+                  id="confPass"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  disabled={isSubmittingPassword}
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsChangingPassword(false)}
+                  disabled={isSubmittingPassword}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="default"
+                  size="sm"
+                  disabled={isSubmittingPassword || !currentPassword || !newPassword}
+                >
+                  {isSubmittingPassword ? 'Updating...' : 'Update Password'}
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <div className="p-3.5 rounded-lg bg-muted/30 border border-border flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                <span>Password encrypted with bcrypt standard</span>
+              </div>
+              <Badge variant="outline" className="text-[10px]">Secure</Badge>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 6. Workspace & Permissions Card */}
       <Card>
         <CardHeader className="pb-4">
           <CardTitle className="text-base font-semibold">Workspace & Access Matrix</CardTitle>
@@ -263,14 +466,14 @@ export const ProfilePage: React.FC = () => {
               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                 Tenant Workspace
               </span>
-              <p className="font-medium text-foreground">{user?.organizationName || 'Default Workspace'}</p>
+              <p className="font-medium text-foreground">{profile?.organizationName || user?.organizationName || 'Default Workspace'}</p>
             </div>
 
             <div className="p-3 rounded-lg bg-muted/30 border border-border/60 space-y-1">
               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                 Organization Tenant ID
               </span>
-              <p className="font-mono text-foreground">{user?.organizationId || 'org_acme_infra_001'}</p>
+              <p className="font-mono text-foreground">{profile?.organizationId || user?.organizationId || 'org_acme_infra_001'}</p>
             </div>
           </div>
 
@@ -281,32 +484,28 @@ export const ProfilePage: React.FC = () => {
                 Active Permissions List
               </span>
               <Badge variant="outline" className="text-[10px] font-mono">
-                {user?.permissions?.length || 0} Scopes
+                {(profile?.permissions || user?.permissions)?.length || 0} Scopes
               </Badge>
             </div>
 
             <div className="flex flex-wrap gap-1.5">
-              {user?.permissions && user.permissions.length > 0 ? (
-                user.permissions.map((perm) => (
-                  <span
-                    key={perm}
-                    className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono bg-primary/10 text-primary border border-primary/20"
-                  >
-                    {perm}
-                  </span>
-                ))
-              ) : (
-                <span className="text-xs text-muted-foreground">Standard viewer permissions</span>
-              )}
+              {(profile?.permissions || user?.permissions)?.map((perm) => (
+                <span
+                  key={perm}
+                  className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono bg-primary/10 text-primary border border-primary/20"
+                >
+                  {perm}
+                </span>
+              ))}
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* 6. Session Security & Compliance Overview */}
+      {/* 7. Session Security & Compliance Overview */}
       <Card>
         <CardHeader className="pb-4">
-          <CardTitle className="text-base font-semibold">Security & Session Details</CardTitle>
+          <CardTitle className="text-base font-semibold">Session Security &amp; Token Architecture</CardTitle>
           <CardDescription className="text-xs">
             Cryptographic token session and multi-tenant security guarantees
           </CardDescription>
