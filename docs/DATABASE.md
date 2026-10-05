@@ -352,3 +352,155 @@ We adopt **Option 3 (Hybrid Defense-in-Depth)**:
 1. Application services always explicitly pass `organization_id` in repository queries.
 2. PostgreSQL tables have RLS enabled with `FORCE ROW LEVEL SECURITY`.
 3. Database transactions set `SET LOCAL app.current_tenant_id = :tenantId`.
+
+---
+---
+
+# Part B — Target Schema (v2.0 Bidder-Side)
+
+**Status:** design only (PROMPT 5). The v1.0 schema above (§2–§8) is the running system; this Part B is the target schema after the pivot. Migration strategy: **expand-and-contract** — create new tables alongside, backfill, retire `bids`/`compliance_items` last.
+
+## B.1 Entity-Relationship Additions
+
+```mermaid
+erDiagram
+    ORGANIZATIONS ||--o{ COMPANIES : "owns"
+    COMPANIES ||--o{ COMPANY_PROFILES : "has versions"
+    COMPANY_PROFILES ||--o{ CAPABILITY_ENTRIES : "contains"
+    CAPABILITY_ENTRIES ||--o{ CAPABILITY_EVIDENCE : "backed by"
+    EVIDENCE_DOCUMENTS ||--o{ CAPABILITY_EVIDENCE : "backs"
+    ORGANIZATIONS ||--o{ EXTERNAL_DATA_CONNECTIONS : "grants"
+    TENDERS ||--o{ TENDER_REQUIREMENTS : "requires"
+    TENDERS ||--o{ TENDER_AMENDMENTS : "amended by"
+    BID_CASES }o--|| TENDERS : "pursues"
+    BID_CASES }o--|| COMPANY_PROFILES : "evaluated against pinned version"
+    BID_CASES ||--o{ EVIDENCE_MATCHES : "contains"
+    BID_CASES ||--o{ RISK_FINDINGS : "contains"
+    BID_CASES ||--o{ BID_DECISIONS : "decided by"
+    BID_CASES ||--o{ REVIEW_TASKS : "gated by"
+    BID_CASES ||--o{ GENERATED_ARTIFACTS : "exports"
+```
+
+## B.2 Core New Tables
+
+### B.2.1 `companies` (Legal Entity)
+
+| Column | Type | Constraints | Description |
+|:-------|:-----|:------------|:------------|
+| `id` | `UUID` | `PK DEFAULT gen_random_uuid()` | Company ID |
+| `organization_id` | `UUID` | `NOT NULL REFERENCES organizations(id) ON DELETE CASCADE` | Tenant isolation key |
+| `legal_name` | `VARCHAR(255)` | `NOT NULL` | Registered legal name |
+| `gstin` / `udyam_id` / `pan` | `VARCHAR` | `NULL` | Statutory identifiers |
+| `constitution` | `VARCHAR(30)` | `NULL` | Proprietorship / Partnership / Pvt Ltd / LLP |
+| `version` | `INT` | `NOT NULL DEFAULT 1` | OCC counter |
+| `created_at` / `updated_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Timestamps |
+
+### B.2.2 `company_profiles` (Versioned Aggregate Root)
+
+| Column | Type | Constraints | Description |
+|:-------|:-----|:------------|:------------|
+| `id` | `UUID` | `PK` | Profile version ID |
+| `company_id` / `organization_id` | `UUID` | `NOT NULL REFERENCES …` | Ownership + tenant key |
+| `version` | `INT` | `NOT NULL CHECK (version >= 1)` | Monotonic version number |
+| `status` | `VARCHAR(10)` | `CHECK (status IN ('DRAFT','ACTIVE','ARCHIVED'))` | Lifecycle |
+| `change_summary` | `TEXT` | `NULL` | Human-readable change note |
+| `created_by` | `UUID` | `NOT NULL REFERENCES users(id)` | Publisher |
+| `created_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Publish timestamp |
+
+**Constraints:**
+- `UNIQUE (company_id, version)` — version history is immutable.
+- `UNIQUE (company_id) WHERE status = 'ACTIVE'` — exactly one ACTIVE version per company (partial unique index).
+
+### B.2.3 `capability_entries` (The Differentiator)
+
+| Column | Type | Constraints | Description |
+|:-------|:-----|:------------|:------------|
+| `id` | `UUID` | `PK` | Entry ID |
+| `profile_id` / `organization_id` | `UUID` | `NOT NULL REFERENCES …` | Owning profile version + tenant |
+| `section` | `VARCHAR(30)` | `CHECK (section IN ('REGISTRATION','CERTIFICATION','FINANCIAL','EXPERIENCE','WORK_ORDER','COMPLETION_CERTIFICATE','OEM','STAFF','EQUIPMENT','GEOGRAPHY','PREVIOUS_BID'))` | One of the 11 sections |
+| `subtype` | `VARCHAR(50)` | `NOT NULL` | e.g. `ISO_9001`, `UDYAM`, `TURNOVER_FY` |
+| `title` | `VARCHAR(255)` | `NOT NULL` | Human label |
+| `attributes` | `JSONB` | `NOT NULL` | Typed structured fields, schema-validated per subtype |
+| `valid_from` / `valid_to` | `TIMESTAMPTZ` | `NULL` | ValidityWindow (open-ended allowed) |
+| `verification_tier` | `VARCHAR(20)` | `CHECK (… IN ('AUTHORITY_VERIFIED','ISSUER_VERIFIED','SELF_ATTESTED','UNVERIFIED'))` | Proof quality |
+| `verification_status` | `VARCHAR(15)` | `DEFAULT 'PENDING' CHECK (… IN ('PENDING','VERIFIED','REJECTED','EXPIRED','REVOKED'))` | Lifecycle |
+| `verified_by` / `verified_at` / `verification_method` | — | `NULL` | Verification attribution |
+| `source` | `JSONB` | `NOT NULL` | `{sourceType, fetchedAt, operatorUserId, consentReference, externalReference}` |
+| `created_by` / `created_at` | — | `NOT NULL` | Provenance |
+
+**Indexes:** `(organization_id, profile_id, section)` B-Tree (evaluation read path); `GIN (attributes)` (JSONB attribute queries, e.g. `attributes @> '{"standard":"ISO_9001"}'`); `(organization_id, verification_status, valid_to)` (expiry scan).
+
+### B.2.4 `evidence_documents` (Proof Blobs)
+
+| Column | Type | Constraints | Description |
+|:-------|:-----|:------------|:------------|
+| `id` | `UUID` | `PK` | Evidence ID (used in storage path) |
+| `organization_id` | `UUID` | `NOT NULL REFERENCES organizations(id)` | Tenant key |
+| `storage_path` | `VARCHAR(512)` | `NOT NULL UNIQUE` | `tenants/{orgId}/profile/{entryId}/{evidenceId}/{fileName}` |
+| `file_name` / `mime_type` / `size_bytes` / `checksum_sha256` | — | `NOT NULL` | Blob metadata (same pattern as `tender_documents`) |
+| `document_kind` | `VARCHAR(40)` | `NOT NULL` | CERTIFICATE / LETTER / CERTIFICATE_OF_COMPLETION / … |
+| `issuer` / `issue_date` / `valid_from` / `valid_to` | — | `NULL` | Issuance & validity |
+| `verification_tier` | `VARCHAR(20)` | as above | Authority/issuer/self-attested |
+| `status` | `VARCHAR(15)` | `DEFAULT 'PENDING'` | PENDING / VERIFIED / REJECTED / EXPIRED / REVOKED |
+| `source` | `JSONB` | `NOT NULL` | Same source VO as capability entries |
+| `uploaded_by` / `created_at` | — | `NOT NULL` | Attribution |
+
+**Unique:** `UNIQUE (organization_id, checksum_sha256)` — dedupe identical uploads per tenant.
+
+### B.2.5 `capability_evidence` (Many-to-Many Join)
+
+| Column | Type | Constraints |
+|:-------|:-----|:------------|
+| `capability_entry_id` | `UUID` | `NOT NULL REFERENCES capability_entries(id) ON DELETE CASCADE` |
+| `evidence_document_id` | `UUID` | `NOT NULL REFERENCES evidence_documents(id) ON DELETE CASCADE` |
+| `organization_id` | `UUID` | `NOT NULL` |
+| `attached_by` / `attached_at` | — | `NOT NULL` |
+
+**PK:** `(capability_entry_id, evidence_document_id)`.
+
+### B.2.6 `external_data_connections` (OAuth/Consent Integrations)
+
+| Column | Type | Constraints | Description |
+|:-------|:-----|:------------|:------------|
+| `id` | `UUID` | `PK` | Connection ID |
+| `organization_id` | `UUID` | `NOT NULL REFERENCES organizations(id)` | Tenant key |
+| `source` | `VARCHAR(20)` | `CHECK (source IN ('DIGILOCKER','ACCOUNT_AGGREGATOR','GSP','MCA_AGGREGATOR'))` | Connector type |
+| `status` | `VARCHAR(10)` | `CHECK (status IN ('CONNECTED','EXPIRED','REVOKED'))` | Connection state |
+| `scopes` | `JSONB` | `NOT NULL` | Minimally-scoped permissions |
+| `encrypted_tokens` | `JSONB` | `NOT NULL` | Encrypted at rest; never logged; never sent to AI |
+| `consent_reference` | `VARCHAR(255)` | `NULL` | Consent receipt |
+| `last_synced_at` / `revoked_at` | `TIMESTAMPTZ` | `NULL` | Sync/revocation timestamps |
+
+### B.2.7 Pivot Aggregates (compact)
+
+| Table | Key columns | Notes |
+|:------|:------------|:------|
+| `tenders` | id, organization_id, tender_number UK per tenant, tendering_authority, estimated_value_paise, submission_deadline, status (DISCOVERED→…→CLOSED), version | Replaces `bids`; package metadata |
+| `tender_requirements` | id, tender_id, organization_id, category, title, description, execution_rules JSONB, provenance JSONB, status (EXTRACTED→PROPOSED→CONFIRMED→SUPERSEDED), version | Replaces `compliance_items` (extraction side) |
+| `tender_amendments` | id, tender_id, organization_id, document_id, published_at, status (PENDING→APPLIED→ASSESSED) | Corrigenda; supersede requirements |
+| `bid_cases` | id, tender_id, organization_id, **profile_version_id FK**, status (CREATED→…→READY_TO_SUBMIT→SUBMITTED/ABANDONED), eligibility_verdict JSONB, readiness_score, version | The pursuit; **pinned profile version is mandatory** |
+| `evidence_matches` | id, bid_case_id, requirement_id, capability_entry_id (NULL), evidence_document_id (NULL), match_state (MATCHED/PARTIAL/EXPIRED/MISSING/NOT_APPLICABLE), matched_at | Requirement ↔ capability/evidence |
+| `risk_findings` | id, bid_case_id, organization_id, category (LD/DLP/PBG/PAYMENT/EMD_AFFORDABILITY…), severity, description, provenance JSONB | Commercial trap register |
+| `bid_decisions` | id, bid_case_id, organization_id, verdict (GO/CONDITIONAL_GO/NO_GO), rationale, proposed_by, confirmed_by, confirmed_at, status (AI_PROPOSED→UNDER_REVIEW→CONFIRMED) | Human-confirmed decision |
+| `review_tasks` | id, organization_id, subject_type, subject_id, assigned_to, status (OPEN→CLAIMED→RESOLVED/EXPIRED), resolution (APPROVED/REJECTED/EDITED), notes, version | HITL gate; optimistic concurrency |
+| `generated_artifacts` | id, bid_case_id, organization_id, artifact_type (PDF/EXCEL), storage_path, generated_by, created_at | Export packs |
+
+## B.3 New Invariants
+
+1. **Profile version pin**: `bid_cases.profile_version_id` is `NOT NULL` — every decision is reproducible against the exact profile state at evaluation time.
+2. **One ACTIVE profile**: partial unique index `(company_id) WHERE status = 'ACTIVE'`.
+3. **Validity is point-in-time**: matching evaluates `valid_from <= evaluation_date AND (valid_to IS NULL OR valid_to >= evaluation_date)` where evaluation_date is the **bid submission date**, not the query date.
+4. **Append-only audit**: `audit_logs` gains new action codes (`PROFILE_VERSION_PUBLISHED`, `CAPABILITY_ADDED`, `EVIDENCE_ATTACHED`, `EVIDENCE_VERIFIED`, `BID_DECISION_CONFIRMED`, …); `REVOKE UPDATE, DELETE` unchanged.
+5. **Encrypted connector tokens**: application-layer encryption (envelope encryption with KMS/CMK); the database never stores plaintext OAuth tokens.
+6. **All tenant-owned tables**: `organization_id` leading column + RLS `FORCE ROW LEVEL SECURITY` + `SET LOCAL app.current_tenant_id` — identical to v1.0 policy (§8), extended to every new table.
+
+## B.4 Migration Note (Expand-and-Contract)
+
+1. **Expand**: create all Part B tables; dual-write profile/proof data.
+2. **Backfill**: `bids` → `tenders`; `compliance_items` → `tender_requirements` (provenance carries over).
+3. **Contract**: retire `bids`/`compliance_items` only after bid-case read paths are verified.
+4. Zero-downtime: all steps are additive DDL until the final rename; CI deploy stages execute migrations before deploy (existing expand-and-contract policy in `docs/CICD.md`).
+
+---
+
+*Part B status: design only, per PROMPT 5. No schema changes implemented.*

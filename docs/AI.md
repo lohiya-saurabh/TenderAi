@@ -136,9 +136,12 @@ Modern chat completion APIs structure interaction into discrete roles:
 | :-------------------------------- | :----------------- | :--------------------------------------------------------------- |
 | **Tenant Isolation & Security**   | Deterministic Code | LLMs cannot enforce authorization boundaries.                    |
 | **Arithmetic & Calculations**     | Deterministic Code | LLMs fail at reliable arithmetic; code is 100% exact.            |
+| **Verdict Computation (PASS/FAIL/MISSING/REVIEW)** | Deterministic Code | Verdicts must be reproducible and legally defensible; a model cannot be cited in a dispute (ADR 0019/0021). |
 | **Unstructured Text Parsing**     | Model Reasoning    | Code cannot anticipate every bureaucratic clause syntax.         |
 | **Quote & Citation Verification** | Deterministic Code | Exact substring verification guarantees zero hallucination.      |
+| **Explanation Narrative**         | Model Reasoning (guarded) | Prose is where LLMs excel — but it explains a *determined* result and is citation-verified (§5). |
 | **Database State Mutations**      | Deterministic Code | Relational constraints and ACID transactions govern persistence. |
+| **Final Compliance Decision**     | Human              | Override is permission-gated, reasoned, and audited (ADR 0021). |
 
 ---
 
@@ -297,3 +300,65 @@ How isolation is enforced across subsystems:
 2. **Checkpoints**: Thread IDs are prefixed by tenant ID: `f"tenant_{tenant_id}:bid_{bid_id}:run_{run_id}"`. Checkpointer SQL queries enforce `WHERE organization_id = :tenant_id`.
 3. **Tools & Retrieval**: Tools validate that queried `document_id` exists in `state["security_context"].allowed_document_ids`. Vectors are pre-filtered with `WHERE organization_id = :tenant_id`.
 4. **Caches**: Shared semantic caches across tenants are strictly prohibited.
+
+---
+
+## 5. The AI Explanation Layer: Evidence-Based Compliance (ADR 0021)
+
+The Evidence & Compliance Engine answers *"For this tender requirement, what evidence does the company have?"* with a five-stage pipeline: **retrieval → matching → deterministic validation → AI explanation → human decision** (`docs/DOMAIN.md` Part F). The AI participates in exactly **one** stage — explanation — and is structurally prevented from participating in the decision.
+
+### 5.1 The Contract: No Verdict in the Schema
+
+The explanation node receives the **deterministic result bundle** (criterion results, evidence references, conflict records, verbatim quotes) for requirements the caller is authorized to see — never raw documents, never company data beyond authorized scope.
+
+```python
+class ExplanationClaim(BaseModel):
+    result_id: str            # cites a CriterionResult / EvidenceRef id
+    statement: str            # prose restatement, no new facts
+
+class Explanation(BaseModel):
+    claims: list[ExplanationClaim]
+    narrative: str
+    model_id: str
+    model_version: str
+    # NOTE: deliberately NO verdict, NO amount, NO PASS/FAIL field.
+    # The AI physically cannot express an assessment (ADR 0019 contract boundary).
+```
+
+**Why:** the blast radius of a hallucination is confined to prose quality. A hallucinated explanation is a documentation bug; it can never flip a verdict, because no code path reads a verdict from the model output.
+
+### 5.2 Explanation Grounding Verification
+
+A deterministic verifier checks every `claim.result_id` against the result bundle:
+
+1. The cited result must exist in the bundle (no invented results).
+2. Any number/date/amount in `statement` must match the cited result's value (no numeric drift).
+3. The narrative may **rephrase and connect** ("the average across four years is ₹10.05 Cr, margin ₹5 L") but may not assert facts absent from the bundle.
+
+Failure → bounded retry (≤2) → **deterministic template renderer** produces the narrative from the same bundle. The assessment is never blocked on prose: if the model is down, the verdict and evidence stand, and the explanation degrades gracefully.
+
+### 5.3 What the Model May See (Security Boundary)
+
+- **In scope:** the result bundle for authorized requirements — already-extracted facts and verbatim quotes, tenant-scoped by `SecurityContext` (§4.4), profile-version-pinned.
+- **Out of scope:** raw PDFs, other tenants' data, live (unpinned) profile state, and any field the caller's RBAC does not grant. Retrieval and tenant filtering happen **before** the AI boundary (ADR 0011/0013) — the model is never the access-control layer.
+- **Ambiguous clauses:** the model may propose *interpretations* of an ambiguous requirement, but they are labelled advisory candidates for human review — never verdicts. The engine marks the requirement REVIEW_REQUIRED; the human decides.
+
+### 5.4 Why Explanation Is a Separate Stage (Not Merged With Validation)
+
+| Merged design ("AI assesses and explains") | Separated design (ADR 0021) |
+|:------------------------------------------|:----------------------------|
+| Verdict untestable, unreproducible | Verdict is a pure function — property + mutation tested |
+| Hallucination can create false PASS | Hallucination confined to prose; citation-verified |
+| Company financials enter prompts | Only the result bundle enters the AI boundary |
+| "Why PASS?" = "the model said so" | "Why PASS?" = documents, pages, arithmetic, policy |
+
+### 5.5 Evaluation & Regression
+
+The `apps/ai` scorecard framework extends to the explanation layer:
+
+- **Faithfulness**: fraction of narrative claims whose citations exist and match the bundle (target 1.0).
+- **Citation accuracy**: zero claims citing non-existent results (zero-tolerance invariant).
+- **Verdict parity**: explanation run 10× on the same bundle must never change the assessment state.
+- **Adversarial suite**: result bundles containing deliberate conflicts, expired certificates, and missing dates must produce explanations that *report* the conflict — never resolve it.
+
+*Stop point reached: design only, per PROMPT 7. No code implemented.*

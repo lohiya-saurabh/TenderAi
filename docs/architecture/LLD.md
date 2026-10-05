@@ -404,3 +404,236 @@ In line with our engineering rules (_"Do not introduce design patterns unless th
 
 - **No Event Sourcing**: Full event sourcing (saving every state diff as an immutable event stream) adds massive schema migration complexity. A relational model with a dedicated `audit_logs` table provides identical auditability with 10x less complexity.
 - **No Complex CQRS with Separate Read Databases**: A single PostgreSQL instance with optimized indexes and views easily handles our read and write volume. Adding read-replica syncing or separate read models in Phase 1–3 is premature.
+
+---
+
+## 9. Evidence & Compliance Engine (PROMPT 7 — Design Only)
+
+Translates `docs/DOMAIN.md` Part F (§49–60) and ADR 0021 into component architecture. Answers *"For this tender requirement, what evidence does the company have?"* — every assessment carrying tender-side and company-side provenance. Never a bare percentage.
+
+### 9.1 Package Structure Additions (`modules/compliance`)
+
+```
+modules/compliance/
+├── domain/
+│   ├── entities/
+│   │   ├── ComplianceItem.entity.ts          # exists today → becomes TenderRequirement (extraction side)
+│   │   ├── EvidenceMatch.entity.ts           # NEW: requirement ↔ evidence link (dual-sided provenance)
+│   │   └── ComplianceAssessment.entity.ts    # NEW: per-requirement assessment record
+│   ├── value-objects/
+│   │   ├── AssessmentState.vo.ts             # NEW: PASS | FAIL | MISSING_EVIDENCE | REVIEW_REQUIRED
+│   │   ├── EvidenceRef.vo.ts                 # NEW: company-side citation (doc, pages, section, quote, tier)
+│   │   └── ConflictRecord.vo.ts              # NEW: value collision + resolution policy outcome
+│   ├── services/                             # pure, framework-free (ADR 0019)
+│   │   ├── EvidenceRetrievalService.ts       # Stage 1: candidate selection (recall)
+│   │   ├── EvidenceMatchService.ts           # Stage 2: deterministic linking
+│   │   └── ComplianceValidationEngine.ts     # Stage 3: evaluators + expiry/tier/conflict policy
+│   └── repositories/
+│       ├── IEvidenceMatchRepository.ts
+│       └── IComplianceAssessmentRepository.ts
+├── application/
+│   ├── use-cases/
+│   │   ├── GenerateComplianceAssessment.usecase.ts   # orchestrates stages 1–4, persists Stage-5 record
+│   │   └── OverrideAssessment.use-case.ts            # human override (OCC + permission + reason)
+│   └── ports/
+│       └── IExplanationGenerator.ts          # AI explanation port (implemented in infrastructure/ai)
+└── infrastructure/
+    ├── persistence/                          # Drizzle repositories (tenant-scoped)
+    └── ai/ExplanationGenerator.ts            # IExplanationGenerator adapter (FastAPI AI engine)
+```
+
+### 9.2 Domain Model Additions
+
+```mermaid
+classDiagram
+    class ComplianceAssessment {
+        +UUID id
+        +UUID bidCaseId
+        +UUID requirementId
+        +UUID organizationId
+        +CriterionResult[] criterionResults
+        +EvidenceRef[] companyEvidence
+        +ConflictRecord[] conflicts
+        +AssessmentState engineVerdict
+        +AssessmentState finalVerdict
+        +Explanation explanation
+        +Override override
+        +Int version
+        +UUID[] auditTrail
+        +finalize(engineVerdict, explanation)
+        +applyOverride(actorId, reason, newVerdict)
+    }
+
+    class EvidenceMatch {
+        +UUID id
+        +UUID requirementId
+        +EvidenceRef evidenceRef
+        +MatchState state
+        +String selectionPolicy
+        +link(candidates, policy)
+    }
+
+    class EvidenceRef {
+        <<ValueObject>>
+        +UUID documentId
+        +String fileName
+        +String pages
+        +String section
+        +String verbatimQuote
+        +VerificationTier verificationTier
+        +ExtractionMethod extractionMethod
+    }
+
+    class ConflictRecord {
+        <<ValueObject>>
+        +String field
+        +EvidenceRef[] conflictingRefs
+        +ConflictPolicy policyApplied
+        +Boolean resolved
+    }
+
+    class AssessmentState {
+        <<ValueObject>>
+        +AssessmentStateEnum value
+        +canTransitionTo(AssessmentStateEnum) Boolean
+    }
+
+    ComplianceAssessment "1" *-- "many" EvidenceMatch : contains
+    EvidenceMatch *-- EvidenceRef : cites
+    ComplianceAssessment *-- ConflictRecord : records
+    ComplianceAssessment *-- AssessmentState : tracked by
+```
+
+### 9.3 ComplianceAssessment State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> UNASSESSED : BidCase pinned (profile version N)
+    UNASSESSED --> ENGINE_ASSESSED : Stages 1–4 complete
+    ENGINE_ASSESSED --> HUMAN_RESOLVED : REVIEW_REQUIRED resolved by human
+    ENGINE_ASSESSED --> OVERRIDDEN : human override (engineVerdict retained)
+    HUMAN_RESOLVED --> ENGINE_ASSESSED : evidence changes / re-opened
+    OVERRIDDEN --> [*] : terminal unless re-opened by corrigendum delta (§47)
+```
+
+| Current State | Permitted Next States | Guard Invariant |
+|:--------------|:----------------------|:----------------|
+| `UNASSESSED` | `ENGINE_ASSESSED` | Requires completed validation result with ≥1 criterion result; assessment impossible without evidence evaluation |
+| `ENGINE_ASSESSED` | `HUMAN_RESOLVED`, `OVERRIDDEN` | Override requires `compliance:override` permission + non-empty reason + matching `expectedVersion` |
+| `HUMAN_RESOLVED` | `ENGINE_ASSESSED` | Re-opened only by evidence mutation or corrigendum delta — never by silent status change |
+| `OVERRIDDEN` | _(None — terminal)_ | `engineVerdict` immutable; both verdicts always retrievable |
+
+### 9.4 Component Specifications
+
+**9.4.1 `EvidenceRetrievalService` (Domain Service — Stage 1)**
+
+- **RESPONSIBILITY**: Selects candidate company evidence for a requirement from the **pinned profile version**. Over-retrieves (top-K = 20); never judges.
+- **DEPENDENCIES**: `ICompanyProfileRepository` (read, version-pinned), `IEvidenceSearchPort` (full-text + ANN, tenant-filtered).
+- **INPUT**: `TenderRequirement` (criteria, requiredDocumentKinds, minimumVerificationTier), `ProfileVersionRef`.
+- **OUTPUT**: `CandidateEvidenceSet { candidates: EvidenceRef[], retrievalMethod, queryId }`.
+- **FAILURE CASES**: Empty/error retrieval → `MISSING_EVIDENCE` with reason `RETRIEVAL_EMPTY` — never PASS.
+- **WHY IT EXISTS**: Recall is measured independently of precision; tenant isolation is enforced at the repository port before any ranking.
+
+**9.4.2 `EvidenceMatchService` (Domain Service — Stage 2)**
+
+- **RESPONSIBILITY**: Deterministically links candidates to the requirement; computes MatchState (Part E §43); applies cross-document dedup (by certificate/work-order number) and best-selection policy.
+- **DEPENDENCIES**: `EvidenceRef`, `MatchState`, criterion predicates.
+- **INPUT**: `CandidateEvidenceSet`, `TenderRequirement.criteria`.
+- **OUTPUT**: `EvidenceMatch[]` with dual-sided provenance (tender anchors §28 + company EvidenceRef).
+- **FAILURE CASES**: None — total function; unmatched criteria yield `MatchState = MISSING`.
+- **WHY IT EXISTS**: Separates *finding* from *deciding*; many-to-many evidence linking keeps every supporting document auditable.
+
+**9.4.3 `ComplianceValidationEngine` (Pure Domain Service — Stage 3)**
+
+- **RESPONSIBILITY**: Runs Part E §42 evaluators plus the three domain policies: expiry (at submission date), tier sufficiency, conflict resolution (tier → recency → source authority → UNRESOLVED).
+- **DEPENDENCIES**: None (pure functions; evaluation date is a parameter).
+- **INPUT**: `EvidenceMatch[]`, `criteria`, `evaluationDate`.
+- **OUTPUT**: `CriterionResult[]`, `ConflictRecord[]`, `EngineVerdict`.
+- **FAILURE CASES**: Total — every input maps to a state; never throws (property-tested).
+- **WHY IT EXISTS**: The only stage permitted to produce a verdict (ADR 0019/0021).
+
+**9.4.4 `ExplanationGenerator` (Infrastructure Adapter — Stage 4, port `IExplanationGenerator`)**
+
+- **RESPONSIBILITY**: Generates a grounded narrative from the deterministic result bundle. Output schema contains **no verdict field**; every claim cites a resultId/evidenceRef.
+- **DEPENDENCIES**: FastAPI AI engine (`apps/ai`), deterministic citation verifier, template renderer (fallback).
+- **INPUT**: Result bundle (criterion results, evidence refs, conflicts, quotes) for authorized requirements only.
+- **OUTPUT**: `Explanation { narrative, modelId, modelVersion, claims[], groundingCheck }`.
+- **FAILURE CASES**: Citation-verification failure → bounded retry → template fallback. The assessment is never blocked on prose.
+- **WHY IT EXISTS**: LLMs are excellent at explanation and unreliable at verdicts — this component confines them to the former.
+
+**9.4.5 `GenerateComplianceAssessmentUseCase` (Application Service)**
+
+- **RESPONSIBILITY**: Orchestrates Stages 1–4 and persists the Stage-5 record; idempotent per (bidCaseId, requirementId, profileVersionId, evaluationDate).
+- **DEPENDENCIES**: Stages 1–4 services, `IComplianceAssessmentRepository`, `IAuditLogger`, `IEventBus`.
+- **INPUT**: `GenerateComplianceAssessmentCommand { organizationId, bidCaseId, requirementId, evaluationDate }`.
+- **OUTPUT**: `ComplianceAssessmentDto` (engineVerdict + evidence + explanation + auditTrail).
+- **FAILURE CASES**: `BidCaseNotFoundException` (tenant mismatch), `RequirementNotFoundException`, `ProfileVersionNotFoundException`.
+- **WHY IT EXISTS**: One transaction boundary for the pipeline; emits `RETRIEVAL_EXECUTED → EVIDENCE_MATCHED → VALIDATION_COMPLETED → EXPLANATION_GENERATED → ASSESSMENT_FINALIZED` audit events.
+
+**9.4.6 `OverrideAssessmentUseCase` (Application Service — Stage 5)**
+
+- **RESPONSIBILITY**: Applies a human override with permission check, mandatory reason, and OCC; preserves `engineVerdict` immutably.
+- **DEPENDENCIES**: `IComplianceAssessmentRepository`, `IPermissionService`, `IAuditLogger`.
+- **INPUT**: `OverrideAssessmentCommand { organizationId, assessmentId, newVerdict, reason, actorId, expectedVersion }`.
+- **OUTPUT**: `ComplianceAssessmentDto` (both verdicts).
+- **FAILURE CASES**: `ForbiddenException` (no `compliance:override`), `ConcurrencyConflictException` (HTTP 409), `EmptyReasonException`.
+- **WHY IT EXISTS**: Humans own decisions; the engine owns facts. The override contract makes the disagreement explicit and auditable.
+
+### 9.5 Sequence Diagram: Assessment Pipeline
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Bid Manager
+    participant Ctrl as ComplianceController
+    participant UC as GenerateComplianceAssessmentUseCase
+    participant S1 as EvidenceRetrievalService
+    participant S2 as EvidenceMatchService
+    participant S3 as ComplianceValidationEngine
+    participant S4 as ExplanationGenerator
+    participant DB as PostgreSQL
+
+    User->>Ctrl: GET /api/v1/bid-cases/:id/assessments
+    Ctrl->>UC: execute(command)
+    UC->>S1: retrieve(requirement, profileVersionRef)
+    S1->>DB: SELECT ... WHERE organizationId = :tenant AND profile_version_id = :pinned
+    S1-->>UC: CandidateEvidenceSet (20 candidates)
+    UC->>S2: match(candidates, criteria)
+    S2-->>UC: EvidenceMatch[] (dual provenance)
+    UC->>S3: validate(matches, criteria, submissionDate)
+    S3-->>UC: CriterionResult[] + ConflictRecord[] + EngineVerdict
+    UC->>S4: explain(resultBundle)
+    S4-->>UC: Explanation (citation-verified)
+    UC->>DB: INSERT compliance_assessments + audit_events
+    UC-->>Ctrl: ComplianceAssessmentDto
+    Ctrl-->>User: 200 OK (PASS + evidence + explanation)
+
+    Note over User,DB: Override path (Stage 5)
+    User->>Ctrl: POST /api/v1/bid-cases/:id/assessments/:aId/override { newVerdict, reason, expectedVersion }
+    Ctrl->>OverrideUC: execute(command)
+    OverrideUC->>OverrideUC: assert permission compliance:override
+    OverrideUC->>DB: UPDATE ... WHERE id = :id AND version = :expectedVersion
+    OverrideUC->>DB: INSERT ASSESSMENT_OVERRIDDEN audit event
+    OverrideUC-->>Ctrl: 200 OK (engineVerdict + finalVerdict)
+```
+
+### 9.6 API Endpoints (New)
+
+| Method & Path | Purpose |
+|:--------------|:--------|
+| `GET /api/v1/bid-cases/:id/assessments` | List per-requirement assessments (evidence-carrying) |
+| `GET /api/v1/bid-cases/:id/assessments/:assessmentId` | Single assessment with full evidence trail |
+| `POST /api/v1/bid-cases/:id/assessments/:assessmentId/override` | Human override (permission + reason + OCC) |
+| `POST /internal/v1/bid-cases/:id/assessments/rerun` | Worker-triggered re-evaluation (corrigendum delta, §47) |
+
+### 9.7 Design Patterns Used & Explicitly Justified
+
+1. **Strategy Pattern (conflict/tier/expiry policies)**: _Problem Solved_: policies are pure, swappable, and individually unit-testable; adding a new conflict rule (e.g., department-specific precedence) never touches evaluators.
+2. **Ports & Adapters (`IExplanationGenerator`)**: _Problem Solved_: the AI engine is replaceable (Bedrock/GCP/regression mock) without touching domain orchestration (ADR 0014).
+3. **Template Renderer (explanation fallback)**: _Problem Solved_: deterministic prose from the same result bundle guarantees availability when the model is unreachable or fails citation checks.
+
+### Patterns Explicitly Rejected:
+
+- **No LLM-in-retrieval (v1)**: semantic ranking is advisory only; deterministic retrieval keeps recall measurable and tenant isolation airtight (ADR 0019).
+- **No verdict field in the explanation schema**: enforced at the Pydantic contract boundary — the AI physically cannot emit an assessment.
+- **No soft-delete on overrides**: the engine verdict is never mutated or deleted; override history is append-only.

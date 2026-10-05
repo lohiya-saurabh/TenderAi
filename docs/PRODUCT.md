@@ -1,145 +1,232 @@
 # Product Strategy & Definition: TenderPulse AI
 
+**Version:** 2.0 — Bidder-Side Pivot (2026-10-04)
+**Supersedes:** v1.0 (compliance-extraction-centric definition)
+**Companion document:** `docs/CURRENT_STATE.md` (engineering audit of what exists today)
+
+---
+
 ## 1. Product Vision
 
-**TenderPulse AI** is an intelligent bid-readiness and technical compliance platform purpose-built for Indian government contractors (MSMEs and mid-market engineering/services firms). It transforms dense, labyrinthine 200+ page Public Procurement tenders (GeM & CPPP) into actionable, auditable compliance checklists, gap analyses, and bid-readiness matrices—eliminating technical disqualifications caused by procedural oversights.
+**TenderPulse AI is a Tender Intelligence & Bid Readiness Platform for Indian MSMEs, contractors, and service providers.**
+
+The platform works for the **bidder**, not the procurement officer. It answers five questions that decide whether a contractor wins or loses money:
+
+1. **Should I pursue this tender?** (Bid / No-Bid decision)
+2. **What exactly does this tender require?** (Requirement extraction)
+3. **Do we have the required evidence?** (Company evidence matching)
+4. **What could cause rejection?** (Risk analysis)
+5. **Are we ready to submit?** (Bid readiness)
+
+### The pivot in one sentence
+
+> v1.0 asked: *"What does this tender demand?"*
+> v2.0 asks: *"What does this tender demand **of us specifically**, and can we prove it?"*
+
+The single most important differentiator is the **persistent Company Capability Profile** — a reusable, structured, versioned record of the company's registrations, certifications, finances, experience, equipment, people, geography, and past bid evidence. Every new tender is evaluated **against this profile**, so qualification work done once is reused across every future bid.
 
 ---
 
-## 2. Market Context & The Problem
+## 2. Market Context (unchanged from v1.0 — still valid)
 
-### 2.1 The Indian Public Procurement Ecosystem
-
-The Government of India and State Governments procure over **₹5 to ₹10 Lakh Crore** worth of goods, works, and services annually through institutional portals:
-
-- **GeM (Government e-Marketplace)**: Mandatory for central ministries and CPSEs for standard goods and service contracts.
-- **CPPP (Central Public Procurement Portal - eProcure)**: The backbone for infrastructure, EPC, defense, civil engineering, and specialized tenders.
-- **State Portals & Railways**: State NIC portals (e.g., MahaTenders, Karnataka eProc), IREPS (Railways), and MES (Military Engineer Services).
-
-### 2.2 The Disqualification Epidemic
-
-In Indian government tenders, bidding is divided into a strict **Two-Packet (Two-Envelope) System**:
-
-1. **Packet 1: Technical & Pre-Qualification Bid**
-2. **Packet 2: Commercial / Financial Bid (BOQ)**
-
-> **The Golden Rule of Govt Tendering**: If a bidder is disqualified in Packet 1 (Technical Bid), their Packet 2 (Financial Bid) is **never opened**. It is permanently rejected on the portal.
-
-Every year, an estimated **15% to 30% of bids are rejected at the technical stage** due to minor procedural defects, such as:
-
-- Submitting an affidavit on a ₹50 stamp paper when the tender specified a **₹100 Non-Judicial Stamp Paper**.
-- Omitting the ICAI **UDIN (Unique Document Identification Number)** on the CA Turnover Certificate.
-- Submitting a client completion certificate signed by an Assistant Engineer when the tender strictly mandated an **Executive Engineer (EE) or above**.
-- Missing an amendment buried in **Corrigendum No. 4**, issued 36 hours before bid closure.
-- Failing to include the exact statutory wording for the **Make-in-India (PPP-MII) Local Content Declaration**.
-
-### 2.3 Economic Loss per Rejected Bid
-
-When a contractor gets technically disqualified:
-
-- **Direct Sunk Costs**: ₹25,000 to ₹75,000 in preparation costs (external tender consultants, CA charges, stamp papers, notary fees, courier).
-- **Frozen Liquidity**: Earnest Money Deposit (EMD) of 1%–3% of tender value (e.g., ₹2 Lakh to ₹10 Lakh) remains locked in government accounts for 60–120 days until tender finalization.
-- **Lost Revenue Opportunity**: Contractors spend 5–10 business days per tender. Losing on a clerical error nullifies weeks of engineering and commercial estimation.
+- Indian public procurement: **₹5–10 Lakh Crore/year** across GeM, CPPP, state portals (MahaTenders, Karnataka eProc), IREPS (Railways), MES, CPWD, and PSU portals.
+- **Two-packet system**: disqualification in Packet 1 (technical) means Packet 2 (financial) is **never opened**. An estimated **15–30% of bids are rejected at the technical stage** on procedural defects — wrong stamp paper denomination, missing ICAI UDIN, wrong signing authority rank, a corrigendum missed 36 hours before closure.
+- **Cost of a disqualification**: ₹25,000–75,000 sunk preparation cost, EMD (1–3% of tender value) frozen for 60–120 days, and 5–10 lost engineering days.
+- **Buying criterion remains ROI**: preventing one technical disqualification per quarter pays for the subscription many times over.
 
 ---
 
-## 3. Customer Personas: Buyer vs. User
+## 3. The Core User Questions → Product Stages
 
-Understanding the distinction between who authorizes the purchase and who sits at the screen daily is vital for product design and SaaS pricing.
-
-### 3.1 The Economic Buyer
-
-- **Title**: Managing Director, Proprietor, Partner, or Chief Operating Officer (COO).
-- **Company Profile**: MSME or mid-market firm (Turnover: ₹5 Cr to ₹100 Cr; 15 to 150 employees; Civil, Electrical, Telecom, Medical Equipment, Facility Management, or IT Infrastructure).
-- **Core Motivation**:
-  - Stop losing tenders due to clerical errors.
-  - Scale bidding volume from 2–3 tenders/month to 10–15 tenders/month without adding headcount.
-  - Reduce dependence on unpredictable external tender agents who charge ₹15,000–₹40,000 per bid plus a 1% success fee.
-- **Buying Criterion**: Demonstrable ROI. If the software prevents just _one_ technical disqualification per quarter, it pays for an annual subscription many times over.
-
-### 3.2 The Daily End User
-
-- **Title**: Bid Manager, Tendering Executive, Estimation Engineer, or Senior Accountant.
-- **Daily Pain Points**:
-  - Information Overload: Scanning 200–500 pages of scanned, poorly OCR'd PDFs, Standard Bidding Documents (SBD), General Conditions of Contract (GCC), and Special Conditions of Contract (SCC).
-  - High Stress & Tight Deadlines: Scrambling 48 hours before the deadline to collect 25+ signed declarations, notarized affidavits, and bank solvency certificates.
-  - Manual Checklist Generation: Copy-pasting clauses into manual Excel sheets while cross-checking against previous bids.
-- **User Experience Needs**:
-  - Extreme clarity, zero ambiguity.
-  - Every extracted requirement must link directly to the tender PDF source page.
-  - High-confidence verification checklist: "Show me exactly what documents I must prepare today."
-
----
-
-## 4. Value Proposition & Core Workflows
+The product workflow is an 11-stage pipeline. Each stage maps to one user question:
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      TenderPulse AI                         │
-│                                                             │
-│  ┌────────────────┐     ┌────────────────┐     ┌──────────┐ │
-│  │ 1. Eligibility │ ──> │ 2. Compliance  │ ──> │ 3. Risk  │ │
-│  │    Engine      │     │    Matrix      │     │    Radar │ │
-│  └────────────────┘     └────────────────┘     └──────────┘ │
-│         │                      │                     │      │
-│  Instant Go/No-Go       Automated Checklist    Hidden Trap  │
-│  (Turnover, Work Exp,   (Annexures, Stamp      Detection    │
-│  Solvency, Credentials) Papers, Notary, UDIN)  (LD, DLP, BG)│
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│ 1. Tender Discovery          (What's out there?)                   │
+│ 2. Tender-to-Company Matching (Is this ours to win?)               │
+│ 3. Bid/No-Bid Decision       → Q1: Should I pursue this tender?    │
+│ 4. Requirement Extraction    → Q2: What exactly is required?       │
+│ 5. Company Evidence Matching → Q3: Do we have the evidence?        │
+│ 6. Compliance Analysis       (Gap register)                        │
+│ 7. Risk Analysis             → Q4: What could cause rejection?     │
+│ 8. Missing Evidence          (Acquisition list)                    │
+│ 9. Human Review              (AI proposes, human confirms)         │
+│ 10. Bid Readiness            → Q5: Are we ready to submit?         │
+│ 11. Submission Preparation   (Packet 1 pack assembly)              │
+│ ─────────────────────────────────────────────────────────────────── │
+│ 12. Corrigendum / Requirement Change Monitoring (continuous)       │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
-1. **Instant Go / No-Go Qualification (in < 3 minutes)**:
-   Extracts minimum average annual turnover, required past single/double/triple work order values, bank solvency limits, and technical certifications. Evaluates against the contractor's saved master profile.
-2. **Exhaustive Technical Compliance Matrix**:
-   Identifies every single declaration, format, annexure, and certificate required for Packet 1. Specifies notarization, stamp paper denomination, and signing authority requirements.
-3. **Evidence Matching & Gap Analysis**:
-   Matches required clauses against the contractor's uploaded document repository (e.g., "Your ISO 9001:2015 certificate expires next week", "Your work order for Project X is missing the Completion Certificate with EE signature").
-4. **Commercial Trap & Clause Radar**:
-   Surfaces aggressive Liquidated Damages (e.g., 1% per day up to 15%), long Defect Liability Periods (e.g., 5-year warranty retention), price variation risks, and unusual termination clauses hidden deep in the SCC.
+### Stage-by-stage product definition
+
+| # | Stage | What the system does | Deterministic vs AI |
+|:--|:------|:---------------------|:--------------------|
+| 1 | **Tender Discovery** | User registers a tender opportunity (manual upload of NIT/RFP package, or paste portal metadata: tender number, authority, est. value, deadline, EMD, fee). Optional saved searches of user-maintained watchlists. | Manual by design (anti-scope: no scraping). NIT metadata extraction is AI-assisted. |
+| 2 | **Tender-to-Company Matching** | Extracted eligibility criteria are matched against the Company Capability Profile (turnover vs. threshold, experience vs. similar-work requirement, certifications, geography, OEM empanelment). Produces a **Match Scorecard**. | Deterministic threshold arithmetic. AI only structures the criteria; **math is never done by the LLM**. |
+| 3 | **Bid/No-Bid Decision** | Go / Conditional-Go / No-Go recommendation with reasons: hard eligibility failures (INELIGIBLE), conditional gaps (missing certificate, expired document), commercial attractiveness (EMD lockup vs. liquidity, LD exposure). Decision and rationale are stored on the tender. | Deterministic rules + human final call. |
+| 4 | **Requirement Extraction** | Full Packet-1 requirement register: annexures, declarations, affidavits, certificates — each with execution rules (stamp paper ₹, notarization, UDIN, signing rank) and **verbatim provenance** (file, page, clause, quote). | AI extraction + deterministic grounding verification. |
+| 5 | **Company Evidence Matching** | Each requirement is matched to an asset in the company's Evidence Vault (e.g., "CA Turnover Certificate FY24-25 with UDIN"). Match states: `MATCHED` / `EXPIRED` / `PARTIAL` / `MISSING` / `NOT_APPLICABLE`. | Deterministic attribute matching + expiry-date comparison. |
+| 6 | **Compliance Analysis** | Consolidated gap register: requirement ↔ evidence ↔ status, with per-item execution rules and provenance. This replaces v1.0's "compliance matrix" but is now **bidder-centric**: every row answers "what must we produce, and do we have it?" | Deterministic state machine. |
+| 7 | **Risk Analysis** | Commercial trap radar: LD %/day and cap, DLP length, PBG %, payment milestones/retention, bid validity vs. EMD lockup, unusually aggressive SCC clauses — each cited verbatim with a severity rating. | AI surfaces + classifies; deterministic severity rules. |
+| 8 | **Missing Evidence** | Prioritized acquisition list: what must be obtained (new stamp paper, notary, UDIN, board resolution, OEM letter), owner, and deadline countdown. | Deterministic scheduling. |
+| 9 | **Human Review** | Every AI-proposed requirement, match, and risk is confirmed, edited, or waived by the Bid Manager. Immutable record of who approved what. | Human-in-the-loop (4-tier decision matrix, `docs/HUMAN_REVIEW.md`). |
+| 10 | **Bid Readiness** | Readiness score: % of requirements evidence-complete, open risks, days-to-deadline, EMD availability check. Explicit `READY_TO_SUBMIT` gate requires human sign-off. | Deterministic rollup + human gate. |
+| 11 | **Submission Preparation** | Exportable, audit-ready Packet-1 preparation pack (PDF/Excel): checklist with checkboxes, owners, citations, evidence references. **No auto-submission, no DSC handling.** | Deterministic rendering. |
+| 12 | **Corrigendum Monitoring** | When a corrigendum is uploaded (or requirement changes are detected), the system diffs requirements, re-runs matching against the Company Profile, and alerts on new/changed requirements that affect the bid decision. | Deterministic diff + re-evaluation. |
 
 ---
 
-## 5. Architectural Principles: AI vs. Deterministic Governance
+## 4. The Company Capability Profile (the differentiator)
 
-In government compliance, a hallucination is catastrophic. If the AI tells a contractor "No stamp paper is required for Annexure III" when the tender states "Affidavit on ₹100 non-judicial stamp paper," the contractor is disqualified and loses ₹10 Lakhs in EMD and fees.
+The persistent, reusable core of the product. Maintained once, enriched over time, and evaluated against every new tender. Owned by the tenant organization; versioned; fully auditable.
 
-### Our Ironclad Philosophy:
+### 4.1 Profile sections
 
-1. **Source of Truth is Always Deterministic**:
-   All database records, authorization, subscription billing, file storage, and audit logs are governed strictly by deterministic code (PostgreSQL, NestJS).
-2. **Every AI Claim Must Have a Proof Token (Citation)**:
-   The AI cannot state a requirement without producing:
-   - File Name
-   - Page Number
-   - Exact Verbatim Quote from the NIT/SBD
-3. **AI Proposes, Human Confirms**:
-   The AI generates an exhaustive draft compliance checklist; the human Bid Manager checks off or overrides items. The system maintains an immutable audit trail of who approved what.
-4. **Zero AI Financial Math**:
-   Tender fee exemptions, EMD calculations, and turnover arithmetic are handled by pure, testable deterministic functions—never by LLM inference.
+| Section | Structured data examples |
+|:--------|:-------------------------|
+| **Registrations** | Udyam (MSME) registration, GSTIN, PAN, Shops & Establishments, ISO, NSIC, PF/ESI, professional body memberships |
+| **Certifications** | ISO 9001/14001/45001, CMMI, LEED, industry-specific certs — with **issuer, number, issue/expiry dates** |
+| **Financial information** | Audited turnover (FY-wise), net worth, working capital, bank solvency/limit letters, CA certificates (with **UDIN**) |
+| **Experience / Projects** | Completed & ongoing works: scope, value, client, location, completion certificate, reference contact |
+| **Work orders** | Framed work orders, supply orders — value, period, issuing authority |
+| **Completion certificates** | Certificates issued by client engineers (with **signing authority rank**: AE/EE/SE) — the single most common Packet-1 defect |
+| **OEM relationships** | OEM authorizations, dealer/distributor agreements, letters of intent, partnership certificates |
+| **Employees** | Key personnel: qualifications, experience, roles (project manager, safety officer), certificates |
+| **Equipment** | Owned/leased plant & machinery with capacity specs (required for "essential plant undertaking" clauses) |
+| **Geographic presence** | Offices, project sites, service regions, regional registration (state-specific eligibility) |
+| **Previous bid evidence** | Past bid outcomes (won/lost/withdrawn), disqualification reasons, EMD lockup history — feeds learning and risk scoring |
 
----
+### 4.2 Product properties
 
-## 6. What We Are Building (MVP vs Future)
-
-| Feature Area             | MVP (Phase 1–6)                                                                                                               | Post-MVP / Future                                                                      |
-| :----------------------- | :---------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------- |
-| **Document Ingestion**   | Upload single/multiple NIT, RFP, and Corrigendum PDFs (searchable and scanned via OCR).                                       | Automated scraping of CPPP/GeM via browser credentials / push feeds.                   |
-| **Eligibility Analysis** | Extracts Financial Turnover, Similar Work, Net Worth, Solvency, and compares against Contractor Profile.                      | Automated multi-bid portfolio optimization across simultaneous tenders.                |
-| **Checklist Generation** | Tabular checklist of all required Packet 1 documents, stamp paper values, notarizations, signing authorities, with citations. | Automated fill-in and drafting of annexures and affidavits.                            |
-| **Evidence Mapping**     | Manual association of contractor's stored documents with checklist items + validity check (expiry dates).                     | Semantic diff of uploaded past experience certificates against required scope of work. |
-| **Risk Detection**       | Flags Liquidated Damages, PBG percentages, milestone deadlines, and payment hold terms.                                       | Sub-contractor quote comparison and automated BOQ price modeling.                      |
+1. **Persistent & reusable** — captured once; every tender evaluation reuses it. The profile is the reason a 10th tender is faster than the 1st.
+2. **Evidence-backed** — every profile attribute links to a stored source document (certificate PDF, CA letter) with expiry tracking.
+3. **Deterministic evaluation** — tender threshold vs. profile value is pure arithmetic (e.g., *required avg. turnover ₹4.5 Cr; profile FY23–25 avg. ₹4.2 Cr → shortfall ₹30 L → INELIGIBLE*). The LLM never computes money.
+4. **Versioned & auditable** — profile changes are logged; bid decisions are reproducible against the profile version used at decision time.
+5. **Confidential** — the profile is the company's crown jewels; tenant isolation and access control are first-class (see `docs/SECURITY_MODEL.md`).
 
 ---
 
-## 7. What We Explicitly Will NOT Build (Anti-Scope)
+## 5. Architectural Principles (carried forward, extended)
 
-To maintain absolute architectural clarity and legal compliance, we draw strict boundaries:
+The v1.0 ironclad philosophy stands and is extended by the profile:
 
-1. **No Automated Bid Submission / Bot Auto-Upload**:
-   We will **never** automate logging into GeM or CPPP with the user's Class-3 DSC (Digital Signature Certificate) token. Doing so creates extreme legal liabilities, violates portal terms of service, and exposes client private cryptographic keys.
-2. **No Portal Scraping / Captcha Bypassing**:
-   We do not build captcha solvers or illicit scrapers against CPPP/GeM. Contractors download official tender packages and upload them into TenderPulse AI.
-3. **No Pricing / BOQ Guesswork**:
-   We will not use AI to "predict winning bid prices" or recommend bid rates. Govt pricing in India depends on ground-level supplier negotiations, localized cartel dynamics, and razor-thin margins. Algorithmic price prediction is a legal and commercial trap.
-4. **No Legal Guarantee / Certification**:
-   The platform provides a decision-support and compliance tool; it does not replace the statutory legal responsibility of the bidder. Terms of Service explicitly mandate human sign-off before bid submission.
+1. **Source of truth is deterministic code.** Authorization, profile arithmetic, state machines, eligibility math, expiry checks — pure, testable functions.
+2. **Every AI claim has a proof token.** No requirement or risk is stated without file name, page number, and verbatim quote.
+3. **AI proposes, human confirms.** The AI drafts the requirement register, matches, and risks; the Bid Manager approves. Immutable audit trail of who confirmed what.
+4. **Zero AI financial math.** Turnover shortfalls, EMD affordability, LD exposure arithmetic — deterministic only.
+5. **NEW — The Company Profile is an aggregate, not a document.** It is queryable structured data with evidence links, so matching is exact, reproducible, and testable — not another pile of PDFs.
+
+---
+
+## 6. Existing Capability → New Product Role (explicit mapping)
+
+Everything below exists in the repository today (see `docs/CURRENT_STATE.md`). **Nothing is thrown away**; the pivot re-centers the product around the Company Profile and adds the decision/matching/risk/readiness stages.
+
+### 6.1 Existing features that remain valuable (KEEP)
+
+| Existing capability | New product role |
+|:--------------------|:-----------------|
+| Presigned direct upload (GCS/S3) + confirm handshake | Tender package ingestion **and** Evidence Vault ingestion (same port, two uses) |
+| PDF text extraction (`DocumentContentNormalizer`, multi-zone page selection for 200+ page tenders) | Tender document parsing (Stage 4 input) |
+| 16-domain Indian procurement taxonomy extraction (EMD, PBG, turnover, PoA, JV, experience, personnel, plant, validity, LD, DLP, integrity pact, Make-in-India, GSTIN/PAN) | Requirement Extraction (Stage 4) — **extended** to capture eligibility *thresholds* (turnover value, work-order count, solvency limit) that feed matching |
+| Execution rules (stamp paper ₹, notarization, UDIN, signing rank) | Compliance Analysis (Stage 6) and Submission Preparation (Stage 11) |
+| Verbatim provenance + 100% grounding verification | Core invariant across all AI surfaces — the product's trust foundation |
+| Multi-page dedup + most-restrictive rule fusion | Requirement consolidation (Stage 4) |
+| Human review lifecycle (READY/FLAGGED/WAIVED, optimistic concurrency, LangGraph interrupt/resume) | Human Review (Stage 9) |
+| `ComplianceItem` aggregate + status state machine | Gap register entity (Stage 6) — **adapted** to carry evidence-match state |
+| `IngestionJob` aggregate, async pipeline design, SQS/PubSub adapters, DLQ, leases, retries | Processing backbone (Stages 2, 4, 12) |
+| Domain events + `InMemoryEventBus` + audit logging | Decision audit, corrigendum change notifications (Stage 12) |
+| Two-phase cascade deletion + storage prefix pruning | Data hygiene, right-to-erasure for tenant data |
+| RBAC permission matrix + `TenantContextHolder` (AsyncLocalStorage) | Multi-user MSME teams; reviewer/approver separation |
+| AI security tooling (secret scrubber, injection neutralization, scoped retrieval, network guard) | All AI stages — unchanged |
+| AI evaluation framework (12-dimension scorecard, regression gates in CI) | Quality gate for extraction & matching models |
+| React SPA (login, dashboard, uploader, SSE progress, audit timeline) | Frontend shell — **extended** with Match Scorecard, Readiness, and Profile screens |
+| Terraform modules (AWS + GCP), docker-compose, CI quality gates | Delivery infrastructure — unchanged |
+
+### 6.2 Features that must be ADAPTED
+
+| Existing feature | Adaptation required |
+|:-----------------|:-------------------|
+| `BidProject` aggregate (tender-centric record) | Becomes **TenderOpportunity** (discovery metadata + decision) + **BidCase** (active pursuit). Decision fields (go/no-go, rationale, profile version) added. |
+| Compliance matrix UI (tender-only rows) | Re-centered: each row shows requirement ↔ profile attribute ↔ evidence asset ↔ match state. |
+| SSE extraction progress | Extended to job types: extraction, matching, corrigendum re-evaluation. |
+| Hardcoded single-tenant demo data | Replaced by multi-tenant organizations + per-tenant Company Profiles (see audit P0). |
+| Keyword-based extraction (regex) | Retained as the deterministic baseline; eligibility-threshold extraction added; LLM adapter optional behind the same contract. |
+
+### 6.3 Capabilities that are NEW (currently missing — the pivot's core)
+
+1. **Company Capability Profile** — aggregate, sections per §4.1, evidence links, versioning. *(The differentiator.)*
+2. **Evidence Vault** — company document repository with expiry tracking and attribute linkage.
+3. **Tender-to-Company Matching engine** — deterministic eligibility evaluation producing a Match Scorecard.
+4. **Bid/No-Bid decision record** — go/conditional/no-go with stored rationale.
+5. **Risk Analysis** — commercial trap radar with severity and EMD-liquidity check.
+6. **Missing Evidence acquisition list** — prioritized, owned, deadline-driven.
+7. **Bid Readiness score + sign-off gate.**
+8. **Corrigendum diff + requirement-change re-evaluation.**
+9. **Submission Preparation export** (PDF/Excel Packet-1 pack).
+
+### 6.4 What is explicitly de-emphasized
+
+- The "procurement-officer verification system" framing of v1.0. The platform never verifies bids for authorities; it prepares bids for bidders.
+- Tender-side analytics for buyers (never in scope).
+
+---
+
+## 7. MVP Scope (Phase 1) vs. Future
+
+| Area | MVP (Phase 1) | Post-MVP |
+|:-----|:--------------|:---------|
+| Tender Discovery | Manual package upload + NIT metadata extraction | Watchlists, saved searches, portal feed integrations (no scraping) |
+| Company Profile | All §4.1 sections, manual entry + document upload, expiry tracking | Auto-enrichment from past bid history, team collaboration on profile |
+| Matching | Deterministic eligibility matching (turnover, experience, certifications, geography) | Semantic matching of scope-of-work descriptions, win-probability modeling |
+| Bid/No-Bid | Go/Conditional/No-Go with hard-failure reasons + rationale storage | Portfolio optimization across simultaneous tenders |
+| Requirement Extraction | 16-domain taxonomy + thresholds, verbatim grounding | OCR for scanned PDFs, section/layout segmentation |
+| Evidence Matching | Attribute + expiry matching, MATCHED/EXPIRED/PARTIAL/MISSING states | Semantic diff of past experience certificates vs. required scope |
+| Risk Analysis | LD, DLP, PBG, payment terms, bid validity, EMD lockup | Subcontractor quote comparison, price-variation clause modeling |
+| Corrigendum | Manual corrigendum upload → requirement diff → re-match | Automated change alerts via portal polling (where legally permissible) |
+| Submission Prep | PDF/Excel Packet-1 pack with citations | Assisted drafting of annexures (Phase 2), DSC workflow guidance (no token handling) |
+
+### Anti-scope (unchanged, reinforced)
+
+1. **No automated bid submission / bot upload** on GeM/CPPP with user DSC tokens.
+2. **No portal scraping or captcha bypass** — contractors download official packages and upload them.
+3. **No BOQ pricing / bid-price prediction** — legal and commercial trap.
+4. **No legal guarantee** — decision support only; human sign-off is mandatory before submission.
+
+---
+
+## 8. Success Criteria
+
+1. **Decision quality**: ≥95% of hard eligibility failures correctly flagged on benchmark tenders (false-negative rate ≈ 0 — missing an INELIGIBLE signal is the worst outcome).
+2. **Grounding**: 100% of extracted requirements and risks carry verbatim citation.
+3. **Reuse**: the 5th+ tender in a quarter requires <50% of the profile-entry effort of the 1st (profile reuse is measurable).
+4. **Speed**: 150-page package → Match Scorecard + requirement register in <3 minutes.
+5. **Zero cross-tenant leakage** of Company Profiles (the most sensitive data in the system).
+
+---
+
+## 9. Implications for the Domain Model (design language, not code)
+
+The pivot introduces first-class concepts the current schema lacks (currently `users`, `bids`, `tender_documents`, `compliance_items`, `audit_logs`):
+
+- **CompanyProfile** (tenant-owned aggregate) → **ProfileSection** → **CapabilityEntry** (registrations, certifications, financials, experience, work orders, completion certificates, OEM, employees, equipment, geography) → **EvidenceAsset** (stored document + validity window).
+- **TenderOpportunity** (discovery metadata + source package) → **BidDecision** (go/conditional/no-go, rationale, profile version used).
+- **Requirement** (extracted, grounded) → **EvidenceMatch** (requirement ↔ capability/evidence, match state) → **GapItem**.
+- **RiskFinding** (commercial trap, severity, citation) → **ReadinessAssessment** (score, open items, sign-off).
+- **CorrigendumEvent** → requirement diff → re-evaluation chain.
+
+Existing aggregates (`TenderDocument`, `IngestionJob`, `ComplianceItem`→`Requirement`, `AuditLog`, domain events) map cleanly onto this model — see §6. The next phase (design, not implementation) should produce the updated LLD and ADRs for the Company Profile and Matching engine.
+
+---
+
+## 10. Decision Summary
+
+- **WHY the pivot:** v1.0 answered one question ("what does the tender require?") with a checklist. The bidder's real cost is disqualification, and disqualification is prevented by knowing whether *we specifically* can prove *what this tender demands*. The persistent Company Capability Profile is the moat: it compounds in value with every bid, which a checklist cannot.
+- **WHAT changes:** product center of gravity moves from tender → requirement, to company profile → tender match → decision → readiness.
+- **HOW:** reuse the ingestion, extraction, grounding, review, async, security, and delivery foundations wholesale; add Profile, Matching, Decision, Risk, Evidence, Readiness, and Corrigendum stages.
+- **WHY NOT build the profile later:** without it, every bid re-enters company data from scratch, matching is impossible, and the product is a feature (checklist) rather than a platform.
+- **TRADE-OFFS:** profile maintenance is real user work; mitigated by evidence-linked entry, expiry tracking, and measurable reuse. Deterministic matching is less "intelligent" than semantic matching but is auditable, testable, and legally defensible — the correct default for government compliance.
+- **FAILURE MODES:** stale profile data → false GO decisions (mitigated by expiry tracking and decision-time profile versioning); over-confident matching (mitigated by hard-fail determinism + human confirmation gate).
+
+*Stop point reached: product direction only. No features implemented, per PROMPT 1.*

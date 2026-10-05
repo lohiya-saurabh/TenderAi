@@ -1,5 +1,42 @@
 # Project Status & Milestone Tracker
 
+## ⚠️ Product Pivot (2026-10-04) — Bidder-Side Redesign
+
+`docs/PRODUCT.md` has been rewritten (v2.0): TenderPulse is now a **Tender Intelligence & Bid Readiness Platform for Indian MSMEs, contractors, and service providers** — bidder-side, not procurement-officer-side. The core differentiator is the **persistent Company Capability Profile** (registrations, certifications, financials, experience, work orders, completion certificates, OEM relationships, employees, equipment, geography, previous bid evidence), against which every new tender is evaluated.
+
+The 11-stage workflow: Tender Discovery → Tender-to-Company Matching → Bid/No-Bid Decision → Requirement Extraction → Company Evidence Matching → Compliance Analysis → Risk Analysis → Missing Evidence → Human Review → Bid Readiness → Submission Preparation → Corrigendum Monitoring.
+
+**Domain model documented (2026-10-04):** `docs/DOMAIN.md` Part B now teaches the bidder-side domain model and ubiquitous language — aggregate roots (CompanyProfile, Tender, BidCase, ReviewTask, WorkflowRun, AuditEvent), entities (CapabilityEntry specializations, EvidenceDocument, TenderRequirement, TenderAmendment, EvidenceMatch, RiskFinding, GeneratedArtifact), value objects (Permission, ExecutionRules, Provenance, Money, Criterion, EligibilityVerdict, MatchState, ProfileVersionRef), workflows (Workflow, ComplianceAssessment, BidReadiness, CorrigendumMonitoring), lifecycle state machines for all major concepts, the 10-step "how a tender is evaluated against a company profile" walkthrough, and a full domain glossary. Design-only; no database changes.
+
+**HLD delta documented (2026-10-05):** `docs/ARCHITECTURE.md` (new, root-level) compares existing vs. target architecture and answers the 10 delta questions (what remains / must change / new modules / wrong boundaries / what stays together / AI placement / deterministic logic placement / async / events / human review). Target module map covers all 14 logical areas. New ADRs: **0016** (bidder-side pivot aggregates: Tender + BidCase + CompanyProfile), **0017** (enforce layered boundary at HTTP — eliminate CRUD bypass), **0018** (async-first extraction — queue→worker becomes the live path), **0019** (deterministic Eligibility/Matching engine in the domain layer; AI schema cannot express verdicts or money), **0020** (external data connectors — DigiLocker OAuth, Account Aggregator — behind an `IConnector` enrichment port, phased adoption). Design-only; no code implemented.
+
+**Company Capability Profile designed (2026-10-05, PROMPT 5):** the differentiator is fully designed across three docs — `docs/DOMAIN.md` Part C (§15–17: the ten design requirements, structured-data-vs-documents rule, one-shot→SaaS transformation), `docs/DATABASE.md` Part B (target v2.0 schema: `companies`, `company_profiles` with immutable versions + one-ACTIVE partial unique index, `capability_entries` with per-subtype JSONB attributes + verification tier/status + source provenance, `evidence_documents`, `capability_evidence` many-to-many, `external_data_connections`, and the pivot aggregates `tenders`/`tender_requirements`/`tender_amendments`/`bid_cases` with mandatory pinned `profile_version_id`, `evidence_matches`, `risk_findings`, `bid_decisions`, `review_tasks`, `generated_artifacts`; expand-and-contract migration), and `docs/ARCHITECTURE.md` (module anatomy, four key flows: maintain/publish, evaluation read path against pinned version, expiry monitoring, connector enrichment; where the ten design concerns live). Design-only; no code implemented.
+
+**Tender ingestion & requirement normalization designed (2026-10-05, PROMPT 6):** `docs/DOMAIN.md` Part D (§25–34) and `docs/ARCHITECTURE.md` (new pipeline section). Key decisions: tender = package of 17 typed documents (never a single blob); 10-stage async pipeline (document processing → extraction → OCR-on-demand → section segmentation → section-aware chunking → 3-tier requirement detection → normalization → classification → source citation → persistence); **deterministic-first execution** (regex → structural → LLM fallback with identical output contracts and per-requirement `detectionMethod`); normalized requirement schema with four traceability anchors (document, page, section, clause) + verbatim quote + chunkId; hard grounding invariant (exact-substring verification pre-persistence; failures rejected, never stored); corrigenda as first-class amendments (diff → SUPERSEDE → re-evaluate changed criteria only → human re-confirmation); idempotency at document (SHA-256), requirement (deterministic key upsert), and workflow levels; per-document failure isolation with honest zero-extraction. Design-only; no code implemented.
+
+**Evidence & Compliance Engine designed (2026-10-06, PROMPT 7):** `docs/DOMAIN.md` Part F (§49–60), `docs/architecture/LLD.md` §9, `docs/AI.md` §5, and new **ADR 0021** (evidence-first compliance engine). The engine answers *"For this tender requirement, what evidence does the company have?"* — never a bare percentage. Five separated stages with distinct owners: (1) evidence retrieval (deterministic, recall-oriented, tenant-scoped, pinned profile version), (2) evidence matching (dual-sided provenance: tender anchors §28 + company EvidenceRef, many-to-many, cross-document dedup), (3) deterministic validation (Part E evaluators + expiry-at-submission-date, tier-sufficiency, and ordered conflict policies — tier → recency → source authority → REVIEW_REQUIRED, never silently pick), (4) AI explanation (grounded narrative with **no verdict field in the output schema**; citation-verified against the result bundle; template fallback so prose never blocks verdicts), (5) human decision (confirm/override/waive; `compliance:override` permission, mandatory reason, OCC; engine verdict preserved immutably, both verdicts always displayed). Assessment states PASS / FAIL / MISSING_EVIDENCE / REVIEW_REQUIRED with deterministic rollup mapping (FAIL > MISSING_EVIDENCE > REVIEW_REQUIRED > PASS). Designed hard cases: conflicting evidence, expired certificates, insufficient evidence, ambiguous clauses, missing dates (UNKNOWN_VALIDITY → REVIEW_REQUIRED), contradictory company data, multiple evidence documents, manual override, and append-only reference-only audit trail (RETRIEVAL_EXECUTED → … → ASSESSMENT_OVERRIDDEN). Design-only; no code implemented.
+
+**Evaluation & Matching Engine designed (2026-10-05):** the deterministic core specified at algorithm level — `docs/DOMAIN.md` Part E (§42–48) and `docs/ARCHITECTURE.md` (new engine section). Seven criterion evaluator types (THRESHOLD, COUNT, VALIDITY, SET_MEMBERSHIP, RANK, PRESENCE, RATIO) as pure functions; worst-state-wins matching; conservative verdict aggregation (any HARD_ELIGIBILITY requirement not MATCHED → INELIGIBLE/NO-GO); structured GapItems driving the acquisition list; weighted readiness rollup (50% evidence completeness, 20% risk clearance, 15% deadline buffer, 15% EMD affordability) with configurable sign-off threshold; corrigendum delta evaluation (changed keys only, auto re-opens BidDecision on hard-eligibility change); evaluation date = submission deadline (point-in-time validity); purity guarantees (no I/O, no clock reads, byte-identical determinism) with property-based, golden-fixture, and mutation testing. Design-only; no code implemented.
+
+`docs/PRODUCT.md` §6 contains the explicit **Existing capability → New product role** mapping: ingestion, PDF extraction, 16-domain taxonomy, execution rules, verbatim provenance, human review, async pipeline, RBAC, AI safety tooling, frontend shell, and Terraform all carry forward; `BidProject` adapts into TenderOpportunity + BidCase; the Company Profile, Evidence Vault, Matching engine, Bid/No-Bid decision, Risk radar, Readiness score, and Corrigendum diff are **new** (see `docs/CURRENT_STATE.md` §3). No features implemented yet.
+
+---
+
+## ⚠️ Current-State Audit (2026-10-04) — read this first
+
+A full repository audit was completed on 2026-10-04. See **`docs/CURRENT_STATE.md`** for the complete area-by-area classification (KEEP / ADAPT / REPLACE / MISSING), the "Existing ParakhSetu-like capabilities" inventory, and the "Capabilities required for the new product but currently missing" gap list.
+
+**Audit headline:** the architecture, domain model, ports/adapters, async design, AI safety tooling, and docs are strong and worth keeping — but the running system is currently a **single-tenant demo with critical security gaps**:
+
+1. Access tokens are unsigned base64 JSON (forgeable); `POST /api/v1/auth/refresh` is unauthenticated and returns the first user's token; no HTTP endpoint enforces auth or RBAC.
+2. Tenant isolation is hardcoded to `org_acme_infra_001`; `TenantContextHolder` is populated only in tests, never per request.
+3. The production persistence path is embedded PGlite, not the real PostgreSQL defined in docker-compose/Terraform; `DATABASE_URL` is never read.
+4. CI deploy stages (7–9) are `echo` placeholders; the "AI" extraction engine is deterministic regex, not LLM inference.
+
+The milestone log below reflects design/build history. The **actual next actions** are the P0 items in `docs/CURRENT_STATE.md` §3: real authentication, per-request tenant resolution, multi-tenant schema, real Postgres runtime, then the eligibility engine.
+
+---
+
 ## Current Milestone: Production Document + AI Pipeline (Milestone 20)
 
 **Status**: COMPLETED (Decoupled asynchronous architecture S3 → SQS → IngestionWorker → Normalized Content → AI Workflow → Deterministic Grounding → PostgreSQL → Notification/Review, AiDocumentExtractor, DocumentContentNormalizer, FastAPI /api/v1/extract endpoint, trusted database security scope derivation, worker crash recovery via SQS visibility timeout and lease locks, exponential backoff retries, dead-letter queue isolation, strict deterministic invariant verification, 7 passing E2E tests in `ProductionDocumentAiPipeline.e2e.spec.ts` and 27 passing tests in Python `apps/ai`).
@@ -323,7 +360,12 @@
 
 ## Next Immediate Action
 
-The compliance extraction engine is operating with full-document multi-zone selection, a 16-domain procurement taxonomy, structural clause referencing, and 100% deterministic verbatim grounding. Ready to proceed to next milestones or user-requested enhancements.
+Per the 2026-10-04 audit (`docs/CURRENT_STATE.md`), the next actions are **P0 hardening before any new features**:
+
+1. Replace demo tokens with signed JWT access + revocable refresh; add verification middleware and guards on every endpoint; secure `/auth/refresh`.
+2. Add `organizations` + `organization_memberships`; resolve tenant per request from the authenticated identity; remove all `org_acme_infra_001` literals; derive audit `userId`/`userName` from context.
+3. Switch runtime persistence to real PostgreSQL via `DATABASE_URL` with a migration tool and indexes.
+4. Then build the product gaps: contractor profile + eligibility engine, evidence repository + matching, risk radar, corrigendum handling, export, observability.
 
 
 
