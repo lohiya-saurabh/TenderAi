@@ -86,6 +86,8 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
       organization_name TEXT NOT NULL
     );
 
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT;
+
     CREATE TABLE IF NOT EXISTS tenant_settings (
       id TEXT PRIMARY KEY,
       organization_id TEXT UNIQUE NOT NULL,
