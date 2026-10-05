@@ -92,7 +92,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
           className="scale-in"
           style={{
             position: 'absolute',
-            zIndex: 'var(--z-index-tooltip)' as unknown as number,
+            zIndex: 'var(--z-index-tooltip, 90)' as unknown as number,
             backgroundColor: 'var(--color-surface-bg)',
             color: 'var(--color-surface-text)',
             border: '1px solid var(--color-surface-border)',

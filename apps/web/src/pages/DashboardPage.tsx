@@ -18,9 +18,13 @@ import { TenderListSection } from '../components/dashboard/TenderListSection.js'
 import { MissingApiCallout } from '../components/dashboard/MissingApiCallout.js';
 import { computePipelineStages } from '../components/dashboard/dashboardData.js';
 
+import { useCompany } from '../context/CompanyContext.js';
+import { CompanySelector } from '../components/layout/CompanySelector.js';
+
 export const DashboardPage: React.FC = () => {
   const { data: bids, isLoading, error, refetch } = useApi<BidSummary[]>(listBids);
   const { hasPermission } = useAuth();
+  const { selectedCompany } = useCompany();
 
   const { itemsByBid, isLoading: complianceLoading } = useBidComplianceItems(bids);
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
@@ -46,22 +50,32 @@ export const DashboardPage: React.FC = () => {
       {/* 1. Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            Bid Dashboard
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              Bid Dashboard
+            </h1>
+            {selectedCompany && (
+              <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                {selectedCompany.legalName}
+              </span>
+            )}
+          </div>
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
             What is happening with my bids — blockers, pipeline stage, deadlines, and tender readiness at a glance
           </p>
         </div>
 
-        {canCreateBid && (
-          <Link to="/bids/new" className="no-underline shrink-0">
-            <Button variant="default" size="sm" className="gap-1.5 shadow-sm">
-              <Plus className="h-4 w-4" />
-              New Bid Project
-            </Button>
-          </Link>
-        )}
+        <div className="flex items-center gap-2.5 shrink-0">
+          <CompanySelector />
+          {canCreateBid && (
+            <Link to="/bids/new" className="no-underline shrink-0">
+              <Button variant="default" size="sm" className="gap-1.5 shadow-sm">
+                <Plus className="h-4 w-4" />
+                New Bid Project
+              </Button>
+            </Link>
+          )}
+        </div>
       </div>
 
       {error && <ErrorBanner message={error.message} onRetry={refetch} />}

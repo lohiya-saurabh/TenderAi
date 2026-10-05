@@ -57,7 +57,7 @@ export const Drawer: React.FC<DrawerProps> = ({
         backdropFilter: 'blur(4px)',
         display: 'flex',
         justifyContent: position === 'right' ? 'flex-end' : 'flex-start',
-        zIndex: 'var(--z-index-drawer)' as unknown as number,
+        zIndex: 'var(--z-index-drawer, 60)' as unknown as number,
       }}
       onClick={onClose}
     >

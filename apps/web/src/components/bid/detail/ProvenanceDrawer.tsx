@@ -46,7 +46,7 @@ export const ProvenanceDrawer: React.FC<ProvenanceDrawerProps> = ({
         bottom: 0,
         backgroundColor: 'rgba(15, 23, 42, 0.6)',
         backdropFilter: 'blur(4px)',
-        zIndex: 'var(--z-index-modal)' as unknown as number,
+        zIndex: 'var(--z-index-drawer, 60)' as unknown as number,
         display: 'flex',
         justifyContent: 'flex-end',
       }}

@@ -21,6 +21,7 @@ import { validateCompanyProfilePayload } from './presentation/dto/CompanyProfile
 
 export interface CompanyProfileVersionView {
   id: string;
+  companyId?: string;
   organizationId: string;
   version: number;
   name: string;
@@ -30,6 +31,7 @@ export interface CompanyProfileVersionView {
 }
 
 export interface CompanyProfileView {
+  companyId?: string;
   active: CompanyProfileVersionView | null;
   versions: CompanyProfileVersionView[];
 }
@@ -49,6 +51,7 @@ export interface ExpiringCertificateItem {
 
 export interface ExpiringCertificatesResult {
   organizationId: string;
+  companyId?: string;
   activeProfileVersionId: string | null;
   evaluatedAt: string;
   filterWithinDays: number;
@@ -65,41 +68,93 @@ export class CompanyProfileService {
     this.db = 'select' in db ? (db as DrizzleDb) : createDrizzle(db as PGlite);
   }
 
-  /** Active version + full version history for the tenant. */
-  public async getProfile(): Promise<CompanyProfileView> {
+  /**
+   * Resolves the target company ID, ensuring it belongs to the authenticated tenant.
+   * If companyId is omitted, resolves the primary company for the tenant.
+   */
+  public async resolveCompanyId(companyId?: string): Promise<string> {
     const orgId = this.requireOrg();
+
+    if (companyId) {
+      const [comp] = await this.db
+        .select()
+        .from(schema.companies)
+        .where(
+          and(
+            eq(schema.companies.id, companyId),
+            eq(schema.companies.organizationId, orgId),
+          ),
+        )
+        .limit(1);
+
+      if (!comp) {
+        throw new NotFoundError(`Company '${companyId}' not found in your organization.`);
+      }
+      return comp.id;
+    }
+
+    // Default: find first company for organization
+    const [defaultComp] = await this.db
+      .select()
+      .from(schema.companies)
+      .where(eq(schema.companies.organizationId, orgId))
+      .limit(1);
+
+    return defaultComp?.id ?? 'comp_acme_infra_001';
+  }
+
+  /** Active version + full version history for the company / tenant. */
+  public async getProfile(companyId?: string): Promise<CompanyProfileView> {
+    const orgId = this.requireOrg();
+    const targetCompId = await this.resolveCompanyId(companyId);
 
     const versions = await this.db
       .select()
       .from(schema.companyProfileVersions)
-      .where(eq(schema.companyProfileVersions.organizationId, orgId))
+      .where(
+        and(
+          eq(schema.companyProfileVersions.organizationId, orgId),
+          eq(schema.companyProfileVersions.companyId, targetCompId),
+        ),
+      )
       .orderBy(desc(schema.companyProfileVersions.version));
 
-    const [pointer] = await this.db
+    // Also check for pointers matching companyId or orgId
+    const pointers = await this.db
       .select()
       .from(schema.companyProfiles)
-      .where(eq(schema.companyProfiles.organizationId, orgId))
+      .where(
+        and(
+          eq(schema.companyProfiles.organizationId, orgId),
+          eq(schema.companyProfiles.companyId, targetCompId),
+        ),
+      )
       .limit(1);
 
+    const pointer = pointers[0];
     const views = versions.map((v) => this.mapVersion(v));
     const active = pointer
-      ? views.find((v) => v.id === pointer.activeVersionId) ?? null
-      : null;
+      ? views.find((v) => v.id === pointer.activeVersionId) ?? views[0] ?? null
+      : views[0] ?? null;
 
-    return { active, versions: views };
+    return { companyId: targetCompId, active, versions: views };
   }
 
   /**
    * Identifies certifications and OEM authorizations expiring within the specified window.
    */
-  public async getExpiringCertificates(withinDays = 90): Promise<ExpiringCertificatesResult> {
+  public async getExpiringCertificates(
+    withinDays = 90,
+    companyId?: string,
+  ): Promise<ExpiringCertificatesResult> {
     const orgId = this.requireOrg();
     const now = new Date();
-    const profile = await this.getProfile();
+    const profile = await this.getProfile(companyId);
 
     if (!profile.active || !profile.active.payload) {
       return {
         organizationId: orgId,
+        companyId: profile.companyId,
         activeProfileVersionId: null,
         evaluatedAt: now.toISOString(),
         filterWithinDays: withinDays,
@@ -180,6 +235,7 @@ export class CompanyProfileService {
 
     return {
       organizationId: orgId,
+      companyId: profile.companyId,
       activeProfileVersionId: profile.active.id,
       evaluatedAt: now.toISOString(),
       filterWithinDays: withinDays,
@@ -190,17 +246,25 @@ export class CompanyProfileService {
   }
 
   /** Fetch a specific immutable version by id (tenant-scoped). */
-  public async getVersionById(versionId: string): Promise<CompanyProfileVersionView> {
+  public async getVersionById(
+    versionId: string,
+    companyId?: string,
+  ): Promise<CompanyProfileVersionView> {
     const orgId = this.requireOrg();
+    const targetCompId = companyId ? await this.resolveCompanyId(companyId) : undefined;
+
+    const conditions = [
+      eq(schema.companyProfileVersions.id, versionId),
+      eq(schema.companyProfileVersions.organizationId, orgId),
+    ];
+    if (targetCompId) {
+      conditions.push(eq(schema.companyProfileVersions.companyId, targetCompId));
+    }
+
     const [record] = await this.db
       .select()
       .from(schema.companyProfileVersions)
-      .where(
-        and(
-          eq(schema.companyProfileVersions.id, versionId),
-          eq(schema.companyProfileVersions.organizationId, orgId),
-        ),
-      )
+      .where(and(...conditions))
       .limit(1);
 
     if (!record) {
@@ -210,16 +274,18 @@ export class CompanyProfileService {
   }
 
   /**
-   * Pins a new immutable profile version and makes it active.
+   * Pins a new immutable profile version and makes it active for a company.
    * Validation happens here so malformed snapshots never enter
    * the evaluation pipeline.
    */
   public async createProfileVersion(
     name: string,
     payload: unknown,
+    companyId?: string,
   ): Promise<CompanyProfileVersionView> {
     const orgId = this.requireOrg();
     const userId = TenantContextHolder.get()?.userId || 'usr_bid_mgr_01';
+    const targetCompId = await this.resolveCompanyId(companyId);
 
     const violations = validateCompanyProfilePayload(payload);
     if (violations.length > 0) {
@@ -230,15 +296,16 @@ export class CompanyProfileService {
 
     const trimmedName = typeof name === 'string' && name.trim()
       ? name.trim()
-      : `Profile v${await this.nextVersion(orgId)}`;
+      : `Profile v${await this.nextVersion(orgId, targetCompId)}`;
 
     // Immutable append-only versioning: never update in place.
-    const versionNumber = await this.nextVersion(orgId);
-    const versionId = `cpv-${orgId}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+    const versionNumber = await this.nextVersion(orgId, targetCompId);
+    const versionId = `cpv-${targetCompId}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
     const now = new Date();
 
     await this.db.insert(schema.companyProfileVersions).values({
       id: versionId,
+      companyId: targetCompId,
       organizationId: orgId,
       version: versionNumber,
       name: trimmedName,
@@ -247,21 +314,42 @@ export class CompanyProfileService {
       createdAt: now,
     });
 
-    // Re-point the active version (upsert on organization PK).
-    await this.db
-      .insert(schema.companyProfiles)
-      .values({
+    // Re-point the active version for this company.
+    const pointerId = `prof_${targetCompId}`;
+    const [existingPointer] = await this.db
+      .select()
+      .from(schema.companyProfiles)
+      .where(
+        and(
+          eq(schema.companyProfiles.companyId, targetCompId),
+          eq(schema.companyProfiles.organizationId, orgId),
+        ),
+      )
+      .limit(1);
+
+    if (existingPointer) {
+      await this.db
+        .update(schema.companyProfiles)
+        .set({ activeVersionId: versionId, updatedAt: now })
+        .where(
+          and(
+            eq(schema.companyProfiles.companyId, targetCompId),
+            eq(schema.companyProfiles.organizationId, orgId),
+          ),
+        );
+    } else {
+      await this.db.insert(schema.companyProfiles).values({
+        id: pointerId,
+        companyId: targetCompId,
         organizationId: orgId,
         activeVersionId: versionId,
         updatedAt: now,
-      })
-      .onConflictDoUpdate({
-        target: schema.companyProfiles.organizationId,
-        set: { activeVersionId: versionId, updatedAt: now },
       });
+    }
 
     return {
       id: versionId,
+      companyId: targetCompId,
       organizationId: orgId,
       version: versionNumber,
       name: trimmedName,
@@ -271,11 +359,15 @@ export class CompanyProfileService {
     };
   }
 
-  private async nextVersion(orgId: string): Promise<number> {
+  private async nextVersion(orgId: string, companyId?: string): Promise<number> {
+    const conditions = [eq(schema.companyProfileVersions.organizationId, orgId)];
+    if (companyId) {
+      conditions.push(eq(schema.companyProfileVersions.companyId, companyId));
+    }
     const [row] = await this.db
       .select({ maxVersion: max(schema.companyProfileVersions.version) })
       .from(schema.companyProfileVersions)
-      .where(eq(schema.companyProfileVersions.organizationId, orgId));
+      .where(and(...conditions));
     return (row?.maxVersion ?? 0) + 1;
   }
 
@@ -288,6 +380,7 @@ export class CompanyProfileService {
         : record.payload;
     return {
       id: record.id,
+      companyId: record.companyId,
       organizationId: record.organizationId,
       version: record.version,
       name: record.name,

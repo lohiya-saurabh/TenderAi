@@ -144,6 +144,17 @@
     --content-max-width: 1440px;
     --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
     --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Z-Index Stacking Hierarchy */
+    --z-index-base: 1;
+    --z-index-sticky: 20;
+    --z-index-sidebar: 30;
+    --z-index-header: 40;
+    --z-index-dropdown: 50;
+    --z-index-drawer: 60;
+    --z-index-modal: 70;
+    --z-index-popover: 80;
+    --z-index-tooltip: 90;
   }
 }
 
@@ -189,5 +200,36 @@ nav::-webkit-scrollbar,
   display: none;
   width: 0;
   height: 0;
+}
+
+/* Modal & Drawer Entrance Animations */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0.8;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes scale-in {
+  from {
+    transform: scale(0.96);
+    opacity: 0.6;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.slide-in-right {
+  animation: slide-in-right 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.scale-in {
+  animation: scale-in 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 

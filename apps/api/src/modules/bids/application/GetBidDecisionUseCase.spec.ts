@@ -156,6 +156,8 @@ describe('GetBidDecisionUseCase — bid/no-bid evaluation pipeline', () => {
       createdAt: new Date(),
     });
     await drizzleDb.insert(schema.companyProfiles).values({
+      id: `cp-${organizationId}-default`,
+      companyId: 'comp_acme_infra_001',
       organizationId,
       activeVersionId: 'cpv-test-01',
       updatedAt: new Date(),

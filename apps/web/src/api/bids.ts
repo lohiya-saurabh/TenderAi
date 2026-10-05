@@ -10,6 +10,7 @@ export type { ApiResult } from './client.js';
 
 export interface BidSummary {
   id: string;
+  companyId?: string;
   title: string;
   tenderNumber: string;
   tenderingAuthority: string;
@@ -32,6 +33,7 @@ export interface BidSummary {
 }
 
 export interface ListBidsQuery {
+  companyId?: string;
   page?: number;
   limit?: number;
   sort?: string;
@@ -63,6 +65,7 @@ export interface BidDocument {
 }
 
 export interface CreateBidRequest {
+  companyId?: string;
   title: string;
   tenderNumber: string;
   tenderingAuthority: string;
@@ -72,6 +75,7 @@ export interface CreateBidRequest {
 
 export interface CreateBidResponse {
   bidId: string;
+  companyId?: string;
   title: string;
   tenderNumber: string;
   tenderingAuthority: string;
@@ -118,6 +122,7 @@ export function listBids(
     return apiGet<BidSummary[]>('/api/v1/bids');
   }
   const params = new URLSearchParams();
+  if (query.companyId) params.set('companyId', query.companyId);
   if (query.page !== undefined) params.set('page', String(query.page));
   if (query.limit !== undefined) params.set('limit', String(query.limit));
   if (query.sort) params.set('sort', query.sort);

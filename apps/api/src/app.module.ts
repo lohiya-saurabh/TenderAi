@@ -12,6 +12,7 @@ import { DocumentsModule } from './modules/documents/documents.module.js';
 import { ComplianceModule } from './modules/compliance/compliance.module.js';
 import { AuditModule } from './modules/audit/audit.module.js';
 import { CompanyProfileModule } from './modules/company-profile/company-profile.module.js';
+import { CompaniesModule } from './modules/companies/companies.module.js';
 import { DashboardModule } from './modules/dashboard/dashboard.module.js';
 
 @Module({
@@ -29,6 +30,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module.js';
     ComplianceModule,
     AuditModule,
     CompanyProfileModule,
+    CompaniesModule,
     DashboardModule,
   ],
 })

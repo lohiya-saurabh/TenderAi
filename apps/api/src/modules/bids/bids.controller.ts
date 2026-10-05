@@ -35,6 +35,7 @@ export class BidsController {
   async create(
     @Body()
     body: {
+      companyId?: string;
       title?: string;
       tenderNumber?: string;
       tenderingAuthority?: string;
@@ -46,6 +47,7 @@ export class BidsController {
     const newBid = await this.bidsService.createBid(body);
     return {
       bidId: newBid.id,
+      companyId: newBid.companyId,
       title: newBid.title,
       tenderNumber: newBid.tenderNumber,
       tenderingAuthority: newBid.tenderingAuthority,

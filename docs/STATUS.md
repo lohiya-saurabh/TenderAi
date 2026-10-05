@@ -6,6 +6,14 @@
 
 The 11-stage workflow: Tender Discovery → Tender-to-Company Matching → Bid/No-Bid Decision → Requirement Extraction → Company Evidence Matching → Compliance Analysis → Risk Analysis → Missing Evidence → Human Review → Bid Readiness → Submission Preparation → Corrigendum Monitoring.
 
+**1 Tenant → N Companies Multi-Company Architecture (2026-10-06):** Validated and implemented the 1 Tenant → N Companies domain hierarchy end-to-end across database, backend, frontend, AI context, and security:
+1. **Clear Domain Boundary & Anti-IDOR Model**: A Tenant (`organization_id`) is the immutable SaaS security boundary; a Company (`company_id`) is a business legal entity represented and evaluated within that tenant. Every query and mutation strictly enforces `company.organization_id == caller.organizationId`, denying cross-tenant access with 404/403.
+2. **Database Schema & DDL Updates (`schema.ts`, `database.provider.ts`)**: Added `companies` table with legal name, slug, GSTIN, PAN, Udyam ID, constitution, and timestamps. Added `company_id` to `bids`, `company_profiles`, `company_profile_versions`, and `bid_decisions`.
+3. **Companies Feature Module (`apps/api/src/modules/companies/`)**: Created `CompaniesService`, `CompaniesController`, and `CompaniesModule` supporting `GET /api/v1/companies`, `POST /api/v1/companies`, `GET /api/v1/companies/:id`, `GET /api/v1/companies/:id/profile`, `POST /api/v1/companies/:id/profile`, and `GET /api/v1/companies/:id/expiring-certificates`.
+4. **Company-Scoped Capability Profiles & AI Decisions**: Enhanced `CompanyProfileService` and `GetBidDecisionUseCase` to isolate profile versions per company, query by `bid.companyId`, pass `security_context.company_id` to the AI engine, and persist `bid_decisions.companyId`.
+5. **Frontend Multi-Company Integration (`apps/web`)**: Created `companies.ts` API client, `CompanyContext` with active company caching, and `CompanySelector` header dropdown for switching active companies.
+6. **Zero-Regress Monorepo Verification (408 / 408 tests passing)**: 192 in `apps/api` (including 10 in `multi-company-security.spec.ts`), 140 in `apps/web`, 76 in `apps/ai`. `npm run type-check` clean with 0 errors.
+
 **Object Storage Upload & Mock Resolution Fix (2026-10-06):** Resolved the `net::ERR_NAME_NOT_RESOLVED` document upload failure:
 1. **Root Cause Analysis**: In local development environments without an active cloud bucket or with `MockStorageService`, `generatePresignedUploadUrl` previously emitted synthetic hostnames (`https://mock-s3.tenderpulse.local/...`), which caused the browser's direct XHR PUT request to fail DNS name resolution (`ERR_NAME_NOT_RESOLVED`).
 2. **Dynamic Endpoint Routing & Protocol Awareness**: Updated `DocumentsService.generateUploadUrl` and `DocumentsService.getDownloadUrl` in `apps/api` to detect unresolvable mock domains and automatically route uploads/downloads to the live NestJS mock endpoints (`/api/v1/mock-upload/:bidId/:docId/:fileName` and `/api/v1/mock-download/...`) with dynamic protocol resolution (`http`/`https`).
@@ -567,6 +575,28 @@ Per the 2026-10-04 audit (`docs/CURRENT_STATE.md`), the next actions are **P0 ha
         - Role-based permissions check (`compliance:review`), modal for reviewer notes/justification, and optimistic concurrency version validation (`expectedVersion: item.version`).
       - **Unit Test Coverage**: Added `complianceMatrix.spec.ts` testing all 7 columns, filtering, multi-field search, sorting, and 4-question derivations (10 new tests, 127 total web tests passing, 378 passing across monorepo).
 
-
-
+35. [x] **Phase 43: 1 Tenant → N Companies Architecture & Multi-Surface Selection (2026-10-06)** _(Completed)_
+    - **Established and validated the canonical enterprise multi-tenancy hierarchy**:
+      ```text
+      Tenant (SaaS / Security / RBAC Boundary)
+        └── N × Companies (Legal business entities evaluated within tenant)
+              ├── Capability Profile (Versioned registrations, CA UDINs, financials)
+              ├── Corporate Evidence Vault
+              └── Tenders / Bids (Evaluated per company profile)
+      ```
+    - **Backend Multi-Company Security (`apps/api`)**:
+      - `companies` table scoped by `tenant_id` (`organization_id`), composite index `(tenant_id, id)`.
+      - Scoped `company_profiles` and `company_profile_versions` by `(tenant_id, company_id)`.
+      - Dynamic tenant context resolution in `BidsService`, `CompanyProfileService`, and `CompaniesController`.
+      - Strict multi-company anti-IDOR security tests verifying cross-tenant and intra-tenant isolation in `multi-company-security.spec.ts` (10 tests, 192 total API tests passing).
+    - **Multi-Surface Frontend Company Selection (`apps/web`)**:
+      - **Global Header**: Interactive `CompanySelector` dropdown with active company badge, GSTIN details, and inline "+ Add Legal Company Entity" modal.
+      - **Sidebar**: Sticky "Active Company" card above navigation items, displaying current business entity name.
+      - **Dashboard**: Prominent active company badge with direct entity switcher alongside the "New Bid Project" CTA.
+      - **Bid Creation Workflow**: Dedicated "Bidding Company Entity *" selector in `CreateBidPage.tsx` wiring `companyId` into tender initialization.
+      - **Company Dossier Header**: Instant company switching in `CompanyProfileHeader.tsx` updating legal details and version tracking.
+      - **Tenant-Aware Fallback & Persistence**: `CompanyContext` with instant hydration from `localStorage` keyed by `tenderpulse_active_company_${organizationId}` so the UI never flashes empty.
+    - **Quality Gates**:
+      - 408 automated tests passing across the monorepo (192 API + 140 Web + 76 Python AI).
+      - 0 TypeScript errors across all 4 monorepo packages.
 

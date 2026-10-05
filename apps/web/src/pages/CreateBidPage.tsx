@@ -1,11 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { createBid } from '../api/bids.js';
+import { useCompany } from '../context/CompanyContext.js';
 import { Button } from '../components/common/Button.js';
 import { Input } from '../components/common/Input.js';
 import { ErrorBanner } from '../components/common/ErrorBanner.js';
+import { Building2 } from 'lucide-react';
 
 export const CreateBidPage: React.FC = () => {
+  const { companies, selectedCompanyId } = useCompany();
+  const [companyId, setCompanyId] = useState<string>(selectedCompanyId || '');
   const [title, setTitle] = useState<string>('');
   const [tenderNumber, setTenderNumber] = useState<string>('');
   const [tenderingAuthority, setTenderingAuthority] = useState<string>('');
@@ -16,6 +20,12 @@ export const CreateBidPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (selectedCompanyId && !companyId) {
+      setCompanyId(selectedCompanyId);
+    }
+  }, [selectedCompanyId, companyId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,6 +40,7 @@ export const CreateBidPage: React.FC = () => {
     const numericValue = estimatedValueRupees ? parseFloat(estimatedValueRupees) : undefined;
 
     const result = await createBid({
+      companyId: companyId || selectedCompanyId || undefined,
       title: title.trim(),
       tenderNumber: tenderNumber.trim(),
       tenderingAuthority: tenderingAuthority.trim(),
@@ -77,6 +88,35 @@ export const CreateBidPage: React.FC = () => {
           gap: '1.25rem',
         }}
       >
+        {/* Company Entity Scoping */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+          <label style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-surface-text)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <Building2 size={14} className="text-primary" /> Bidding Company Entity *
+          </label>
+          <select
+            value={companyId || (companies[0]?.id ?? '')}
+            onChange={(e) => setCompanyId(e.target.value)}
+            style={{
+              padding: '0.65rem 0.85rem',
+              backgroundColor: 'var(--color-surface-bg)',
+              border: '1px solid var(--color-surface-border)',
+              borderRadius: 'var(--radius-md)',
+              color: 'var(--color-surface-text)',
+              fontSize: 'var(--text-sm)',
+              outline: 'none',
+            }}
+          >
+            {companies.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.legalName} {c.gstin ? `(GST: ${c.gstin})` : ''}
+              </option>
+            ))}
+          </select>
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)' }}>
+            This tender will be evaluated against this company's pinned capability profile and evidence vault.
+          </span>
+        </div>
+
         <Input
           label="Tender Project Title"
           required

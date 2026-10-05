@@ -6,6 +6,58 @@
 
 // ─── Shared Type Definitions ────────────────────────────────────────────
 
+export interface DemoCompany {
+  id: string;
+  organizationId: string;
+  legalName: string;
+  slug?: string;
+  gstin?: string;
+  pan?: string;
+  udyamId?: string;
+  constitution?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const DEMO_COMPANIES: DemoCompany[] = [
+  {
+    id: 'comp_acme_infra_001',
+    organizationId: 'org_acme_infra_001',
+    legalName: 'Acme Infrastructure Solutions Ltd',
+    slug: 'acme-infra',
+    gstin: '27AABCU9603R1ZM',
+    pan: 'AABCU9603R',
+    udyamId: 'UDYAM-MH-12-0049281',
+    constitution: 'PUBLIC_LIMITED',
+    createdAt: '2026-09-01T00:00:00.000Z',
+    updatedAt: '2026-10-01T00:00:00.000Z',
+  },
+  {
+    id: 'comp_acme_tech_002',
+    organizationId: 'org_acme_infra_001',
+    legalName: 'Acme Smart Systems & Surveillance Pvt Ltd',
+    slug: 'acme-tech',
+    gstin: '27AABCS4412Q1ZX',
+    pan: 'AABCS4412Q',
+    udyamId: 'UDYAM-MH-12-0088192',
+    constitution: 'PRIVATE_LIMITED',
+    createdAt: '2026-09-15T00:00:00.000Z',
+    updatedAt: '2026-10-01T00:00:00.000Z',
+  },
+  {
+    id: 'comp_bharat_heavy_001',
+    organizationId: 'org_bharat_build_002',
+    legalName: 'Bharat Heavy Infrastructure Enterprises Ltd',
+    slug: 'bharat-heavy',
+    gstin: '07AAACB2194P1Z8',
+    pan: 'AAACB2194P',
+    udyamId: 'UDYAM-DL-05-0012948',
+    constitution: 'PUBLIC_LIMITED',
+    createdAt: '2026-09-01T00:00:00.000Z',
+    updatedAt: '2026-10-01T00:00:00.000Z',
+  },
+];
+
 export interface DemoUser {
   id: string;
   email: string;
@@ -108,6 +160,7 @@ export interface DemoDocument {
 
 export interface DemoBid {
   id: string;
+  companyId?: string;
   title: string;
   tenderNumber: string;
   tenderingAuthority: string;
@@ -396,6 +449,7 @@ export const DEMO_COMPANY_PROFILE_PAYLOAD = {
 export const BIDS: DemoBid[] = [
   {
     id: 'bid-nhai-44-001',
+    companyId: 'comp_acme_infra_001',
     title: 'Four-laning of NH-44 Bypass Section (Km 120.000 to Km 154.200) under EPC Mode',
     tenderNumber: 'NHAI/HQ/2026/EPC-4482',
     tenderingAuthority: 'National Highways Authority of India (NHAI)',
@@ -449,6 +503,7 @@ export const BIDS: DemoBid[] = [
   },
   {
     id: 'bid-cpwd-gov-002',
+    companyId: 'comp_acme_infra_001',
     title: 'Construction of Sustainable Central Government Administrative Complex (Phase 2)',
     tenderNumber: 'CPWD/DELHI/2026/CIVIL-0491',
     tenderingAuthority: 'Central Public Works Department (CPWD)',
@@ -475,6 +530,7 @@ export const BIDS: DemoBid[] = [
   },
   {
     id: 'bid-mha-surv-003',
+    companyId: 'comp_acme_tech_002',
     title: 'City-Wide Integrated CCTV Surveillance & Traffic Command Centre (ICCC)',
     tenderNumber: 'MHA/SMARTCITY/2026/ITS-0118',
     tenderingAuthority: 'Smart Cities Mission & Municipal Corporation',

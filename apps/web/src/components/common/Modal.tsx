@@ -75,7 +75,7 @@ export const Modal: React.FC<ModalProps> = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 'var(--z-index-modal)' as unknown as number,
+        zIndex: 'var(--z-index-modal, 70)' as unknown as number,
         padding: '1rem',
       }}
       onClick={onClose}

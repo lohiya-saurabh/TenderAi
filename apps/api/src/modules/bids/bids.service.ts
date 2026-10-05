@@ -13,6 +13,7 @@ import type { DemoBid, DemoDocument } from '../../seed/data.js';
 import { TenantContextHolder } from '../../common/security/TenantContext.js';
 
 export interface CreateBidDto {
+  companyId?: string;
   title?: string;
   tenderNumber?: string;
   tenderingAuthority?: string;
@@ -28,6 +29,7 @@ export interface DeleteBidResult {
 }
 
 export interface ListBidsQuery {
+  companyId?: string;
   page?: string | number;
   limit?: string | number;
   sort?: string;
@@ -107,6 +109,11 @@ export class BidsService {
       .select()
       .from(schema.bids)
       .where(eq(schema.bids.organizationId, orgId));
+
+    if (query?.companyId && typeof query.companyId === 'string' && query.companyId.trim()) {
+      const targetCompanyId = query.companyId.trim();
+      allBids = allBids.filter((b) => b.companyId === targetCompanyId);
+    }
 
     if (query?.status && typeof query.status === 'string' && query.status.trim() && query.status !== 'ALL') {
       const targetStatus = query.status.trim().toUpperCase();
@@ -304,7 +311,7 @@ export class BidsService {
   public async createBid(dto: CreateBidDto): Promise<DemoBid> {
     const orgId = TenantContextHolder.get()?.organizationId || 'org_acme_infra_001';
     const userId = TenantContextHolder.get()?.userId || 'usr_bid_mgr_01';
-    const newBidId = `bid-${Date.now()}`;
+    const newBidId = `bid-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
     const title = typeof dto.title === 'string' && dto.title.trim() ? dto.title.trim() : 'Untitled Tender';
     const tenderNumber =
       typeof dto.tenderNumber === 'string' && dto.tenderNumber.trim()
@@ -323,11 +330,39 @@ export class BidsService {
       typeof dto.locationState === 'string' && dto.locationState.trim()
         ? dto.locationState.trim()
         : null;
+
+    let companyId = dto.companyId?.trim();
+    if (companyId) {
+      const [comp] = await this.db
+        .select()
+        .from(schema.companies)
+        .where(
+          and(
+            eq(schema.companies.id, companyId),
+            eq(schema.companies.organizationId, orgId),
+          ),
+        )
+        .limit(1);
+
+      if (!comp) {
+        throw new NotFoundError(`Company '${companyId}' not found in your organization.`);
+      }
+    } else {
+      const [defaultComp] = await this.db
+        .select()
+        .from(schema.companies)
+        .where(eq(schema.companies.organizationId, orgId))
+        .limit(1);
+
+      companyId = defaultComp?.id ?? 'comp_acme_infra_001';
+    }
+
     const now = new Date();
 
     await this.db.insert(schema.bids).values({
       id: newBidId,
       organizationId: orgId,
+      companyId: companyId!,
       title,
       tenderNumber,
       tenderingAuthority,
@@ -358,6 +393,7 @@ export class BidsService {
 
     return {
       id: newBidId,
+      companyId: companyId!,
       title,
       tenderNumber,
       tenderingAuthority,
@@ -699,6 +735,7 @@ export class BidsService {
   private mapBidRecord(b: schema.Bid, documents: DemoDocument[]): DemoBid {
     return {
       id: b.id,
+      companyId: b.companyId,
       title: b.title,
       tenderNumber: b.tenderNumber,
       tenderingAuthority: b.tenderingAuthority,

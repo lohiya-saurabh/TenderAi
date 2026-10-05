@@ -11,6 +11,7 @@ import { eq, sql } from 'drizzle-orm';
 import bcrypt from 'bcrypt';
 import {
   DEMO_USERS,
+  DEMO_COMPANIES,
   BIDS,
   DEMO_COMPANY_PROFILE_PAYLOAD,
   DEMO_COMPLIANCE_ITEMS,
@@ -84,9 +85,25 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
       organization_name TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS companies (
+      id TEXT PRIMARY KEY,
+      organization_id TEXT NOT NULL,
+      legal_name TEXT NOT NULL,
+      slug TEXT,
+      gstin TEXT,
+      pan TEXT,
+      udyam_id TEXT,
+      constitution TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_companies_org ON companies(organization_id);
+
     CREATE TABLE IF NOT EXISTS bids (
       id TEXT PRIMARY KEY,
       organization_id TEXT NOT NULL,
+      company_id TEXT NOT NULL DEFAULT 'comp_acme_infra_001',
       title TEXT NOT NULL,
       tender_number TEXT NOT NULL DEFAULT '',
       tendering_authority TEXT NOT NULL DEFAULT '',
@@ -102,6 +119,7 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    ALTER TABLE bids ADD COLUMN IF NOT EXISTS company_id TEXT NOT NULL DEFAULT 'comp_acme_infra_001';
     ALTER TABLE bids ADD COLUMN IF NOT EXISTS tender_number TEXT NOT NULL DEFAULT '';
     ALTER TABLE bids ADD COLUMN IF NOT EXISTS tendering_authority TEXT NOT NULL DEFAULT '';
     ALTER TABLE bids ADD COLUMN IF NOT EXISTS estimated_value_rupees BIGINT NOT NULL DEFAULT 0;
@@ -165,6 +183,7 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
 
     CREATE TABLE IF NOT EXISTS company_profile_versions (
       id TEXT PRIMARY KEY,
+      company_id TEXT NOT NULL DEFAULT 'comp_acme_infra_001',
       organization_id TEXT NOT NULL,
       version INT NOT NULL,
       name TEXT NOT NULL,
@@ -173,18 +192,27 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    ALTER TABLE company_profile_versions ADD COLUMN IF NOT EXISTS company_id TEXT NOT NULL DEFAULT 'comp_acme_infra_001';
+
     CREATE INDEX IF NOT EXISTS idx_company_profile_versions_org
       ON company_profile_versions(organization_id, version DESC);
+    CREATE INDEX IF NOT EXISTS idx_company_profile_versions_comp
+      ON company_profile_versions(company_id, version DESC);
 
     CREATE TABLE IF NOT EXISTS company_profiles (
-      organization_id TEXT PRIMARY KEY,
+      id TEXT PRIMARY KEY,
+      company_id TEXT NOT NULL,
+      organization_id TEXT NOT NULL,
       active_version_id TEXT NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    ALTER TABLE company_profiles ADD COLUMN IF NOT EXISTS company_id TEXT NOT NULL DEFAULT 'comp_acme_infra_001';
+
     CREATE TABLE IF NOT EXISTS bid_decisions (
       id TEXT PRIMARY KEY,
       bid_id TEXT NOT NULL,
+      company_id TEXT,
       organization_id TEXT NOT NULL,
       profile_version_id TEXT NOT NULL,
       verdict TEXT NOT NULL,
@@ -194,13 +222,15 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    ALTER TABLE bid_decisions ADD COLUMN IF NOT EXISTS company_id TEXT;
+
     CREATE INDEX IF NOT EXISTS idx_bid_decisions_org_bid
       ON bid_decisions(organization_id, bid_id, created_at DESC);
   `);
 
   const drizzleDb = drizzle(db, { schema });
 
-  // 2. Seed Users if empty
+  // 2. Seed Users & Companies if empty
   if (seedUsers) {
     const userCountResult = await drizzleDb.select({ count: sql<string>`count(*)` }).from(schema.users);
     const userCount = parseInt(userCountResult[0]?.count || '0', 10);
@@ -238,6 +268,30 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
           .where(eq(schema.users.id, u.id));
       }
     }
+
+    // Seed Companies
+    const companyCountResult = await drizzleDb.select({ count: sql<string>`count(*)` }).from(schema.companies);
+    const companyCount = parseInt(companyCountResult[0]?.count || '0', 10);
+    if (companyCount === 0) {
+      console.log('🌱 Seeding enterprise companies into PostgreSQL...');
+      for (const comp of DEMO_COMPANIES) {
+        await drizzleDb
+          .insert(schema.companies)
+          .values({
+            id: comp.id,
+            organizationId: comp.organizationId,
+            legalName: comp.legalName,
+            slug: comp.slug ?? null,
+            gstin: comp.gstin ?? null,
+            pan: comp.pan ?? null,
+            udyamId: comp.udyamId ?? null,
+            constitution: comp.constitution ?? null,
+            createdAt: new Date(comp.createdAt),
+            updatedAt: new Date(comp.updatedAt),
+          })
+          .onConflictDoNothing();
+      }
+    }
   }
 
   // 3. Seed Company Capability Profile (11 domains) if empty
@@ -253,6 +307,7 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
         .insert(schema.companyProfileVersions)
         .values({
           id: 'cpv-acme-v1',
+          companyId: 'comp_acme_infra_001',
           organizationId: 'org_acme_infra_001',
           version: 1,
           name: 'V1.0 (Active Baseline)',
@@ -265,6 +320,8 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
       await drizzleDb
         .insert(schema.companyProfiles)
         .values({
+          id: 'prof_comp_acme_infra_001',
+          companyId: 'comp_acme_infra_001',
           organizationId: 'org_acme_infra_001',
           activeVersionId: 'cpv-acme-v1',
           updatedAt: new Date('2026-09-01T00:00:00.000Z'),
@@ -286,6 +343,7 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
           .values({
             id: bid.id,
             organizationId: 'org_acme_infra_001',
+            companyId: bid.companyId || 'comp_acme_infra_001',
             title: bid.title,
             tenderNumber: bid.tenderNumber,
             tenderingAuthority: bid.tenderingAuthority,

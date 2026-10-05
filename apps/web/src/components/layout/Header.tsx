@@ -6,9 +6,10 @@ import {
   MenuIcon,
   SidebarCollapseIcon,
   SidebarExpandIcon,
-  BuildingOfficeIcon,
 } from '../common/Icons.js';
 import { Button } from '../ui/button.js';
+
+import { CompanySelector } from './CompanySelector.js';
 
 export interface HeaderProps {
   onToggleMobileSidebar?: () => void;
@@ -64,15 +65,18 @@ export const Header: React.FC<HeaderProps> = ({
         <Breadcrumbs />
       </div>
 
-      {/* Right section: Tenant badge & User Account dropdown */}
-      <div className="flex items-center gap-3 shrink-0">
+      {/* Right section: Tenant badge, Company Switcher & User Account dropdown */}
+      <div className="flex items-center gap-2 md:gap-3 shrink-0">
         {/* Tenant Organization Indicator */}
-        <div className="hidden sm:inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-background border border-border text-xs text-muted-foreground">
-          <BuildingOfficeIcon size={13} className="text-primary" />
-          <span className="text-foreground font-medium max-w-[180px] truncate">
-            {user?.organizationName || 'Default Organization'}
+        <div className="hidden lg:inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-background border border-border text-xs text-muted-foreground" title="SaaS Tenant Workspace">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tenant:</span>
+          <span className="text-foreground font-medium max-w-[140px] truncate">
+            {user?.organizationName || 'Default Workspace'}
           </span>
         </div>
+
+        {/* Company Selector (1 Tenant -> N Companies) */}
+        <CompanySelector />
 
         {/* User Account Menu */}
         <UserAccountMenu />

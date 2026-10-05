@@ -63,6 +63,7 @@ export interface AiBidDecisionRequest {
   security_context: {
     tenant_id: string;
     user_id: string;
+    company_id?: string;
     workflow_run_id: string;
     roles?: string[];
     permissions?: string[];

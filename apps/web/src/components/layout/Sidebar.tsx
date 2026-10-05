@@ -11,6 +11,8 @@ import {
 } from '../common/Icons.js';
 import { cn } from '../../lib/utils.js';
 
+import { useCompany } from '../../context/CompanyContext.js';
+
 export interface SidebarProps {
   isCollapsed?: boolean;
   isMobileOpen?: boolean;
@@ -23,6 +25,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onCloseMobile,
 }) => {
   const { hasPermission } = useAuth();
+  const { selectedCompany } = useCompany();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -106,6 +109,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Navigation items list */}
       <nav aria-label="Main Navigation" className="p-3 flex flex-col gap-1 flex-1 overflow-y-auto overflow-x-hidden no-scrollbar">
+        {/* Active Company indicator in Sidebar */}
+        {!isCollapsed && selectedCompany && (
+          <div className="mb-2 p-2 rounded-lg bg-accent/40 border border-border/80">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-6 h-6 rounded bg-primary/15 text-primary flex items-center justify-center shrink-0">
+                <BuildingOfficeIcon size={13} />
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">Active Company</span>
+                <span className="text-xs font-semibold text-foreground truncate" title={selectedCompany.legalName}>
+                  {selectedCompany.legalName}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {!isCollapsed && (
           <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
             Platform

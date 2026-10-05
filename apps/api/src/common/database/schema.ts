@@ -18,9 +18,26 @@ export const users = pgTable('users', {
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 
+export const companies = pgTable('companies', {
+  id: text('id').primaryKey(),
+  organizationId: text('organization_id').notNull(),
+  legalName: text('legal_name').notNull(),
+  slug: text('slug'),
+  gstin: text('gstin'),
+  pan: text('pan'),
+  udyamId: text('udyam_id'),
+  constitution: text('constitution'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type Company = typeof companies.$inferSelect;
+export type NewCompany = typeof companies.$inferInsert;
+
 export const bids = pgTable('bids', {
   id: text('id').primaryKey(),
   organizationId: text('organization_id').notNull(),
+  companyId: text('company_id').notNull().default('comp_acme_infra_001'),
   title: text('title').notNull(),
   tenderNumber: text('tender_number').notNull(),
   tenderingAuthority: text('tendering_authority').notNull(),
@@ -111,6 +128,7 @@ export type NewAuditLog = typeof auditLogs.$inferInsert;
  */
 export const companyProfileVersions = pgTable('company_profile_versions', {
   id: text('id').primaryKey(),
+  companyId: text('company_id').notNull().default('comp_acme_infra_001'),
   organizationId: text('organization_id').notNull(),
   version: integer('version').notNull(),
   name: text('name').notNull(),
@@ -123,10 +141,12 @@ export type CompanyProfileVersion = typeof companyProfileVersions.$inferSelect;
 export type NewCompanyProfileVersion = typeof companyProfileVersions.$inferInsert;
 
 /**
- * Current pointer: one active profile version per organization.
+ * Current pointer: one active profile version per company within an organization.
  */
 export const companyProfiles = pgTable('company_profiles', {
-  organizationId: text('organization_id').primaryKey(),
+  id: text('id').primaryKey(),
+  companyId: text('company_id').notNull(),
+  organizationId: text('organization_id').notNull(),
   activeVersionId: text('active_version_id').notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -145,6 +165,7 @@ export type NewCompanyProfile = typeof companyProfiles.$inferInsert;
 export const bidDecisions = pgTable('bid_decisions', {
   id: text('id').primaryKey(),
   bidId: text('bid_id').notNull(),
+  companyId: text('company_id'),
   organizationId: text('organization_id').notNull(),
   profileVersionId: text('profile_version_id').notNull(),
   verdict: text('verdict').notNull(),

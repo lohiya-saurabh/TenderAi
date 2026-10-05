@@ -9,6 +9,9 @@ import {
 } from './companyProfileData.js';
 import { Zap, Building2, Check, CheckCircle2, FolderArchive, Plus, RefreshCw } from 'lucide-react';
 
+import { useCompany } from '../../context/CompanyContext.js';
+import { CompanySelector } from '../layout/CompanySelector.js';
+
 export interface CompanyProfileHeaderProps {
   profile: FullCompanyProfile;
   onOpenVault: () => void;
@@ -20,9 +23,13 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
   onOpenVault,
   onAddCredential,
 }) => {
+  const { selectedCompany } = useCompany();
   const health = computeProfileHealth(profile);
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
   const [publishSuccess, setPublishSuccess] = useState(false);
+
+  const displayName = selectedCompany?.legalName || profile.companyName;
+  const displayGstin = selectedCompany?.gstin || profile.registrations.find((r) => r.regType === 'GSTIN')?.regNumber || '27AAKCA1234F1Z5';
 
   const handlePublishVersion = () => {
     setPublishSuccess(true);
@@ -61,6 +68,7 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <CompanySelector />
           <Badge variant="primary" size="sm">
             {profile.profileVersion}
           </Badge>
@@ -78,7 +86,7 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
               <Building2 size={24} className="text-primary" />
               <h1 style={{ fontSize: 'var(--text-xl)', fontWeight: 700, color: 'var(--color-surface-text)', margin: 0 }}>
-                {profile.companyName}
+                {displayName}
               </h1>
               <Badge variant="success" size="sm" dot>
                 Active Dossier
@@ -96,6 +104,9 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
             </div>
 
             <div style={{ display: 'flex', gap: '1.25rem', fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+              <div>
+                <strong>GSTIN:</strong> <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-surface-text)' }}>{displayGstin}</span>
+              </div>
               <div>
                 <strong>CIN:</strong> <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-surface-text)' }}>{profile.cinNumber}</span>
               </div>

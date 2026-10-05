@@ -121,17 +121,27 @@ export class GetBidDecisionUseCase {
       complianceItems as unknown as RequirementSourceItem[],
     );
 
-    // 2. Pinned company profile
+    // 2. Pinned company profile for the bid's company
+    const targetCompanyId = bid.companyId;
+
+    let pointerCondition = eq(schema.companyProfiles.organizationId, orgId);
+    if (targetCompanyId) {
+      pointerCondition = and(
+        eq(schema.companyProfiles.organizationId, orgId),
+        eq(schema.companyProfiles.companyId, targetCompanyId),
+      ) as any;
+    }
+
     const [pointer] = await this.db
       .select()
       .from(schema.companyProfiles)
-      .where(eq(schema.companyProfiles.organizationId, orgId))
+      .where(pointerCondition)
       .limit(1);
 
     if (!pointer) {
       throw new ConflictError(
-        'No Company Capability Profile is configured for your organization. ' +
-          'POST /api/v1/company-profile to pin a profile before evaluating a bid decision.',
+        `No Company Capability Profile is configured for company '${targetCompanyId || orgId}'. ` +
+          'Pin a profile before evaluating a bid decision.',
       );
     }
 
@@ -148,7 +158,7 @@ export class GetBidDecisionUseCase {
 
     if (!profileVersion) {
       throw new ConflictError(
-        `Active company profile version '${pointer.activeVersionId}' is missing. Re-pin a profile via POST /api/v1/company-profile.`,
+        `Active company profile version '${pointer.activeVersionId}' is missing. Re-pin a profile via Company Profile settings.`,
       );
     }
 
@@ -170,7 +180,7 @@ export class GetBidDecisionUseCase {
 
     // 4. Assemble the engine request
     const companyProfile: AiCompanyProfileSnapshot = {
-      company_id: orgId,
+      company_id: pointer.companyId || orgId,
       company_name: payload.company_name ?? 'Unknown Company',
       profile_version_id: profileVersion.id,
       is_active: true,
@@ -190,6 +200,7 @@ export class GetBidDecisionUseCase {
       security_context: {
         tenant_id: orgId,
         user_id: userId,
+        company_id: pointer.companyId,
         workflow_run_id: `run-bid-decision-${bidId}-${Date.now()}`,
         allowed_document_ids: documents.map((d) => d.id),
         allowed_source_ids: [],
@@ -216,6 +227,7 @@ export class GetBidDecisionUseCase {
     await this.db.insert(schema.bidDecisions).values({
       id: decisionId,
       bidId,
+      companyId: pointer.companyId,
       organizationId: orgId,
       profileVersionId: profileVersion.id,
       verdict: response.verdict,
