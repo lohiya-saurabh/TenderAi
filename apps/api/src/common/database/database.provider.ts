@@ -253,6 +253,14 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
 
     CREATE INDEX IF NOT EXISTS idx_notifications_tenant
       ON notifications(organization_id, recipient_user_id, is_read, created_at DESC);
+
+    UPDATE bid_decisions
+    SET readiness_score = readiness_score / 100
+    WHERE readiness_score > 1;
+
+    UPDATE bid_decisions
+    SET verdict = 'CONDITIONAL_GO'
+    WHERE verdict = 'PROCEED_WITH_CAUTION';
   `);
 
   const drizzleDb = drizzle(db, { schema });

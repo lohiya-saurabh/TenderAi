@@ -65,14 +65,21 @@ export interface BidDecision {
  * - NO_GO → DO_NOT_PURSUE
  * - REVIEW_REQUIRED → REVIEW_REQUIRED
  */
-export function mapVerdict(verdict: BidVerdict): BidRecommendation {
-  switch (verdict) {
+export function mapVerdict(verdict?: BidVerdict | string | null): BidRecommendation {
+  if (!verdict) return 'REVIEW_REQUIRED';
+  switch (verdict.toUpperCase().trim()) {
     case 'GO':
     case 'CONDITIONAL_GO':
+    case 'PROCEED_WITH_CAUTION':
+    case 'PURSUE':
       return 'PURSUE';
     case 'NO_GO':
+    case 'DO_NOT_PURSUE':
+    case 'REJECT':
       return 'DO_NOT_PURSUE';
     case 'REVIEW_REQUIRED':
+    case 'UNDER_REVIEW':
+    default:
       return 'REVIEW_REQUIRED';
   }
 }

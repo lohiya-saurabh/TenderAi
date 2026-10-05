@@ -28,9 +28,32 @@ export interface BidVerdictCardProps {
 
 const DECISION_STATE_LABELS: Record<string, string> = {
   AI_PROPOSED: 'AI-proposed — human confirmation required',
+  ai_proposed: 'AI-proposed — human confirmation required',
   UNDER_REVIEW: 'Under human review',
+  under_review: 'Under human review',
   CONFIRMED: 'Confirmed by human review',
+  confirmed: 'Confirmed by human review',
   OVERRIDDEN: 'Overridden by human review — original verdict preserved',
+  overridden: 'Overridden by human review — original verdict preserved',
+  PENDING_REVIEW: 'Pending human review',
+  pending_review: 'Pending human review',
+  DRAFT: 'Draft assessment',
+  draft: 'Draft assessment',
+};
+
+const formatFitScorePercent = (score?: number | null): string => {
+  if (score === null || score === undefined || Number.isNaN(score)) return '0%';
+  const num = Number(score);
+  // Normalize: if score is > 1 (e.g. 86.5), it's already a 0..100 percentage; if <= 1 (e.g. 0.865), scale by 100
+  const pct = num > 1 ? num : num * 100;
+  return `${Math.round(pct)}%`;
+};
+
+const formatDecisionStateText = (state?: string | null): string => {
+  if (!state) return 'AI-proposed — human confirmation required';
+  const upper = state.toUpperCase().trim();
+  if (DECISION_STATE_LABELS[upper]) return DECISION_STATE_LABELS[upper];
+  return state.replace(/_/g, ' ');
 };
 
 const verdictColors: Record<BidRecommendation, { border: string; bg: string; color: string; icon: React.ReactNode }> = {
@@ -77,16 +100,16 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
           decision ? (
             <Badge
               variant={
-                decision.verdict! === 'PURSUE'
+                decision.verdict === 'PURSUE'
                   ? 'success'
-                  : decision.verdict! === 'DO_NOT_PURSUE'
+                  : decision.verdict === 'DO_NOT_PURSUE'
                     ? 'danger'
                     : 'warning'
               }
               size="sm"
               dot
             >
-              {decision.verdict!.replace(/_/g, ' ')}
+              {(decision.verdict || 'REVIEW_REQUIRED').replace(/_/g, ' ')}
             </Badge>
           ) : (
             <Badge variant="neutral" size="sm" dot>
@@ -105,7 +128,10 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
           {/* Verdict display */}
           {decision ? (() => {
-            const v = decision.verdict!;
+            const v: BidRecommendation =
+              decision.verdict && verdictColors[decision.verdict]
+                ? decision.verdict
+                : 'REVIEW_REQUIRED';
             return (
               <>
                 {/* Primary verdict banner */}
@@ -128,8 +154,8 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
                         {v.replace(/_/g, ' ')}
                       </div>
                       <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)', marginTop: '0.25rem' }}>
-                        Fit score: <strong>{Math.round((decision.readinessScore ?? 0) * 100)}%</strong>{' '}
-                        • {decision.state ? DECISION_STATE_LABELS[decision.state] : 'Unknown'}
+                        Fit score: <strong>{formatFitScorePercent(decision.readinessScore)}</strong>{' '}
+                        • {formatDecisionStateText(decision.state)}
                       </div>
                     </div>
                     <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-subtle)', textAlign: 'right', minWidth: '160px' }}>

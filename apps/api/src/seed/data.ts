@@ -997,12 +997,13 @@ export const DEMO_BID_DECISION_SEED = {
   bidId: 'bid-nhai-44-001',
   organizationId: 'org_acme_infra_001',
   profileVersionId: 'cpv-acme-v1',
-  verdict: 'PROCEED_WITH_CAUTION',
+  verdict: 'CONDITIONAL_GO',
   state: 'AI_PROPOSED',
-  readinessScore: 86.5,
+  readinessScore: 0.865,
   response: {
-    verdict: 'PROCEED_WITH_CAUTION',
-    readiness_score: 86.5,
+    verdict: 'CONDITIONAL_GO',
+    state: 'AI_PROPOSED',
+    readiness_score: 0.865,
     reasons_to_pursue: [
       'Strong financial qualification: 3-year average turnover of ₹281.90 Cr exceeds the required ₹150.00 Cr by 87.9%.',
       'Direct similar work experience: Completed Pune-Solapur 4-Lane Highway EPC (₹185.40 Cr) satisfies the ₹120.00 Cr technical threshold.',

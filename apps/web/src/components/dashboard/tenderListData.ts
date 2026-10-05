@@ -320,14 +320,18 @@ export type FitTier = 'STRONG' | 'MODERATE' | 'WEAK';
  * engine flags 0.50–0.70 as borderline. GO evaluates at 0.95.
  */
 export function getFitTier(score: number): FitTier {
-  if (score >= 0.7) return 'STRONG';
-  if (score >= 0.45) return 'MODERATE';
+  const normalized = score > 1 ? score / 100 : score;
+  if (normalized >= 0.7) return 'STRONG';
+  if (normalized >= 0.45) return 'MODERATE';
   return 'WEAK';
 }
 
-/** readinessScore (0.0–1.0) as a display percentage. */
+/** readinessScore (0.0–1.0 or 0–100) as a display percentage. */
 export function formatFitScore(score: number): string {
-  return `${Math.round(score * 100)}%`;
+  if (score === null || score === undefined || Number.isNaN(score)) return '0%';
+  const num = Number(score);
+  const normalized = num > 1 ? num : num * 100;
+  return `${Math.round(normalized)}%`;
 }
 
 export type VerdictTone = 'success' | 'warning' | 'danger' | 'review';

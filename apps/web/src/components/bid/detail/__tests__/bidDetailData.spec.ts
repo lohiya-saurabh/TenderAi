@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  mapVerdict,
   mapApiDecisionToBidDecision,
   extractReasons,
   formatReasonItem,
@@ -132,6 +133,20 @@ describe('bidDetailData — Robust Reason & Decision Formatting', () => {
       expect(decision.reasons).toContain(
         'LIQUIDATED DAMAGES: Standard 0.5% per week delay penalty capped at 10% of contract value.'
       );
+    });
+  });
+
+  describe('mapVerdict — Resilient Mapping', () => {
+    it('should map standard and legacy verdict strings properly', () => {
+      expect(mapVerdict('GO')).toBe('PURSUE');
+      expect(mapVerdict('CONDITIONAL_GO')).toBe('PURSUE');
+      expect(mapVerdict('PROCEED_WITH_CAUTION')).toBe('PURSUE');
+      expect(mapVerdict('PURSUE')).toBe('PURSUE');
+      expect(mapVerdict('NO_GO')).toBe('DO_NOT_PURSUE');
+      expect(mapVerdict('DO_NOT_PURSUE')).toBe('DO_NOT_PURSUE');
+      expect(mapVerdict('REVIEW_REQUIRED')).toBe('REVIEW_REQUIRED');
+      expect(mapVerdict(null)).toBe('REVIEW_REQUIRED');
+      expect(mapVerdict(undefined)).toBe('REVIEW_REQUIRED');
     });
   });
 });
