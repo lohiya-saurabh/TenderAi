@@ -17,6 +17,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 import { SettingsModule } from './modules/settings/settings.module.js';
 import { TeamsModule } from './modules/teams/teams.module.js';
+import { NotificationsModule } from './modules/notifications/notifications.module.js';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { TeamsModule } from './modules/teams/teams.module.js';
     UsersModule,
     SettingsModule,
     TeamsModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {}

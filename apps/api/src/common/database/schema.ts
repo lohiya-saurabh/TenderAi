@@ -194,3 +194,27 @@ export const bidDecisions = pgTable('bid_decisions', {
 
 export type BidDecision = typeof bidDecisions.$inferSelect;
 export type NewBidDecision = typeof bidDecisions.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// Notifications
+// ---------------------------------------------------------------------------
+
+export const notifications = pgTable('notifications', {
+  id: text('id').primaryKey(),
+  organizationId: text('organization_id').notNull(),
+  recipientUserId: text('recipient_user_id'),
+  recipientEmail: text('recipient_email'),
+  category: text('category').notNull(), // 'DEADLINE' | 'EVIDENCE_EXPIRY' | 'REVIEW_REQUEST' | 'HIGH_RISK_FLAG' | 'SYSTEM'
+  channel: text('channel').notNull().default('IN_APP'), // 'IN_APP' | 'EMAIL' | 'SMS'
+  priority: text('priority').notNull().default('MEDIUM'), // 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
+  title: text('title').notNull(),
+  message: text('message').notNull(),
+  metadata: jsonb('metadata'),
+  isRead: boolean('is_read').notNull().default(false),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  readAt: timestamp('read_at', { withTimezone: true }),
+});
+
+export type Notification = typeof notifications.$inferSelect;
+export type NewNotification = typeof notifications.$inferInsert;
+

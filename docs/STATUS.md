@@ -6,6 +6,21 @@
 
 The 11-stage workflow: Tender Discovery → Tender-to-Company Matching → Bid/No-Bid Decision → Requirement Extraction → Company Evidence Matching → Compliance Analysis → Risk Analysis → Missing Evidence → Human Review → Bid Readiness → Submission Preparation → Corrigendum Monitoring.
 
+**Enterprise In-App Notifications & Preference Gating (2026-10-06):** Implemented, verified, and integrated the production multi-channel notification engine, database schema, preference-gated delivery, and interactive header feed in `apps/api` and `apps/web`:
+1. **Multi-Channel & Category-Gated Notification Architecture**:
+   - Gated delivery across 4 key categories (`DEADLINE`, `EVIDENCE_EXPIRY`, `REVIEW_REQUEST`, `HIGH_RISK_FLAG`) checking `tenant_settings.notification_preferences` before persistence and dispatch.
+   - Built automated deadline & certificate expiration scanner (`triggerDeadlineAndExpiryScan`) computing point-in-time day differences for active tenders within 7 days.
+2. **Database Schema & DDL Updates (`schema.ts`, `database.provider.ts`)**:
+   - Added `notifications` table (`id`, `organization_id`, `recipient_user_id`, `recipient_email`, `category`, `channel`, `priority`, `title`, `message`, `metadata JSONB`, `is_read`, `created_at`, `read_at`).
+   - Added compound index `idx_notifications_tenant` on `(organization_id, recipient_user_id, is_read, created_at DESC)`.
+3. **Backend Feature Module (`apps/api/src/modules/notifications/`)**:
+   - `NotificationsModule` (`NotificationsService`, `NotificationsController`): `GET /api/v1/notifications`, `PATCH /api/v1/notifications/:id/read`, `POST /api/v1/notifications/mark-all-read`, `POST /api/v1/notifications/trigger-scan`, `POST /api/v1/notifications`.
+   - Strict `TenantContextHolder` isolation and Anti-IDOR guards across all endpoints.
+4. **Frontend Integration & Real-Time Header Feed (`apps/web`)**:
+   - Created `notifications.ts` web API client.
+   - Built `NotificationBell.tsx` with unread count pill badge, category iconography (`Clock`, `TriangleAlert`, `ShieldCheck`), relative timestamps, mark-as-read toggles, and deep links to bid cases.
+5. **Quality Gates & Monorepo Test Verification (430 / 430 tests passing)**: 207 in `apps/api` (including 7 in `notifications.spec.ts`), 147 in `apps/web`, 76 in `apps/ai`. `npm run type-check` clean with 0 errors across all 4 monorepo packages.
+
 **User Profile, Workspace Settings & Team Management Persistence (2026-10-06):** Implemented, verified, and exposed complete backend REST endpoints, database schema additions, and live frontend integrations for user profiles, workspace configurations, and multi-user tenant team collaboration:
 1. **Clear Domain Boundary & Separation of Concerns**:
    - **User Profile (`/profile`)**: Manages individual credentials (`users` table), display name, phone number, and bcrypt-hashed password rotation (10 salt rounds with constant-time verification).

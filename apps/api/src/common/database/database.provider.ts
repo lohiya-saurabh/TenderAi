@@ -235,8 +235,24 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
 
     ALTER TABLE bid_decisions ADD COLUMN IF NOT EXISTS company_id TEXT;
 
-    CREATE INDEX IF NOT EXISTS idx_bid_decisions_org_bid
-      ON bid_decisions(organization_id, bid_id, created_at DESC);
+    CREATE TABLE IF NOT EXISTS notifications (
+      id TEXT PRIMARY KEY,
+      organization_id TEXT NOT NULL,
+      recipient_user_id TEXT,
+      recipient_email TEXT,
+      category TEXT NOT NULL,
+      channel TEXT NOT NULL DEFAULT 'IN_APP',
+      priority TEXT NOT NULL DEFAULT 'MEDIUM',
+      title TEXT NOT NULL,
+      message TEXT NOT NULL,
+      metadata JSONB,
+      is_read BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      read_at TIMESTAMPTZ
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_notifications_tenant
+      ON notifications(organization_id, recipient_user_id, is_read, created_at DESC);
   `);
 
   const drizzleDb = drizzle(db, { schema });
@@ -468,6 +484,61 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
           createdAt: new Date(DEMO_BID_DECISION_SEED.createdAt),
         })
         .onConflictDoNothing();
+    }
+
+    // 7. Seed Notifications if empty
+    const notificationCountResult = await drizzleDb
+      .select({ count: sql<string>`count(*)` })
+      .from(schema.notifications);
+    const notificationCount = parseInt(notificationCountResult[0]?.count || '0', 10);
+
+    if (notificationCount === 0) {
+      console.log('🌱 Seeding realistic procurement notifications into PostgreSQL...');
+      const demoNotifications = [
+        {
+          id: 'notif-001',
+          organizationId: 'org_acme_infra_001',
+          recipientUserId: 'usr_bid_mgr_01',
+          category: 'REVIEW_REQUEST',
+          channel: 'IN_APP',
+          priority: 'HIGH',
+          title: 'Human Review Required: Non-Blacklisting Affidavit',
+          message: 'Clause 1.4.3 requires notarized affidavit on ₹500 Maharashtra e-Stamp paper for NHAI EPC bypass tender.',
+          metadata: { bidId: 'bid-nhai-44-001', complianceItemId: 'comp-nhai-003' },
+          isRead: false,
+          createdAt: new Date('2026-10-02T10:15:00.000Z'),
+        },
+        {
+          id: 'notif-002',
+          organizationId: 'org_acme_infra_001',
+          recipientUserId: 'usr_bid_mgr_01',
+          category: 'DEADLINE',
+          channel: 'IN_APP',
+          priority: 'MEDIUM',
+          title: 'Tender Submission Deadline Reminder',
+          message: 'Four-laning of NH-44 Bypass Section (Km 120.000 to Km 154.200) submission deadline is in 40 days (15-Nov-2026).',
+          metadata: { bidId: 'bid-nhai-44-001', deadline: '2026-11-15T15:00:00.000Z' },
+          isRead: false,
+          createdAt: new Date('2026-10-03T09:00:00.000Z'),
+        },
+        {
+          id: 'notif-003',
+          organizationId: 'org_acme_infra_001',
+          recipientUserId: 'usr_bid_mgr_01',
+          category: 'EVIDENCE_EXPIRY',
+          channel: 'IN_APP',
+          priority: 'LOW',
+          title: 'CA Turnover Certificate Verified',
+          message: '3-Year CA Turnover Certificate (UDIN 25089745AAAAAA1234) successfully matched against NHAI financial eligibility.',
+          metadata: { companyId: 'comp_acme_infra_001', udin: '25089745AAAAAA1234' },
+          isRead: true,
+          createdAt: new Date('2026-10-01T11:00:00.000Z'),
+        },
+      ];
+
+      for (const n of demoNotifications) {
+        await drizzleDb.insert(schema.notifications).values(n).onConflictDoNothing();
+      }
     }
   }
 

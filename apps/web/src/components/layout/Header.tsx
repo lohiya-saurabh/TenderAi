@@ -10,6 +10,7 @@ import {
 import { Button } from '../ui/button.js';
 
 import { CompanySelector } from './CompanySelector.js';
+import { NotificationBell } from './NotificationBell.js';
 
 export interface HeaderProps {
   onToggleMobileSidebar?: () => void;
@@ -65,7 +66,7 @@ export const Header: React.FC<HeaderProps> = ({
         <Breadcrumbs />
       </div>
 
-      {/* Right section: Tenant badge, Company Switcher & User Account dropdown */}
+      {/* Right section: Tenant badge, Company Switcher, Notification Bell & User Account dropdown */}
       <div className="flex items-center gap-2 md:gap-3 shrink-0">
         {/* Tenant Organization Indicator */}
         <div className="hidden lg:inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-background border border-border text-xs text-muted-foreground" title="SaaS Tenant Workspace">
@@ -77,6 +78,9 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Company Selector (1 Tenant -> N Companies) */}
         <CompanySelector />
+
+        {/* Real-Time Notifications Bell */}
+        <NotificationBell />
 
         {/* User Account Menu */}
         <UserAccountMenu />
