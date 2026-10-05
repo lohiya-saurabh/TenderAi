@@ -3,12 +3,20 @@ import secrets
 from fastapi import Depends, FastAPI, Header, HTTPException, status
 from pydantic import BaseModel
 
+from tenderpulse_ai.agent import (
+    AgentInput,
+    AgentOutput,
+    TenderRequirementAgent,
+    default_requirement_model,
+)
 from tenderpulse_ai.config import settings
 from tenderpulse_ai.pipeline import (
     DocumentExtractionRequest,
     DocumentExtractionResponse,
     ProductionExtractionPipeline,
 )
+from tenderpulse_ai.tools.page_text import PageTextTool
+from tenderpulse_ai.tools.retrieval import ScopedRetrievalTool
 
 app = FastAPI(
     title="TenderPulse AI Engine",
@@ -58,4 +66,19 @@ async def root():
 async def extract_document(request: DocumentExtractionRequest):
     pipeline = ProductionExtractionPipeline()
     return await pipeline.execute(request)
+
+
+@app.post(
+    "/api/v1/agent/analyze-requirements",
+    response_model=AgentOutput,
+    dependencies=[Depends(verify_internal_key)],
+)
+async def analyze_requirements(request: AgentInput):
+    """Tender Requirement Intelligence Agent: bounded, read-only, tenant-scoped."""
+    agent = TenderRequirementAgent(
+        retrieval_tool=ScopedRetrievalTool(),
+        page_text_tool=PageTextTool(),
+        model_fn=default_requirement_model,
+    )
+    return await agent.analyze(request)
 

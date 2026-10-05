@@ -361,4 +361,222 @@ The `apps/ai` scorecard framework extends to the explanation layer:
 - **Verdict parity**: explanation run 10× on the same bundle must never change the assessment state.
 - **Adversarial suite**: result bundles containing deliberate conflicts, expired certificates, and missing dates must produce explanations that *report* the conflict — never resolve it.
 
-*Stop point reached: design only, per PROMPT 7. No code implemented.*
+---
+
+## 6. What Actually Needs LangGraph (Critical Determination)
+
+LangGraph is in the stack because it solves three specific problems — **cyclic feedback, durable mid-run resumption, and human-in-the-loop inside reasoning**. It is not a general workflow engine, and the product's 8-step tender workflow is deliberately **not** one LangGraph graph.
+
+### 6.1 The Determination
+
+| Product Step | Substrate | Justification |
+|:-------------|:----------|:--------------|
+| Load Tender Context | Plain service (NestJS worker) | DB reads only; no model, no cycle, no pause |
+| Extract Requirements | **LangGraph** | LLM → deterministic verification → feedback retry cycle → escalation |
+| Retrieve Company Evidence | Plain deterministic service | ADR 0019/0021: deterministic, tenant-scoped, pinned-profile retrieval |
+| Analyze Match | Pure functions | ADR 0019 EligibilityEngine — no state, no AI |
+| Deterministic Validation | Pure functions | Expiry/tier/conflict policies are total functions |
+| Risk Analysis | Split: extraction sub-graph + pure evaluation | Only text understanding needs the model |
+| Human Review | **LangGraph** (conditional) | `interrupt()`/`Command(resume=...)` when in-flight state must survive a multi-day wait or the human edit re-enters model reasoning; otherwise plain async `ReviewTask` + `PATCH` API |
+| Final Assessment | Deterministic rollup | ADR 0021: engine-computed; explanation is one guarded call |
+
+**The rule:** if a step has no model, no cycle, and no mid-run human pause, LangGraph adds checkpoint serialization, harness complexity, and blast radius with zero benefit. A plain service or SQS-driven `WorkflowRun` (ADR 0018) is the default; LangGraph is the exception.
+
+### 6.2 Why Not One Giant 8-Step Graph
+
+1. **Tenant isolation is structural, not stylistic.** Matching and validation consume company financials. Those must run in the NestJS worker — putting them in the AI service's graph would push tenant data through the AI boundary, violating ADR 0011/0013/0019/0021.
+2. **Cost.** Every graph step is checkpoint-serialized. Checkpointing a DB read is pure overhead.
+3. **Testability.** Pure functions unit-test in milliseconds; graph nodes need a graph harness.
+4. **Blast radius.** A routing bug in a monolithic graph can loop or stall all 8 steps; layered substrates contain failures.
+5. **Predictability.** Deterministic steps have no business being adjacent to probabilistic execution.
+
+### 6.3 The First LangGraph Workflow (Conceptual)
+
+**TenderRequirementExtractionWorkflow** — one graph per (BidCase, TenderDocument), triggered by the SQS ingestion job. Full concept, node-by-node teaching, and the real implementation pointers are in `docs/learning/langgraph.md` §7.2–7.3. Summary:
+
+- **State:** `ComplianceWorkflowState` — frozen `security_context`, document coordinates, raw page text, retrieved chunks, extracted candidates, verified items (append-reducer), unverified items, retry counter, error feedback, accumulated audit events.
+- **Nodes:** `scoped_retrieval` → `model_extraction` → `deterministic_verification` → conditional router → (`persistence` | `targeted_refine` → cycle | `escalate_human_review` → `human_review`) → `persistence` → END.
+- **Branching:** `route_verification_outcome` — pure function of state; the model never chooses the next node.
+- **Retries:** semantic cycle bounded at `retry_count < 2`; transient 429/503 backoff inside the LLM client.
+- **Human interruption:** dynamic `interrupt(payload)` with unverified items + failure reasons; resume via `Command(resume=HumanReviewActionPayload)`; tenant mismatch raises `CrossTenantReviewException`.
+- **Persistence:** `PostgresSaver` checkpoints (thread_id = `tenant_{id}:bid_{id}:run_{id}`) + business persistence via the API sink → `BulkIngestComplianceUseCase` → PostgreSQL.
+- **Failure handling:** per-document isolation, bounded retries, escalation-not-crash, outer `WorkflowRun` + DLQ owns whole-run retries, honest zero-extraction.
+
+### 6.4 Security Implications
+
+- The graph's first node already operates on tenant-scoped chunks (`document_id ∈ allowed_document_ids`); the model only ever sees wrapped, sanitized, in-scope data.
+- `interrupt()` payloads are reference-only (ids, counts, failure reasons) — never raw document dumps.
+- Checkpoints are tenant-partitioned by `thread_id` construction and RLS-enforced at the database.
+- Resume decisions are re-validated against the workflow's own `security_context` — a resumed `Command` cannot cross tenants.
+
+---
+
+## 7. The First Real AI Agent: Tender Requirement Intelligence Agent (PROMPT 12)
+
+The `TenderRequirementAgent` is the platform's first production-grade AI agent (`apps/ai/src/tenderpulse_ai/agent/`). It solves a concrete, high-stakes product bottleneck: Indian public procurement tenders (NIT, RFP, GCC, SCC) are hundreds of dense pages containing critical eligibility rules, financial covenants, submission formats, and statutory declarations buried in complex legal prose.
+
+**Status: implemented (smallest useful version).** Exposed at `POST /api/v1/agent/analyze-requirements` (internal-service-key protected, `apps/ai/src/tenderpulse_ai/main.py`). 17 agent tests, 44 total in `apps/ai`, all passing; ruff clean. The default model function is a deterministic adapter over the existing regex extractor, so the agent runs end-to-end in tests, CI, and local dev without a live LLM; production injects a structured-output model with the same `(system_prompt, user_prompt) -> list[RequirementCandidate]` signature.
+
+### 7.1 Agent Mission & Responsibilities
+
+The agent's sole job is **intelligence extraction, structuring, and ambiguity detection**:
+1. **Analyze tender content**: ingests page-level text within an authorized, tenant-scoped boundary.
+2. **Identify requirements**: extracts mandatory and informational procurement stipulations.
+3. **Classify them**: maps clauses to the canonical 8-domain taxonomy (`FINANCIAL`, `TECHNICAL`, `LEGAL`, `STATUTORY`, `COMMERCIAL`, `COMMERCIAL_RISK`, `EXECUTION`, `ANNEXURE_DECLARATION`).
+4. **Normalize them**: standardizes requirements into structured `CriterionProps` (type, operator, threshold, unit, lookback window) and `ExecutionRulesProps` (stamp paper, denomination, notarization, signatory rank, UDIN).
+5. **Identify ambiguity**: detects vague quantifiers, missing thresholds, missing validity dates, numeric contradictions, and missing signatory authorities.
+6. **Provide source citations**: enforces strict provenance with exact-substring verbatim quotes, page numbers, and clause references.
+7. **Return structured output**: returns strongly typed, validated `AgentOutput` bundles with zero hallucinated or ungrounded requirements.
+
+---
+
+### 7.2 What the Agent Is NOT (Architectural Trust Boundaries)
+
+In strict accordance with the Zero-Trust AI Architecture (ADR 0011, 0013, 0019, 0021):
+
+| Forbidden Capability | Architectural Enforcement |
+|:---------------------|:--------------------------|
+| **Authorize access** | The agent never makes authorization decisions. Permissions are verified upfront by NestJS guards; the agent receives a read-only `SecurityContext`. |
+| **Query arbitrary data** | The agent has zero general-purpose query tools. It can only call `ScopedRetrievalTool`, which strictly enforces `allowed_document_ids` and `tenant_id` at the tool boundary. |
+| **Make irreversible decisions** | The agent cannot disqualify tenders, reject bids, or grant approvals. It extracts structured intelligence for human review and the deterministic `EligibilityEngine`. |
+| **Access unrestricted infrastructure** | No shell, no raw database connections, no arbitrary HTTP/network egress, and no direct filesystem access. |
+| **Decide tenant permissions** | Multi-tenancy is enforced by the database and security context. The LLM is never prompted to evaluate who belongs to what tenant. |
+
+---
+
+### 7.3 End-to-End Pipeline & Stage Contracts
+
+```
+[Input Request: AgentInput]
+       │
+       ▼
+1. Security Context Validation  (Assert purpose == COMPLIANCE_EXTRACTION & doc ∈ allowed_document_ids)
+       │
+       ▼
+2. Scoped Retrieval             (ScopedRetrievalTool: tenant-isolated, document-whitelisted, rate-limited)
+       │
+       ▼
+3. Prompt Construction          (XML-encapsulated untrusted data, SecretSanitizer scrubbing)
+       │
+       ▼
+4. Model Invocation             (Structured output; transient 429/503 retry with linear backoff)
+       │
+       ▼
+5. Deterministic Validation     (Exact-substring grounding verification against raw page text)
+       │
+      ┌┴─────────────────────────────┐
+ [Failures & passes < max_refinement] [All pass OR max refinement reached]
+      ▼                              ▼
+ 6. Targeted Semantic Refinement  7. Ambiguity Detection (Deterministic regex heuristics)
+ (Cycle back to model with exact     │
+  grounding feedback; max 1 pass)    ▼
+                                  8. Output Assembly (Status: COMPLETED / COMPLETED_WITH_AMBIGUITY / COMPLETED_EMPTY / FAILED)
+                                     │
+                                     ▼
+                                  9. Persistence Sink (Optional injected callback; agent does not write DB directly)
+```
+
+---
+
+### 7.4 Detailed Specification
+
+#### 1. Tools
+- **`ScopedRetrievalTool`**: read-only, tenant-isolated vector/chunk retrieval. Rejects cross-tenant queries and unwhitelisted document IDs; enforces per-run rate limits (`ToolRateLimitExceededException`).
+- **`PageTextTool`**: read-only source text retrieval by `(tenant_id, document_id, page_number)` for deterministic grounding verification.
+- **`PersistenceSinkFn`** (Optional): injected callback (`AgentOutput -> Awaitable[None]`). The agent prepares data; storage belongs to the application layer.
+
+#### 2. Inputs (`AgentInput`)
+- `security_context: SecurityContext`: immutable caller context (`tenant_id`, `user_id`, `workflow_run_id`, `allowed_document_ids`, `purpose`).
+- `bid_id: str`: aggregate root identifier.
+- `document_id: str`: tender document identifier (must be in `allowed_document_ids`).
+- `file_name: str`: human-readable source filename.
+- `pages: list[AgentPageInput]`: list of `(page_number, text)` pairs to analyze.
+
+#### 3. Outputs (`AgentOutput`)
+- `bid_id`, `document_id`: traceability identifiers.
+- `status: AgentStatus`: `COMPLETED` | `COMPLETED_WITH_AMBIGUITY` | `COMPLETED_EMPTY` | `FAILED`.
+- `requirements: list[RequirementCandidate]`: strictly verified and grounded requirements.
+- `unverified: list[RejectedCandidate]`: candidate requirements that failed grounding or category normalization, with specific rejection reasons (never persisted as truth).
+- `ambiguities: list[AmbiguityFlag]`: detected ambiguities with clause quotes and classification.
+- `stats: AgentStats`: counters for pages analyzed, chunks retrieved, model calls, refinement passes, verified vs. rejected counts.
+- `audit_events: list[dict[str, Any]]`: append-only reference log (no verbatim tenant text).
+- `error: str | None`: error message if status is `FAILED`.
+
+#### 4. State & Deduplication
+- Ephemeral in-memory execution state during `analyze()`.
+- Grounded candidates deduplicated across refinement passes via composite tuple key: `(category, title, verbatim_quote)`.
+- Stats tracking model calls, passes, and verification outcomes.
+
+#### 5. Failure Modes & Resilience
+- **Model Timeout (`AgentModelTimeoutException`)**: hard 30-second budget per invocation. Timeouts are *not* retried to avoid burning upstream deadlines; returns `FAILED` status.
+- **Model Provider Unavailable (`AgentModelUnavailableException`)**: transient 429/503 errors retried up to `model_attempts` (default 2) with linear backoff (0.5s * attempt).
+- **Grounding Hallucination**: model returns quote not in raw page text. Sent back once via targeted refinement feedback. If it fails again, candidate is moved to `unverified` and excluded from `requirements`.
+- **Unknown Category**: rejected immediately without guessing; recorded in `unverified`.
+- **Security Scope Violation**: raises `UnauthorizedDocumentAccessException` immediately (never caught or masked as a pipeline error).
+- **Tool Rate Limit**: raises `ToolRateLimitExceededException` to protect infrastructure.
+
+#### 6. Timeouts & Token Limits
+- `model_timeout_seconds`: 30.0s hard timeout per LLM request.
+- `model_attempts`: 2 maximum attempts for transient provider failures.
+- `max_refinement_passes`: 1 bounded feedback cycle (prevents infinite reasoning loops).
+- `token_budget_chars`: 24,000 characters maximum per prompt chunk bundle.
+
+#### 7. Audit Events
+Events are **strictly reference-only** (ADR 0013). Never include raw document quotes, tender amounts, or secret keys:
+- `AGENT_INVOCATION_STARTED`: document ID, page count, bid ID.
+- `CHUNKS_RETRIEVED`: chunk count.
+- `SECRET_SCRUBBED`: alert that an API key or token was neutralized in the prompt.
+- `VALIDATION_COMPLETED`: counts of extracted, verified, and rejected candidates.
+- `AMBIGUITY_DETECTED`: count and list of ambiguity types found.
+- `AGENT_COMPLETED`: final completion status.
+- `AGENT_FAILED`: execution failure and sanitized error message.
+
+#### 8. Security Controls
+- **Zero-Trust Input**: all document text is wrapped in `<untrusted_document_data>` XML tags.
+- **Secret Sanitizer**: regex scrubber strips AWS keys, JWTs, and private keys before dispatching prompt to model.
+- **Exact-Substring Grounding**: every candidate requirement's `verbatim_quote` must exist verbatim in the source page text (`verify_grounding`).
+- **Deterministic Ambiguity Engine**: ambiguities are detected via static regex heuristics (`scan_ambiguities`), never subjective model self-assessment.
+
+---
+
+### 7.5 Implementation: KEEP / ADAPT / REPLACE / NEW
+
+- **KEEP**:
+  - `SecurityContext` (`tenderpulse_ai.security.context`) — immutable security principal.
+  - `SecretSanitizer` (`tenderpulse_ai.security.sanitizer`) — prompt leak protection.
+  - `ScopedRetrievalTool`, `PageTextTool` (`tenderpulse_ai.tools`) — boundary-enforcing tools.
+  - `ProvenanceProps`, `ExecutionRulesProps` (`tenderpulse_ai.domain.models`) — standard schema.
+- **ADAPT**:
+  - `default_tender_extractor` (`tenderpulse_ai.pipeline`) — adapted as `default_requirement_model` fallback, allowing full test and CI execution without live LLM API keys.
+- **REPLACE**:
+  - None. The existing regex extractor is retained (as the fallback above); the agent wraps it in the deterministic trust envelope rather than discarding working functionality.
+- **NEW**:
+  - `TenderRequirementAgent` (`tenderpulse_ai.agent.agent`) — the core bounded intelligence agent.
+  - Agent Schemas (`tenderpulse_ai.agent.schemas`) — `AgentInput`, `AgentOutput`, `RequirementCandidate`, `RejectedCandidate`, `AmbiguityFlag`, `AmbiguityType`, `AgentStats`, `AgentStatus`.
+  - Deterministic Validation (`tenderpulse_ai.agent.validation`) — `normalize_category`, `verify_grounding`.
+  - Deterministic Ambiguity Detector (`tenderpulse_ai.agent.ambiguity`) — `scan_ambiguities` with 6 deterministic heuristic patterns.
+  - Test Suite (`apps/ai/tests/test_tender_requirement_agent.py`) — 17 unit and security tests covering happy path, ambiguity detection, grounding rejection, bounded refinement, security barriers, failure timeouts, transient retries, audit safety, and sink persistence.
+
+---
+
+### 7.6 Engineering Decisions (Deep-Dive)
+
+- **WHY an agent instead of a raw LLM prompt?**
+  A raw LLM call is non-deterministic, hallucinates clauses, fabricates thresholds, and ignores category schemas. The `TenderRequirementAgent` wraps the probabilistic model inside a deterministic trust envelope: validation, grounding verification, ambiguity scanning, secret scrubbing, and bounded refinement.
+- **WHAT is the agent's core contract?**
+  Input: `AgentInput` with `SecurityContext` + raw tender pages.
+  Output: `AgentOutput` containing only verified requirements, rejected candidates, detected ambiguities, reference-only audit events, and run statistics.
+- **HOW is grounding guaranteed?**
+  `verify_grounding` performs whitespace-normalized exact substring matching against the source page text. If the model modifies even a single digit or word in the quote, the requirement is rejected.
+- **WHY NOT an autonomous ReAct loop?**
+  Autonomous agents with open-ended tool loops (`Thought -> Action -> Observation`) exhibit non-deterministic runtimes, spiraling API costs, infinite loops, and potential tool injection vulnerabilities. A structured workflow with a maximum of 1 bounded refinement pass provides 99% of the self-correction capability with 100% deterministic cost and latency bounds.
+- **TRADE-OFFS**:
+  - *Exact substring grounding* may reject minor formatting variations (e.g. hyphenation across lines), but guarantees zero hallucinated clauses enter the enterprise knowledge base.
+  - *Bounded refinement (1 pass)* caps maximum latency at 2 model calls rather than continuing until perfection. Unverified items are reported honestly in `unverified`.
+- **FAILURE MODES**:
+  - Upstream provider outage: transient retries (2 attempts) -> fail-fast to `AgentStatus.FAILED` with audit trail.
+  - Prompt injection attempt in tender PDF: neutralized by XML data boundary and read-only tools.
+  - Grounding failure: candidate quarantined to `unverified`, never stored as valid requirement.
+- **SECURITY IMPLICATIONS**:
+  The agent cannot access other tenants' documents because `ScopedRetrievalTool` validates `tenant_id` and `document_id` against the `SecurityContext` that the application layer resolves from the authenticated caller (the agent itself never evaluates identity). Audit events are strictly reference-only and contain zero customer data.
+

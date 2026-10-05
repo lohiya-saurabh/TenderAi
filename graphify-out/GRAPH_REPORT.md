@@ -1,38 +1,38 @@
 # Graph Report - TenderAi  (2026-10-05)
 
 ## Corpus Check
-- 302 files · ~155,550 words
+- 308 files · ~162,951 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 10 file(s) not represented in the graph (top: (none) 6, .example 1, .lock 1)
 
 ## Summary
-- 2231 nodes · 4266 edges · 134 communities (108 shown, 26 thin omitted)
-- Extraction: 91% EXTRACTED · 9% INFERRED · 0% AMBIGUOUS · INFERRED: 365 edges (avg confidence: 0.9)
+- 2318 nodes · 4550 edges · 139 communities (114 shown, 25 thin omitted)
+- Extraction: 91% EXTRACTED · 9% INFERRED · 0% AMBIGUOUS · INFERRED: 409 edges (avg confidence: 0.91)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `16cb86ae`
+- Built from commit: `0fbc5471`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - DomainException.ts
-- BulkIngestComplianceUseCase.ts
 - IngestionWorker.ts
+- TenantContext.ts
 - BidProject
-- nodes.py
+- pipeline.py
 - IngestionJobMessage
 - IngestionJob
-- CandidateComplianceItem
+- HumanReviewManager
 - AI Security Architecture, Multi-Tenant Isolation, and Defense-in-Depth
 - evaluator.py
 - web/package.json
 - ScopedRetrievalTool
 - TenderDocument
-- documents.service.ts
+- GcsStorageService
 - react
-- PostgresBidRepository.ts
-- CoreBusinessWorkflowWithoutAi.e2e.spec.ts
+- documents.service.ts
+- test_tender_requirement_agent.py
 - AWS Cloud Architecture & Infrastructure Blueprint: TenderPulse AI
 - useAuth
 - BidDetailPage.tsx
@@ -43,13 +43,13 @@
 - AuditLog
 - client.ts
 - LangChain, LangGraph, and Stateful AI Workflows: First Principles
-- pipeline.py
+- main.py
 - AI Security, Multi-Tenant Isolation, and Threat Mitigation
 - System Architecture: TenderPulse AI
 - compilerOptions
 - ValidationException
-- ExecutionRulesProps
-- test_compliance_workflow.py
+- CandidateComplianceItem
+- CoreVerticalSlice.e2e.spec.ts
 - compliance.service.ts
 - Database Design & PostgreSQL Data Architecture: TenderPulse AI
 - Human-in-the-Loop (HITL) Architecture: Human Review, Authorization & State Machine Resumption
@@ -79,8 +79,8 @@
 - useApi.ts
 - ADR 0013: Deterministic AI Security, RAG Isolation, and Zero-Trust Guardrails
 - Product Strategy & Definition: TenderPulse AI
-- llm_client.py
-- BidProjectCreatedEvent
+- agent.py
+- DomainEvent
 - generate_sample_tenders.py
 - devDependencies
 - AwsS3StorageService
@@ -109,10 +109,10 @@
 - ui/tsconfig.json
 - DocumentUploader.tsx
 - ADR 0007: Scoping & Boundary Decision for Redis and EventBridge
-- DocumentStatus
+- test_evaluation_regression.py
 - config.py
 - Project Status & Milestone Tracker
-- @typescript-eslint/eslint-plugin
+- InternalWorkerController.ts
 - tokens.ts
 - AggregateRoot
 - dev.sh
@@ -124,18 +124,18 @@
 - Requirements
 - Index
 - Docker Compose
-- TenantContext.ts
+- main.ts
 - tenderpulse-ai
 - 1. Area-by-Area Classification
-- InMemoryEventBus
-- BidStatus
+- DocumentStatus
+- PostgresBidRepository.ts
 - GcpPubSubJobQueue
 - IJobQueue
-- 1. Storage Port Pruning Methods (`IStorageService`)
+- IStorageService
 - Lowest-Cost AWS MVP Deployment & Testing Guide
 - Google Cloud Platform (GCP) Setup & Hybrid Testing Guide
 - AwsSqsJobQueue
-- ADR 0016: Bidder-Side Pivot — Company Profile, Tender, and BidCase Aggregates
+- AiDocumentExtractor.ts
 - MockStorageService
 - ADR 0017: Enforce the Layered Boundary at HTTP (Eliminate the CRUD Bypass)
 - ADR 0018: Async-First Extraction and AI Invocation
@@ -145,7 +145,10 @@
 - ADR 0020: External Data Connectors behind an Enrichment Port
 - ADR 0021: Evidence-First Compliance Engine (Five-Stage Separation)
 - 4. A–E Summary
-- Current-State Engineering Audit — TenderPulse AI
+- DocumentContentNormalizer
+- BidStatus
+- ADR 0016: Bidder-Side Pivot — Company Profile, Tender, and BidCase Aggregates
+- @typescript-eslint/eslint-plugin
 
 ## God Nodes (most connected - your core abstractions)
 1. `BidProject` - 45 edges
@@ -156,8 +159,8 @@
 6. `ComplianceItem` - 37 edges
 7. `IngestionJob` - 36 edges
 8. `CandidateComplianceItem` - 34 edges
-9. `StructuredLLMClient` - 32 edges
-10. `IStorageService` - 32 edges
+9. `SecurityContext` - 34 edges
+10. `StructuredLLMClient` - 32 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `6. Where AI belongs` --references--> `StructuredLLMClient`  [INFERRED]
@@ -174,43 +177,43 @@
 ## Import Cycles
 - None detected.
 
-## Communities (134 total, 26 thin omitted)
+## Communities (139 total, 25 thin omitted)
 
 ### Community 0 - "DomainException.ts"
-Cohesion: 0.07
-Nodes (12): DomainException, EntityNotFoundException, InvalidExecutionRulesException, InvalidProvenanceException, InMemoryComplianceItemRepository, StoredComplianceRecord, ComplianceItem, CreateComplianceItemProps (+4 more)
+Cohesion: 0.08
+Nodes (14): ConcurrencyConflictException, DomainException, EntityNotFoundException, InvalidExecutionRulesException, InvalidProvenanceException, InMemoryComplianceItemRepository, StoredComplianceRecord, BulkIngestComplianceCommand (+6 more)
 
-### Community 1 - "BulkIngestComplianceUseCase.ts"
-Cohesion: 0.10
-Nodes (22): ConcurrencyConflictException, InternalServiceGuard, BulkIngestComplianceCommand, BulkIngestComplianceResult, BulkIngestComplianceUseCase, ExtractedComplianceItemInput, ComplianceItemViewDto, ListComplianceItemsQuery (+14 more)
+### Community 1 - "IngestionWorker.ts"
+Cohesion: 0.12
+Nodes (25): DirectUnitOfWork, IUnitOfWork, IEventBus, Permissions, TenantContextHolder, InMemoryBidRepository, CreateAuditLogProps, IAuditRepository (+17 more)
 
-### Community 2 - "IngestionWorker.ts"
-Cohesion: 0.09
-Nodes (25): DirectUnitOfWork, IUnitOfWork, DomainEvent, IEventBus, Permissions, InMemoryBidRepository, CreateAuditLogProps, IAuditRepository (+17 more)
+### Community 2 - "TenantContext.ts"
+Cohesion: 0.22
+Nodes (6): UnauthorizedTenantAccessException, hasPermission(), Permission, ROLE_PERMISSIONS, UserRole, TenantContext
 
-### Community 4 - "nodes.py"
-Cohesion: 0.09
-Nodes (34): VerifiedComplianceItem, WorkflowStatus, StructuredLLMClient, HumanReviewActionPayload, SecurityContext, build_compliance_workflow_graph(), route_verification_outcome(), create_audit_event() (+26 more)
+### Community 4 - "pipeline.py"
+Cohesion: 0.08
+Nodes (34): VerifiedComplianceItem, WorkflowStatus, StructuredLLMClient, HumanReviewActionPayload, SecurityContext, SecretSanitizer, build_compliance_workflow_graph(), route_verification_outcome() (+26 more)
 
 ### Community 5 - "IngestionJobMessage"
 Cohesion: 0.19
 Nodes (6): GcpPubSubConfig, InternalQueueItem, MockSqsJobQueue, DeadLetterMessage, IngestionJobMessage, QueueMessage
 
 ### Community 6 - "IngestionJob"
-Cohesion: 0.10
-Nodes (3): InMemoryIngestionJobRepository, IngestionJob, IIngestionJobRepository
+Cohesion: 0.11
+Nodes (3): InMemoryIngestionJobRepository, IngestionJob, 14. Async Processing — **ADAPT**
 
-### Community 7 - "CandidateComplianceItem"
-Cohesion: 0.09
-Nodes (11): CandidateComplianceItem, ILLMClient, HumanReviewManager, CrossTenantReviewException, DuplicateReviewException, HumanReviewDecision, HumanReviewException, HumanReviewTask (+3 more)
+### Community 7 - "HumanReviewManager"
+Cohesion: 0.13
+Nodes (9): HumanReviewManager, CrossTenantReviewException, DuplicateReviewException, HumanReviewDecision, HumanReviewException, HumanReviewTask, HumanReviewTaskStatus, ReviewTaskExpiredException (+1 more)
 
 ### Community 8 - "AI Security Architecture, Multi-Tenant Isolation, and Defense-in-Depth"
 Cohesion: 0.05
 Nodes (44): AI Security Architecture, Multi-Tenant Isolation, and Defense-in-Depth, 10. Model Provider Security, Privacy & Data Residency, 11. Secret Prevention Architecture, 12. Safe Observability & Audit Logging, 13. The 10 Security Attack Vectors & Test Suite, 1. Foundational Axioms, 2. The 13-Stage End-to-End Security & Data Path, 3. The Explicit SecurityContext Contract (+36 more)
 
 ### Community 9 - "evaluator.py"
-Cohesion: 0.11
-Nodes (15): get_synthetic_evaluation_suite(), ComplianceWorkflowEvaluator, CaseEvaluationResult, EvaluationCaseType, EvaluationSuiteMetrics, ExpectedItem, SyntheticEvaluationCase, DocumentChunk (+7 more)
+Cohesion: 0.20
+Nodes (8): get_synthetic_evaluation_suite(), ComplianceWorkflowEvaluator, CaseEvaluationResult, EvaluationCaseType, EvaluationSuiteMetrics, ExpectedItem, SyntheticEvaluationCase, DocumentChunk
 
 ### Community 10 - "web/package.json"
 Cohesion: 0.05
@@ -218,27 +221,27 @@ Nodes (37): dependencies, react, react-dom, react-router-dom, @tenderpulse/share
 
 ### Community 11 - "ScopedRetrievalTool"
 Cohesion: 0.08
-Nodes (10): AISecurityException, CrossTenantAccessException, SecretDetectedException, ToolRateLimitExceededException, UnauthorizedDocumentAccessException, UnrestrictedAccessBlockedException, NetworkEgressGuard, PageTextTool (+2 more)
+Nodes (10): AISecurityException, CrossTenantAccessException, SecretDetectedException, ToolRateLimitExceededException, UnauthorizedDocumentAccessException, PageTextTool, ScopedRetrievalTool, base_security_context() (+2 more)
 
 ### Community 12 - "TenderDocument"
-Cohesion: 0.06
-Nodes (11): InMemoryTenderDocumentRepository, AiDocumentExtractor, AiExtractorConfig, AiServiceExtractResponse, RawExtractedItem, DocumentContentNormalizer, DefaultDocumentExtractor, ExtractedComplianceItem (+3 more)
+Cohesion: 0.10
+Nodes (5): InMemoryTenderDocumentRepository, DefaultDocumentExtractor, IDocumentExtractor, TenderDocument, The Ten Design Concerns
 
-### Community 13 - "documents.service.ts"
-Cohesion: 0.07
-Nodes (14): GcsStorageConfig, GcsStorageService, mockBucket, mockDownload, mockFile, mockGetMetadata, mockGetSignedUrl, STORAGE_TOKEN (+6 more)
+### Community 13 - "GcsStorageService"
+Cohesion: 0.12
+Nodes (8): GcsStorageConfig, GcsStorageService, mockBucket, mockDownload, mockFile, mockGetMetadata, mockGetSignedUrl, @google-cloud/storage
 
 ### Community 14 - "react"
 Cohesion: 0.06
 Nodes (13): BidStatusBadgeProps, ButtonProps, EmptyStateProps, ErrorBannerProps, InputProps, LoadingSkeletonProps, ModalProps, StatusBadgeProps (+5 more)
 
-### Community 15 - "PostgresBidRepository.ts"
-Cohesion: 0.24
-Nodes (3): CreateBidProjectProps, BidStatusEnum, Money
+### Community 15 - "documents.service.ts"
+Cohesion: 0.17
+Nodes (6): STORAGE_TOKEN, StorageModule, ConfirmUploadResult, DeleteDocumentResult, UploadUrlResult, pdf-parse
 
-### Community 16 - "CoreBusinessWorkflowWithoutAi.e2e.spec.ts"
-Cohesion: 0.19
-Nodes (13): ConfirmDocumentUploadResult, ConfirmDocumentUploadUseCase, CreateBidResult, CreateBidUseCase, GenerateUploadUrlUseCase, GetDocumentDownloadUrlResult, GetDocumentDownloadUrlUseCase, BidsController (+5 more)
+### Community 16 - "test_tender_requirement_agent.py"
+Cohesion: 0.06
+Nodes (30): UnrestrictedAccessBlockedException, NetworkEgressGuard, test_unrestricted_url_access_is_impossible(), test_workflow_scope_cannot_expand(), test_task_reassignment_updates_assignee_and_audit(), valid_sec_context(), _emd_candidate(), make_agent() (+22 more)
 
 ### Community 17 - "AWS Cloud Architecture & Infrastructure Blueprint: TenderPulse AI"
 Cohesion: 0.06
@@ -261,12 +264,12 @@ Cohesion: 0.07
 Nodes (28): AI Systems Architecture & First Principles: TenderPulse AI, 1. Architectural Philosophy: The Separation of Intelligence & Authority, 2.10 AI Workflow vs. Autonomous Agent, 2.11 Stateless vs. Stateful AI, 2.12 Deterministic Code vs. Model Reasoning: The Hard Boundary, 2.1 Large Language Models LLMs, 2.2 Tokens and Context Windows, 2.3 System, User, and Tool Messages Role Framing (+20 more)
 
 ### Community 22 - "NotFoundError"
-Cohesion: 0.10
-Nodes (11): AppModule, BadRequestError, ConflictError, HttpError, NotFoundError, UnauthorizedError, AllExceptionsFilter, bootstrap() (+3 more)
+Cohesion: 0.23
+Nodes (5): BadRequestError, ConflictError, HttpError, NotFoundError, UnauthorizedError
 
 ### Community 23 - "@nestjs/common"
-Cohesion: 0.09
-Nodes (10): DatabaseModule, StorageModule, AuditController, AuditModule, AuditService, BidsModule, ComplianceModule, DocumentsModule (+2 more)
+Cohesion: 0.10
+Nodes (10): DatabaseModule, AuditController, AuditModule, AuditService, AuthModule, BidsModule, ComplianceModule, DocumentsModule (+2 more)
 
 ### Community 25 - "client.ts"
 Cohesion: 0.19
@@ -276,8 +279,8 @@ Nodes (21): AuthUser, login(), LoginResponse, logout(), RefreshResponse, refresh
 Cohesion: 0.08
 Nodes (26): LangChain, LangGraph, and Stateful AI Workflows: First Principles, 10. Retries, 11. Interrupts, 12. Human Approval Human-in-the-Loop, 13. Resumability & Time Travel, 1. Architectural Foundation & First Principles, 1. LangChain, 1. Mandatory Graph State Security Context (+18 more)
 
-### Community 27 - "pipeline.py"
-Cohesion: 0.10
+### Community 27 - "main.py"
+Cohesion: 0.09
 Nodes (16): extract_document(), health_check(), HealthResponse, root(), default_tender_extractor(), get_quote(), DocumentExtractionRequest, DocumentExtractionResponse (+8 more)
 
 ### Community 28 - "AI Security, Multi-Tenant Isolation, and Threat Mitigation"
@@ -293,16 +296,16 @@ Cohesion: 0.08
 Nodes (24): compilerOptions, alwaysStrict, declaration, declarationMap, esModuleInterop, forceConsistentCasingInFileNames, module, moduleResolution (+16 more)
 
 ### Community 31 - "ValidationException"
-Cohesion: 0.12
-Nodes (11): ValidationException, GenerateUploadUrlCommand, GenerateUploadUrlResult, ALLOWED_MIME_TYPES, DocumentType, MAX_DOCUMENT_SIZE_BYTES, TenderDocumentUploadedEvent, TenderDocumentUploadedPayload (+3 more)
+Cohesion: 0.09
+Nodes (18): ValidationException, ConfirmDocumentUploadResult, CreateBidResult, GenerateUploadUrlCommand, GenerateUploadUrlResult, GetDocumentDownloadUrlResult, ALLOWED_MIME_TYPES, DocumentType (+10 more)
 
-### Community 32 - "ExecutionRulesProps"
-Cohesion: 0.24
-Nodes (10): AuditEvent, ExecutionRulesProps, ProvenanceProps, extractor(), mock_extractor(), test_malicious_pdf_instructions_are_untrusted_data(), tricked_extractor(), test_model_failure_recovers_safely() (+2 more)
+### Community 32 - "CandidateComplianceItem"
+Cohesion: 0.14
+Nodes (14): AuditEvent, CandidateComplianceItem, ExecutionRulesProps, ProvenanceProps, extractor(), ILLMClient, test_authorized_document_succeeds(), mock_extractor() (+6 more)
 
-### Community 33 - "test_compliance_workflow.py"
-Cohesion: 0.12
-Nodes (6): base_security_context(), setup_node_context(), test_tenant_a_cannot_retrieve_tenant_b_data(), test_workflow_scope_cannot_expand(), test_task_reassignment_updates_assignee_and_audit(), valid_sec_context()
+### Community 33 - "CoreVerticalSlice.e2e.spec.ts"
+Cohesion: 0.15
+Nodes (12): ComplianceItemViewDto, ListComplianceItemsQuery, ListComplianceItemsUseCase, ReviewComplianceItemCommand, ReviewComplianceItemResult, ReviewComplianceItemUseCase, IComplianceItemRepository, ExecutionRulesProps (+4 more)
 
 ### Community 34 - "compliance.service.ts"
 Cohesion: 0.19
@@ -321,8 +324,8 @@ Cohesion: 0.09
 Nodes (22): AI Systems Engineering: From First Principles to Stateful Workflows, 10. AI Workflow vs. Autonomous Agent, 11. Stateless vs. Stateful AI, 12. Deterministic Code vs. Model Reasoning: The Hard Boundary, 1. Large Language Models LLMs, 2. Tokens and Context Windows, 3. System, User, and Tool Messages Role Framing, 4. Structured Output Constrained Decoding (+14 more)
 
 ### Community 39 - "bids.module.ts"
-Cohesion: 0.13
-Nodes (5): DATABASE_TOKEN, BidsController, BidsService, BID_REPOSITORY_TOKEN, DemoBid
+Cohesion: 0.09
+Nodes (10): DATABASE_TOKEN, BidsController, BidsService, BID_REPOSITORY_TOKEN, BIDS, DEMO_USERS, DemoBid, DemoDocument (+2 more)
 
 ### Community 40 - "BidCard.tsx"
 Cohesion: 0.18
@@ -337,8 +340,8 @@ Cohesion: 0.11
 Nodes (19): dependencies, @aws-sdk/client-s3, @aws-sdk/client-sqs, @aws-sdk/s3-request-presigner, bcrypt, drizzle-orm, @electric-sql/pglite, express (+11 more)
 
 ### Community 43 - "bids.service.ts"
-Cohesion: 0.13
-Nodes (15): createDrizzle(), DRIZZLE_TOKEN, DrizzleDb, getDatabase(), initDatabase(), AuthResult, CreateBidDto, DeleteBidResult (+7 more)
+Cohesion: 0.17
+Nodes (11): createDrizzle(), DRIZZLE_TOKEN, DrizzleDb, getDatabase(), initDatabase(), AuthResult, CreateBidDto, DeleteBidResult (+3 more)
 
 ### Community 44 - "Domain Knowledge: Indian Government Public Procurement"
 Cohesion: 0.11
@@ -385,8 +388,8 @@ Cohesion: 0.17
 Nodes (4): createBid(), CreateBidPage(), LoginPage(), react-router-dom
 
 ### Community 55 - "AuthService"
-Cohesion: 0.19
-Nodes (3): AuthController, AuthModule, AuthService
+Cohesion: 0.21
+Nodes (3): AuthController, AuthService, 3. Authentication — **REPLACE**
 
 ### Community 56 - "AI Evaluation, Groundedness Verification, and Regression Testing Architecture"
 Cohesion: 0.13
@@ -416,6 +419,14 @@ Nodes (14): ADR 0013: Deterministic AI Security, RAG Isolation, and Zero-Trust G
 Cohesion: 0.14
 Nodes (14): Product Strategy & Definition: TenderPulse AI, 1. Product Vision, 2.1 The Indian Public Procurement Ecosystem, 2.2 The Disqualification Epidemic, 2.3 Economic Loss per Rejected Bid, 2. Market Context & The Problem, 3.1 The Economic Buyer, 3.2 The Daily End User (+6 more)
 
+### Community 63 - "agent.py"
+Cohesion: 0.09
+Nodes (21): AgentModelTimeoutException, AgentModelUnavailableException, default_requirement_model(), TenderRequirementAgent, scan_ambiguities(), AgentInput, AgentOutput, AgentPageInput (+13 more)
+
+### Community 64 - "DomainEvent"
+Cohesion: 0.17
+Nodes (7): DomainEvent, BidProjectCreatedEvent, BidProjectCreatedPayload, ComplianceIngestionCompletedEvent, ComplianceIngestionCompletedPayload, ComplianceItemReviewedEvent, ComplianceItemReviewedPayload
+
 ### Community 65 - "generate_sample_tenders.py"
 Cohesion: 0.21
 Nodes (6): build_pdf_stream(), generate_pdf(), main(), build_pdf_stream(), generate_pdf(), main()
@@ -425,8 +436,8 @@ Cohesion: 0.17
 Nodes (12): devDependencies, eslint, @nestjs/testing, @tenderpulse/config, @types/express, @types/node, @types/pdf-parse, @types/uuid (+4 more)
 
 ### Community 67 - "AwsS3StorageService"
-Cohesion: 0.15
-Nodes (5): AwsS3StorageConfig, AwsS3StorageService, HeadObjectResult, @aws-sdk/client-s3, @aws-sdk/s3-request-presigner
+Cohesion: 0.22
+Nodes (3): AwsS3StorageConfig, AwsS3StorageService, @aws-sdk/client-s3
 
 ### Community 68 - "scripts"
 Cohesion: 0.09
@@ -446,7 +457,7 @@ Nodes (10): ADR 0011: AI Security, Multi-Tenant Isolation, and Defense-in-Depth,
 
 ### Community 73 - "HLD Delta: Existing Architecture → Bidder-Side Target Architecture"
 Cohesion: 0.06
-Nodes (31): 10. Where human review occurs, 2. What must change (ADAPT / REPLACE), 3. New modules required, 4. Which existing boundaries are wrong, 5. Which services/modules should remain together, 6. Where AI belongs, 7. Where deterministic business logic belongs, 8. Where asynchronous processing is used (+23 more)
+Nodes (30): 10. Where human review occurs, 2. What must change (ADAPT / REPLACE), 3. New modules required, 4. Which existing boundaries are wrong, 5. Which services/modules should remain together, 6. Where AI belongs, 7. Where deterministic business logic belongs, 8. Where asynchronous processing is used (+22 more)
 
 ### Community 74 - "scripts"
 Cohesion: 0.22
@@ -528,33 +539,45 @@ Nodes (4): confirmDocumentUpload(), generateUploadUrl(), DocumentUploader(), Doc
 Cohesion: 0.33
 Nodes (6): ADR 0007: Scoping & Boundary Decision for Redis and EventBridge, Consequences, Context, Decisions, Rules from AGENTS.md:, Status
 
-### Community 94 - "DocumentStatus"
-Cohesion: 0.15
-Nodes (4): InvalidStateTransitionException, CreateTenderDocumentProps, DocumentStatus, 2. Domain Model — **KEEP**
+### Community 94 - "test_evaluation_regression.py"
+Cohesion: 0.16
+Nodes (7): test_full_evaluation_suite_meets_all_quality_and_security_gates(), test_regression_corrigendum_precedence_conflict_resolution(), test_regression_cross_tenant_access_blocked(), test_regression_misleading_specimen_draft_refusal(), test_regression_missing_information_anti_hallucination(), test_regression_prompt_injection_override_neutralized(), test_regression_unauthorized_document_blocked()
 
 ### Community 96 - "Project Status & Milestone Tracker"
 Cohesion: 0.50
 Nodes (4): Project Status & Milestone Tracker, Current Milestone: Production Document + AI Pipeline Milestone 20, Next Immediate Action, Roadmap Stop Points as defined in AGENTS.md
 
-### Community 110 - "TenantContext.ts"
-Cohesion: 0.24
-Nodes (7): UnauthorizedTenantAccessException, hasPermission(), Permission, ROLE_PERMISSIONS, UserRole, TenantContext, TenantContextHolder
+### Community 97 - "InternalWorkerController.ts"
+Cohesion: 0.23
+Nodes (8): InternalServiceGuard, BulkIngestComplianceResult, BulkIngestComplianceUseCase, ExtractedComplianceItemInput, BulkIngestComplianceDto, BulkIngestPayload, InternalWorkerController, 13. APIs — **ADAPT**
+
+### Community 99 - "AggregateRoot"
+Cohesion: 0.11
+Nodes (6): AggregateRoot, IDomainEvent, DomainEventHandler, InMemoryEventBus, 15. Event Architecture — **ADAPT**, 2. Domain Model — **KEEP**
+
+### Community 110 - "main.ts"
+Cohesion: 0.18
+Nodes (6): AppModule, AllExceptionsFilter, bootstrap(), express, @nestjs/core, reflect-metadata
 
 ### Community 112 - "1. Area-by-Area Classification"
-Cohesion: 0.12
-Nodes (15): 10. Evidence Handling — **MISSING**, 12. Database — **ADAPT**, 14. Async Processing — **ADAPT**, 16. Frontend — **KEEP (minor ADAPT)**, 17. Tests — **KEEP**, 18. Security — **REPLACE (critical items); KEEP (hardening patterns)**, 19. Infrastructure — **ADAPT**, 1. Area-by-Area Classification (+7 more)
+Cohesion: 0.11
+Nodes (16): 0. Executive Summary, 10. Evidence Handling — **MISSING**, 12. Database — **ADAPT**, 16. Frontend — **KEEP (minor ADAPT)**, 17. Tests — **KEEP**, 18. Security — **REPLACE (critical items); KEEP (hardening patterns)**, 19. Infrastructure — **ADAPT**, 1. Area-by-Area Classification (+8 more)
 
-### Community 114 - "InMemoryEventBus"
-Cohesion: 0.27
-Nodes (3): DomainEventHandler, InMemoryEventBus, 15. Event Architecture — **ADAPT**
+### Community 114 - "DocumentStatus"
+Cohesion: 0.17
+Nodes (4): InvalidStateTransitionException, CreateTenderDocumentProps, DocumentStatus, DocumentStatusEnum
+
+### Community 115 - "PostgresBidRepository.ts"
+Cohesion: 0.30
+Nodes (3): CreateBidProjectProps, BidStatusEnum, Money
 
 ### Community 117 - "IJobQueue"
-Cohesion: 0.12
+Cohesion: 0.11
 Nodes (11): IJobQueue, 1. Cloud-Agnostic Domain & Application Ports, 2. Infrastructure Adapters, 3. Google Cloud Platform (GCP) Infrastructure, ADR 0014: Cloud-Agnostic Ports & Adapters with Google Cloud Platform (GCP) Implementation, Consequences, Context, Decision (+3 more)
 
-### Community 118 - "1. Storage Port Pruning Methods (`IStorageService`)"
-Cohesion: 0.17
-Nodes (11): 1. Storage Port Pruning Methods (`IStorageService`), 2. Deletion Sequence & Invariants, 3. Rationale for Database First, Storage Second, ADR 0015: Two-Phase Cascade Deletion Across Relational State and Object Storage, Consequences, Context, Decision, Positive (+3 more)
+### Community 118 - "IStorageService"
+Cohesion: 0.11
+Nodes (12): IStorageService, 1. Storage Port Pruning Methods (`IStorageService`), 2. Deletion Sequence & Invariants, 3. Rationale for Database First, Storage Second, ADR 0015: Two-Phase Cascade Deletion Across Relational State and Object Storage, Consequences, Context, Decision (+4 more)
 
 ### Community 119 - "Lowest-Cost AWS MVP Deployment & Testing Guide"
 Cohesion: 0.18
@@ -568,17 +591,17 @@ Nodes (10): 1. Install Google Cloud SDK (if not already installed):, 2. Authenti
 Cohesion: 0.20
 Nodes (3): AwsSqsConfig, AwsSqsJobQueue, @aws-sdk/client-sqs
 
-### Community 122 - "ADR 0016: Bidder-Side Pivot — Company Profile, Tender, and BidCase Aggregates"
-Cohesion: 0.25
-Nodes (7): ADR 0016: Bidder-Side Pivot — Company Profile, Tender, and BidCase Aggregates, Consequences, Context, Decision, References, Status, The Problem
+### Community 122 - "AiDocumentExtractor.ts"
+Cohesion: 0.18
+Nodes (6): AiExtractorConfig, AiServiceExtractResponse, RawExtractedItem, NormalizedDocumentPage, ExtractedComplianceItem, DocumentsService
 
 ### Community 124 - "ADR 0017: Enforce the Layered Boundary at HTTP (Eliminate the CRUD Bypass)"
 Cohesion: 0.25
 Nodes (7): ADR 0017: Enforce the Layered Boundary at HTTP (Eliminate the CRUD Bypass), Consequences, Context, Decision, References, Status, The Problem
 
 ### Community 125 - "ADR 0018: Async-First Extraction and AI Invocation"
-Cohesion: 0.25
-Nodes (7): ADR 0018: Async-First Extraction and AI Invocation, Consequences, Context, Decision, References, Status, The Problem
+Cohesion: 0.33
+Nodes (5): ADR 0018: Async-First Extraction and AI Invocation, Consequences, Decision, References, Status
 
 ### Community 126 - "GcpPubSubJobQueue.spec.ts"
 Cohesion: 0.29
@@ -604,29 +627,33 @@ Nodes (6): ADR 0021: Evidence-First Compliance Engine (Five-Stage Separation), C
 Cohesion: 0.33
 Nodes (6): 4. A–E Summary, A. What we already built well, B. What should not be thrown away, C. What needs architectural changes, D. What we should build next (recommended order), E. Technical debt that could become dangerous later
 
-### Community 133 - "Current-State Engineering Audit — TenderPulse AI"
-Cohesion: 0.40
-Nodes (4): 0. Executive Summary, 2. Existing ParakhSetu-like Capabilities, 3. Capabilities Required for the New Product but Currently Missing, Current-State Engineering Audit — TenderPulse AI
+### Community 133 - "DocumentContentNormalizer"
+Cohesion: 0.26
+Nodes (5): AiDocumentExtractor, DocumentContentNormalizer, Context, The Problem, 7. Document Processing — **ADAPT**
+
+### Community 137 - "ADR 0016: Bidder-Side Pivot — Company Profile, Tender, and BidCase Aggregates"
+Cohesion: 0.25
+Nodes (7): ADR 0016: Bidder-Side Pivot — Company Profile, Tender, and BidCase Aggregates, Consequences, Context, Decision, References, Status, The Problem
 
 ## Knowledge Gaps
 - **903 isolated node(s):** `tenderpulse-ai`, `Config`, `name`, `version`, `private` (+898 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1245 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **26 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1263 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **25 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `StructuredLLMClient` connect `nodes.py` to `ExecutionRulesProps`, `4. A–E Summary`, `Current-State Engineering Audit — TenderPulse AI`, `CandidateComplianceItem`, `evaluator.py`, `HLD Delta: Existing Architecture → Bidder-Side Target Architecture`, `ScopedRetrievalTool`, `pipeline.py`, `ADR 0018: Async-First Extraction and AI Invocation`, `llm_client.py`?**
-  _High betweenness centrality (0.092) - this node is a cross-community bridge._
-- **Why does `1. Area-by-Area Classification` connect `1. Area-by-Area Classification` to `BulkIngestComplianceUseCase.ts`, `nodes.py`, `Current-State Engineering Audit — TenderPulse AI`, `TenderDocument`, `CoreBusinessWorkflowWithoutAi.e2e.spec.ts`, `InMemoryEventBus`, `pipeline.py`, `DocumentStatus`?**
-  _High betweenness centrality (0.059) - this node is a cross-community bridge._
-- **Why does `BidProject` connect `BidProject` to `BidProjectCreatedEvent`, `BulkIngestComplianceUseCase.ts`, `IngestionWorker.ts`, `AggregateRoot`, `HLD Delta: Existing Architecture → Bidder-Side Target Architecture`, `PostgresBidRepository.ts`, `BidStatus`, `1. Storage Port Pruning Methods (`IStorageService`)`, `AuditLog`, `ADR 0016: Bidder-Side Pivot — Company Profile, Tender, and BidCase Aggregates`, `DocumentStatus`?**
-  _High betweenness centrality (0.050) - this node is a cross-community bridge._
+- **Why does `StructuredLLMClient` connect `pipeline.py` to `CandidateComplianceItem`, `4. A–E Summary`, `evaluator.py`, `HLD Delta: Existing Architecture → Bidder-Side Target Architecture`, `1. Area-by-Area Classification`, `main.py`, `ADR 0018: Async-First Extraction and AI Invocation`?**
+  _High betweenness centrality (0.120) - this node is a cross-community bridge._
+- **Why does `BidProject` connect `BidProject` to `DomainException.ts`, `IngestionWorker.ts`, `DomainEvent`, `AggregateRoot`, `BidStatus`, `ADR 0016: Bidder-Side Pivot — Company Profile, Tender, and BidCase Aggregates`, `HLD Delta: Existing Architecture → Bidder-Side Target Architecture`, `PostgresBidRepository.ts`, `IStorageService`, `AuditLog`?**
+  _High betweenness centrality (0.068) - this node is a cross-community bridge._
+- **Why does `1. Area-by-Area Classification` connect `1. Area-by-Area Classification` to `InternalWorkerController.ts`, `IngestionWorker.ts`, `AggregateRoot`, `pipeline.py`, `DocumentContentNormalizer`, `IngestionJob`, `bids.module.ts`, `AuthService`, `main.py`?**
+  _High betweenness centrality (0.057) - this node is a cross-community bridge._
 - **Are the 6 inferred relationships involving `BidProject` (e.g. with `Context` and `Consequences`) actually correct?**
   _`BidProject` has 6 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `tenderpulse-ai`, `Config`, `name` to the rest of the system?**
   _903 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `DomainException.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.07337526205450734 - nodes in this community are weakly interconnected._
-- **Should `BulkIngestComplianceUseCase.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.09608843537414966 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07562136435748282 - nodes in this community are weakly interconnected._
+- **Should `IngestionWorker.ts` be split into smaller, more focused modules?**
+  _Cohesion score 0.12057112638815441 - nodes in this community are weakly interconnected._
