@@ -1,5 +1,4 @@
 import React from 'react';
-import { useAuth } from '../../auth/useAuth.js';
 import { Breadcrumbs } from './Breadcrumbs.js';
 import { UserAccountMenu } from './UserAccountMenu.js';
 import {
@@ -23,8 +22,6 @@ export const Header: React.FC<HeaderProps> = ({
   isSidebarCollapsed = false,
   onToggleSidebarCollapse,
 }) => {
-  const { user } = useAuth();
-
   return (
     <header className="sticky top-0 z-40 h-16 w-full border-b border-border bg-card/95 backdrop-blur-xs flex items-center justify-between px-4 md:px-6 gap-4">
       {/* Left section: Navigation toggles & Breadcrumbs */}
@@ -66,16 +63,8 @@ export const Header: React.FC<HeaderProps> = ({
         <Breadcrumbs />
       </div>
 
-      {/* Right section: Tenant badge, Company Switcher, Notification Bell & User Account dropdown */}
+      {/* Right section: Company Switcher, Notification Bell & User Account dropdown */}
       <div className="flex items-center gap-2 md:gap-3 shrink-0">
-        {/* Tenant Organization Indicator */}
-        <div className="hidden lg:inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-background border border-border text-xs text-muted-foreground" title="SaaS Tenant Workspace">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tenant:</span>
-          <span className="text-foreground font-medium max-w-[140px] truncate">
-            {user?.organizationName || 'Default Workspace'}
-          </span>
-        </div>
-
         {/* Company Selector (1 Tenant -> N Companies) */}
         <CompanySelector />
 

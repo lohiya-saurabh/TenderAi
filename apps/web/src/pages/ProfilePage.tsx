@@ -174,7 +174,43 @@ export const ProfilePage: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Distinction Banner: User vs Company Capability */}
+      {/* 2. Tenant Workspace Profile Banner */}
+      <div className="p-4 sm:p-5 rounded-lg bg-card border border-border/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-start sm:items-center gap-3.5">
+          <div className="h-10 w-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 text-primary">
+            <Building2 className="h-5 w-5" />
+          </div>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Tenant:
+              </span>
+              <span className="text-base sm:text-lg font-semibold text-foreground tracking-tight">
+                {profile?.organizationName || user?.organizationName || 'Acme Infrastructure Sol'}
+              </span>
+              <Badge variant="outline" className="text-[10px] font-mono border-primary/30 text-primary bg-primary/5">
+                Multi-Tenant Isolated
+              </Badge>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
+              <span>Tenant ID: {profile?.organizationId || user?.organizationId || 'org_acme_infra_001'}</span>
+              <span>•</span>
+              <span>Role: {(profile?.role || user?.role || 'User').replace(/_/g, ' ')}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+          <Link to="/settings">
+            <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
+              <KeyRound className="h-3.5 w-3.5 text-muted-foreground" />
+              Tenant Settings
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      {/* 3. Distinction Banner: User vs Company Capability */}
       <div className="p-3.5 rounded-lg bg-accent/40 border border-border flex items-start gap-3 text-xs">
         <Building2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
         <div className="space-y-0.5">
