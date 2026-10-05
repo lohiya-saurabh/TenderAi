@@ -36,5 +36,11 @@ __pycache__/
 # IDE & OS
 .idea/
 .vscode/
+.opencode/
 *.swp
 *.swo
+
+# Knowledge Graph / Local Indexing
+graphify-out/
+**/graphify-out/
+
