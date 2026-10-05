@@ -596,7 +596,29 @@ Per the 2026-10-04 audit (`docs/CURRENT_STATE.md`), the next actions are **P0 ha
       - **Bid Creation Workflow**: Dedicated "Bidding Company Entity *" selector in `CreateBidPage.tsx` wiring `companyId` into tender initialization.
       - **Company Dossier Header**: Instant company switching in `CompanyProfileHeader.tsx` updating legal details and version tracking.
       - **Tenant-Aware Fallback & Persistence**: `CompanyContext` with instant hydration from `localStorage` keyed by `tenderpulse_active_company_${organizationId}` so the UI never flashes empty.
+36. [x] **Phase 44: Profile & Workspace Settings Pages (2026-10-06)** _(Completed)_
+    - **Implemented Dedicated User Profile Experience (`/profile`, `ProfilePage.tsx`)**:
+      - Represents the authenticated individual (`name`, `email`, deterministic initials `AvatarFallback`, `role`, `id`, `permissions`).
+      - Inline form editing for user display name with validation, loading state, error handling, and success feedback.
+      - Tenant Workspace details (`organizationName`, `organizationId`) and active RBAC permissions list.
+      - Session security architecture summary (HMAC-SHA256, Fiber-Safe Tenant Gating, OCC Concurrency).
+      - Prominent domain boundary callout clearly differentiating individual User Profile from the multi-entity **Company Capability Profile** (`/company-profile`).
+    - **Implemented Multi-Tab Workspace Settings Experience (`/settings`, `SettingsPage.tsx`)**:
+      - Structured with shadcn `Tabs` across 5 dedicated sections:
+        1. **General**: Workspace Name, Tenant ID, default active company selection, and regional procurement parameters (GeM, CPPP, INR ₹).
+        2. **Notifications**: In-app toggles for Tender Deadline warnings, Evidence Expiry alerts, Human Review task requests, and High-Risk clause flags, with clear roadmap disclosure regarding outbound webhooks.
+        3. **Security**: Session token specifications (RFC 7519 HS256, timing-safe verification), tenant isolation guarantees, and upcoming security roadmap (2FA TOTP, SIEM audit exports).
+        4. **Team & RBAC**: Tenant role breakdown (`ADMIN`, `BID_MANAGER`, `LEGAL_COUNSEL`, `FINANCIAL_CONTROLLER`, `VIEWER`), assigned permissions, and active scope descriptions.
+        5. **Companies**: Multi-company entity management, listing registered companies with GSTIN, one-click active entity switching, inline entity registration form, and direct links to each company's capability dossier.
+    - **Navigation & Layout Integration**:
+      - [UserAccountMenu.tsx](file:///Users/belikesaurabh/main/TenderAi/apps/web/src/components/layout/UserAccountMenu.tsx): Added direct links to `User Profile` and `Workspace Settings`.
+      - [Sidebar.tsx](file:///Users/belikesaurabh/main/TenderAi/apps/web/src/components/layout/Sidebar.tsx): Added direct `Settings` item with `SettingsIcon`.
+      - [Breadcrumbs.tsx](file:///Users/belikesaurabh/main/TenderAi/apps/web/src/components/layout/Breadcrumbs.tsx): Added dynamic breadcrumbs for `/profile` and `/settings`.
+    - **Design System & Primitives**:
+      - Built shadcn [label.tsx](file:///Users/belikesaurabh/main/TenderAi/apps/web/src/components/ui/label.tsx) and [switch.tsx](file:///Users/belikesaurabh/main/TenderAi/apps/web/src/components/ui/switch.tsx).
+      - Strict adherence to design constraints: 0 emojis, 0 decorative graphics, 0 custom CSS, Linear/Stripe style hierarchy.
     - **Quality Gates**:
-      - 408 automated tests passing across the monorepo (192 API + 140 Web + 76 Python AI).
-      - 0 TypeScript errors across all 4 monorepo packages.
+      - Added `profile-settings.spec.ts` unit test suite (6 new tests).
+      - 414 automated tests passing across the monorepo (192 API + 146 Web + 76 AI).
+      - 0 TypeScript compiler errors across all monorepo packages.
 

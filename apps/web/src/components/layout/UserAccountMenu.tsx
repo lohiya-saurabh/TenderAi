@@ -1,6 +1,7 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth.js';
-import { LogOut, ShieldCheck } from 'lucide-react';
+import { LogOut, User, Settings } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -82,10 +83,18 @@ export const UserAccountMenu: React.FC = () => {
           </p>
         </div>
         <DropdownMenuSeparator />
-        <div className="px-3 py-1.5 flex items-center gap-2 text-xs text-muted-foreground">
-          <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-          <span>HMAC-SHA256 Token Session</span>
-        </div>
+        <DropdownMenuItem asChild className="cursor-pointer">
+          <Link to="/profile" className="flex items-center w-full">
+            <User className="mr-2 h-4 w-4 text-muted-foreground" />
+            <span>User Profile</span>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild className="cursor-pointer">
+          <Link to="/settings" className="flex items-center w-full">
+            <Settings className="mr-2 h-4 w-4 text-muted-foreground" />
+            <span>Workspace Settings</span>
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={() => logout()}

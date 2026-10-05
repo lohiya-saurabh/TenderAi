@@ -12,6 +12,7 @@ import {
 import { cn } from '../../lib/utils.js';
 
 import { useCompany } from '../../context/CompanyContext.js';
+import { Settings as SettingsIcon } from 'lucide-react';
 
 export interface SidebarProps {
   isCollapsed?: boolean;
@@ -60,6 +61,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       to: '/company-profile',
       label: 'Company Profile',
       icon: BuildingOfficeIcon,
+      permission: PERMISSIONS.BIDS_READ,
+    },
+    {
+      to: '/settings',
+      label: 'Settings',
+      icon: SettingsIcon,
       permission: PERMISSIONS.BIDS_READ,
     },
   ];

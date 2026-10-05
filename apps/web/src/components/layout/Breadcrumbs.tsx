@@ -27,7 +27,17 @@ export const Breadcrumbs: React.FC = () => {
       return [{ label: 'Company Profile' }];
     }
 
-    // 4. Bid detail and sub-routes: /bids/:id/...
+    // 4. User Profile
+    if (path === '/profile') {
+      return [{ label: 'User Profile' }];
+    }
+
+    // 5. Settings
+    if (path === '/settings') {
+      return [{ label: 'Workspace Settings' }];
+    }
+
+    // 6. Bid detail and sub-routes: /bids/:id/...
     const bidMatch = path.match(/^\/bids\/([^/]+)(.*)$/);
     if (bidMatch && bidMatch[1]) {
       const bidId = bidMatch[1];
