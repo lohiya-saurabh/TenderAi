@@ -1,10 +1,14 @@
 import React from 'react';
+import { SpinnerIcon } from './Icons.js';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'success';
+  variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'success' | 'outline';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
   icon?: React.ReactNode;
+  startIcon?: React.ReactNode;
+  endIcon?: React.ReactNode;
+  fullWidth?: boolean;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -13,8 +17,12 @@ export const Button: React.FC<ButtonProps> = ({
   size = 'md',
   isLoading = false,
   icon,
+  startIcon,
+  endIcon,
+  fullWidth = false,
   disabled,
   style,
+  className = '',
   ...props
 }) => {
   const getVariantStyles = (): React.CSSProperties => {
@@ -24,12 +32,19 @@ export const Button: React.FC<ButtonProps> = ({
           backgroundColor: 'var(--color-primary-600)',
           color: '#ffffff',
           border: '1px solid var(--color-primary-500)',
+          boxShadow: 'var(--shadow-xs)',
         };
       case 'secondary':
         return {
           backgroundColor: 'var(--color-surface-card)',
           color: 'var(--color-surface-text)',
           border: '1px solid var(--color-surface-border)',
+        };
+      case 'outline':
+        return {
+          backgroundColor: 'transparent',
+          color: 'var(--color-primary-400)',
+          border: '1px solid var(--color-primary-500)',
         };
       case 'danger':
         return {
@@ -41,7 +56,7 @@ export const Button: React.FC<ButtonProps> = ({
         return {
           backgroundColor: 'var(--color-success)',
           color: '#ffffff',
-          border: '1px solid #059669',
+          border: '1px solid var(--color-success-hover)',
         };
       case 'ghost':
         return {
@@ -55,30 +70,50 @@ export const Button: React.FC<ButtonProps> = ({
   const getSizeStyles = (): React.CSSProperties => {
     switch (size) {
       case 'sm':
-        return { padding: '0.25rem 0.6rem', fontSize: '0.8125rem' };
+        return {
+          padding: '0.3rem 0.65rem',
+          fontSize: 'var(--text-xs)',
+          gap: '0.375rem',
+          height: '32px',
+        };
       case 'lg':
-        return { padding: '0.75rem 1.5rem', fontSize: '1.05rem' };
+        return {
+          padding: '0.65rem 1.35rem',
+          fontSize: 'var(--text-base)',
+          gap: '0.6rem',
+          height: '46px',
+        };
       case 'md':
       default:
-        return { padding: '0.5rem 1rem', fontSize: '0.9rem' };
+        return {
+          padding: '0.45rem 1rem',
+          fontSize: 'var(--text-sm)',
+          gap: '0.5rem',
+          height: '38px',
+        };
     }
   };
+
+  const effectiveStartIcon = startIcon || icon;
 
   return (
     <button
       disabled={disabled || isLoading}
+      aria-busy={isLoading}
+      className={`btn btn-${variant} btn-${size} ${fullWidth ? 'btn-full-width' : ''} ${className}`}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: '0.5rem',
-        fontWeight: 500,
+        fontWeight: 'var(--font-medium)' as unknown as number,
         borderRadius: 'var(--radius-md)',
         cursor: disabled || isLoading ? 'not-allowed' : 'pointer',
         opacity: disabled || isLoading ? 0.6 : 1,
         transition: 'all var(--transition-fast)',
         fontFamily: 'inherit',
         outline: 'none',
+        whiteSpace: 'nowrap',
+        width: fullWidth ? '100%' : 'auto',
         ...getVariantStyles(),
         ...getSizeStyles(),
         ...style,
@@ -86,21 +121,12 @@ export const Button: React.FC<ButtonProps> = ({
       {...props}
     >
       {isLoading ? (
-        <span
-          style={{
-            display: 'inline-block',
-            width: '1em',
-            height: '1em',
-            border: '2px solid currentColor',
-            borderRightColor: 'transparent',
-            borderRadius: '50%',
-            animation: 'shimmer 0.8s linear infinite',
-          }}
-        />
+        <SpinnerIcon size={size === 'sm' ? 14 : size === 'lg' ? 18 : 16} />
       ) : (
-        icon
+        effectiveStartIcon
       )}
       {children}
+      {!isLoading && endIcon}
     </button>
   );
 };

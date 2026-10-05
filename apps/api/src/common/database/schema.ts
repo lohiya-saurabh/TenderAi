@@ -2,7 +2,7 @@
  * Drizzle ORM Schema definition for TenderPulse AI PostgreSQL database.
  * Single source of truth for compile-time types and query building.
  */
-import { pgTable, text, integer, bigint, timestamp, boolean, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, bigint, timestamp, boolean, jsonb, real } from 'drizzle-orm/pg-core';
 
 export const users = pgTable('users', {
   id: text('id').primaryKey(),
@@ -26,6 +26,7 @@ export const bids = pgTable('bids', {
   tenderingAuthority: text('tendering_authority').notNull(),
   estimatedValueRupees: bigint('estimated_value_rupees', { mode: 'number' }).notNull(),
   submissionDeadline: text('submission_deadline'),
+  locationState: text('location_state'),
   status: text('status').notNull().default('DRAFT'),
   totalRequirements: integer('total_requirements').notNull().default(0),
   flaggedRequirements: integer('flagged_requirements').notNull().default(0),
@@ -95,3 +96,60 @@ export const auditLogs = pgTable('audit_logs', {
 
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type NewAuditLog = typeof auditLogs.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// Company Capability Profile (pinned, versioned snapshots)
+// ---------------------------------------------------------------------------
+
+/**
+ * Immutable company capability snapshot. The payload mirrors the AI engine's
+ * CompanyProfileSnapshot contract (snake_case) so it can be passed through
+ * to the bid-decision evaluation without mapping drift.
+ */
+export const companyProfileVersions = pgTable('company_profile_versions', {
+  id: text('id').primaryKey(),
+  organizationId: text('organization_id').notNull(),
+  version: integer('version').notNull(),
+  name: text('name').notNull(),
+  payload: jsonb('payload').notNull(),
+  createdBy: text('created_by').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type CompanyProfileVersion = typeof companyProfileVersions.$inferSelect;
+export type NewCompanyProfileVersion = typeof companyProfileVersions.$inferInsert;
+
+/**
+ * Current pointer: one active profile version per organization.
+ */
+export const companyProfiles = pgTable('company_profiles', {
+  organizationId: text('organization_id').primaryKey(),
+  activeVersionId: text('active_version_id').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type CompanyProfile = typeof companyProfiles.$inferSelect;
+export type NewCompanyProfile = typeof companyProfiles.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// Bid Decision audit trail
+// ---------------------------------------------------------------------------
+
+/**
+ * Persisted bid/no-bid decision produced by the deterministic eligibility
+ * engine. Immutable append-only record: every evaluation is kept for audit.
+ */
+export const bidDecisions = pgTable('bid_decisions', {
+  id: text('id').primaryKey(),
+  bidId: text('bid_id').notNull(),
+  organizationId: text('organization_id').notNull(),
+  profileVersionId: text('profile_version_id').notNull(),
+  verdict: text('verdict').notNull(),
+  state: text('state').notNull(),
+  readinessScore: real('readiness_score').notNull(),
+  response: jsonb('response').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type BidDecision = typeof bidDecisions.$inferSelect;
+export type NewBidDecision = typeof bidDecisions.$inferInsert;

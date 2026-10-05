@@ -76,6 +76,7 @@ export async function initDatabase(db: PGlite): Promise<void> {
       tendering_authority TEXT NOT NULL,
       estimated_value_rupees BIGINT NOT NULL,
       submission_deadline TEXT,
+      location_state TEXT,
       status TEXT NOT NULL DEFAULT 'DRAFT',
       total_requirements INT NOT NULL DEFAULT 0,
       flagged_requirements INT NOT NULL DEFAULT 0,
@@ -129,6 +130,40 @@ export async function initDatabase(db: PGlite): Promise<void> {
       payload JSONB NOT NULL,
       timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS company_profile_versions (
+      id TEXT PRIMARY KEY,
+      organization_id TEXT NOT NULL,
+      version INT NOT NULL,
+      name TEXT NOT NULL,
+      payload JSONB NOT NULL,
+      created_by TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_company_profile_versions_org
+      ON company_profile_versions(organization_id, version DESC);
+
+    CREATE TABLE IF NOT EXISTS company_profiles (
+      organization_id TEXT PRIMARY KEY,
+      active_version_id TEXT NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS bid_decisions (
+      id TEXT PRIMARY KEY,
+      bid_id TEXT NOT NULL,
+      organization_id TEXT NOT NULL,
+      profile_version_id TEXT NOT NULL,
+      verdict TEXT NOT NULL,
+      state TEXT NOT NULL,
+      readiness_score REAL NOT NULL,
+      response JSONB NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_bid_decisions_org_bid
+      ON bid_decisions(organization_id, bid_id, created_at DESC);
   `);
 
   // 2. Seed Users if empty via Drizzle ORM
@@ -187,6 +222,7 @@ export async function initDatabase(db: PGlite): Promise<void> {
           tenderingAuthority: bid.tenderingAuthority,
           estimatedValueRupees: bid.estimatedValueRupees,
           submissionDeadline: bid.submissionDeadline,
+          locationState: bid.locationState || null,
           status: 'DRAFT',
           totalRequirements: 0,
           flaggedRequirements: 0,

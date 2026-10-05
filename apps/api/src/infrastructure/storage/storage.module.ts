@@ -1,12 +1,10 @@
-/**
- * StorageModule — Provides GcsStorageService as an injectable.
- *
- * Resolves GCS configuration from environment and provides it globally.
- */
 import { Module, Global } from '@nestjs/common';
 import fs from 'node:fs';
 import path from 'node:path';
+import type { IStorageService } from '../../modules/bids/application/IStorageService.js';
 import { GcsStorageService } from './GcsStorageService.js';
+import { AwsS3StorageService } from './AwsS3StorageService.js';
+import { MockStorageService } from './MockStorageService.js';
 
 export const STORAGE_TOKEN = 'STORAGE_SERVICE';
 
@@ -15,38 +13,55 @@ export const STORAGE_TOKEN = 'STORAGE_SERVICE';
   providers: [
     {
       provide: STORAGE_TOKEN,
-      useFactory: (): GcsStorageService | null => {
-        const keyPath = path.resolve(process.cwd(), 'gcp-key.json');
-        const bucketName =
-          process.env.STORAGE_BUCKET_NAME ||
-          process.env.GCS_BUCKET_NAME ||
-          'tenderpulse-vault-local-e004630c';
-
-        if (!bucketName) return null;
-
-        try {
-          if (fs.existsSync(keyPath)) {
-            const service = new GcsStorageService({
-              bucketName,
-              keyFilename: keyPath,
-              projectId: process.env.GCP_PROJECT_ID || 'digital-proton-228114',
+      useFactory: (): IStorageService => {
+        // 1. AWS S3 detection
+        const s3Bucket = process.env.AWS_S3_BUCKET || process.env.S3_BUCKET_NAME;
+        if (s3Bucket) {
+          try {
+            const service = new AwsS3StorageService({
+              bucketName: s3Bucket,
+              region: process.env.AWS_REGION || 'ap-south-1',
+              endpoint: process.env.S3_ENDPOINT,
             });
-            console.log(`[Storage] Connected to Google Cloud Storage bucket: gs://${bucketName}`);
+            console.log(`[Storage] Connected to AWS S3 bucket: s3://${s3Bucket}`);
             return service;
-          } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-            const service = new GcsStorageService({
-              bucketName,
-              keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
-              projectId: process.env.GCP_PROJECT_ID,
-            });
-            console.log(`[Storage] Connected to Google Cloud Storage bucket: gs://${bucketName}`);
-            return service;
+          } catch (e) {
+            console.warn('[Storage] AWS S3 initialization failed, falling back to local mock:', e);
           }
-        } catch (e) {
-          console.warn('[Storage] GCS initialization failed, falling back to local mock:', e);
         }
 
-        return null;
+        // 2. Google Cloud Storage detection
+        const keyPath = path.resolve(process.cwd(), 'gcp-key.json');
+        const gcsBucket =
+          process.env.STORAGE_BUCKET_NAME ||
+          process.env.GCS_BUCKET_NAME;
+
+        if (gcsBucket) {
+          try {
+            if (fs.existsSync(keyPath)) {
+              const service = new GcsStorageService({
+                bucketName: gcsBucket,
+                keyFilename: keyPath,
+                projectId: process.env.GCP_PROJECT_ID || 'digital-proton-228114',
+              });
+              console.log(`[Storage] Connected to Google Cloud Storage bucket: gs://${gcsBucket}`);
+              return service;
+            } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+              const service = new GcsStorageService({
+                bucketName: gcsBucket,
+                keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+                projectId: process.env.GCP_PROJECT_ID,
+              });
+              console.log(`[Storage] Connected to Google Cloud Storage bucket: gs://${gcsBucket}`);
+              return service;
+            }
+          } catch (e) {
+            console.warn('[Storage] GCS initialization failed, falling back to local mock:', e);
+          }
+        }
+
+        // 3. Fallback to in-memory MockStorageService
+        return new MockStorageService();
       },
     },
   ],

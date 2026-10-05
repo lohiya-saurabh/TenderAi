@@ -510,4 +510,48 @@ The seven evaluators (THRESHOLD, COUNT, VALIDITY, SET_MEMBERSHIP, RANK, PRESENCE
 
 ---
 
-*Stop point reached: HLD delta + ADRs only. No code implemented, per PROMPT 3.*
+## 11. Cloud-Agnostic Infrastructure & GCP Target (PROMPT 19)
+
+### The Core Invariant: Cloud-Provider Agnostic Core
+
+The application code (Domain Entities, Value Objects, Use Cases, Application Services) must remain **100% agnostic** of any specific cloud provider. Provider-specific terms, SDKs, or conventions (`S3Service`, `GcsService`, `SQSService`, `PubSubService`, `AWS_BUCKET`, `GCP_PROJECT`) are strictly banned from domain and application packages.
+
+All infrastructure services are consumed through explicit, capability-oriented interfaces (Ports) defined in the application layer:
+
+| Conceptual Capability | Generic Port (Application Layer) | GCP Adapter (`infrastructure/`) | AWS Adapter (`infrastructure/`) | Local/Dev Adapter |
+|:----------------------|:---------------------------------|:--------------------------------|:--------------------------------|:------------------|
+| **Object Storage** | `ObjectStorage` | `GcpCloudStorageAdapter` | `AwsS3StorageAdapter` | `LocalStorageAdapter` / `MockStorage` |
+| **Asynchronous Queue** | `MessageQueue` | `GcpPubSubQueueAdapter` | `AwsSqsQueueAdapter` | `InMemoryQueueAdapter` |
+| **Domain Events** | `EventPublisher` | `GcpPubSubEventsAdapter` | `AwsEventBridgeAdapter` | `InMemoryEventBus` |
+| **Transient Cache & Locks**| `Cache` | In-process LRU / `RedisCacheAdapter` | `RedisCacheAdapter` | `InMemoryCacheAdapter` |
+| **Document Storage** | `DocumentRepository` | `PostgresDocumentRepository` | `PostgresDocumentRepository` | `PostgresDocumentRepository` (PGlite) |
+| **Workflow Execution**| `WorkflowStore` | `PostgresWorkflowStore` | `PostgresWorkflowStore` | `PostgresWorkflowStore` (PGlite) |
+| **Generated Packets** | `ArtifactStore` | `PostgresArtifactStore` | `PostgresArtifactStore` | `PostgresArtifactStore` (PGlite) |
+
+### Component Necessity Evaluation
+
+In adherence to the "Zero Unnecessary Technology" rule, every infrastructure component is evaluated for direct business necessity:
+
+1. **Cloud Run over GKE**: Serverless containers provide automatic scale-to-zero when idle and burst scaling during 15:00/18:00 IST submission deadlines, saving $74+/mo in static Kubernetes cluster control-plane and node-pool overhead.
+2. **Cloud SQL for PostgreSQL 16 over Spanner**: Single-region (`asia-south1` Mumbai) compliance under DPDP Act 2023. Spanner’s multi-region distributed sharding ($600+/mo) is grossly premature for Indian tender workloads that fit comfortably on a relational instance.
+3. **Cloud Storage over Filestore**: Presigned V4 URLs allow direct client upload/download without streaming multi-megabyte PDFs through the Node.js API container memory.
+4. **Pub/Sub Pull Subscriptions over Cloud Tasks**: Pull subscriptions allow the Ingestion Worker to pull messages only when it has CPU capacity to process large PDFs, preventing memory exhaustion.
+5. **Reject Dedicated Redis for MVP**: An idle Memorystore Redis instance costs $35–50/month. For MVP, in-process LRU caching and PostgreSQL-backed distributed locks fulfill all concurrency and caching needs.
+
+### ADR 0022 — Cloud-Agnostic Infrastructure Model & Initial GCP Deployment
+
+- **Context:** Production deployment requires cloud hosting in India (`asia-south1` Mumbai) for DPDP Act 2023 compliance. The team must avoid cloud vendor lock-in while leveraging managed services.
+- **Decision:** 
+  1. Standardize all application/domain interfaces around conceptual capabilities (`ObjectStorage`, `MessageQueue`, `EventPublisher`, `Cache`, `DocumentRepository`, `WorkflowStore`, `ArtifactStore`).
+  2. Target Google Cloud Platform (GCP) for initial production deployment using Cloud Run, Cloud SQL (PostgreSQL 16), Cloud Storage, Cloud Pub/Sub, Secret Manager, Cloud KMS, and Cloud Load Balancing.
+  3. Confine all provider-specific SDKs (`@google-cloud/*`, `@aws-sdk/*`) to `apps/api/src/infrastructure/`.
+- **Consequences:** 
+  - *Positive:* 100% cloud portability. Switching from GCP to AWS or bare metal requires altering only infrastructure adapters and Terraform manifests, with zero edits to business logic.
+  - *Positive:* Zero Kubernetes ops overhead; estimated initial infrastructure cost is kept lean ($170–$240/month).
+  - *Trade-off:* Writing adapter wrappers requires strict discipline and CI lint checks to prevent leaking cloud SDK types into use cases.
+
+Detailed GCP specifications, network topology, security boundaries, and disaster recovery runbooks are documented in **`docs/GCP.md`**.
+
+---
+
+*Stop point reached: Infrastructure design and ADRs completed. No deployment authorized, per PROMPT 19.*

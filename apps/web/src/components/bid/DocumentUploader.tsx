@@ -2,20 +2,45 @@ import React, { useState, useRef } from 'react';
 import { generateUploadUrl, confirmDocumentUpload } from '../../api/bids.js';
 import { Button } from '../common/Button.js';
 import { ErrorBanner } from '../common/ErrorBanner.js';
+import { ProgressBar } from '../progress/ProgressBar.js';
 
 export interface DocumentUploaderProps {
   bidId: string;
-  onUploadSuccess: (documentId: string) => void;
+  onUploadSuccess: (documentId: string, docName: string) => void;
+  onCancel?: () => void;
 }
+
+export type TenderDocType =
+  | 'NIT'
+  | 'TECHNICAL_SPECS'
+  | 'BOQ'
+  | 'CORRIGENDUM'
+  | 'FINANCIAL_BID';
+
+interface DocTypeOption {
+  value: TenderDocType;
+  label: string;
+  description: string;
+}
+
+const DOC_TYPES: readonly DocTypeOption[] = [
+  { value: 'NIT', label: 'Notice Inviting Tender (NIT)', description: 'Core tender notice with eligibility & critical dates' },
+  { value: 'TECHNICAL_SPECS', label: 'Technical Specs & SOW', description: 'Scope of work, engineering requirements & standards' },
+  { value: 'BOQ', label: 'Bill of Quantities (BOQ)', description: 'Schedule of rates and item breakdown' },
+  { value: 'CORRIGENDUM', label: 'Corrigendum / Addendum', description: 'Official amendments, date extensions & clause revisions' },
+  { value: 'FINANCIAL_BID', label: 'Financial Bid Guidelines', description: 'Price evaluation rules & bank guarantee requirements' },
+];
 
 export const DocumentUploader: React.FC<DocumentUploaderProps> = ({
   bidId,
   onUploadSuccess,
+  onCancel,
 }) => {
   const [file, setFile] = useState<File | null>(null);
-  const [docType, setDocType] = useState<'NIT' | 'BOQ' | 'CORRIGENDUM' | 'TECHNICAL_SPECS' | 'FINANCIAL_BID'>('NIT');
+  const [docType, setDocType] = useState<TenderDocType>('NIT');
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [uploadMessage, setUploadMessage] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState<boolean>(false);
 
@@ -31,16 +56,35 @@ export const DocumentUploader: React.FC<DocumentUploaderProps> = ({
   const validateAndSetFile = (selected: File) => {
     setError(null);
     if (!selected.name.toLowerCase().endsWith('.pdf') && selected.type !== 'application/pdf') {
-      setError('Only PDF tender documents are supported.');
+      setError('Only PDF tender documents are supported for automated extraction.');
       return;
     }
 
     if (selected.size > 50 * 1024 * 1024) {
-      setError('File size exceeds the 50MB limit.');
+      setError('File size exceeds the 50MB limit. For larger files, split by volume.');
       return;
     }
 
     setFile(selected);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const dropped = e.dataTransfer.files?.[0];
+    if (dropped) {
+      validateAndSetFile(dropped);
+    }
   };
 
   const handleUpload = async () => {
@@ -48,6 +92,7 @@ export const DocumentUploader: React.FC<DocumentUploaderProps> = ({
 
     setIsUploading(true);
     setUploadProgress(10);
+    setUploadMessage('Requesting secure presigned upload token...');
     setError(null);
 
     try {
@@ -64,9 +109,10 @@ export const DocumentUploader: React.FC<DocumentUploaderProps> = ({
       }
 
       const { uploadUrl, documentId } = presignedRes.data;
-      setUploadProgress(30);
+      setUploadProgress(25);
+      setUploadMessage(`Streaming ${file.name} to encrypted tenant storage...`);
 
-      // 2. Direct S3 Upload via XMLHttpRequest for progress tracking
+      // 2. Direct S3 Upload via XMLHttpRequest for real byte progress tracking
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open('PUT', uploadUrl);
@@ -74,8 +120,11 @@ export const DocumentUploader: React.FC<DocumentUploaderProps> = ({
 
         xhr.upload.onprogress = (e) => {
           if (e.lengthComputable) {
-            const percentComplete = 30 + Math.round((e.loaded / e.total) * 50);
+            const percentComplete = 25 + Math.round((e.loaded / e.total) * 55);
             setUploadProgress(percentComplete);
+            const mbUploaded = (e.loaded / (1024 * 1024)).toFixed(1);
+            const mbTotal = (e.total / (1024 * 1024)).toFixed(1);
+            setUploadMessage(`Uploading to storage: ${mbUploaded} MB / ${mbTotal} MB (${percentComplete}%)`);
           }
         };
 
@@ -83,15 +132,16 @@ export const DocumentUploader: React.FC<DocumentUploaderProps> = ({
           if (xhr.status >= 200 && xhr.status < 300) {
             resolve();
           } else {
-            reject(new Error(`S3 upload failed with status ${xhr.status}`));
+            reject(new Error(`Storage transfer failed with HTTP status ${xhr.status}`));
           }
         };
 
-        xhr.onerror = () => reject(new Error('Network error during file upload to storage.'));
+        xhr.onerror = () => reject(new Error('Network error during file upload to object storage.'));
         xhr.send(file);
       });
 
       setUploadProgress(85);
+      setUploadMessage('Confirming storage checksum and registering with extraction worker...');
 
       // 3. Confirm document upload with backend
       const confirmRes = await confirmDocumentUpload(bidId, { documentId });
@@ -100,14 +150,17 @@ export const DocumentUploader: React.FC<DocumentUploaderProps> = ({
       }
 
       setUploadProgress(100);
-      setFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      setUploadMessage('Document uploaded and dispatched to extraction pipeline!');
 
-      onUploadSuccess(documentId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed unexpectedly');
-    } finally {
+      setTimeout(() => {
+        onUploadSuccess(documentId, file.name);
+      }, 500);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Upload failed due to network error';
+      setError(msg);
       setIsUploading(false);
+      setUploadProgress(0);
+      setUploadMessage('');
     }
   };
 
@@ -115,134 +168,144 @@ export const DocumentUploader: React.FC<DocumentUploaderProps> = ({
     <div
       style={{
         backgroundColor: 'var(--color-surface-card)',
-        border: '1px solid var(--color-surface-border)',
+        border: '1px solid var(--color-primary-500)',
         borderRadius: 'var(--radius-lg)',
         padding: '1.5rem',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '1.25rem',
       }}
     >
-      <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem', color: 'var(--color-surface-text)' }}>
-        Upload Tender Document
-      </h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--color-surface-text)', margin: '0 0 0.2rem' }}>
+            Upload Tender Package Document
+          </h3>
+          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)', margin: 0 }}>
+            Upload PDF tender notices, technical specs, or BOQ files for automated clause extraction.
+          </p>
+        </div>
+        {onCancel && (
+          <Button variant="ghost" size="sm" onClick={onCancel} disabled={isUploading}>
+            ✕ Close
+          </Button>
+        )}
+      </div>
 
       {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
 
+      {/* Document Type Selector */}
+      <div>
+        <label style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-surface-text)', display: 'block', marginBottom: '0.4rem' }}>
+          Document Classification *
+        </label>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.5rem' }}>
+          {DOC_TYPES.map((dt) => (
+            <button
+              key={dt.value}
+              type="button"
+              disabled={isUploading}
+              onClick={() => setDocType(dt.value)}
+              style={{
+                textAlign: 'left',
+                padding: '0.6rem 0.75rem',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: docType === dt.value ? 'rgba(99, 102, 241, 0.12)' : 'var(--color-surface-bg)',
+                border: `1px solid ${docType === dt.value ? 'var(--color-primary-500)' : 'var(--color-surface-border)'}`,
+                cursor: isUploading ? 'default' : 'pointer',
+                transition: 'all var(--transition-fast)',
+              }}
+            >
+              <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: docType === dt.value ? 'var(--color-primary-300)' : 'var(--color-surface-text)' }}>
+                {dt.label}
+              </div>
+              <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)', marginTop: '0.15rem' }}>
+                {dt.description}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Drop Zone */}
       <div
-        onDragOver={(e) => {
-          e.preventDefault();
-          setIsDragOver(true);
-        }}
-        onDragLeave={() => setIsDragOver(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setIsDragOver(false);
-          const droppedFile = e.dataTransfer.files?.[0];
-          if (droppedFile) validateAndSetFile(droppedFile);
-        }}
-        onClick={() => fileInputRef.current?.click()}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        onClick={() => !isUploading && fileInputRef.current?.click()}
         style={{
           border: `2px dashed ${isDragOver ? 'var(--color-primary-500)' : 'var(--color-surface-border)'}`,
+          backgroundColor: isDragOver ? 'rgba(99, 102, 241, 0.06)' : 'var(--color-surface-bg)',
           borderRadius: 'var(--radius-md)',
-          padding: '2rem',
+          padding: '2rem 1.5rem',
           textAlign: 'center',
-          backgroundColor: isDragOver ? 'rgba(99, 102, 241, 0.05)' : 'var(--color-surface-bg)',
-          cursor: 'pointer',
+          cursor: isUploading ? 'default' : 'pointer',
           transition: 'all var(--transition-fast)',
-          marginBottom: '1rem',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '0.5rem',
         }}
       >
         <input
           ref={fileInputRef}
           type="file"
-          accept=".pdf,application/pdf"
-          onChange={handleFileChange}
+          accept="application/pdf,.pdf"
           style={{ display: 'none' }}
+          onChange={handleFileChange}
+          disabled={isUploading}
         />
-        <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📄</div>
-        <p style={{ fontWeight: 500, color: 'var(--color-surface-text)', marginBottom: '0.25rem' }}>
-          {file ? file.name : 'Click to browse or drag and drop tender PDF here'}
-        </p>
-        <p style={{ fontSize: '0.75rem', color: 'var(--color-surface-muted)' }}>
-          {file
-            ? `${(file.size / (1024 * 1024)).toFixed(2)} MB`
-            : 'PDF format only, maximum 50MB per file'}
-        </p>
+        <span style={{ fontSize: '2rem' }}>📄</span>
+        {file ? (
+          <div>
+            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-surface-text)' }}>
+              {file.name}
+            </span>
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)', display: 'block' }}>
+              {(file.size / (1024 * 1024)).toFixed(2)} MB • PDF Document
+            </span>
+          </div>
+        ) : (
+          <div>
+            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-surface-text)' }}>
+              Drag & Drop tender PDF here, or <span style={{ color: 'var(--color-primary-400)' }}>browse files</span>
+            </span>
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)', display: 'block', marginTop: '0.2rem' }}>
+              Supports PDF documents up to 50MB (Multi-page NIT, Specs, BOQ)
+            </span>
+          </div>
+        )}
       </div>
 
-      {file && (
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ flex: 1, minWidth: '200px' }}>
-            <label
-              htmlFor="doc-type-select"
-              style={{
-                display: 'block',
-                fontSize: '0.8rem',
-                color: 'var(--color-surface-muted)',
-                marginBottom: '0.35rem',
-              }}
-            >
-              Document Classification:
-            </label>
-            <select
-              id="doc-type-select"
-              value={docType}
-              onChange={(e) => setDocType(e.target.value as typeof docType)}
-              style={{
-                width: '100%',
-                backgroundColor: 'var(--color-surface-input)',
-                color: 'var(--color-surface-text)',
-                border: '1px solid var(--color-surface-border)',
-                borderRadius: 'var(--radius-md)',
-                padding: '0.5rem',
-                fontSize: '0.85rem',
-                outline: 'none',
-              }}
-            >
-              <option value="NIT">Notice Inviting Tender (NIT)</option>
-              <option value="TECHNICAL_SPECS">Technical Specifications</option>
-              <option value="BOQ">Bill of Quantities (BOQ)</option>
-              <option value="CORRIGENDUM">Corrigendum / Addendum</option>
-              <option value="FINANCIAL_BID">Financial Bid Guidelines</option>
-            </select>
-          </div>
-
-          <div style={{ alignSelf: 'flex-end' }}>
-            <Button
-              variant="primary"
-              onClick={handleUpload}
-              isLoading={isUploading}
-              disabled={isUploading}
-            >
-              Upload & Extract Compliance
-            </Button>
-          </div>
-        </div>
-      )}
-
+      {/* Progress Feedback during Byte Transfer */}
       {isUploading && (
-        <div style={{ marginTop: '1rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--color-surface-muted)', marginBottom: '0.25rem' }}>
-            <span>Uploading document to storage...</span>
-            <span>{uploadProgress}%</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-xs)' }}>
+            <span style={{ color: 'var(--color-surface-text)', fontWeight: 600 }}>{uploadMessage}</span>
+            <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--color-primary-300)' }}>
+              {uploadProgress}%
+            </span>
           </div>
-          <div
-            style={{
-              height: '6px',
-              backgroundColor: 'var(--color-surface-bg)',
-              borderRadius: 'var(--radius-full)',
-              overflow: 'hidden',
-            }}
-          >
-            <div
-              style={{
-                height: '100%',
-                width: `${uploadProgress}%`,
-                backgroundColor: 'var(--color-primary-500)',
-                transition: 'width 0.3s ease',
-              }}
-            />
-          </div>
+          <ProgressBar progress={uploadProgress} height="6px" />
         </div>
       )}
+
+      {/* Action Footer */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', alignItems: 'center' }}>
+        {file && !isUploading && (
+          <Button variant="ghost" size="sm" onClick={() => setFile(null)}>
+            Clear Selection
+          </Button>
+        )}
+        <Button
+          variant="primary"
+          onClick={handleUpload}
+          disabled={!file || isUploading}
+          isLoading={isUploading}
+        >
+          {isUploading ? 'Transferring File...' : 'Start Document Upload & Analysis'}
+        </Button>
+      </div>
     </div>
   );
 };

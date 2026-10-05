@@ -8,6 +8,7 @@ import { DashboardPage } from './pages/DashboardPage.js';
 import { CreateBidPage } from './pages/CreateBidPage.js';
 import { BidDetailPage } from './pages/BidDetailPage.js';
 import { ComplianceReviewPage } from './pages/ComplianceReviewPage.js';
+import { CompanyProfilePage } from './pages/CompanyProfilePage.js';
 import { AuditHistoryPage } from './pages/AuditHistoryPage.js';
 import { NotFoundPage } from './pages/NotFoundPage.js';
 import { PERMISSIONS } from './utils/permissions.js';
@@ -45,6 +46,15 @@ export const App: React.FC = () => {
               element={
                 <ProtectedRoute requiredPermission={PERMISSIONS.BIDS_CREATE}>
                   <CreateBidPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/company-profile"
+              element={
+                <ProtectedRoute requiredPermission={PERMISSIONS.BIDS_READ}>
+                  <CompanyProfilePage />
                 </ProtectedRoute>
               }
             />

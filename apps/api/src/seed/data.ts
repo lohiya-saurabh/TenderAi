@@ -79,6 +79,7 @@ export interface DemoBid {
   tenderingAuthority: string;
   estimatedValueRupees: number;
   submissionDeadline: string | null;
+  locationState: string | null;
   status: string;
   totalRequirements: number;
   flaggedRequirements: number;
@@ -139,6 +140,7 @@ export const BIDS: DemoBid[] = [
     tenderingAuthority: 'National Highways Authority of India (NHAI)',
     estimatedValueRupees: 2450000000,
     submissionDeadline: '2026-11-15T15:00:00.000Z',
+    locationState: 'Maharashtra',
     status: 'REVIEW_READY',
     totalRequirements: 5,
     flaggedRequirements: 1,
@@ -182,6 +184,7 @@ export const BIDS: DemoBid[] = [
     tenderingAuthority: 'Central Public Works Department (CPWD)',
     estimatedValueRupees: 1850000000,
     submissionDeadline: '2026-12-01T17:00:00.000Z',
+    locationState: 'Delhi',
     status: 'DRAFT',
     totalRequirements: 0,
     flaggedRequirements: 0,

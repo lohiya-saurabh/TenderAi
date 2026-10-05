@@ -5,6 +5,10 @@ export interface EmptyStateProps {
   title: string;
   description: string;
   action?: React.ReactNode;
+  secondaryAction?: React.ReactNode;
+  compact?: boolean;
+  className?: string;
+  style?: React.CSSProperties;
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
@@ -12,53 +16,71 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   title,
   description,
   action,
+  secondaryAction,
+  compact = false,
+  className = '',
+  style,
 }) => {
   return (
     <div
+      className={`empty-state ${className}`}
       style={{
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
         textAlign: 'center',
-        padding: '4rem 2rem',
+        padding: compact ? 'var(--space-6) var(--space-4)' : 'var(--space-12) var(--space-6)',
         backgroundColor: 'var(--color-surface-card)',
         border: '1px dashed var(--color-surface-border)',
         borderRadius: 'var(--radius-lg)',
+        width: '100%',
+        ...style,
       }}
     >
       {icon && (
         <div
           style={{
-            fontSize: '2.5rem',
-            marginBottom: '1rem',
-            color: 'var(--color-primary-500)',
+            fontSize: compact ? '2rem' : '2.75rem',
+            marginBottom: 'var(--space-3)',
+            color: 'var(--color-primary-400)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
+          aria-hidden="true"
         >
           {icon}
         </div>
       )}
       <h3
         style={{
-          fontSize: '1.25rem',
-          fontWeight: 600,
+          fontSize: compact ? 'var(--text-base)' : 'var(--text-lg)',
+          fontWeight: 'var(--font-semibold)' as unknown as number,
           color: 'var(--color-surface-text)',
-          marginBottom: '0.5rem',
+          marginBottom: 'var(--space-1-5)',
+          letterSpacing: '-0.01em',
         }}
       >
         {title}
       </h3>
       <p
         style={{
-          fontSize: '0.9rem',
+          fontSize: 'var(--text-sm)',
           color: 'var(--color-surface-muted)',
-          maxWidth: '450px',
-          marginBottom: action ? '1.5rem' : '0',
+          maxWidth: '460px',
+          marginBottom: action || secondaryAction ? 'var(--space-5)' : '0',
+          lineHeight: 'var(--leading-normal)',
         }}
       >
         {description}
       </p>
-      {action}
+      {(action || secondaryAction) && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap', justifyContent: 'center' }}>
+          {action}
+          {secondaryAction}
+        </div>
+      )}
     </div>
   );
 };

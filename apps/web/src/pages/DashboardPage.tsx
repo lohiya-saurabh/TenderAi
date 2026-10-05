@@ -1,119 +1,156 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { listBids, type BidSummary } from '../api/bids.js';
 import { useApi } from '../hooks/useApi.js';
+import { useBidComplianceItems } from '../hooks/useBidComplianceItems.js';
 import { useAuth } from '../auth/useAuth.js';
 import { PERMISSIONS } from '../utils/permissions.js';
-import { BidCard } from '../components/bid/BidCard.js';
 import { Button } from '../components/common/Button.js';
-import { EmptyState } from '../components/common/EmptyState.js';
-import { ErrorBanner } from '../components/common/ErrorBanner.js';
+import { ErrorBanner, ErrorState } from '../components/common/ErrorBanner.js';
 import { LoadingSkeleton } from '../components/common/LoadingSkeleton.js';
+import { PageHeader } from '../components/common/PageLayout.js';
+import { PlusCircleIcon } from '../components/common/Icons.js';
+import { DashboardKpiStrip } from '../components/dashboard/DashboardKpiStrip.js';
+import { ActionRequiredCard } from '../components/dashboard/ActionRequiredCard.js';
+import { CompanyReadinessCard } from '../components/dashboard/CompanyReadinessCard.js';
+import { UpcomingDeadlinesCard } from '../components/dashboard/UpcomingDeadlinesCard.js';
+import { BidPipelineCard } from '../components/dashboard/BidPipelineCard.js';
+import { TenderListSection } from '../components/dashboard/TenderListSection.js';
+import { MissingApiCallout } from '../components/dashboard/MissingApiCallout.js';
+import { computePipelineStages } from '../components/dashboard/dashboardData.js';
 
 export const DashboardPage: React.FC = () => {
   const { data: bids, isLoading, error, refetch } = useApi<BidSummary[]>(listBids);
   const { hasPermission } = useAuth();
-  const [searchTerm, setSearchTerm] = useState<string>('');
+
+  // Clause-level compliance items for every active bid (parallel, existing API)
+  const { itemsByBid, isLoading: complianceLoading } = useBidComplianceItems(bids);
+
+  // Workflow status filter shared between the Bid Pipeline card and the Tender List
+  const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
 
   const canCreateBid = hasPermission(PERMISSIONS.BIDS_CREATE);
 
-  const filteredBids = (bids || []).filter(
-    (b) =>
-      b.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.tenderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.tenderingAuthority.toLowerCase().includes(searchTerm.toLowerCase()),
+  const allBids = bids || [];
+
+  const stages = useMemo(() => computePipelineStages(allBids), [allBids]);
+  const archivedCount = useMemo(
+    () => allBids.filter((b) => b.status === 'ARCHIVED').length,
+    [allBids],
   );
 
+  // Selecting a pipeline stage filters the Tender List and scrolls to it
+  const handleSelectStage = (status: string) => {
+    setSelectedStatus(status);
+    document
+      .getElementById('tender-list')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      {/* Top action header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-surface-text)' }}>
-            Tender Bids Dashboard
-          </h2>
-          <p style={{ fontSize: '0.85rem', color: 'var(--color-surface-muted)' }}>
-            Track active tenders, extraction pipelines, and compliance verification.
-          </p>
-        </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+      {/* 1. Page Header */}
+      <PageHeader
+        title="Bid Dashboard"
+        subtitle="What is happening with my bids — blockers, pipeline stage, deadlines, and tender readiness at a glance"
+        actions={
+          canCreateBid ? (
+            <Link to="/bids/new" style={{ textDecoration: 'none' }}>
+              <Button variant="primary" startIcon={<PlusCircleIcon size={16} />}>
+                New Bid Project
+              </Button>
+            </Link>
+          ) : undefined
+        }
+      />
 
-        {canCreateBid && (
-          <Link to="/bids/new">
-            <Button variant="primary" icon={<span>➕</span>}>
-              New Bid Project
-            </Button>
-          </Link>
-        )}
-      </div>
-
+      {/* Error state: surface the failure honestly — never render the
+          "no tenders" empty state when the API actually failed */}
       {error && <ErrorBanner message={error.message} onRetry={refetch} />}
 
-      {/* Filter / Search Bar */}
-      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-        <input
-          type="text"
-          placeholder="Filter by title, tender number, or tendering authority..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          style={{
-            flex: 1,
-            maxWidth: '450px',
-            backgroundColor: 'var(--color-surface-card)',
-            color: 'var(--color-surface-text)',
-            border: '1px solid var(--color-surface-border)',
-            borderRadius: 'var(--radius-md)',
-            padding: '0.6rem 0.9rem',
-            fontSize: '0.9rem',
-            outline: 'none',
-          }}
+      {error ? (
+        <ErrorState
+          title="Unable to load bid dashboard"
+          message={error.message}
+          onRetry={refetch}
         />
-      </div>
-
-      {/* Content list */}
-      {isLoading ? (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-            gap: '1.25rem',
-          }}
-        >
-          <LoadingSkeleton height="180px" borderRadius="var(--radius-lg)" />
-          <LoadingSkeleton height="180px" borderRadius="var(--radius-lg)" />
-          <LoadingSkeleton height="180px" borderRadius="var(--radius-lg)" />
-        </div>
-      ) : filteredBids.length === 0 ? (
-        bids && bids.length > 0 ? (
-          <EmptyState
-            title="No bids match your search"
-            description="Try clearing your search query to see all tenant bids."
-          />
-        ) : (
-          <EmptyState
-            icon="📁"
-            title="No Tender Bid Projects Yet"
-            description="Create your first bid project to upload tender specifications and generate AI compliance checklists."
-            action={
-              canCreateBid ? (
-                <Link to="/bids/new">
-                  <Button variant="primary">Create First Bid</Button>
-                </Link>
-              ) : undefined
-            }
-          />
-        )
       ) : (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-            gap: '1.25rem',
-          }}
-        >
-          {filteredBids.map((bid) => (
-            <BidCard key={bid.id} bid={bid} />
-          ))}
-        </div>
+        <>
+          {/* 2. Executive KPI Strip */}
+          {isLoading ? (
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                gap: 'var(--space-4)',
+              }}
+            >
+              <LoadingSkeleton height="95px" borderRadius="var(--radius-lg)" />
+              <LoadingSkeleton height="95px" borderRadius="var(--radius-lg)" />
+              <LoadingSkeleton height="95px" borderRadius="var(--radius-lg)" />
+              <LoadingSkeleton height="95px" borderRadius="var(--radius-lg)" />
+            </div>
+          ) : (
+            <DashboardKpiStrip bids={allBids} />
+          )}
+
+          {/* 3. Attention row: Action Required + Upcoming Deadlines */}
+          {isLoading ? (
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+                gap: 'var(--space-4)',
+              }}
+            >
+              <LoadingSkeleton height="300px" borderRadius="var(--radius-lg)" />
+              <LoadingSkeleton height="300px" borderRadius="var(--radius-lg)" />
+            </div>
+          ) : allBids.length > 0 ? (
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+                gap: 'var(--space-4)',
+              }}
+            >
+              <ActionRequiredCard
+                bids={allBids}
+                complianceByBid={itemsByBid}
+                isLoadingCompliance={complianceLoading}
+              />
+              <UpcomingDeadlinesCard bids={allBids} />
+            </div>
+          ) : null}
+
+          {/* 4. Bid Pipeline */}
+          {isLoading ? (
+            <LoadingSkeleton height="180px" borderRadius="var(--radius-lg)" />
+          ) : allBids.length > 0 ? (
+            <BidPipelineCard
+              stages={stages}
+              archivedCount={archivedCount}
+              selectedStatus={selectedStatus}
+              onSelectStage={handleSelectStage}
+            />
+          ) : null}
+
+          {/* 5. Tender List — the core list workflow */}
+          <TenderListSection
+            bids={allBids}
+            isLoading={isLoading}
+            selectedStatus={selectedStatus}
+            onStatusChange={setSelectedStatus}
+            onDeleted={refetch}
+            canCreateBid={canCreateBid}
+          />
+
+          {/* 6. Company Readiness (honest missing-API state) */}
+          {!isLoading && <CompanyReadinessCard />}
+
+          {/* 7. Documented Missing APIs Disclosure */}
+          <MissingApiCallout />
+        </>
       )}
     </div>
   );

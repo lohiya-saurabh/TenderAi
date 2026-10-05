@@ -1,30 +1,39 @@
 import React from 'react';
 
-export type ComplianceStatusFilterValue = 'ALL' | 'FLAGGED' | 'READY' | 'PENDING' | 'WAIVED';
+export type ComplianceStatusFilterValue =
+  | 'ALL'
+  | 'PASS'
+  | 'FAIL'
+  | 'MISSING'
+  | 'REVIEW_REQUIRED'
+  | 'NOT_APPLICABLE';
 
 export interface StatusFilterProps {
   value: ComplianceStatusFilterValue;
   onChange: (value: ComplianceStatusFilterValue) => void;
-  counts?: {
-    ALL: number;
-    FLAGGED: number;
-    READY: number;
-    PENDING: number;
-    WAIVED: number;
-  };
+  counts?: Record<ComplianceStatusFilterValue, number>;
 }
+
+const statusColors: Record<Exclude<ComplianceStatusFilterValue, 'ALL'>, string> = {
+  PASS: 'var(--color-success)',
+  FAIL: 'var(--color-danger)',
+  MISSING: 'var(--color-warning)',
+  REVIEW_REQUIRED: 'var(--color-primary-500)',
+  NOT_APPLICABLE: 'var(--color-surface-muted)',
+};
 
 export const StatusFilter: React.FC<StatusFilterProps> = ({
   value,
   onChange,
   counts,
 }) => {
-  const options: { label: string; value: ComplianceStatusFilterValue; color?: string }[] = [
+  const options: { value: ComplianceStatusFilterValue; label: string; color?: string }[] = [
     { label: 'All Items', value: 'ALL' },
-    { label: 'Flagged (Action Req.)', value: 'FLAGGED', color: 'var(--color-danger)' },
-    { label: 'Ready', value: 'READY', color: 'var(--color-success)' },
-    { label: 'Pending', value: 'PENDING', color: 'var(--color-warning)' },
-    { label: 'Waived', value: 'WAIVED' },
+    { label: 'Pass', value: 'PASS', color: statusColors.PASS },
+    { label: 'Fail', value: 'FAIL', color: statusColors.FAIL },
+    { label: 'Missing', value: 'MISSING', color: statusColors.MISSING },
+    { label: 'Review Required', value: 'REVIEW_REQUIRED', color: statusColors.REVIEW_REQUIRED },
+    { label: 'Not Applicable', value: 'NOT_APPLICABLE', color: statusColors.NOT_APPLICABLE },
   ];
 
   return (

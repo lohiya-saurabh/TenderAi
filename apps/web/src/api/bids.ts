@@ -6,6 +6,8 @@
 
 import { apiGet, apiPost, apiDelete, type ApiResult } from './client.js';
 
+export type { ApiResult } from './client.js';
+
 export interface BidSummary {
   id: string;
   title: string;
@@ -13,6 +15,7 @@ export interface BidSummary {
   tenderingAuthority: string;
   estimatedValueRupees?: number | null;
   submissionDeadline?: string | null;
+  locationState?: string | null;
   status: 'DRAFT' | 'ANALYZING' | 'REVIEW_READY' | 'SUBMITTED' | 'ARCHIVED';
   totalRequirements?: number;
   flaggedRequirements?: number;
@@ -118,6 +121,73 @@ export function getDocumentDownloadUrl(
   documentId: string,
 ): Promise<ApiResult<DownloadUrlResponse>> {
   return apiGet<DownloadUrlResponse>(`/api/v1/bids/${bidId}/documents/${documentId}/download-url`);
+}
+
+// ---------------------------------------------------------------------------
+// Bid decision — "Should we bid on this tender?"
+// ---------------------------------------------------------------------------
+
+/** Deterministic bid/no-bid verdict computed by the eligibility engine. */
+export type BidVerdict = 'GO' | 'CONDITIONAL_GO' | 'NO_GO' | 'REVIEW_REQUIRED';
+
+/**
+ * Human-in-the-loop state of a decision. The engine proposes
+ * (AI_PROPOSED); a human confirms or overrides. The UI must never
+ * present an AI_PROPOSED verdict as final.
+ */
+export type BidDecisionState =
+  | 'AI_PROPOSED'
+  | 'UNDER_REVIEW'
+  | 'CONFIRMED'
+  | 'OVERRIDDEN';
+
+/**
+ * Wire contract of GET /api/v1/bids/:id/bid-decision
+ * (BidsController.toDecisionWire).
+ *
+ * The verdict is computed deterministically against the pinned
+ * Company Capability Profile — the AI engine cannot alter it.
+ * `readinessScore` is 0.0–1.0. A bid with no evaluated decision
+ * returns 404 (Not Found), which is the expected "not evaluated"
+ * state, not an error.
+ */
+export interface BidDecisionSummary {
+  decisionId: string;
+  bidId: string;
+  profileVersionId: string;
+  verdict: BidVerdict;
+  state: BidDecisionState;
+  readinessScore: number;
+  evaluatedAt: string;
+  reasonsToPursue: unknown[];
+  reasonsNotToPursue: unknown[];
+  hardDisqualifiers: unknown[];
+  missingInformation: unknown[];
+  uncertainAreas: unknown[];
+  commercialRisks: unknown[];
+  evidenceCitations: unknown[];
+  reviewTriggers: unknown[];
+}
+
+/**
+ * Latest persisted bid/no-bid decision for a tender.
+ * Requires BIDS_READ. 404 when the tender has never been evaluated.
+ */
+export function getBidDecision(
+  bidId: string,
+): Promise<ApiResult<BidDecisionSummary>> {
+  return apiGet<BidDecisionSummary>(`/api/v1/bids/${bidId}/bid-decision`);
+}
+
+/**
+ * Trigger a fresh deterministic evaluation against the
+ * pinned Company Capability Profile.
+ * Requires BIDS_UPDATE (writes a decision record).
+ */
+export function evaluateBidDecision(
+  bidId: string,
+): Promise<ApiResult<BidDecisionSummary>> {
+  return apiPost<BidDecisionSummary>(`/api/v1/bids/${bidId}/bid-decision`, {});
 }
 
 export interface DeleteBidResponse {

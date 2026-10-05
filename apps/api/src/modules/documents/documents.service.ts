@@ -1,19 +1,22 @@
 /**
  * DocumentsService — Upload URL generation, upload confirmation, and download URL resolution.
  */
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Optional } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
 import { eq, and, inArray, desc, sql } from 'drizzle-orm';
 import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '../../common/database/database.module.js';
 import * as schema from '../../common/database/schema.js';
 import { STORAGE_TOKEN } from '../../infrastructure/storage/storage.module.js';
+import { QUEUE_TOKEN } from '../../infrastructure/queue/queue.module.js';
 import { GcsStorageService } from '../../infrastructure/storage/GcsStorageService.js';
 import { MockStorageService } from '../../infrastructure/storage/MockStorageService.js';
 import type { IStorageService } from '../bids/application/IStorageService.js';
+import type { IJobQueue } from '../bids/application/IJobQueue.js';
 import { NotFoundError } from '../../common/errors/errors.js';
 import { AiDocumentExtractor, type ExtractedComplianceItem } from '../bids/application/AiDocumentExtractor.js';
 import { DocumentContentNormalizer, type NormalizedDocumentPage } from '../bids/application/DocumentContentNormalizer.js';
 import { TenderDocument, type DocumentType } from '../bids/domain/entities/TenderDocument.js';
+import { TenantContextHolder } from '../../common/security/TenantContext.js';
 
 export interface UploadUrlResult {
   documentId: string;
@@ -52,8 +55,15 @@ export class DocumentsService {
   constructor(
     @Inject(DRIZZLE_TOKEN) db: DrizzleDb | PGlite,
     @Inject(STORAGE_TOKEN) private readonly storageService: (IStorageService & Partial<GcsStorageService>) | null,
+    @Optional() @Inject(QUEUE_TOKEN) private readonly jobQueue?: IJobQueue | null,
   ) {
     this.db = 'select' in db ? (db as DrizzleDb) : createDrizzle(db as PGlite);
+  }
+
+  public registerUploadedMockObject(storagePath: string, content: Buffer): void {
+    if (this.storageService && typeof (this.storageService as unknown as Record<string, unknown>).simulateUploadedObject === 'function') {
+      (this.storageService as unknown as { simulateUploadedObject: (p: string, s: number, c?: string, b?: Buffer) => void }).simulateUploadedObject(storagePath, content.length, undefined, content);
+    }
   }
 
   private get gcsStorageService(): GcsStorageService | null {
@@ -71,9 +81,10 @@ export class DocumentsService {
     rawSizeBytes?: number,
     rawDocumentType?: string,
   ): Promise<UploadUrlResult> {
+    const orgId = TenantContextHolder.get()?.organizationId || 'org_acme_infra_001';
     const docId = `doc-${Date.now()}`;
     const fileName = typeof rawFileName === 'string' && rawFileName.trim() ? rawFileName.trim() : 'document.pdf';
-    const storagePath = `tenants/org_acme_infra_001/bids/${bidId}/${docId}/${fileName}`;
+    const storagePath = `tenants/${orgId}/bids/${bidId}/${docId}/${fileName}`;
     const contentType = (typeof rawMimeType === 'string' && rawMimeType) || 'application/pdf';
     const sizeBytes = typeof rawSizeBytes === 'number' && rawSizeBytes > 0 ? rawSizeBytes : undefined;
     const documentType = typeof rawDocumentType === 'string' && rawDocumentType.trim() ? rawDocumentType.trim() : 'NIT';
@@ -108,10 +119,13 @@ export class DocumentsService {
   }
 
   public async confirmUpload(bidId: string, rawDocumentId?: string): Promise<ConfirmUploadResult> {
+    const orgId = TenantContextHolder.get()?.organizationId || 'org_acme_infra_001';
+    const userId = TenantContextHolder.get()?.userId || 'usr_bid_mgr_01';
+
     const [bidRecord] = await this.db
       .select()
       .from(schema.bids)
-      .where(eq(schema.bids.id, bidId))
+      .where(and(eq(schema.bids.id, bidId), eq(schema.bids.organizationId, orgId)))
       .limit(1);
 
     if (!bidRecord) {
@@ -126,7 +140,13 @@ export class DocumentsService {
     const [existingDoc] = await this.db
       .select()
       .from(schema.tenderDocuments)
-      .where(and(eq(schema.tenderDocuments.bidId, bidId), eq(schema.tenderDocuments.id, docId)))
+      .where(
+        and(
+          eq(schema.tenderDocuments.bidId, bidId),
+          eq(schema.tenderDocuments.id, docId),
+          eq(schema.tenderDocuments.organizationId, orgId),
+        ),
+      )
       .limit(1);
 
     let fileName = pending?.fileName || (existingDoc && existingDoc.fileName !== 'Uploaded_Tender_Document.pdf' ? existingDoc.fileName : undefined);
@@ -138,7 +158,7 @@ export class DocumentsService {
     if ((!fileName || !storagePath || fileName === 'Uploaded_Tender_Document.pdf') && this.gcsStorageService) {
       try {
         const matchedFiles = await this.gcsStorageService.findFilesByPrefix(
-          `tenants/org_acme_infra_001/bids/${bidId}/${docId}/`,
+          `tenants/${orgId}/bids/${bidId}/${docId}/`,
         );
         if (matchedFiles.length > 0) {
           storagePath = matchedFiles[0]!;
@@ -150,7 +170,7 @@ export class DocumentsService {
     }
 
     fileName = fileName || 'Uploaded_Tender_Document.pdf';
-    storagePath = storagePath || `tenants/org_acme_infra_001/bids/${bidId}/${docId}/${fileName}`;
+    storagePath = storagePath || `tenants/${orgId}/bids/${bidId}/${docId}/${fileName}`;
     const now = new Date();
 
     // Query exact file size from Cloud Storage headObject if available, else use reported size
@@ -172,7 +192,7 @@ export class DocumentsService {
       .values({
         id: docId,
         bidId,
-        organizationId: 'org_acme_infra_001',
+        organizationId: orgId,
         fileName,
         storagePath,
         fileSizeBytes,
@@ -198,15 +218,15 @@ export class DocumentsService {
     await this.db
       .update(schema.bids)
       .set({ status: 'REVIEW_READY', updatedAt: now })
-      .where(eq(schema.bids.id, bidId));
+      .where(and(eq(schema.bids.id, bidId), eq(schema.bids.organizationId, orgId)));
 
     // 3. Record immutable audit log
     await this.db.insert(schema.auditLogs).values({
       id: `aud-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
       bidId,
-      organizationId: 'org_acme_infra_001',
-      userId: 'usr_bid_mgr_01',
-      userName: 'Vikramaditya Sharma',
+      organizationId: orgId,
+      userId,
+      userName: userId === 'usr_bid_mgr_01' ? 'Vikramaditya Sharma' : 'Authorized User',
       eventType: 'DOCUMENT_UPLOADED',
       aggregateType: 'TenderDocument',
       aggregateId: docId,
@@ -214,7 +234,22 @@ export class DocumentsService {
       timestamp: now,
     });
 
-    // 4. Trigger asynchronous extraction pipeline against FastAPI / PDF text
+    // 4. Enqueue background ingestion job to SQS / PubSub queue if queue is configured
+    if (this.jobQueue) {
+      try {
+        await this.jobQueue.enqueue({
+          jobId: `job-${Date.now()}-${docId}`,
+          organizationId: orgId,
+          bidId,
+          documentId: docId,
+          timestamp: now.toISOString(),
+        });
+      } catch (queueErr) {
+        console.warn(`[DocumentsService] Failed to enqueue ingestion job for ${docId}:`, queueErr);
+      }
+    }
+
+    // 5. Trigger asynchronous extraction pipeline against FastAPI / PDF text
     void this.markExtractionComplete(bidId, docId).catch((err) => {
       console.warn(`[DocumentsService] Background extraction failed for bid '${bidId}':`, err);
     });
@@ -230,20 +265,27 @@ export class DocumentsService {
     docId: string,
     hostHeader?: string,
   ): Promise<{ downloadUrl: string; expiresInSeconds: number }> {
+    const orgId = TenantContextHolder.get()?.organizationId || 'org_acme_infra_001';
     const [docRow] = await this.db
       .select()
       .from(schema.tenderDocuments)
-      .where(and(eq(schema.tenderDocuments.bidId, bidId), eq(schema.tenderDocuments.id, docId)))
+      .where(
+        and(
+          eq(schema.tenderDocuments.bidId, bidId),
+          eq(schema.tenderDocuments.id, docId),
+          eq(schema.tenderDocuments.organizationId, orgId),
+        ),
+      )
       .limit(1);
 
     let fileName = docRow?.fileName || 'tender_document.pdf';
     let storagePath =
-      docRow?.storagePath || `tenants/org_acme_infra_001/bids/${bidId}/${docId}/${fileName}`;
+      docRow?.storagePath || `tenants/${orgId}/bids/${bidId}/${docId}/${fileName}`;
 
     if (this.gcsStorageService) {
       try {
         const matchedFiles = await this.gcsStorageService.findFilesByPrefix(
-          `tenants/org_acme_infra_001/bids/${bidId}/${docId}/`,
+          `tenants/${orgId}/bids/${bidId}/${docId}/`,
         );
 
         if (matchedFiles.length > 0) {
@@ -977,8 +1019,9 @@ export class DocumentsService {
   public async deleteDocument(
     bidId: string,
     docId: string,
-    organizationId = 'org_acme_infra_001',
+    organizationId = TenantContextHolder.get()?.organizationId || 'org_acme_infra_001',
   ): Promise<DeleteDocumentResult> {
+    const userId = TenantContextHolder.get()?.userId || 'usr_bid_mgr_01';
     // 1. Verify existence & tenant boundary (Anti-IDOR)
     const [doc] = await this.db
       .select()
@@ -1027,8 +1070,8 @@ export class DocumentsService {
       id: `aud-docdel-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
       bidId,
       organizationId,
-      userId: 'usr_bid_mgr_01',
-      userName: 'Vikramaditya Sharma',
+      userId,
+      userName: userId === 'usr_bid_mgr_01' ? 'Vikramaditya Sharma' : 'Authorized User',
       eventType: 'DOCUMENT_DELETED',
       aggregateType: 'TenderDocument',
       aggregateId: docId,

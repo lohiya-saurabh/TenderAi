@@ -10,6 +10,7 @@ import type { IStorageService } from './application/IStorageService.js';
 import * as schema from '../../common/database/schema.js';
 import { NotFoundError } from '../../common/errors/errors.js';
 import type { DemoBid, DemoDocument } from '../../seed/data.js';
+import { TenantContextHolder } from '../../common/security/TenantContext.js';
 
 export interface CreateBidDto {
   title?: string;
@@ -17,6 +18,7 @@ export interface CreateBidDto {
   tenderingAuthority?: string;
   estimatedValueRupees?: number | string;
   submissionDeadline?: string | null;
+  locationState?: string | null;
 }
 
 export interface DeleteBidResult {
@@ -37,8 +39,16 @@ export class BidsService {
   }
 
   public async listBids(): Promise<DemoBid[]> {
-    const allBids = await this.db.select().from(schema.bids).orderBy(desc(schema.bids.createdAt));
-    const allDocs = await this.db.select().from(schema.tenderDocuments);
+    const orgId = TenantContextHolder.get()?.organizationId || 'org_acme_infra_001';
+    const allBids = await this.db
+      .select()
+      .from(schema.bids)
+      .where(eq(schema.bids.organizationId, orgId))
+      .orderBy(desc(schema.bids.createdAt));
+    const allDocs = await this.db
+      .select()
+      .from(schema.tenderDocuments)
+      .where(eq(schema.tenderDocuments.organizationId, orgId));
 
     const docsByBid = new Map<string, DemoDocument[]>();
     for (const doc of allDocs) {
@@ -60,10 +70,11 @@ export class BidsService {
   }
 
   public async getBidById(bidId: string): Promise<DemoBid> {
+    const orgId = TenantContextHolder.get()?.organizationId || 'org_acme_infra_001';
     const [bidRecord] = await this.db
       .select()
       .from(schema.bids)
-      .where(eq(schema.bids.id, bidId))
+      .where(and(eq(schema.bids.id, bidId), eq(schema.bids.organizationId, orgId)))
       .limit(1);
 
     if (!bidRecord) {
@@ -73,7 +84,7 @@ export class BidsService {
     const docs = await this.db
       .select()
       .from(schema.tenderDocuments)
-      .where(eq(schema.tenderDocuments.bidId, bidId))
+      .where(and(eq(schema.tenderDocuments.bidId, bidId), eq(schema.tenderDocuments.organizationId, orgId)))
       .orderBy(asc(schema.tenderDocuments.uploadedAt));
 
     const documents: DemoDocument[] = [];
@@ -92,7 +103,7 @@ export class BidsService {
             typeof (this.storageService as unknown as { findFilesByPrefix?: (p: string) => Promise<string[]> }).findFilesByPrefix === 'function'
           ) {
             const matched = await (this.storageService as unknown as { findFilesByPrefix: (p: string) => Promise<string[]> }).findFilesByPrefix(
-              `tenants/org_acme_infra_001/bids/${bidId}/${d.id}/`,
+              `tenants/${orgId}/bids/${bidId}/${d.id}/`,
             );
             if (matched && matched.length > 0) {
               storagePath = matched[0]!;
@@ -129,6 +140,8 @@ export class BidsService {
   }
 
   public async createBid(dto: CreateBidDto): Promise<DemoBid> {
+    const orgId = TenantContextHolder.get()?.organizationId || 'org_acme_infra_001';
+    const userId = TenantContextHolder.get()?.userId || 'usr_bid_mgr_01';
     const newBidId = `bid-${Date.now()}`;
     const title = typeof dto.title === 'string' && dto.title.trim() ? dto.title.trim() : 'Untitled Tender';
     const tenderNumber =
@@ -144,16 +157,21 @@ export class BidsService {
         ? dto.estimatedValueRupees
         : Number(dto.estimatedValueRupees) || 0;
     const submissionDeadline = typeof dto.submissionDeadline === 'string' ? dto.submissionDeadline : null;
+    const locationState =
+      typeof dto.locationState === 'string' && dto.locationState.trim()
+        ? dto.locationState.trim()
+        : null;
     const now = new Date();
 
     await this.db.insert(schema.bids).values({
       id: newBidId,
-      organizationId: 'org_acme_infra_001',
+      organizationId: orgId,
       title,
       tenderNumber,
       tenderingAuthority,
       estimatedValueRupees,
       submissionDeadline,
+      locationState,
       status: 'DRAFT',
       totalRequirements: 0,
       flaggedRequirements: 0,
@@ -166,9 +184,9 @@ export class BidsService {
     await this.db.insert(schema.auditLogs).values({
       id: `aud-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
       bidId: newBidId,
-      organizationId: 'org_acme_infra_001',
-      userId: 'usr_bid_mgr_01',
-      userName: 'Vikramaditya Sharma',
+      organizationId: orgId,
+      userId,
+      userName: userId === 'usr_bid_mgr_01' ? 'Vikramaditya Sharma' : 'Authorized User',
       eventType: 'BID_PROJECT_CREATED',
       aggregateType: 'BidProject',
       aggregateId: newBidId,
@@ -183,6 +201,7 @@ export class BidsService {
       tenderingAuthority,
       estimatedValueRupees,
       submissionDeadline,
+      locationState,
       status: 'DRAFT',
       totalRequirements: 0,
       flaggedRequirements: 0,
@@ -195,8 +214,9 @@ export class BidsService {
 
   public async deleteBid(
     bidId: string,
-    organizationId = 'org_acme_infra_001',
+    organizationId = TenantContextHolder.get()?.organizationId || 'org_acme_infra_001',
   ): Promise<DeleteBidResult> {
+    const userId = TenantContextHolder.get()?.userId || 'usr_bid_mgr_01';
     // 1. Verify existence and tenant boundary (Anti-IDOR)
     const [bid] = await this.db
       .select()
@@ -220,8 +240,8 @@ export class BidsService {
       id: `aud-del-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
       bidId,
       organizationId,
-      userId: 'usr_bid_mgr_01',
-      userName: 'Vikramaditya Sharma',
+      userId,
+      userName: userId === 'usr_bid_mgr_01' ? 'Vikramaditya Sharma' : 'Authorized User',
       eventType: 'BID_PROJECT_DELETED',
       aggregateType: 'BidProject',
       aggregateId: bidId,
@@ -264,6 +284,7 @@ export class BidsService {
       tenderingAuthority: b.tenderingAuthority,
       estimatedValueRupees: Number(b.estimatedValueRupees),
       submissionDeadline: b.submissionDeadline,
+      locationState: b.locationState,
       status: b.status,
       totalRequirements: b.totalRequirements,
       flaggedRequirements: b.flaggedRequirements,

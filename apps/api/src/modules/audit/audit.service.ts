@@ -3,10 +3,11 @@
  */
 import { Injectable, Inject } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
-import { eq, desc } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '../../common/database/database.module.js';
 import * as schema from '../../common/database/schema.js';
 import type { DemoAuditEvent } from '../../seed/data.js';
+import { TenantContextHolder } from '../../common/security/TenantContext.js';
 
 @Injectable()
 export class AuditService {
@@ -17,10 +18,16 @@ export class AuditService {
   }
 
   public async listEvents(bidId: string): Promise<DemoAuditEvent[]> {
+    const orgId = TenantContextHolder.get()?.organizationId || 'org_acme_infra_001';
     const records = await this.db
       .select()
       .from(schema.auditLogs)
-      .where(eq(schema.auditLogs.bidId, bidId))
+      .where(
+        and(
+          eq(schema.auditLogs.bidId, bidId),
+          eq(schema.auditLogs.organizationId, orgId),
+        ),
+      )
       .orderBy(desc(schema.auditLogs.timestamp));
 
     return records.map((row) => ({

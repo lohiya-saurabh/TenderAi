@@ -36,3 +36,10 @@ export class BadRequestError extends HttpError {
     this.name = 'BadRequestError';
   }
 }
+
+export class ForbiddenError extends HttpError {
+  constructor(message: string) {
+    super(403, message);
+    this.name = 'ForbiddenError';
+  }
+}

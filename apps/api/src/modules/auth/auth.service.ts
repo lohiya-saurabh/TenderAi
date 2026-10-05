@@ -1,13 +1,15 @@
 /**
- * AuthService — Handles user authentication against PostgreSQL.
+ * AuthService — Handles user authentication against PostgreSQL with cryptographic JWTs.
  */
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Optional } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
 import bcrypt from 'bcrypt';
 import { sql } from 'drizzle-orm';
 import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '../../common/database/database.module.js';
 import * as schema from '../../common/database/schema.js';
 import { UnauthorizedError } from '../../common/errors/errors.js';
+import { TokenService } from '../../common/security/TokenService.js';
+import type { UserRole, Permission } from '../../common/security/permissions.js';
 
 // Precomputed cost-10 bcrypt hash used to normalize timing and defend against user enumeration
 const DUMMY_BCRYPT_HASH = '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
@@ -29,9 +31,14 @@ export interface AuthResult {
 @Injectable()
 export class AuthService {
   private readonly db: DrizzleDb;
+  private readonly tokenService: TokenService;
 
-  constructor(@Inject(DRIZZLE_TOKEN) db: DrizzleDb | PGlite) {
+  constructor(
+    @Inject(DRIZZLE_TOKEN) db: DrizzleDb | PGlite,
+    @Optional() @Inject(TokenService) tokenService?: TokenService,
+  ) {
     this.db = 'select' in db ? (db as DrizzleDb) : createDrizzle(db as PGlite);
+    this.tokenService = tokenService || new TokenService();
   }
 
   public async login(email?: string, password?: string): Promise<AuthResult> {
@@ -60,21 +67,29 @@ export class AuthService {
       );
     }
 
-    const permissions =
+    const permissions: Permission[] =
       typeof matched.permissions === 'string' ? JSON.parse(matched.permissions) : matched.permissions;
 
     const userProfile = {
       id: matched.id,
       email: matched.email,
       name: matched.name,
-      role: matched.role,
+      role: matched.role as UserRole,
       permissions,
       organizationId: matched.organizationId,
       organizationName: matched.organizationName,
     };
 
-    const accessToken = `tp_demo_access_${Buffer.from(JSON.stringify(userProfile)).toString('base64url')}`;
-    const refreshToken = `tp_demo_refresh_${userProfile.id}_${Date.now()}`;
+    const accessToken = this.tokenService.signAccessToken({
+      sub: userProfile.id,
+      email: userProfile.email,
+      name: userProfile.name,
+      role: userProfile.role,
+      permissions: userProfile.permissions,
+      organizationId: userProfile.organizationId,
+      organizationName: userProfile.organizationName,
+    });
+    const refreshToken = this.tokenService.signRefreshToken(userProfile.id);
 
     return {
       accessToken,
@@ -83,33 +98,53 @@ export class AuthService {
     };
   }
 
-  public async refresh(): Promise<{ accessToken: string; refreshToken: string }> {
-    const [defaultUser] = await this.db.select().from(schema.users).limit(1);
-    if (!defaultUser) {
-      throw new UnauthorizedError('No active user available for refresh.');
+  public async refresh(incomingRefreshToken?: string): Promise<{ accessToken: string; refreshToken: string }> {
+    if (!incomingRefreshToken) {
+      throw new UnauthorizedError('Missing or empty refresh token.');
     }
 
-    const permissions =
-      typeof defaultUser.permissions === 'string'
-        ? JSON.parse(defaultUser.permissions)
-        : defaultUser.permissions;
+    // Cryptographic signature and expiration check
+    const { userId } = this.tokenService.verifyRefreshToken(incomingRefreshToken);
+
+    const [user] = await this.db
+      .select()
+      .from(schema.users)
+      .where(sql`${schema.users.id} = ${userId}`)
+      .limit(1);
+
+    if (!user) {
+      throw new UnauthorizedError('User account associated with this refresh token no longer exists.');
+    }
+
+    const permissions: Permission[] =
+      typeof user.permissions === 'string'
+        ? JSON.parse(user.permissions)
+        : user.permissions;
 
     const userProfile = {
-      id: defaultUser.id,
-      email: defaultUser.email,
-      name: defaultUser.name,
-      role: defaultUser.role,
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role as UserRole,
       permissions,
-      organizationId: defaultUser.organizationId,
-      organizationName: defaultUser.organizationName,
+      organizationId: user.organizationId,
+      organizationName: user.organizationName,
     };
 
-    const newJwt = `tp_demo_access_${Buffer.from(JSON.stringify(userProfile)).toString('base64url')}`;
-    const newRefresh = `tp_demo_refresh_${userProfile.id}_${Date.now()}`;
+    const newAccessToken = this.tokenService.signAccessToken({
+      sub: userProfile.id,
+      email: userProfile.email,
+      name: userProfile.name,
+      role: userProfile.role,
+      permissions: userProfile.permissions,
+      organizationId: userProfile.organizationId,
+      organizationName: userProfile.organizationName,
+    });
+    const newRefreshToken = this.tokenService.signRefreshToken(userProfile.id);
 
     return {
-      accessToken: newJwt,
-      refreshToken: newRefresh,
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
     };
   }
 }

@@ -68,10 +68,14 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
       );
     });
 
-    it('should refresh demo tokens', async () => {
-      const result = await authService.refresh();
+    it('should refresh demo tokens with genuine refresh token and reject empty', async () => {
+      const loginResult = await authService.login('bidmanager@acme.com', 'Password123!');
+      const result = await authService.refresh(loginResult.refreshToken);
       expect(result.accessToken).toBeDefined();
       expect(result.refreshToken).toBeDefined();
+
+      await expect(authService.refresh()).rejects.toThrow(UnauthorizedError);
+      await expect(authService.refresh('tampered.invalid.token')).rejects.toThrow(UnauthorizedError);
     });
   });
 

@@ -3,89 +3,204 @@
    ============================================================
    Design tokens from @tenderpulse/ui mapped to CSS custom
    properties for use across all components and CSS modules.
+   Zero external CSS frameworks. Native, accessible, responsive.
    ============================================================ */
-
-/* --- Google Fonts (loaded in index.html) --- */
 
 /* --- CSS Custom Properties (Design Tokens) --- */
 :root {
-  /* Primary palette — Indigo */
+  /* --- Primary palette — Indigo --- */
   --color-primary-50: #eef2ff;
   --color-primary-100: #e0e7ff;
+  --color-primary-200: #c7d2fe;
+  --color-primary-300: #a5b4fc;
+  --color-primary-400: #818cf8;
   --color-primary-500: #6366f1;
   --color-primary-600: #4f46e5;
   --color-primary-700: #4338ca;
+  --color-primary-800: #3730a3;
   --color-primary-900: #312e81;
 
-  /* Status colors */
-  --color-status-pending: #f59e0b;
-  --color-status-ready: #10b981;
-  --color-status-flagged: #ef4444;
-  --color-status-waived: #6b7280;
+  /* --- Surface colors — Dark Theme --- */
+  --color-surface-bg: #0f172a;           /* Deep navy slate body background */
+  --color-surface-card: #1e293b;         /* Standard card background */
+  --color-surface-card-hover: #253449;   /* Hover state for interactive cards */
+  --color-surface-card-subtle: #172033;  /* Sub-panels, drawer sections */
+  --color-surface-border: #334155;        /* Default border */
+  --color-surface-border-light: #475569;  /* Prominent / active border */
+  --color-surface-border-subtle: #1e293b; /* Recessed border */
+  --color-surface-text: #f8fafc;          /* High-contrast primary text */
+  --color-surface-muted: #94a3b8;         /* Secondary description text */
+  --color-surface-subtle: #64748b;        /* Placeholder / disabled text */
+  --color-surface-input: #0f172a;         /* Input field background */
+
+  /* --- Semantic Statuses --- */
+  /* 1. PASS */
+  --status-pass-bg: rgba(16, 185, 129, 0.12);
+  --status-pass-text: #10b981;
+  --status-pass-border: rgba(16, 185, 129, 0.3);
+  --status-pass-icon: #34d399;
+
+  /* 2. FAIL */
+  --status-fail-bg: rgba(239, 68, 68, 0.12);
+  --status-fail-text: #ef4444;
+  --status-fail-border: rgba(239, 68, 68, 0.3);
+  --status-fail-icon: #f87171;
+
+  /* 3. MISSING */
+  --status-missing-bg: rgba(245, 158, 11, 0.12);
+  --status-missing-text: #f59e0b;
+  --status-missing-border: rgba(245, 158, 11, 0.3);
+  --status-missing-icon: #fbbf24;
+
+  /* 4. REVIEW_REQUIRED */
+  --status-review-bg: rgba(139, 92, 246, 0.15);
+  --status-review-text: #a78bfa;
+  --status-review-border: rgba(139, 92, 246, 0.35);
+  --status-review-icon: #c4b5fd;
+
+  /* 5. NOT_APPLICABLE */
+  --status-na-bg: rgba(100, 116, 139, 0.12);
+  --status-na-text: #94a3b8;
+  --status-na-border: rgba(100, 116, 139, 0.3);
+  --status-na-icon: #64748b;
+
+  /* Backward-compatible status aliases */
+  --color-status-ready: var(--status-pass-text);
+  --color-status-flagged: var(--status-fail-text);
+  --color-status-pending: var(--status-missing-text);
+  --color-status-waived: var(--status-na-text);
   --color-status-processing: #3b82f6;
   --color-status-draft: #8b5cf6;
   --color-status-queued: #06b6d4;
   --color-status-finalized: #059669;
   --color-status-failed: #dc2626;
 
-  /* Surface colors — Dark theme */
-  --color-surface-bg: #0f172a;
-  --color-surface-card: #1e293b;
-  --color-surface-card-hover: #253449;
-  --color-surface-border: #334155;
-  --color-surface-border-light: #475569;
-  --color-surface-text: #f8fafc;
-  --color-surface-muted: #94a3b8;
-  --color-surface-subtle: #64748b;
-  --color-surface-input: #0f172a;
+  /* --- Semantic Risk Levels --- */
+  /* CRITICAL */
+  --risk-critical-bg: rgba(220, 38, 38, 0.15);
+  --risk-critical-text: #f87171;
+  --risk-critical-border: rgba(220, 38, 38, 0.4);
+  --risk-critical-accent: #dc2626;
 
-  /* Semantic */
+  /* HIGH */
+  --risk-high-bg: rgba(249, 115, 22, 0.15);
+  --risk-high-text: #fb923c;
+  --risk-high-border: rgba(249, 115, 22, 0.35);
+  --risk-high-accent: #ea580c;
+
+  /* MEDIUM */
+  --risk-medium-bg: rgba(245, 158, 11, 0.15);
+  --risk-medium-text: #fbbf24;
+  --risk-medium-border: rgba(245, 158, 11, 0.35);
+  --risk-medium-accent: #d97706;
+
+  /* LOW */
+  --risk-low-bg: rgba(16, 185, 129, 0.12);
+  --risk-low-text: #34d399;
+  --risk-low-border: rgba(16, 185, 129, 0.3);
+  --risk-low-accent: #059669;
+
+  /* --- Functional Alert / Notification Colors --- */
   --color-danger: #ef4444;
   --color-danger-hover: #dc2626;
-  --color-success: #10b981;
-  --color-warning: #f59e0b;
-  --color-info: #3b82f6;
+  --color-danger-bg: rgba(239, 68, 68, 0.1);
+  --color-danger-border: rgba(239, 68, 68, 0.3);
 
-  /* Typography */
+  --color-success: #10b981;
+  --color-success-hover: #059669;
+  --color-success-bg: rgba(16, 185, 129, 0.1);
+  --color-success-border: rgba(16, 185, 129, 0.3);
+
+  --color-warning: #f59e0b;
+  --color-warning-hover: #d97706;
+  --color-warning-bg: rgba(245, 158, 11, 0.1);
+  --color-warning-border: rgba(245, 158, 11, 0.3);
+
+  --color-info: #3b82f6;
+  --color-info-hover: #2563eb;
+  --color-info-bg: rgba(59, 130, 246, 0.1);
+  --color-info-border: rgba(59, 130, 246, 0.3);
+
+  /* --- Typography Scale --- */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', Menlo, Monaco, Consolas, monospace;
 
-  /* Spacing */
-  --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
-  --space-4: 1rem;
-  --space-5: 1.25rem;
-  --space-6: 1.5rem;
-  --space-8: 2rem;
-  --space-10: 2.5rem;
-  --space-12: 3rem;
-  --space-16: 4rem;
+  --text-2xs: 0.65rem;   /* 10.4px */
+  --text-xs: 0.75rem;    /* 12px */
+  --text-sm: 0.875rem;   /* 14px */
+  --text-base: 1rem;     /* 16px */
+  --text-lg: 1.125rem;   /* 18px */
+  --text-xl: 1.25rem;    /* 20px */
+  --text-2xl: 1.5rem;    /* 24px */
+  --text-3xl: 1.875rem;  /* 30px */
+  --text-4xl: 2.25rem;   /* 36px */
 
-  /* Radii */
-  --radius-sm: 0.375rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
+  --font-regular: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+
+  --leading-none: 1;
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.75;
+
+  /* --- Spacing Scale (4px base) --- */
+  --space-0-5: 0.125rem; /* 2px */
+  --space-1: 0.25rem;    /* 4px */
+  --space-1-5: 0.375rem; /* 6px */
+  --space-2: 0.5rem;     /* 8px */
+  --space-2-5: 0.625rem; /* 10px */
+  --space-3: 0.75rem;    /* 12px */
+  --space-4: 1rem;       /* 16px */
+  --space-5: 1.25rem;    /* 20px */
+  --space-6: 1.5rem;     /* 24px */
+  --space-8: 2rem;       /* 32px */
+  --space-10: 2.5rem;    /* 40px */
+  --space-12: 3rem;      /* 48px */
+  --space-16: 4rem;      /* 64px */
+
+  /* --- Border Widths & Radii --- */
+  --border-width-thin: 1px;
+  --border-width-thick: 2px;
+
+  --radius-none: 0px;
+  --radius-sm: 0.375rem; /* 6px */
+  --radius-md: 0.5rem;   /* 8px */
+  --radius-lg: 0.75rem;  /* 12px */
+  --radius-xl: 1rem;     /* 16px */
+  --radius-2xl: 1.5rem;  /* 24px */
   --radius-full: 9999px;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  /* --- Shadows & Elevations --- */
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px -1px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
   --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.15);
+  --shadow-glow-success: 0 0 20px rgba(16, 185, 129, 0.2);
+  --shadow-glow-danger: 0 0 20px rgba(239, 68, 68, 0.2);
 
-  /* Transitions */
-  --transition-fast: 150ms ease;
-  --transition-base: 200ms ease;
-  --transition-slow: 300ms ease;
+  /* --- Transitions --- */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
 
-  /* Layout */
+  /* --- Layout & Structural Metrics --- */
   --sidebar-width: 260px;
+  --sidebar-collapsed-width: 68px;
   --header-height: 64px;
+  --content-max-width: 1440px;
+  --z-index-dropdown: 100;
+  --z-index-sticky: 200;
+  --z-index-drawer: 500;
+  --z-index-modal: 1000;
+  --z-index-tooltip: 1100;
+  --z-index-toast: 1200;
 }
 
-/* --- Base Reset --- */
+/* --- Base Reset & Box Sizing --- */
 *,
 *::before,
 *::after {
@@ -98,14 +213,16 @@ html {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 body {
   font-family: var(--font-sans);
   background-color: var(--color-surface-bg);
   color: var(--color-surface-text);
-  line-height: 1.6;
+  line-height: var(--leading-normal);
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 #root {
@@ -113,16 +230,16 @@ body {
 }
 
 a {
-  color: var(--color-primary-500);
+  color: var(--color-primary-400);
   text-decoration: none;
   transition: color var(--transition-fast);
 }
 
 a:hover {
-  color: var(--color-primary-600);
+  color: var(--color-primary-300);
 }
 
-/* --- Scrollbar --- */
+/* --- Custom Scrollbar --- */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -141,13 +258,13 @@ a:hover {
   background: var(--color-surface-border-light);
 }
 
-/* --- Focus visible --- */
+/* --- Accessible Focus Rings --- */
 :focus-visible {
   outline: 2px solid var(--color-primary-500);
   outline-offset: 2px;
 }
 
-/* --- Shimmer animation for loading skeletons --- */
+/* --- Shimmer Animation for Skeletons --- */
 @keyframes shimmer {
   0% {
     background-position: -200% 0;
@@ -169,11 +286,11 @@ a:hover {
   border-radius: var(--radius-sm);
 }
 
-/* --- Fade-in animation --- */
+/* --- Keyframe Animations --- */
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -181,18 +298,32 @@ a:hover {
   }
 }
 
-.fade-in {
-  animation: fadeIn var(--transition-slow) ease forwards;
-}
-
-/* --- Progress bar fill animation --- */
-@keyframes progressFill {
+@keyframes slideInRight {
   from {
-    width: 0%;
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
   }
 }
 
-/* --- Pulse animation for live indicators --- */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @keyframes pulse {
   0%, 100% {
     opacity: 1;
@@ -202,6 +333,73 @@ a:hover {
   }
 }
 
+.fade-in {
+  animation: fadeIn var(--transition-base) ease forwards;
+}
+
+.scale-in {
+  animation: scaleIn var(--transition-base) cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.slide-in-right {
+  animation: slideInRight var(--transition-slow) cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.spin {
+  animation: spin 0.8s linear infinite;
+}
+
 .pulse {
   animation: pulse 2s ease-in-out infinite;
 }
+
+/* --- Screen Reader Only (Visually Hidden) --- */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* --- Application Shell Responsive Media Queries --- */
+@media (max-width: 1024px) {
+  .desktop-sidebar-container {
+    display: none !important;
+  }
+
+  .mobile-nav-toggle {
+    display: inline-flex !important;
+  }
+
+  .desktop-sidebar-toggle {
+    display: none !important;
+  }
+
+  .mobile-close-btn {
+    display: inline-flex !important;
+  }
+
+  .app-main-content {
+    padding: 1.25rem 1.25rem !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .tenant-indicator {
+    display: none !important;
+  }
+
+  .app-header {
+    padding: 0 1rem !important;
+  }
+
+  .app-main-content {
+    padding: 1rem 0.75rem !important;
+  }
+}
+

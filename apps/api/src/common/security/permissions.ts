@@ -21,6 +21,9 @@ export const Permissions = {
   COMPLIANCE_REVIEW: 'compliance:review',
   COMPLIANCE_BULK_INGEST: 'compliance:bulk_ingest',
 
+  // Company Capability Profile (org-level data; basis of bid decisions)
+  COMPANY_PROFILE_MANAGE: 'company-profile:manage',
+
   // Audit
   AUDIT_READ: 'audit:read',
 } as const;
@@ -40,6 +43,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, ReadonlySet<Permission>> = {
     Permissions.DOCUMENTS_UPLOAD,
     Permissions.DOCUMENTS_READ,
     Permissions.COMPLIANCE_REVIEW,
+    Permissions.COMPANY_PROFILE_MANAGE,
     Permissions.AUDIT_READ,
   ]),
 

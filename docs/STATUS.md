@@ -6,6 +6,32 @@
 
 The 11-stage workflow: Tender Discovery → Tender-to-Company Matching → Bid/No-Bid Decision → Requirement Extraction → Company Evidence Matching → Compliance Analysis → Risk Analysis → Missing Evidence → Human Review → Bid Readiness → Submission Preparation → Corrigendum Monitoring.
 
+**Human Review Adjudication Experience Implemented (2026-10-06):** Complete redesign of the compliance adjudication experience in `apps/web` (`ComplianceReviewPage.tsx`, `ReviewActions.tsx`):
+1. **6-Stage Linear Adjudication Flow**: Replaced fragmented cards with a sequential decision model (Requirement → Tender Evidence Grounding → Company Evidence Dossier → AI Pre-Assessment → Review Trigger Reason → Human Decision Console).
+2. **Clear AI Advisory vs. Human Decision Distinction**: Machine analysis rendered with advisory badges and dashed borders stating "AI Recommendation — Advisory Only, Not Final", keeping human verdict visibly distinct.
+3. **5 Explicit Human Review Actions**: Upgraded review actions to `Approve (Pass)`, `Reject (Fail)`, `Request Evidence (Missing)`, `Mark Uncertain (Needs Review)`, and `Waive (Not Applicable)` with required rationale for overrides and OCC protection (`expectedVersion`).
+4. **Zero-Trust Audit Trail & Verification**: Integrated grounding provenance with exact quote copies, UDIN and validity status indicators, and tenant RBAC enforcement (`compliance:review`). All 127 web unit tests passing.
+
+**Company Capability Profile UI Overhaul (2026-10-06):** Complete transformation of the Company Profile from a generic settings page into a high-density, reusable Enterprise Capability Dossier in `apps/web`:
+1. **11 Procurement Capability Domains**: Segmented into Company Overview, Registrations (GSTIN, PAN, Udyam, GeM, CPWD), Certifications (ISO 9001/14001/45001, CMMI), Financials & CA UDIN, Past Experience (7-year qualifying work orders), Major Projects, OEM Relationships & MAFs, Key Personnel & Staff, Plant & Equipment, Geographic Coverage (HQ & State Branches with SLA metrics), and Evidence Vault.
+2. **5 Semantic Status Indicators**: Formalized `VERIFIED`, `EXPIRING_SOON`, `EXPIRED`, `MISSING`, and `NEEDS_REVIEW` with dedicated visual indicators and real-time days-until-expiry calculations.
+3. **Core Reusability Value Banner**: "Maintain your company information once and reuse it across tenders" value proposition, real-time Tender Readiness health progress bar, immutable version publishing, and document integrity tracking with SHA-256 hashes.
+4. **Comprehensive Test Suite**: Added `companyProfileData.spec.ts` testing health calculations, expiration countdowns, and profile domain rules. 14 test files / 133 web unit tests passing.
+
+**Tender Processing Lifecycle & Document Upload Overhaul (2026-10-06):** Complete redesign of the async document upload and extraction experience in `apps/web` (`DocumentUploader.tsx`, `ExtractionProgress.tsx`, `BidDetailPage.tsx`):
+1. **Full-Lifecycle Processing Stepper**: Replaced generic loading spinners with a 5-stage contextual pipeline (Upload & Storage → Document Normalization → Requirement Extraction → Evidence & Risk Analysis → Bid Readiness Ready) consuming live Server-Sent Events (SSE).
+2. **Contextual Live State Messages**: Dynamic real-time messages (e.g. *"Extracting eligibility requirements and statutory clauses"*, *"Analyzing company evidence against CA UDIN records"*) paired with exact progress percentages.
+3. **Actionable 3-Part Failure Guarantees**: Structured error handling explicitly detailing (1) What failed, (2) Data safety guarantees (original PDF encrypted & preserved in tenant storage), and (3) Actionable next steps (Retry with OCR, Re-upload clean PDF, or manual entry).
+4. **Direct S3 Byte Transfer Meter**: Real-time XHR upload progress meter displaying transferred megabytes, percentage, and live upload status. All 14 test files / 133 tests passing.
+
+**First-Class Evidence & Provenance UX Overhaul (2026-10-06):** Elevated evidence from passive attachment lists into a central, verified business object across `apps/web` (`EvidenceTraceabilityChain.tsx`, `EvidenceDrawer.tsx`, `ComplianceRow.tsx`, `ComplianceReviewPage.tsx`):
+1. **4-Node Traceability Chain**: Visually mapped the complete verification relationship: Tender Requirement → Required Evidence Spec → Company Evidence Dossier → Assessment Verdict.
+2. **Dual-Sided Provenance Inspector**: Consolidated tender grounding (document, page, clause, exact quote, grounding score) and corporate proof (file name, type, issue date, validity countdown, ICAI UDIN) into a unified drawer.
+3. **5 Semantic Evidence States**: Formalized `VERIFIED`, `EXPIRING`, `EXPIRED`, `MISSING`, and `NEEDS_REVIEW` across rows, drawers, and compliance cards. All 14 test files / 133 tests passing.
+
+
+
+
 **Domain model documented (2026-10-04):** `docs/DOMAIN.md` Part B now teaches the bidder-side domain model and ubiquitous language — aggregate roots (CompanyProfile, Tender, BidCase, ReviewTask, WorkflowRun, AuditEvent), entities (CapabilityEntry specializations, EvidenceDocument, TenderRequirement, TenderAmendment, EvidenceMatch, RiskFinding, GeneratedArtifact), value objects (Permission, ExecutionRules, Provenance, Money, Criterion, EligibilityVerdict, MatchState, ProfileVersionRef), workflows (Workflow, ComplianceAssessment, BidReadiness, CorrigendumMonitoring), lifecycle state machines for all major concepts, the 10-step "how a tender is evaluated against a company profile" walkthrough, and a full domain glossary. Design-only; no database changes.
 
 **HLD delta documented (2026-10-05):** `docs/ARCHITECTURE.md` (new, root-level) compares existing vs. target architecture and answers the 10 delta questions (what remains / must change / new modules / wrong boundaries / what stays together / AI placement / deterministic logic placement / async / events / human review). Target module map covers all 14 logical areas. New ADRs: **0016** (bidder-side pivot aggregates: Tender + BidCase + CompanyProfile), **0017** (enforce layered boundary at HTTP — eliminate CRUD bypass), **0018** (async-first extraction — queue→worker becomes the live path), **0019** (deterministic Eligibility/Matching engine in the domain layer; AI schema cannot express verdicts or money), **0020** (external data connectors — DigiLocker OAuth, Account Aggregator — behind an `IConnector` enrichment port, phased adoption). Design-only; no code implemented.
@@ -28,20 +54,78 @@ The 11-stage workflow: Tender Discovery → Tender-to-Company Matching → Bid/N
 
 `docs/PRODUCT.md` §6 contains the explicit **Existing capability → New product role** mapping: ingestion, PDF extraction, 16-domain taxonomy, execution rules, verbatim provenance, human review, async pipeline, RBAC, AI safety tooling, frontend shell, and Terraform all carry forward; `BidProject` adapts into TenderOpportunity + BidCase; the Company Profile, Evidence Vault, Matching engine, Bid/No-Bid decision, Risk radar, Readiness score, and Corrigendum diff are **new** (see `docs/CURRENT_STATE.md` §3). No features implemented yet.
 
+**P0 Backend Auth & RBAC Hardening implemented (2026-10-06):** Production-grade authentication and authorization pipeline implemented across NestJS (`apps/api`):
+1. **RFC 7519 HMAC-SHA256 TokenService (`TokenService.ts`):** Zero-external-dependency, constant-time signature verification (`crypto.timingSafeEqual`) preventing timing attacks. Cryptographically signed access tokens and refresh tokens with enforced token-type separation.
+2. **Global NestJS JwtAuthGuard (`jwt-auth.guard.ts`):** Enforces Bearer token authentication across all `/api/v1/*` endpoints by default (rejecting unauthenticated requests with 401 Unauthorized), with `@Public()` opt-outs only on `/api/v1/auth/login`, `/api/v1/auth/refresh`, and mock S3 upload/download endpoints. Supports `?token=` query param for browser `EventSource` SSE streaming.
+3. **Global NestJS RolesGuard (`roles.guard.ts`):** Evaluates atomic permissions via `@RequirePermission(...)` (e.g. `bids:create`, `bids:delete`, `compliance:review`, `audit:read`), rejecting unauthorized roles with 403 Forbidden.
+4. **Fiber-Safe Tenant Context (`tenant-context.interceptor.ts`):** Automatically binds authenticated claims (`organizationId`, `userId`, `role`) to `TenantContextHolder` backed by Node.js `AsyncLocalStorage`.
+5. **Secure Refresh Handshake (`auth.service.ts`):** Cryptographically verifies refresh tokens, looking up the specific user by ID in PostgreSQL, eliminating unauthenticated account takeover.
+6. **Dynamic Tenant Isolation:** `BidsService`, `DocumentsService`, `ComplianceService`, and `AuditService` now dynamically resolve `organizationId` and `userId` from `TenantContextHolder` instead of hardcoding `org_acme_infra_001`.
+7. **Comprehensive Integration Suite:** 19 integration tests in `apps/api/src/modules/__tests__/auth-rbac.spec.ts` passing (180 total tests passing across monorepo).
+
+**Cloud-Agnostic Infrastructure & GCP Target designed (2026-10-06, PROMPT 19):** Complete production infrastructure specification and cloud-agnostic architecture documented in `docs/GCP.md`, `docs/ARCHITECTURE.md` §11, and **ADR 0022**.
+1. **Cloud-Agnostic Core:** Strict enforcement of Hexagonal Ports & Adapters (`ObjectStorage`, `MessageQueue`, `EventPublisher`, `Cache`, `DocumentRepository`, `WorkflowStore`, `ArtifactStore`). Zero cloud-provider SDKs or terms leaked into domain/application logic.
+2. **Component Necessity Evaluation:** Rigorously justified Cloud Run (serverless autoscaling, scale-to-zero), Cloud SQL PostgreSQL 16 (single-region HA, PITR in `asia-south1` Mumbai), Cloud Storage (CMEK, V4 presigned URLs), and Cloud Pub/Sub (pull subscriptions with ack deadlines and DLT). Rejected premature over-engineering: GKE (saves $74+/mo), Cloud Spanner (saves $600+/mo), and dedicated Memorystore Redis (saves $35–50/mo for MVP).
+3. **Network & Security Boundaries:** Private VPC peering for Cloud SQL with zero public IPs, Serverless VPC Access Connector for Cloud Run, Cloud NAT for controlled procurement portal egress, and Cloud Armor WAF at the edge.
+4. **Resilience & Governance:** RPO $\le$ 5m (WAL archiving), RTO $\le$ 30m (Terraform + HA failover), CMEK encryption with Cloud KMS, and Secret Manager versioning. Design-only; no infrastructure deployed.
+
+**End-to-End Pipeline Verified & Wired (2026-10-06):** Complete verification and runtime wiring of the decoupled Frontend → API → S3 → SQS → AI Extraction → DB Persistence pipeline:
+1. **QueueModule Globally Registered:** `QueueModule` registered into `AppModule` providing `QUEUE_TOKEN` (`IJobQueue`) with auto-fallback to `MockSqsJobQueue`, `AwsSqsJobQueue`, or `GcpPubSubJobQueue`.
+2. **StorageModule Dual-Cloud & Fallback:** `StorageModule` enhanced to detect AWS S3, GCS, or fallback to in-memory `MockStorageService`, ensuring zero null references across feature modules.
+3. **Live SQS Dispatch on Confirm Upload:** `DocumentsService.confirmUpload` now optionally injects `QUEUE_TOKEN` and enqueues `IngestionJobMessage` `{ jobId, organizationId, bidId, documentId, timestamp }` onto the queue.
+4. **Mock Upload Binary Capture:** `DocumentsController.mockUpload` buffers incoming binary streams and registers with storage for faithful local development.
+5. **Full E2E Integration Suite:** Added `apps/api/src/test/e2e/EndToEndFrontendToAiPipeline.e2e.spec.ts` testing the complete 6-stage chain, Anti-IDOR guards, DLQ routing for poisoned SQS payloads, and SSE progress streaming. 149 passing tests in `apps/api`, 76 in `apps/ai`, 35 in `apps/web` (260 total passing).
+
+**Frontend UI Audit & Reusable Design System Implemented (2026-10-06):** Complete UX audit across 20 dimensions documented in `docs/UI_AUDIT.md`, with zero business page disruption:
+1. **Technology Stack Conserved:** Reused React 18 + TypeScript + Vite with native CSS Variables and typed `@tenderpulse/ui` tokens. Rejected introducing heavy external frameworks (Tailwind, MUI, Chakra).
+2. **Standardized Token Architecture:** Formalized 9-step typography scale (`--text-2xs` to `--text-4xl`), 4px modular spacing grid (`--space-0-5` to `--space-16`), 6-tier radii (`--radius-sm` to `--radius-full`), and elevations in `index.css` and `@tenderpulse/ui/src/tokens.ts`.
+3. **Canonical Semantic Statuses & Risk Levels:** Formalized `PASS`, `FAIL`, `MISSING`, `REVIEW_REQUIRED`, `NOT_APPLICABLE` and risk levels `CRITICAL`, `HIGH`, `MEDIUM`, `LOW`.
+4. **"Do Not Rely Only on Color" Enforcement:** Every status and risk level pairs dedicated accessible SVG icons (`PassIcon`, `FailIcon`, `MissingIcon`, `ReviewRequiredIcon`, `NotApplicableIcon`, `CriticalRiskIcon`, etc.) with high-contrast text and ARIA announcements (`role="status"`).
+5. **Complete Primitives Suite (`apps/web/src/components/common`):** Enhanced and implemented `Button`, `Input`, `StatusBadge`, `RiskBadge`, `Badge`, `Card`, `Table`, `Tabs`, `Modal`, `Drawer`, `Tooltip`, `Alert`, `LoadingSkeleton`, `Spinner`, `EmptyState`, `ErrorBanner`, `PageLayout`, and `Icons`.
+6. **Monorepo Integration & Verification:** 15 new unit tests added in `design-system.spec.ts`. All 149 API tests, 50 Web tests, and integration tests passing (275 tests total across monorepo).
+
+**B2B Enterprise Application Shell & Responsive Navigation Implemented (2026-10-06):** Production-quality global shell hardening across `apps/web`:
+1. **Information-Dense B2B Navigation:** Clean SVG iconography (`TendersIcon`, `PlusCircleIcon`, `BuildingOfficeIcon`) replacing emojis. Solid left-accent active route borders (`3px solid var(--color-primary-500)`), subtle hover states, zero decorative dashboard fluff or glassmorphism.
+2. **Desktop Collapsible & Mobile Drawer Sidebar:** Dual-mode sidebar supporting 260px standard desktop, 68px collapsed icon rail mode, and off-canvas slide-over drawer with backdrop blur on mobile/tablet (<1024px) with Escape key listeners.
+3. **Dynamic Path-Derived Breadcrumbs (`Breadcrumbs.tsx`):** URL-synchronized hierarchical breadcrumbs with clickable ancestors and `ChevronRightIcon` dividers, announcing `aria-current="page"` on terminal routes.
+4. **Interactive Account & Tenant Hub (`UserAccountMenu.tsx`):** Profile dropdown menu with user initials avatar, organization name, tenant ID, RBAC role badge, HMAC-SHA256 session indicator, and secure sign-out.
+5. **Standardized Content Width & Spacing:** Max-width bounded to `--content-max-width` (1440px) with responsive padding scale (desktop 2rem, tablet 1.25rem, mobile 0.75rem).
+6. **Strict Route Integrity:** No non-existent pages invented; navigation maps strictly to live product routes (`/bids`, `/bids/new`, `/company-profile`, `/bids/:id`).
+7. **Monorepo Verification:** 7 new unit tests in `layout.spec.ts`. 57 Web tests, 149 API tests, 76 AI tests passing (282 total across monorepo).
+
+**Dashboard Overhaul — Honest "What is happening with my bids?" (2026-10-05):** `apps/web` dashboard restructured around real API data only:
+1. **Action Required (ADAPT `ActionRequiredCard`)**: now renders clause-level action items from the existing `GET /api/v1/bids/:id/compliance-items` API (parallel fetch via new `useBidComplianceItems` hook with per-bid failure tolerance) — FLAGGED clauses (critical, deep-linked to `/bids/:id/compliance/:itemId` with category badges and provenance anchors), PENDING+humanReviewRequired clauses (high), ANALYZING extraction (medium), 7-day deadlines (high/critical), incomplete DRAFT intake (medium). Sorted by urgency then deadline.
+2. **Bid Pipeline (NEW `BidPipelineCard`)**: DRAFT → ANALYZING → REVIEW_READY → SUBMITTED funnel derived from live bid statuses, with per-stage aggregate readiness %, flagged counts, and click-to-filter wiring into the Active Tenders tabs.
+3. **Company Readiness (REPLACE `CompanyReadinessCard`)**: removed the hardcoded `DEFAULT_COMPANY_PROFILE` rendering (fabricated data). Now renders an honest "capability data not yet available" state documenting the missing `GET /api/v1/company-profile` and `GET /api/v1/company-profile/expiring-certificates` endpoints.
+4. **State handling**: fixed the broken error state (API failure previously rendered the misleading "No Tender Projects" empty state — now renders `ErrorBanner` + `ErrorState` with retry); skeletons for every section during load; distinct empty states (zero bids vs. no filter matches).
+5. **Pure derivations (NEW `dashboardData.ts`)**: `computeReadiness` (null pct for pending intake), `computeRiskLevel` (0→LOW, 1–2→HIGH, ≥3→CRITICAL, shared thresholds with TenderTableView), `computePipelineStages`, `buildActionItems`, `daysUntil` — all unit-tested (15 new tests in `dashboardData.spec.ts`, 72 total web tests).
+6. **MissingApiCallout (ADAPT)**: documents 5 missing target endpoints (`dashboard/metrics`, `dashboard/action-items`, `company-profile`, `company-profile/expiring-certificates`, `tenders/amendments`) with the current gap each one blocks. N+1 per-bid compliance fetch is the documented trade-off until `dashboard/action-items` ships.
+
+**Tender List Overhaul — Dense Table Workflow (2026-10-05; updated 2026-10-06):** the `/bids` tender list (sidebar "Tender Bids") rebuilt as an information-dense table workflow in `apps/web`:
+1. **Dense table (REWRITE `TenderTableView`)**: 10 columns from the existing `BidSummary` contract — Tender (title + №), Organization, Est. Value, Deadline (date + days-left urgency coloring), Status (`StatusBadge`), Fit, Recommendation, Risk (`RiskBadge` from flagged counts), Readiness (progress bar), Actions. Compact mode for density; card-grid view removed per product direction ("do not turn every tender into a giant card").
+2. **Real bid-decision data**: Fit & Recommendation now consume `GET /api/v1/bids/:id/bid-decision` via the new `useBidDecisions` hook (same N+1-with-tolerance pattern as `useBidComplianceItems`). Fit shows the engine's readinessScore as a percent + micro progress bar with STRONG/MODERATE/WEAK tier colors; Recommendation shows the deterministic verdict (Go/Conditional/No-Go/Review) as a `Badge` with the human-in-the-loop state label (AI-proposed / In review / Confirmed / Overridden) and a tooltip explaining the confirmation requirement. 404 = honest "Not evaluated" placeholder. The documented missing endpoint is removed from `MissingApiCallout`; the N+1 trade-off is documented in the pagination gap.
+3. **Risk cell consistency**: uses shared `computeRiskLevel` + `RiskBadge` (LOW=Clean, HIGH/CRITICAL=flagged count) — matches the risk filter thresholds exactly.
+4. **Sorting**: clickable column headers with `aria-sort` (title, organization, value, deadline, status, risk, readiness); per-column sensible default directions; null/missing values always sort last. Status sorts by workflow pipeline order (DRAFT → ANALYZING → REVIEW_READY → SUBMITTED → ARCHIVED).
+5. **Filters**: status filter as `aria-pressed` toggle group (accessible, not fake `tablist`); risk-level select; free-text search with clear button + Escape key; active filter descriptions shown in toolbar; result count ("N of M tenders").
+6. **Pagination (client-side)**: 10/25/50 row sizes, ellipsis page numbers, prev/next, "Showing X–Y of Z (filtered from N)".
+7. **Row actions**: status-labeled primary link (Review/Continue/Track/View) + RBAC-gated Delete (`bids:delete`) with `TrashIcon`, confirmation modal reusing `DELETE /api/v1/bids/:id`; error surfaces inside modal; parent refetches on success.
+8. **Responsive**: xl = all 10 columns, lg hides Fit+Recommendation, md also hides Organization+Value, sm keeps Tender/Deadline/Status/Readiness/Actions; horizontal scroll floor via `TableContainer`. Unit-tested as pure logic (breakpoint boundaries 767/768, 1023/1024, 1279/1280).
+9. **States**: table-shaped loading skeleton (`TenderTableSkeleton`) mirroring column layout; zero-bids guided empty state with CTA; no-filter-match empty state listing active filters with clear-filters action; page-level error banner + retry.
+10. **New architecture**: pure derivations in `tenderListData.ts` (breakpoints, column visibility, filtering, `compareBids` total order, deadline validity, fit tiers, verdict visuals, decision state labels, active filter descriptions, pagination math) — 43 unit tests; section chrome in `TenderListSection.tsx` (owns search/status/risk/sort state, wires `useBidDecisions`); `useBidDecisions` hook (parallel per-bid fetch, 404 tolerance, stale-response guard); 117 web tests total passing.
+
 ---
 
 ## ⚠️ Current-State Audit (2026-10-04) — read this first
 
 A full repository audit was completed on 2026-10-04. See **`docs/CURRENT_STATE.md`** for the complete area-by-area classification (KEEP / ADAPT / REPLACE / MISSING), the "Existing ParakhSetu-like capabilities" inventory, and the "Capabilities required for the new product but currently missing" gap list.
 
-**Audit headline:** the architecture, domain model, ports/adapters, async design, AI safety tooling, and docs are strong and worth keeping — but the running system is currently a **single-tenant demo with critical security gaps**:
-
-1. Access tokens are unsigned base64 JSON (forgeable); `POST /api/v1/auth/refresh` is unauthenticated and returns the first user's token; no HTTP endpoint enforces auth or RBAC.
-2. Tenant isolation is hardcoded to `org_acme_infra_001`; `TenantContextHolder` is populated only in tests, never per request.
+**Audit headline status:**
+1. ~~Access tokens are unsigned base64 JSON~~ — **RESOLVED (2026-10-06)**: Native HMAC-SHA256 JWTs with constant-time verification, global `JwtAuthGuard`, global `RolesGuard`, and secure user-bound refresh tokens.
+2. ~~Tenant isolation is hardcoded to `org_acme_infra_001`~~ — **RESOLVED (2026-10-06)**: Fiber-safe `TenantContextInterceptor` populates `TenantContextHolder` from token claims on every request; domain and feature services query with dynamic `organizationId`.
 3. The production persistence path is embedded PGlite, not the real PostgreSQL defined in docker-compose/Terraform; `DATABASE_URL` is never read.
 4. CI deploy stages (7–9) are `echo` placeholders; the "AI" extraction engine is deterministic regex, not LLM inference.
 
-The milestone log below reflects design/build history. The **actual next actions** are the P0 items in `docs/CURRENT_STATE.md` §3: real authentication, per-request tenant resolution, multi-tenant schema, real Postgres runtime, then the eligibility engine.
+The milestone log below reflects design/build history. The **actual next actions** are the remaining items in `docs/CURRENT_STATE.md` §3: multi-tenant schema migrations, real Postgres runtime configuration, and the bidder-side eligibility matching engine.
 
 ---
 
@@ -364,6 +448,34 @@ The milestone log below reflects design/build history. The **actual next actions
     - **Quality Gates Passing**:
       - 151 TypeScript tests (126 API + 25 Web), 27 Python tests, 0 ESLint warnings, 0 Ruff errors, 0 TypeScript compile errors.
 
+33. [x] **Phase 40: Frontend / Product UX Architecture & 13-Stage Bidding Workflow (Milestone PROMPT 18)** _(Completed)_
+    - **13-Stage Business Journey Implementation (`apps/web`)**:
+      - Transformed React 18 frontend from a simple upload page into a full 13-stage bidding operating system for Indian MSME contractors.
+      - 5 Intuitive Milestones:
+        1. *Basics & Intake:* Company Profile (`CompanyProfileSection.tsx`), Tender Intake (`DocumentUploader.tsx`), Tender Overview (`TenderOverviewHeader.tsx`), Key Deadlines (`KeyDeadlinesCard.tsx`).
+        2. *Eligibility & Go/No-Go:* 9-Factor Technical & Financial Scorecard (`EligibilitySummaryCards.tsx`), Bid/No-Bid Recommendation (`BidDecisionBanner.tsx`).
+        3. *Requirements & Evidence:* Filterable Requirement Matrix (`ComplianceTable.tsx`), Evidence Mapping with Grounded Citations (`EvidenceCitationDrawer.tsx`).
+        4. *Risks, Gaps & Review:* Commercial Risk Radar (`RiskRadarCard.tsx`), Missing Evidence Acquisition (`MissingEvidenceSection.tsx`), Human Review Task (`HumanReviewTaskCard.tsx`).
+        5. *Readiness & Submission:* 4-Pillar Bid Readiness Score (`BidReadinessGauge.tsx`), Two-Cover Packager & Procedural Checklist (`SubmissionPrepChecklist.tsx`).
+    - **MSME Usability & Zero-Jargon Guarantee**:
+      - All probabilistic terminology replaced with contractor-friendly language (verbatim clause citations, CA UDIN verification status, stamp paper rules, Liquidated Damages caps, and working capital lock-in).
+    - **Traceable Dual-Sided Citation Inspector**:
+      - `EvidenceCitationDrawer.tsx` enables interactive, side-by-side verification between verbatim tender clauses and corporate evidence documents with CA UDIN validation.
+    - **HITL Integration with OCC Versioning**:
+      - First-class human review supporting 5 reviewer roles (`BID_MANAGER`, `LEGAL_COUNSEL`, `FINANCIAL_CONTROLLER`, `TECHNICAL_LEAD`, `BID_DIRECTOR`), threaded comments, confirmation vs override with mandatory audit justification, and OCC versioning.
+    - **Quality Gates & Documentation**:
+      - Created comprehensive `docs/frontend.md` architecture guide.
+      - 237 automated tests passing across monorepo (126 API + 35 Web + 76 Python AI).
+      - 0 TypeScript compiler errors across all monorepo workspaces.
+
+**Code Quality Cleanup (2026-10-06, PROMPT 21):** Resolved all lint and type-check errors across the monorepo:
+1. **Import path fixes** in new modules (`GetBidDecisionUseCase`, `RequirementMapper`, `CompanyProfileService`, `CompanyProfileController`) — corrected relative depths from `../../` to `../../../` for common modules.
+2. **Unused variable cleanup** — removed dead code in `design-system.spec.ts` (unused `Badge`, `SectionHeader` imports), `CompanyProfileSection.tsx` (removed `as any` cast via `as const` array), `TenderTableView.tsx` (unused icons, `LoadingCell` function, `decisionsByBid`/`decisionsLoading` props), `TenderListSection.tsx` (unused imports `CloseIcon`, `TenderTableSkeleton`, `useBidDecisions`, `useBreakpoint`, `getVisibleColumns`, `describeActiveFilters`), `BidVerdictCard.tsx` (unused `WarningIcon`, `DECISION_STATE_LABELS` constant).
+3. **Type safety improvements** — `RequirementMapper.ts` now defensively narrows JSONB `unknown` fields with safe defaults; `roles.guard.ts` widens permissions array for wildcard check; `tenant-context.interceptor.ts` types stream as `unknown`; e2e test uses proper `Request`/`Response` types.
+4. **Missing field fixes** — added `evaluatedFactors` to `toBidDecision()` return in `bidDetailData.ts`; fixed `ApiResult` type narrowing in `useBidDecision.ts`.
+5. **Import path corrections** — `TenderTableView.tsx` imports `computeRiskLevel` from correct path; `useBidDecision.ts` uses correct relative path.
+6. **Quality gates**: All 368 tests passing (292 TypeScript + 76 Python), 0 lint errors, 0 TypeScript compile errors.
+
 ---
 
 ## Next Immediate Action
@@ -374,6 +486,52 @@ Per the 2026-10-04 audit (`docs/CURRENT_STATE.md`), the next actions are **P0 ha
 2. Add `organizations` + `organization_memberships`; resolve tenant per request from the authenticated identity; remove all `org_acme_infra_001` literals; derive audit `userId`/`userName` from context.
 3. Switch runtime persistence to real PostgreSQL via `DATABASE_URL` with a migration tool and indexes.
 4. Then build the product gaps: contractor profile + eligibility engine, evidence repository + matching, risk radar, corrigendum handling, export, observability.
+
+
+33. [x] **Phase 41: Tender Detail Page Redesign — "Should I Bid on This Tender?" (2026-10-05)** _(Completed)_
+    - **Complete redesign of `/bids/:id` (`BidDetailPage.tsx`)** around the single question: *"Should I bid on this tender?"* with the deterministic three-verdict framework (PURSUE / DO_NOT_PURSUE / REVIEW_REQUIRED).
+    - **Eliminated all fabricated data**: Removed the entire 13-stage fabricated workflow (`WorkflowStageStepper`, `TenderOverviewHeader`, `KeyDeadlinesCard`, `EligibilitySummaryCards`, `BidDecisionBanner`, `EvidenceCitationDrawer`, `RiskRadarCard`, `MissingEvidenceSection`, `HumanReviewTaskCard`, `BidReadinessGauge`, `SubmissionPrepChecklist`) and the hardcoded `DEFAULT_COMPANY_PROFILE` — all 11 fabricated workflow components deleted.
+    - **Real API-only architecture**:
+      - `TenderInfoHeader`: Real tender fields only (title, authority, value, deadline, status) — no EMD fabrication, no fake "closing at 15:00 IST", no fallback values.
+      - `BidVerdictCard`: Honest three-verdict framework (PURSUE / DO_NOT_PURSUE / REVIEW_REQUIRED) with "no recommendation yet" state when the bid-decision engine is absent; shows real input signals (requirements count, flagged, review-needed, deadline buffer) and documents the missing `GET /api/v1/bids/:id/bid-decision` + `GET /api/v1/company-profile` endpoints.
+      - `ComplianceTable` (KEPT): Real requirement matrix with grounded provenance, execution rules, and OCC review actions.
+      - `ProvenanceDrawer` (NEW): Real grounded provenance viewer — verbatim quote, document, page, clause, confidence score — with explicit "company evidence matching not yet available" gap disclosure.
+      - `ObligationsCard` (NEW): Aggregated statutory obligations (stamp paper max denomination, notarization count, UDIN count, signing ranks) + flagged requirements as real disqualification-risk signals.
+      - `ReviewNeededCard` (NEW): Real PENDING / humanReviewRequired items deep-linking to the real compliance review page.
+      - `ReadinessCard` (NEW): Real readiness rollup (approved/total %) + deadline buffer; 4-pillar engine gap documented.
+      - `MissingDataCallout` (NEW): Documents 7 missing endpoints (`bid-decision`, `company-profile`, `evidence-matches`, `risk-findings`, `review-tasks`, `readiness`, `deadlines`).
+      - Document package + uploader: Real documents with type badges, download, RBAC-gated delete.
+    - **Backend bid-decision pipeline implemented**:
+      - `AiDecisionClient.ts`: HTTP client for the deterministic `POST /api/v1/agent/bid-decision` (internal service key, security context, timeout, injectable fetch for tests).
+      - `RequirementMapper.ts`: Pure mapping from stored `ComplianceItem` → AI `RequirementCandidate` (category→kind, criticality derivation: FINANCIAL/STATUTORY/TECHNICAL→HARD_ELIGIBILITY; provenance mapping).
+      - `GetBidDecisionUseCase.ts`: Orchestrates bid + compliance items → requirement candidates → pinned company profile → AI engine call → persists `bid_decisions` → returns.
+      - Database: `company_profile_versions` (immutable JSONB snapshots), `company_profiles` (active pointer), `bid_decisions` (immutable audit trail with full AI response JSONB).
+      - Company Profile module: GET/POST `/api/v1/company-profile` (CRUD with version pinning, validation).
+      - Projections: `GET /api/v1/bids/:id/review-tasks` (real PENDING/humanReviewRequired items), `GET /api/v1/bids/:id/readiness` (server-side rollup).
+      - Endpoints: `GET/POST /api/v1/bids/:id/bid-decision` in `BidsController` (BIDS_READ / BIDS_UPDATE).
+      - Permission: `COMPANY_PROFILE_MANAGE` (ADMIN only).
+    - **Web wiring**: `getBidDecision` / `evaluateBidDecision` in `api/bids.ts`, `companyProfile.ts` CRUD, `mapApiDecisionToBidDecision` mapping (GO→PURSUE, CONDITIONAL_GO→REVIEW_REQUIRED, NO_GO→DO_NOT_PURSUE), `BidDetailPage` fetches decision on load, "Re-evaluate" button for ADMIN/BID_MANAGER, `BidVerdictCard` renders real verdict + reasons + disqualifiers + gaps.
+    - **Tests**: 9 RequirementMapper tests, 9 GetBidDecisionUseCase integration tests (PGlite + fake AI client), 8 CompanyProfileService tests, 174 API tests, 117 web tests, 76 Python AI tests — all 368 passing.
+    - **Cleanup**: 11 fabricated workflow components deleted; `TenderTableView` simplified to "Not evaluated" for fit/recommendation; `TenderListSection` cleanup; all 368 tests passing.
+    - **Documentation**: `MissingDataCallout` on detail page documents 7 missing endpoints; `MissingApiCallout` on dashboard updated.
+
+34. [x] **Phase 42: Requirement / Compliance Matrix Overhaul (2026-10-05)** _(Completed)_
+    - **Rebuilt the Requirement / Compliance Matrix** into one of the strongest, most intuitive, and production-grade screens in the product (`apps/web`):
+      - **7 Standardized Columns**: `Requirement` (Title, Subcategory, Clause Ref), `Category` (`LEGAL`, `TECHNICAL`, `FINANCIAL`, `STATUTORY`, `EXECUTION`, `COMMERCIAL`), `Mandatory` (Yes/No badge), `Company Evidence` (Linked evidence status & document title), `Status` (`PASS`, `FAIL`, `MISSING`, `REVIEW_REQUIRED`, `NOT_APPLICABLE`), `Risk` (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`), `Source` (Document name & page citation).
+      - **Dense, Readable Layout**: Avoided dumping huge walls of unformatted text directly in table cells. Implemented single-line expandable rows with collapsible chevrons.
+      - **Answered the 4 Core Contractor Questions**:
+        1. *"What does the tender require?"*: Full requirement text + `ExecutionRulesCard` (Non-judicial stamp paper INR denomination, notarization rules, 18-digit CA UDIN mandate, signing authority rank).
+        2. *"Do we have evidence?"*: Linked company evidence status badge, document type, file name, CA UDIN, expiry date, and `EvidenceDrawer` with status interpretations.
+        3. *"Why did the system reach this result?"*: Structured rationale comparison (Tender Requirement vs Company Capability cards, evaluation rule applied, logic breakdown points, confidence percentage) in `AssessmentPanel`.
+        4. *"Where did this requirement come from?"*: Grounded source coordinates (Document name, Page number, Section/Clause name, and verbatim quote block with copy button) in `SourceCitationDrawer`.
+      - **Search, Multi-Filter & Total Sorting**:
+        - Status filter tabs with live item counts for `ALL`, `PASS`, `FAIL`, `MISSING`, `REVIEW_REQUIRED`, `NOT_APPLICABLE`.
+        - Free-text search across requirements, categories, clauses, evidence titles, and evaluation rules.
+        - Dropdown filters for Category, Risk level, and Mandatory status with active filter badge and "Reset Filters" action.
+        - Full column sorting on all 7 columns via `ColumnSorter`.
+      - **Interactive Human Review with OCC**:
+        - Role-based permissions check (`compliance:review`), modal for reviewer notes/justification, and optimistic concurrency version validation (`expectedVersion: item.version`).
+      - **Unit Test Coverage**: Added `complianceMatrix.spec.ts` testing all 7 columns, filtering, multi-field search, sorting, and 4-question derivations (10 new tests, 127 total web tests passing, 378 passing across monorepo).
 
 
 

@@ -9,20 +9,25 @@ import { Request, Response } from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
 import { DocumentsService } from './documents.service.js';
+import { Public } from '../../common/security/decorators/public.decorator.js';
+import { RequirePermission } from '../../common/security/decorators/permissions.decorator.js';
+import { Permissions } from '../../common/security/permissions.js';
 
 @Controller('api/v1')
 export class DocumentsController {
   constructor(private readonly documentsService: DocumentsService) {}
 
   @Delete('bids/:bidId/documents/:docId')
+  @RequirePermission(Permissions.BIDS_DELETE)
   async deleteDocument(
     @Param('bidId') bidId: string,
     @Param('docId') docId: string,
   ) {
-    return this.documentsService.deleteDocument(bidId, docId, 'org_acme_infra_001');
+    return this.documentsService.deleteDocument(bidId, docId);
   }
 
   @Post('bids/:bidId/upload-url')
+  @RequirePermission(Permissions.DOCUMENTS_UPLOAD)
   async generateUploadUrl(
     @Param('bidId') bidId: string,
     @Body()
@@ -44,15 +49,28 @@ export class DocumentsController {
     );
   }
 
+  @Public()
   @Put('mock-upload/:bidId/:docId/:fileName')
-  mockUpload(@Req() req: Request, @Res() res: Response): void {
-    req.on('data', () => {});
+  mockUpload(
+    @Param('bidId') bidId: string,
+    @Param('docId') docId: string,
+    @Param('fileName') fileName: string,
+    @Req() req: Request,
+    @Res() res: Response,
+  ): void {
+    const chunks: Buffer[] = [];
+    req.on('data', (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
     req.on('end', () => {
-      res.status(200).json({ status: 'UPLOADED' });
+      const buffer = Buffer.concat(chunks);
+      const orgId = 'org_acme_infra_001';
+      const storagePath = `tenants/${orgId}/bids/${bidId}/${docId}/${fileName}`;
+      this.documentsService.registerUploadedMockObject(storagePath, buffer);
+      res.status(200).json({ status: 'UPLOADED', size: buffer.length });
     });
   }
 
   @Post('bids/:bidId/documents/confirm')
+  @RequirePermission(Permissions.DOCUMENTS_UPLOAD)
   async confirmUpload(
     @Param('bidId') bidId: string,
     @Body() body: { documentId?: string },
@@ -61,6 +79,7 @@ export class DocumentsController {
   }
 
   @Get('bids/:bidId/documents/:docId/download-url')
+  @RequirePermission(Permissions.DOCUMENTS_READ)
   async getDownloadUrl(
     @Param('bidId') bidId: string,
     @Param('docId') docId: string,
@@ -69,6 +88,7 @@ export class DocumentsController {
     return this.documentsService.getDownloadUrl(bidId, docId, host);
   }
 
+  @Public()
   @Get(['mock-download/:bidId/:docId', 'mock-download/:bidId/:docId/:fileName'])
   mockDownload(
     @Param('bidId') bidId: string,
@@ -104,6 +124,7 @@ export class DocumentsController {
   }
 
   @Get(['bids/:bidId/extraction-progress', 'bids/:bidId/progress', 'bids/:bidId/documents/stream'])
+  @RequirePermission(Permissions.BIDS_READ)
   streamExtractionProgress(
     @Param('bidId') bidId: string,
     @Req() req: Request,
