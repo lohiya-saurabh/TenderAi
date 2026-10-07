@@ -89,7 +89,155 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
     document: ExtractableDocument,
     securityContext?: SecurityContextDto
   ): Promise<ExtractedComplianceItem[]> {
-    // 1. Fetch document blob from S3 using tenant-scoped object key
+    // 1. Verify object existence in storage (metadata check, avoiding loading full blob into memory)
+    let exists = true;
+    try {
+      const head = await this.storageService.headObject(document.storagePath);
+      exists = head.exists;
+    } catch {
+      const raw = await this.storageService.getObject(document.storagePath);
+      exists = Boolean(raw);
+    }
+
+    if (!exists) {
+      throw new Error(
+        `Failed to retrieve document content for key '${document.storagePath}'. Object not found in storage.`
+      );
+    }
+
+    // 2. Prepare Security Context
+    const secCtx: SecurityContextDto = securityContext ?? {
+      tenantId: document.organizationId,
+      userId: 'system-worker',
+      correlationId: `corr-${document.id}`,
+      roles: ['ADMIN'],
+      workflowRunId: `run-${document.id}-${Date.now()}`,
+      allowedDocumentIds: [document.id],
+      allowedSourceIds: ['s3_vault'],
+      purpose: 'COMPLIANCE_EXTRACTION',
+    };
+
+    // 3. Handover Pattern: Generate presigned download URL for direct Python / Docling / PDFium ingestion
+    let downloadUrl: string | undefined;
+    try {
+      downloadUrl = await this.storageService.generatePresignedDownloadUrl(
+        document.storagePath,
+        document.fileName,
+        900 // 15-minute lease
+      );
+    } catch (err: any) {
+      this.logger.warn(
+        `Failed to generate presigned download URL for doc ${document.id}: ${err?.message}. Falling back to inline buffer normalization.`
+      );
+    }
+
+    // 4. Candidate pages: on happy path with real cloud storage presigned URL handover (GCS/S3), Node.js passes an empty pages array
+    // so FastAPI streams and parses the document directly with native PDFium / Docling.
+    // If presigned URL is unavailable OR points to in-memory mock storage (where no remote cloud object exists),
+    // extract candidate pages from local buffer.
+    const isMockStorage = Boolean(
+      downloadUrl?.includes('mock-s3.tenderpulse.local') || downloadUrl?.includes('.local')
+    );
+    let candidatePages: NormalizedDocumentPage[] = [];
+    if (!downloadUrl || isMockStorage) {
+      candidatePages = await this.extractCandidatePagesLocally(document);
+    }
+
+    // 5. Dispatch request to FastAPI AI Engine
+    const payload = {
+      security_context: {
+        tenant_id: secCtx.tenantId,
+        user_id: secCtx.userId,
+        company_id: secCtx.companyId,
+        workflow_run_id: secCtx.workflowRunId,
+        correlation_id: secCtx.correlationId,
+        allowed_document_ids: secCtx.allowedDocumentIds,
+        allowed_source_ids: secCtx.allowedSourceIds,
+        purpose: secCtx.purpose,
+      },
+      bid_id: document.bidId,
+      document_id: document.id,
+      document_type: document.documentType,
+      file_name: document.fileName,
+      download_url: downloadUrl,
+      pages: candidatePages.map((p) => ({
+        page_number: p.pageNumber,
+        text: p.text,
+      })),
+    };
+
+    const fetchFn = this.customFetch ?? globalThis.fetch;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
+
+    this.logger.log(
+      `Dispatching document ${document.id} to AI engine (${this.aiBaseUrl}/api/v1/extract) via ${
+        downloadUrl ? 'presigned URL handover' : `${candidatePages.length} locally extracted pages`
+      }...`,
+    );
+
+    try {
+      const response = await fetchFn(`${this.aiBaseUrl}/api/v1/extract`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Internal-Service-Key': this.internalServiceKey,
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `AI extraction service returned HTTP ${response.status} for document '${document.id}'.`
+        );
+      }
+
+      const data = await response.json();
+      const rawItems = data.items ?? [];
+      this.logger.log(
+        `AI extraction service responded with ${rawItems.length} raw compliance items for doc ${document.id}.`,
+      );
+
+      // 6. Deterministic validation of extracted items structure
+      return rawItems.map((item: RawExtractedItem, idx: number): ExtractedComplianceItem => {
+        if (!item.category || typeof item.category !== 'string') {
+          throw new Error(`Extracted item at index ${idx} is missing a valid category.`);
+        }
+        if (!item.title || typeof item.title !== 'string') {
+          throw new Error(`Extracted item at index ${idx} is missing a valid title.`);
+        }
+        if (!item.provenance || !item.provenance.verbatimQuote) {
+          throw new Error(`Extracted item at index ${idx} lacks deterministic provenance quote.`);
+        }
+
+        return {
+          category: item.category,
+          title: item.title,
+          description: item.description ?? '',
+          executionRules: {
+            stampPaperRequired: Boolean(item.executionRules?.stampPaperRequired),
+            stampPaperDenominationInr: item.executionRules?.stampPaperDenominationInr ?? undefined,
+            notarizationRequired: Boolean(item.executionRules?.notarizationRequired),
+            udinRequired: Boolean(item.executionRules?.udinRequired),
+            signingAuthorityRank: item.executionRules?.signingAuthorityRank ?? 'Authorized Signatory',
+          },
+          provenance: {
+            pageNumber: Number(item.provenance.pageNumber) || 1,
+            clauseReference: item.provenance.clauseReference ?? 'NIT Clause',
+            verbatimQuote: item.provenance.verbatimQuote,
+            confidenceScore: Number(item.provenance.confidenceScore) || 0.95,
+          },
+        };
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  private async extractCandidatePagesLocally(
+    document: ExtractableDocument
+  ): Promise<NormalizedDocumentPage[]> {
     const rawContent = await this.storageService.getObject(document.storagePath);
     if (!rawContent) {
       throw new Error(
@@ -97,13 +245,11 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
       );
     }
 
-    // 2. Normalize content into pages (supports real binary PDF buffers)
     const allPages: NormalizedDocumentPage[] = await this.normalizer.normalize(rawContent);
     this.logger.debug(
       `Retrieved storage object for doc ${document.id}. Normalized ${allPages.length} total pages.`,
     );
 
-    // Helper to detect pure Table of Contents (TOC) / Index pages without operative obligations
     const isPureTocPage = (text: string): boolean => {
       if (!text || text.trim().length === 0) return true;
       const lines = text.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
@@ -134,8 +280,6 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
       return false;
     };
 
-    // If document is large (> 30 pages), execute multi-zone sectional page selection
-    let candidatePages = allPages;
     if (allPages.length > 30) {
       const initialPages = allPages.slice(0, 10).filter((p) => !isPureTocPage(p.text));
       const remainingPages = allPages.slice(10);
@@ -207,11 +351,9 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
         }
       }
 
-      // Sort by score descending and retain top 50 scored pages across BDS, Section 3, and GCC/SCC
       scoredPages.sort((a, b) => b.score - a.score);
       const topScored = scoredPages.slice(0, 50).map((s) => s.page);
 
-      // Combine initial orientation pages + top scored pages in natural reading order
       const combinedMap = new Map<number, NormalizedDocumentPage>();
       for (const p of initialPages) {
         combinedMap.set(p.pageNumber, p);
@@ -220,112 +362,10 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
         combinedMap.set(p.pageNumber, p);
       }
 
-      candidatePages = Array.from(combinedMap.values()).sort((a, b) => a.pageNumber - b.pageNumber);
+      return Array.from(combinedMap.values()).sort((a, b) => a.pageNumber - b.pageNumber);
     } else {
       const nonTocPages = allPages.filter((p) => !isPureTocPage(p.text));
-      if (nonTocPages.length > 0) {
-        candidatePages = nonTocPages;
-      }
-    }
-
-    // 3. Fallback or verify SecurityContext
-    const secCtx: SecurityContextDto = securityContext ?? {
-      tenantId: document.organizationId,
-      userId: 'system-worker',
-      correlationId: `corr-${document.id}`,
-      roles: ['ADMIN'],
-      workflowRunId: `run-${document.id}-${Date.now()}`,
-      allowedDocumentIds: [document.id],
-      allowedSourceIds: ['s3_vault'],
-      purpose: 'COMPLIANCE_EXTRACTION',
-    };
-
-    // 4. Dispatch request to FastAPI AI Engine
-    const payload = {
-      security_context: {
-        tenant_id: secCtx.tenantId,
-        user_id: secCtx.userId,
-        company_id: secCtx.companyId,
-        workflow_run_id: secCtx.workflowRunId,
-        correlation_id: secCtx.correlationId,
-        allowed_document_ids: secCtx.allowedDocumentIds,
-        allowed_source_ids: secCtx.allowedSourceIds,
-        purpose: secCtx.purpose,
-      },
-      bid_id: document.bidId,
-      document_id: document.id,
-      document_type: document.documentType,
-      file_name: document.fileName,
-      pages: candidatePages.map((p) => ({
-        page_number: p.pageNumber,
-        text: p.text,
-      })),
-    };
-
-    const fetchFn = this.customFetch ?? globalThis.fetch;
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
-
-    this.logger.log(
-      `Dispatching ${candidatePages.length} candidate pages to AI engine (${this.aiBaseUrl}/api/v1/extract) for doc ${document.id}...`,
-    );
-
-    try {
-      const response = await fetchFn(`${this.aiBaseUrl}/api/v1/extract`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Internal-Service-Key': this.internalServiceKey,
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      });
-
-      if (!response.ok) {
-        throw new Error(
-          `AI extraction service returned HTTP ${response.status} for document '${document.id}'.`
-        );
-      }
-
-      const data = await response.json();
-      const rawItems = data.items ?? [];
-      this.logger.log(
-        `AI extraction service responded with ${rawItems.length} raw compliance items for doc ${document.id}.`,
-      );
-
-      // 5. Deterministic validation of extracted items structure
-      return rawItems.map((item: RawExtractedItem, idx: number): ExtractedComplianceItem => {
-        if (!item.category || typeof item.category !== 'string') {
-          throw new Error(`Extracted item at index ${idx} is missing a valid category.`);
-        }
-        if (!item.title || typeof item.title !== 'string') {
-          throw new Error(`Extracted item at index ${idx} is missing a valid title.`);
-        }
-        if (!item.provenance || !item.provenance.verbatimQuote) {
-          throw new Error(`Extracted item at index ${idx} lacks deterministic provenance quote.`);
-        }
-
-        return {
-          category: item.category,
-          title: item.title,
-          description: item.description ?? '',
-          executionRules: {
-            stampPaperRequired: Boolean(item.executionRules?.stampPaperRequired),
-            stampPaperDenominationInr: item.executionRules?.stampPaperDenominationInr ?? undefined,
-            notarizationRequired: Boolean(item.executionRules?.notarizationRequired),
-            udinRequired: Boolean(item.executionRules?.udinRequired),
-            signingAuthorityRank: item.executionRules?.signingAuthorityRank ?? 'Authorized Signatory',
-          },
-          provenance: {
-            pageNumber: Number(item.provenance.pageNumber) || 1,
-            clauseReference: item.provenance.clauseReference ?? 'NIT Clause',
-            verbatimQuote: item.provenance.verbatimQuote,
-            confidenceScore: Number(item.provenance.confidenceScore) || 0.95,
-          },
-        };
-      });
-    } finally {
-      clearTimeout(timeoutId);
+      return nonTocPages.length > 0 ? nonTocPages : allPages;
     }
   }
 }

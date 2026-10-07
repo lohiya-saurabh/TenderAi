@@ -30,7 +30,8 @@ class DocumentExtractionRequest(BaseModel):
     document_id: str
     document_type: str = "NIT"
     file_name: str
-    pages: list[NormalizedPage]
+    download_url: str | None = None
+    pages: list[NormalizedPage] = Field(default_factory=list)
 
 
 class DocumentExtractionResponse(BaseModel):
@@ -879,6 +880,14 @@ class ProductionExtractionPipeline:
         all_verified_items: list[VerifiedComplianceItem] = []
         all_audit_events: list[dict[str, Any]] = []
         human_review_required = False
+
+        if not request.pages and request.download_url:
+            from tenderpulse_ai.domain.pdf_resolver import resolve_pdf_to_pages
+            request.pages = await resolve_pdf_to_pages(
+                download_url=request.download_url,
+                document_id=request.document_id,
+                file_name=request.file_name,
+            )
 
         # Process each page through LangGraph compliance workflow
         for page in request.pages:

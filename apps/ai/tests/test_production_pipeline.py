@@ -281,3 +281,33 @@ async def test_toc_and_glossary_definitions_rejected_in_favor_of_operative_claus
     assert "The Contractor shall, within 28 days of the Letter of Acceptance, provide a Performance Security" in quote
     assert pbg_item["provenance"]["pageNumber"] == 25
 
+
+@pytest.mark.asyncio
+async def test_presigned_download_url_handover(valid_sec_context):
+    from pathlib import Path
+    repo_root = Path(__file__).resolve().parents[3]
+    sample_pdf = repo_root / "samples" / "work_975754" / "NIT8.pdf"
+    if not sample_pdf.is_file():
+        sample_pdf = Path.cwd() / "samples" / "work_975754" / "NIT8.pdf"
+    assert sample_pdf.is_file(), f"Sample NIT8.pdf should exist at {sample_pdf}"
+
+    pipeline = ProductionExtractionPipeline()
+    request = DocumentExtractionRequest(
+        security_context=valid_sec_context,
+        bid_id="bid_presigned_test",
+        document_id="doc_nit_555",
+        document_type="NIT",
+        file_name="NIT8.pdf",
+        download_url=f"file://{sample_pdf.resolve()}",
+        pages=[],  # Empty pages — resolved natively from presigned download_url
+    )
+
+    response = await pipeline.execute(request)
+    assert response.status in ("REVIEW_READY", "HUMAN_REVIEW_REQUIRED")
+    assert len(response.items) > 0
+
+    emd_item = next((i for i in response.items if i["category"] == "FINANCIAL"), None)
+    assert emd_item is not None
+    assert "EMD" in emd_item["title"] or "Earnest" in emd_item["title"]
+    assert emd_item["provenance"]["sourceDocumentId"] == "doc_nit_555"
+

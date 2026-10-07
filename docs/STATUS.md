@@ -1,6 +1,31 @@
 # Project Status & Milestone Tracker
 
-## Current implementation milestone: Authentication Lifecycle Synchronization & Proactive Token Refresh
+## Current implementation milestone: Presigned URL Handover Pattern (Zero-Copy Node.js Ingestion)
+
+1. **Problem Statement & Motivation**:
+   - In earlier iterations, NestJS (`apps/api`) read entire PDF binary blobs into Node.js buffers and executed `pdf-parse`. This resulted in `MaxListenersExceededWarning` EventEmitter leaks, high V8 heap usage, lack of layout/table awareness, and large serialized JSON payload transmissions to the Python AI engine.
+   - The AI engine in FastAPI (`apps/ai`) already has high-performance C++ PDFium and Docling engines designed specifically for document structure parsing, table extraction, and OCR.
+
+2. **Architectural Implementation**:
+   - **Capability-Based Handover (`AiDocumentExtractor.ts`)**:
+     - NestJS acts strictly as an orchestrator and capability grantor: it calls `IStorageService.generatePresignedDownloadUrl(storagePath, fileName, 900)` to generate a 15-minute presigned download capability URL.
+     - Checks object existence via `headObject()` without reading the raw binary blob into memory.
+     - Dispatches `{ document_id, bid_id, download_url, pages: [] }` to FastAPI (`/api/v1/extract`).
+     - Node.js never buffers raw PDF bytes or runs `pdf-parse` on the production cloud path.
+     - Local candidate page normalization is preserved strictly as an emergency offline fallback and for unit tests with in-memory `MockStorageService`.
+   - **FastAPI Ingestion & Streaming Engine (`pdf_resolver.py` & `pipeline.py`)**:
+     - `resolve_pdf_to_pages(download_url, document_id, file_name)`:
+       - Streams bytes safely using `httpx.AsyncClient` with a 150 MB safety guard and scoped tempfile cleanup.
+       - Skips network calls for synthetic mock domains (`mock-s3.tenderpulse.local`).
+       - Extracts text and page geometries using `pypdfium2` (C++ PDFium) in sub-second time.
+       - Integrated seamlessly into `ProductionExtractionPipeline.execute`: if `pages` is empty and `download_url` is provided, pages are resolved directly before entering the LangGraph compliance workflow.
+   - **Automated Verification**:
+     - Python test suite: Added unit test in `test_production_pipeline.py` verifying direct resolution and extraction from presigned download URLs.
+     - TypeScript test suite: All 28 test suites (221 tests) pass in `@tenderpulse/api` without memory warnings or performance degradation.
+     - All 84 pytest tests in `apps/ai` pass.
+     - Monorepo type check (`npm run type-check`) compiles with zero errors across all workspaces.
+
+## Previous implementation milestone: Authentication Lifecycle Synchronization & Proactive Token Refresh
 
 1. **Root Cause Analysis (GET /api/v1/companies 401 Unauthorized)**:
    - **XSS Token Isolation vs Cold Starts**: In `client.ts`, access tokens are retained strictly in-memory (`let accessToken = null`), while the refresh token is persisted in `localStorage` (`tp_refresh_token`). On browser reloads or direct route navigation (e.g. `/bids/:id`), JavaScript memory resets with `accessToken = null`.
