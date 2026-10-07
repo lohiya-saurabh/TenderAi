@@ -4,7 +4,7 @@
  * Resolves SQS or Pub/Sub configuration from environment,
  * falling back to MockSqsJobQueue for local in-memory execution and testing.
  */
-import { Module, Global } from '@nestjs/common';
+import { Module, Global, Logger } from '@nestjs/common';
 import type { IJobQueue } from '../../modules/bids/application/IJobQueue.js';
 import { AwsSqsJobQueue } from './AwsSqsJobQueue.js';
 import { GcpPubSubJobQueue } from './GcpPubSubJobQueue.js';
@@ -18,13 +18,14 @@ export const QUEUE_TOKEN = 'JOB_QUEUE';
     {
       provide: QUEUE_TOKEN,
       useFactory: (): IJobQueue => {
+        const logger = new Logger('QueueModule');
         if (process.env.AWS_SQS_QUEUE_URL) {
           const service = new AwsSqsJobQueue({
             queueUrl: process.env.AWS_SQS_QUEUE_URL,
             dlqUrl: process.env.AWS_SQS_DLQ_URL,
             region: process.env.AWS_REGION || 'ap-south-1',
           });
-          console.log(`[Queue] Connected to AWS SQS queue: ${process.env.AWS_SQS_QUEUE_URL}`);
+          logger.log(`Connected to AWS SQS queue: ${process.env.AWS_SQS_QUEUE_URL}`);
           return service;
         }
 
@@ -39,8 +40,8 @@ export const QUEUE_TOKEN = 'JOB_QUEUE';
             subscriptionName: process.env.GCP_PUBSUB_SUBSCRIPTION,
             dlqTopicName: process.env.GCP_PUBSUB_DLQ_TOPIC,
           });
-          console.log(
-            `[Queue] Connected to GCP Pub/Sub: topic=${process.env.GCP_PUBSUB_TOPIC}, sub=${process.env.GCP_PUBSUB_SUBSCRIPTION}`,
+          logger.log(
+            `Connected to GCP Pub/Sub: topic=${process.env.GCP_PUBSUB_TOPIC}, sub=${process.env.GCP_PUBSUB_SUBSCRIPTION}`,
           );
           return service;
         }

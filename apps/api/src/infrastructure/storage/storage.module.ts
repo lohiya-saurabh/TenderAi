@@ -1,4 +1,4 @@
-import { Module, Global } from '@nestjs/common';
+import { Module, Global, Logger } from '@nestjs/common';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { IStorageService } from '../../modules/bids/application/IStorageService.js';
@@ -14,6 +14,7 @@ export const STORAGE_TOKEN = 'STORAGE_SERVICE';
     {
       provide: STORAGE_TOKEN,
       useFactory: (): IStorageService => {
+        const logger = new Logger('StorageModule');
         // 1. AWS S3 detection
         const s3Bucket = process.env.AWS_S3_BUCKET || process.env.S3_BUCKET_NAME;
         if (s3Bucket) {
@@ -23,10 +24,10 @@ export const STORAGE_TOKEN = 'STORAGE_SERVICE';
               region: process.env.AWS_REGION || 'ap-south-1',
               endpoint: process.env.S3_ENDPOINT,
             });
-            console.log(`[Storage] Connected to AWS S3 bucket: s3://${s3Bucket}`);
+            logger.log(`Connected to AWS S3 bucket: s3://${s3Bucket}`);
             return service;
           } catch (e) {
-            console.warn('[Storage] AWS S3 initialization failed, falling back to local mock:', e);
+            logger.warn(`AWS S3 initialization failed, falling back to local mock: ${e instanceof Error ? e.message : e}`);
           }
         }
 
@@ -44,7 +45,7 @@ export const STORAGE_TOKEN = 'STORAGE_SERVICE';
                 keyFilename: keyPath,
                 projectId: process.env.GCP_PROJECT_ID || 'digital-proton-228114',
               });
-              console.log(`[Storage] Connected to Google Cloud Storage bucket: gs://${gcsBucket}`);
+              logger.log(`Connected to Google Cloud Storage bucket: gs://${gcsBucket}`);
               return service;
             } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
               const service = new GcsStorageService({
@@ -52,11 +53,11 @@ export const STORAGE_TOKEN = 'STORAGE_SERVICE';
                 keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
                 projectId: process.env.GCP_PROJECT_ID,
               });
-              console.log(`[Storage] Connected to Google Cloud Storage bucket: gs://${gcsBucket}`);
+              logger.log(`Connected to Google Cloud Storage bucket: gs://${gcsBucket}`);
               return service;
             }
           } catch (e) {
-            console.warn('[Storage] GCS initialization failed, falling back to local mock:', e);
+            logger.warn(`GCS initialization failed, falling back to local mock: ${e instanceof Error ? e.message : e}`);
           }
         }
 

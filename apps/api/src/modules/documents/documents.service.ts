@@ -1,7 +1,7 @@
 /**
  * DocumentsService — Upload URL generation, upload confirmation, and download URL resolution.
  */
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { PGlite } from '@electric-sql/pglite';
 import { eq, and, inArray, desc, sql } from 'drizzle-orm';
@@ -48,6 +48,7 @@ export interface DeleteDocumentResult {
 
 @Injectable()
 export class DocumentsService {
+  private readonly logger = new Logger(DocumentsService.name);
   private readonly db: DrizzleDb;
   private readonly pendingUploads = new Map<
     string,
@@ -134,6 +135,10 @@ export class DocumentsService {
     } else {
       uploadUrl = fallbackLocalUploadUrl;
     }
+
+    this.logger.debug(
+      `Generated presigned upload URL for doc ${docId} (bid: ${bidId}, type: ${documentType}, path: ${storagePath})`,
+    );
 
     return {
       documentId: docId,
@@ -316,6 +321,10 @@ export class DocumentsService {
           },
         });
     });
+
+    this.logger.log(
+      `Confirmed upload for doc ${docId} (bid: ${bidId}, size: ${fileSizeBytes}B). Enqueued outbox event outbox-${docId}.`,
+    );
 
     return {
       documentId: docId,

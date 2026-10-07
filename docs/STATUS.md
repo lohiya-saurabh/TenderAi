@@ -1,5 +1,25 @@
 # Project Status & Milestone Tracker
 
+## Current implementation milestone: Configurable Hierarchical Logging (NestJS & FastAPI)
+
+Added environment-driven, multi-level diagnostic logging across both backend services (`apps/api` and `apps/ai`):
+
+1. **NestJS LogLevel Resolver (`apps/api`)**:
+   - Implemented `resolveLogLevels(process.env.LOG_LEVEL)` in `src/common/logger/log-level.util.ts`, supporting `error`, `warn`, `info`/`log`, `debug`, and `verbose`/`trace`.
+   - Wired into `NestFactory.create` in `main.ts` and replaced legacy `console.log` / `console.warn` calls across queue and storage providers with native `@nestjs/common` `Logger`.
+   - Integrated contextual structured logging into `DocumentProcessingRuntime`, `AiDocumentExtractor`, and `DocumentsService` with clean separation between high-level operational signals (`LOG`/`WARN`) and deep debugging traces (`DEBUG` for payloads, presigned links, page breakdowns, and lease timing).
+
+2. **FastAPI AI Logging & 8-Node LangGraph Tracing (`apps/ai`)**:
+   - Added `log_level: str = "INFO"` to `TenderPulseSettings` in `config.py` with standard Pydantic Settings env overrides.
+   - Initialized structured root logging in `main.py` using `logging.basicConfig(...)` with formatted timestamps, log levels, and logger names.
+   - Added detailed `DEBUG` / `INFO` telemetry across all 8 nodes in `apps/ai/src/tenderpulse_ai/workflow/nodes.py` (Docling parser, structure builder, candidate detector, context assembler, LLM extractor, validator, confidence router, and PostgreSQL store).
+
+3. **Security & Redaction**:
+   - Explicitly ensured authentication tokens, session secrets, and internal service keys are excluded from logging statements.
+   - Raw document excerpts and large text blocks restricted to `DEBUG` level to prevent production log pollution and sensitive data exposure.
+
+Verification: Full test suites pass cleanly across both packages (`apps/api`: 28/28 suites, 221/221 tests; `apps/ai`: 82/82 tests).
+
 ## Current implementation milestone: 8-Node Docling LangGraph Document Processing Workflow
 
 The FastAPI AI service ([`apps/ai`](file:///Users/belikesaurabh/main/TenderAi/apps/ai)) now executes an 8-node structured LangGraph document processing workflow:

@@ -1,7 +1,10 @@
 import datetime
+import logging
 from typing import Any
 
 from langgraph.types import interrupt
+
+logger = logging.getLogger("tenderpulse_ai.workflow.nodes")
 
 from tenderpulse_ai.domain.candidate_detector import CandidateDetector
 from tenderpulse_ai.domain.context_assembler import ContextAssembler
@@ -88,12 +91,24 @@ def make_docling_parse_node(ctx: WorkflowNodeContext):
         parser = DoclingParserEngine()
         pdf_ref = state.get("storage_reference") or state.get("pdf_path")
         pdf_path = pdf_ref if pdf_ref else None
+        logger.debug(
+            "[Node 1: docling_parse] Parsing doc_id=%s, page=%s (raw text length: %d)",
+            doc_id,
+            page_no,
+            len(raw_text),
+        )
         docling_doc = parser.parse_document(
             document_id=doc_id,
             file_name=file_name,
             pages=pages,
             raw_text=raw_text,
             pdf_path=pdf_path,
+        )
+        logger.info(
+            "[Node 1: docling_parse] Parsed %d layout blocks for doc_id=%s, page=%s",
+            len(docling_doc.blocks),
+            doc_id,
+            page_no,
         )
 
         audit = create_audit_event(
@@ -125,6 +140,11 @@ def make_build_structure_node(ctx: WorkflowNodeContext):
 
         builder = DocumentStructureBuilder()
         tree = builder.build_structure(docling_doc)
+        logger.debug(
+            "[Node 2: build_structure] Built structure tree with %d nodes for doc_id=%s",
+            len(tree.nodes),
+            state.get("document_id"),
+        )
 
         audit = create_audit_event(
             context=sec_context,
@@ -153,6 +173,11 @@ def make_candidate_detection_node(ctx: WorkflowNodeContext):
 
         detector = CandidateDetector()
         candidates = detector.detect_candidates(docling_doc, tree)
+        logger.info(
+            "[Node 3: candidate_detection] Detected %d candidate passages for doc_id=%s",
+            len(candidates),
+            state.get("document_id"),
+        )
 
         audit = create_audit_event(
             context=sec_context,
@@ -183,6 +208,11 @@ def make_context_assembly_node(ctx: WorkflowNodeContext):
         from tenderpulse_ai.domain.models import CandidatePassage
         passages = [CandidatePassage(**c) if isinstance(c, dict) else c for c in state.get("detected_candidates", [])]
         assembled = assembler.assemble_contexts(docling_doc, tree, passages)
+        logger.debug(
+            "[Node 4: context_assembly] Assembled %d clause contexts for doc_id=%s",
+            len(assembled),
+            state.get("document_id"),
+        )
 
         audit = create_audit_event(
             context=sec_context,
@@ -245,6 +275,13 @@ def make_llm_extraction_node(ctx: WorkflowNodeContext):
             user_prompt += f"\n\nPRIOR VERIFICATION FEEDBACK (CORRECT THIS):\n{state['error_feedback']}"
 
         candidates = await ctx.llm_client.extract_compliance(system_prompt, user_prompt)
+        logger.info(
+            "[Node 5: llm_extraction] Extracted %d candidates (chunks=%d) for doc_id=%s, retry=%d",
+            len(candidates),
+            len(chunks),
+            doc_id,
+            state.get("retry_count", 0),
+        )
 
         audit = create_audit_event(
             context=sec_context,
@@ -350,6 +387,13 @@ def make_validation_node(ctx: WorkflowNodeContext):
                 "reasons": failure_reasons[:3],
             },
         )
+        logger.info(
+            "[Node 6: validation] Validated candidates for doc_id=%s: %d verified, %d unverified (score=%.2f)",
+            state.get("document_id"),
+            len(new_verified),
+            len(unverified),
+            avg_score,
+        )
 
         return {
             "validation_reports": reports,
@@ -387,6 +431,13 @@ def make_confidence_routing_node(ctx: WorkflowNodeContext):
             entity_id=state["bid_id"],
             details={"confidence_score": score, "assigned_tier": tier},
         )
+        logger.info(
+            "[Node 7: confidence_routing] Assigned tier '%s' (score=%.2f, unverified=%d) for bid_id=%s",
+            tier,
+            score,
+            len(unverified),
+            state.get("bid_id"),
+        )
 
         return {
             "confidence_tier": tier,
@@ -421,6 +472,12 @@ def make_postgres_store_node(ctx: WorkflowNodeContext):
             entity_type="BidProject",
             entity_id=state["bid_id"],
             details={"inserted_count": len(items_to_persist)},
+        )
+        logger.info(
+            "[Node 8: postgres_store] Persisting %d verified items for bid_id=%s, doc_id=%s",
+            len(items_to_persist),
+            state.get("bid_id"),
+            state.get("document_id"),
         )
 
         final_status = (

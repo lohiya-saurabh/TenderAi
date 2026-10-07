@@ -1,3 +1,4 @@
+import logging
 import secrets
 from pathlib import Path
 
@@ -25,6 +26,14 @@ from tenderpulse_ai.pipeline import (
 from tenderpulse_ai.security.context import SecurityContext
 from tenderpulse_ai.tools.page_text import PageTextTool
 from tenderpulse_ai.tools.retrieval import ScopedRetrievalTool
+
+# Initialize root logging from settings
+numeric_level = getattr(logging, settings.log_level.upper(), logging.INFO)
+logging.basicConfig(
+    level=numeric_level,
+    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
+)
+logger = logging.getLogger("tenderpulse_ai.main")
 
 app = FastAPI(
     title="TenderPulse AI Engine",
@@ -169,8 +178,22 @@ async def root():
     dependencies=[Depends(verify_internal_key)],
 )
 async def extract_document(request: DocumentExtractionRequest):
+    logger.info(
+        "Received extraction request for doc_id=%s, bid_id=%s (pages=%d, tenant=%s)",
+        request.document_id,
+        request.bid_id,
+        len(request.pages),
+        request.security_context.tenant_id,
+    )
     pipeline = ProductionExtractionPipeline()
-    return await pipeline.execute(request)
+    result = await pipeline.execute(request)
+    logger.info(
+        "Completed extraction for doc_id=%s (extracted %d items, status=%s)",
+        request.document_id,
+        len(result.items),
+        result.status,
+    )
+    return result
 
 
 @app.post(
@@ -185,6 +208,12 @@ async def process_queue_message(request: QueueProcessingRequest):
     strict security context, and executes the document extraction workflow on the
     document pages included with the work item or retrieved from the referenced object.
     """
+    logger.info(
+        "Received worker queue message for job_id=%s, doc_id=%s, bid_id=%s",
+        request.job_id,
+        request.document_id,
+        request.bid_id,
+    )
     pages = request.pages
     if not pages:
         pages = StorageDocumentResolver.resolve_pages(

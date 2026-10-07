@@ -156,6 +156,9 @@ export class DocumentProcessingRuntime implements OnModuleInit, OnModuleDestroy 
 
   private async processMessage(message: QueueMessage<IngestionJobMessage>): Promise<void> {
     const { body, receiptHandle, receiveCount } = message;
+    this.logger.log(
+      `Processing document job ${body.jobId} (Tenant: ${body.organizationId}, Bid: ${body.bidId}, Document: ${body.documentId})`,
+    );
     const [source] = await this.db
       .select({ document: schema.tenderDocuments, bid: schema.bids, company: schema.companies })
       .from(schema.tenderDocuments)
@@ -268,6 +271,10 @@ export class DocumentProcessingRuntime implements OnModuleInit, OnModuleDestroy 
       return;
     }
 
+    this.logger.debug(
+      `Claimed DB processing lease for document ${source.document.id} (Attempt #${claimed[0]!.processingAttempts}). Starting extraction...`,
+    );
+
     const visibilityHeartbeat = setInterval(() => {
       void this.queue
         .changeMessageVisibility(receiptHandle, VISIBILITY_TIMEOUT_SECONDS)
@@ -304,6 +311,9 @@ export class DocumentProcessingRuntime implements OnModuleInit, OnModuleDestroy 
         securityContext,
       );
 
+      this.logger.debug(
+        `Received ${extractedItems.length} extracted items from AI engine for doc ${source.document.id}. Validating & persisting...`,
+      );
       this.validateItems(extractedItems);
       await this.persistResults(body, source.bid.companyId, extractedItems);
     } catch (error) {
@@ -316,6 +326,7 @@ export class DocumentProcessingRuntime implements OnModuleInit, OnModuleDestroy 
     // ACK follows committed persistence. A failed ACK leaves the document completed;
     // redelivery will observe that state and acknowledge without reprocessing.
     await this.queue.deleteMessage(receiptHandle);
+    this.logger.log(`Document job ${body.jobId} completed and acknowledged.`);
   }
 
   private validateItems(items: ExtractedComplianceItem[]): void {

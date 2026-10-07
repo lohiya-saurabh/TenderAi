@@ -9,6 +9,7 @@ import {
   ExtractedComplianceItem,
 } from './IngestionWorker.js';
 export type { ExtractedComplianceItem };
+import { Logger } from '@nestjs/common';
 import { SecurityContextDto } from '@tenderpulse/shared-types';
 
 export interface RawExtractedItem {
@@ -60,6 +61,7 @@ export interface AiExtractorConfig {
 }
 
 export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtractionPort {
+  private readonly logger = new Logger(AiDocumentExtractor.name);
   private readonly aiBaseUrl: string;
   private readonly internalServiceKey: string;
   private readonly timeoutMs: number;
@@ -97,6 +99,9 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
 
     // 2. Normalize content into pages (supports real binary PDF buffers)
     const allPages: NormalizedDocumentPage[] = await this.normalizer.normalize(rawContent);
+    this.logger.debug(
+      `Retrieved storage object for doc ${document.id}. Normalized ${allPages.length} total pages.`,
+    );
 
     // If document is large (> 30 pages), execute multi-zone sectional page selection
     let candidatePages = allPages;
@@ -224,6 +229,10 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
 
+    this.logger.log(
+      `Dispatching ${candidatePages.length} candidate pages to AI engine (${this.aiBaseUrl}/api/v1/extract) for doc ${document.id}...`,
+    );
+
     try {
       const response = await fetchFn(`${this.aiBaseUrl}/api/v1/extract`, {
         method: 'POST',
@@ -243,6 +252,9 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
 
       const data = await response.json();
       const rawItems = data.items ?? [];
+      this.logger.debug(
+        `AI extraction service responded with ${rawItems.length} raw compliance items for doc ${document.id}.`,
+      );
 
       // 5. Deterministic validation of extracted items structure
       return rawItems.map((item: RawExtractedItem, idx: number): ExtractedComplianceItem => {

@@ -10,13 +10,16 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
 
+import { Logger } from '@nestjs/common';
+import { resolveLogLevels } from './common/logger/log-level.util.js';
+
 // Tune stream pipeline listener headroom for GCS chunked streams and SSE clients
 EventEmitter.defaultMaxListeners = 30;
 
 async function bootstrap() {
+  const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule, {
-    // Suppress the NestJS ASCII art banner for cleaner logs
-    logger: ['error', 'warn', 'log'],
+    logger: resolveLogLevels(process.env.LOG_LEVEL),
   });
 
   // Global CORS — matches the previous server configuration
@@ -36,11 +39,9 @@ async function bootstrap() {
   const port = Number(process.env.PORT) || 3000;
   await app.listen(port);
 
-  console.log(`\n========================================================`);
-  console.log(`🚀 TenderPulse AI API Server running at http://localhost:${port}`);
-  console.log(`🐘 Persistence Engine: PostgreSQL 16 (PGlite in ./data/postgres)`);
-  console.log(`🏗️  Framework: NestJS + Express`);
-  console.log(`========================================================\n`);
+  logger.log(`🚀 TenderPulse AI API Server running at http://localhost:${port}`);
+  logger.log(`🐘 Persistence Engine: PostgreSQL 16 (PGlite in ./data/postgres)`);
+  logger.log(`🏗️  Framework: NestJS + Express (LogLevels: ${resolveLogLevels().join(', ')})`);
 }
 
 bootstrap();

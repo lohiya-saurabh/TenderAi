@@ -1,4 +1,4 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -6,10 +6,9 @@ class Settings(BaseSettings):
     internal_service_key: str = "tenderpulse-internal-secret-2026"
     api_gateway_url: str = "http://localhost:3000"
     environment: str = "development"
+    log_level: str = "INFO"
 
-    class Config:
-        env_file = ".env"
-        extra = "ignore"
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
 settings = Settings()
