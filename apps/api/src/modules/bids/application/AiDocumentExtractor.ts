@@ -252,7 +252,7 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
 
       const data = await response.json();
       const rawItems = data.items ?? [];
-      this.logger.debug(
+      this.logger.log(
         `AI extraction service responded with ${rawItems.length} raw compliance items for doc ${document.id}.`,
       );
 

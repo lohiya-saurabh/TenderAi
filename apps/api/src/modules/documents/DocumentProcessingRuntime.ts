@@ -311,7 +311,7 @@ export class DocumentProcessingRuntime implements OnModuleInit, OnModuleDestroy 
         securityContext,
       );
 
-      this.logger.debug(
+      this.logger.log(
         `Received ${extractedItems.length} extracted items from AI engine for doc ${source.document.id}. Validating & persisting...`,
       );
       this.validateItems(extractedItems);

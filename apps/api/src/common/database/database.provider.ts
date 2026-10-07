@@ -473,31 +473,31 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
 
     // 5. Seed Compliance Items if enabled
     for (const item of DEMO_COMPLIANCE_ITEMS) {
-        await drizzleDb
-          .insert(schema.complianceItems)
-          .values({
-            id: item.id,
-            bidId: item.bidId,
-            organizationId: 'org_acme_infra_001',
-            category: item.category,
-            title: item.title,
-            description: item.description,
-            status: item.status,
-            humanReviewRequired: item.humanReviewRequired,
-            reviewNotes: item.reviewNotes,
-            reviewedBy: item.reviewedBy,
-            reviewedAt: item.reviewedAt ? new Date(item.reviewedAt) : null,
-            version: item.version,
-            executionRules: item.executionRules,
-            provenance: item.provenance,
-            companyEvidence: item.companyEvidence ?? null,
-            risk: item.risk ?? null,
-            rationale: item.rationale ?? null,
-            createdAt: new Date(item.createdAt),
-            updatedAt: new Date(item.updatedAt),
-          })
-          .onConflictDoNothing();
-      }
+      await drizzleDb
+        .insert(schema.complianceItems)
+        .values({
+          id: item.id,
+          bidId: item.bidId,
+          organizationId: 'org_acme_infra_001',
+          category: item.category,
+          title: item.title,
+          description: item.description,
+          status: item.status,
+          humanReviewRequired: item.humanReviewRequired,
+          reviewNotes: item.reviewNotes,
+          reviewedBy: item.reviewedBy,
+          reviewedAt: item.reviewedAt ? new Date(item.reviewedAt) : null,
+          version: item.version,
+          executionRules: item.executionRules,
+          provenance: item.provenance,
+          companyEvidence: item.companyEvidence ?? null,
+          risk: item.risk ?? null,
+          rationale: item.rationale ?? null,
+          createdAt: new Date(item.createdAt),
+          updatedAt: new Date(item.updatedAt),
+        })
+        .onConflictDoNothing();
+    }
 
     // 6. Seed Persisted Bid Decision if empty
     const decisionCountResult = await drizzleDb
