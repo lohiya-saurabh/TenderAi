@@ -44,8 +44,8 @@ describe('Multi-Company Security & Workflow Suite (1 Tenant -> N Companies)', ()
     await initDatabase(db, { seedUsers: true, seedFullProfile: true, seedBidsAndCompliance: true });
     drizzleDb = drizzle(db, { schema });
 
-    companiesService = new CompaniesService(drizzleDb as any);
     companyProfileService = new CompanyProfileService(drizzleDb as any);
+    companiesService = new CompaniesService(drizzleDb as any, companyProfileService);
     bidsService = new BidsService(drizzleDb as any);
 
     const fakeAiClient = {
@@ -73,7 +73,7 @@ describe('Multi-Company Security & Workflow Suite (1 Tenant -> N Companies)', ()
   describe('1. Tenant-scoped Company Management', () => {
     it('allows Tenant A to list all companies belonging to Tenant A', async () => {
       const companies = await TenantContextHolder.run(
-        { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN', permissions: ['*'] },
+        { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN' },
         () => companiesService.listCompanies(),
       );
 
@@ -87,7 +87,7 @@ describe('Multi-Company Security & Workflow Suite (1 Tenant -> N Companies)', ()
 
     it('allows Tenant A to register a new Company within Tenant A', async () => {
       const newComp = await TenantContextHolder.run(
-        { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN', permissions: ['*'] },
+        { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN' },
         () =>
           companiesService.createCompany({
             legalName: 'Acme Renewable Energy Pvt Ltd',
@@ -103,7 +103,7 @@ describe('Multi-Company Security & Workflow Suite (1 Tenant -> N Companies)', ()
 
       // Check that it now shows up in list
       const companies = await TenantContextHolder.run(
-        { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN', permissions: ['*'] },
+        { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN' },
         () => companiesService.listCompanies(),
       );
       expect(companies.length).toBe(3);
@@ -112,7 +112,7 @@ describe('Multi-Company Security & Workflow Suite (1 Tenant -> N Companies)', ()
     it('rejects company creation with empty name (validation check)', async () => {
       await expect(
         TenantContextHolder.run(
-          { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN', permissions: ['*'] },
+          { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN' },
           () => companiesService.createCompany({ legalName: '   ' }),
         ),
       ).rejects.toThrow(BadRequestError);
@@ -123,7 +123,7 @@ describe('Multi-Company Security & Workflow Suite (1 Tenant -> N Companies)', ()
     it('throws NotFoundError when Tenant A attempts to get Tenant B company details by ID', async () => {
       await expect(
         TenantContextHolder.run(
-          { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN', permissions: ['*'] },
+          { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN' },
           () => companiesService.getCompanyById(COMPANY_B1),
         ),
       ).rejects.toThrow(NotFoundError);
@@ -132,7 +132,7 @@ describe('Multi-Company Security & Workflow Suite (1 Tenant -> N Companies)', ()
     it('throws NotFoundError when Tenant A attempts to fetch capability profile of Tenant B company', async () => {
       await expect(
         TenantContextHolder.run(
-          { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN', permissions: ['*'] },
+          { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN' },
           () => companyProfileService.getProfile(COMPANY_B1),
         ),
       ).rejects.toThrow(NotFoundError);
@@ -141,7 +141,7 @@ describe('Multi-Company Security & Workflow Suite (1 Tenant -> N Companies)', ()
     it('throws NotFoundError when Tenant A attempts to pin a new profile version to Tenant B company', async () => {
       await expect(
         TenantContextHolder.run(
-          { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN', permissions: ['*'] },
+          { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN' },
           () =>
             companyProfileService.createProfileVersion(
               'Malicious Profile Version',
@@ -160,7 +160,7 @@ describe('Multi-Company Security & Workflow Suite (1 Tenant -> N Companies)', ()
     it('creates bids explicitly scoped to a company and filters bids by companyId', async () => {
       // Create a bid for Company A1
       const bid1 = await TenantContextHolder.run(
-        { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN', permissions: ['*'] },
+        { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN' },
         () =>
           bidsService.createBid({
             title: 'Expressway Flyover Tender',
@@ -173,7 +173,7 @@ describe('Multi-Company Security & Workflow Suite (1 Tenant -> N Companies)', ()
 
       // Create a bid for Company A2
       const bid2 = await TenantContextHolder.run(
-        { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN', permissions: ['*'] },
+        { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN' },
         () =>
           bidsService.createBid({
             title: 'Smart Grid IoT Sensor Tender',
@@ -189,14 +189,14 @@ describe('Multi-Company Security & Workflow Suite (1 Tenant -> N Companies)', ()
 
       // List all bids for Tenant A
       const allTenantABids = await TenantContextHolder.run(
-        { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN', permissions: ['*'] },
+        { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN' },
         () => bidsService.listBids(),
       );
       expect((allTenantABids as any).items ? (allTenantABids as any).items.some((b: any) => b.id === bid1.id) : (allTenantABids as any).some((b: any) => b.id === bid1.id)).toBe(true);
 
       // Filter specifically by Company A1
       const compA1Bids = await TenantContextHolder.run(
-        { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN', permissions: ['*'] },
+        { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN' },
         () => bidsService.listBids({ companyId: COMPANY_A1 }),
       );
       const itemsA1 = (compA1Bids as any).items || compA1Bids;
@@ -205,7 +205,7 @@ describe('Multi-Company Security & Workflow Suite (1 Tenant -> N Companies)', ()
 
       // Filter specifically by Company A2
       const compA2Bids = await TenantContextHolder.run(
-        { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN', permissions: ['*'] },
+        { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN' },
         () => bidsService.listBids({ companyId: COMPANY_A2 }),
       );
       const itemsA2 = (compA2Bids as any).items || compA2Bids;
@@ -216,7 +216,7 @@ describe('Multi-Company Security & Workflow Suite (1 Tenant -> N Companies)', ()
     it('rejects bid creation if companyId belongs to another tenant', async () => {
       await expect(
         TenantContextHolder.run(
-          { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN', permissions: ['*'] },
+          { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN' },
           () =>
             bidsService.createBid({
               title: 'Cross Tenant Bid Attempt',
@@ -233,7 +233,7 @@ describe('Multi-Company Security & Workflow Suite (1 Tenant -> N Companies)', ()
     it('isolates profile versions between Company A1 and Company A2', async () => {
       // Pin a new version for Company A1
       const versionA1 = await TenantContextHolder.run(
-        { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN', permissions: ['*'] },
+        { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN' },
         () =>
           companyProfileService.createProfileVersion(
             'Company A1 FY27 Profile',
@@ -248,19 +248,19 @@ describe('Multi-Company Security & Workflow Suite (1 Tenant -> N Companies)', ()
                   evidence_document_id: 'ev-fin-001',
                 },
               ],
-            } as any,
+            },
             COMPANY_A1,
           ),
       );
 
       // Fetch profile view for Company A1 and Company A2
       const profileA1 = await TenantContextHolder.run(
-        { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN', permissions: ['*'] },
+        { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN' },
         () => companyProfileService.getProfile(COMPANY_A1),
       );
 
       const profileA2 = await TenantContextHolder.run(
-        { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN', permissions: ['*'] },
+        { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN' },
         () => companyProfileService.getProfile(COMPANY_A2),
       );
 
@@ -272,7 +272,7 @@ describe('Multi-Company Security & Workflow Suite (1 Tenant -> N Companies)', ()
     it('evaluates bid decision against the correct company profile and persists companyId', async () => {
       // Create a bid for Company A1
       const bid = await TenantContextHolder.run(
-        { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN', permissions: ['*'] },
+        { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN' },
         () =>
           bidsService.createBid({
             title: 'Bridge Construction Tender',
@@ -285,7 +285,7 @@ describe('Multi-Company Security & Workflow Suite (1 Tenant -> N Companies)', ()
       );
 
       const decision = await TenantContextHolder.run(
-        { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN', permissions: ['*'] },
+        { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN' },
         () => getBidDecisionUseCase.evaluate(bid.id),
       );
 

@@ -8,7 +8,7 @@ import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '../../common/datab
 import { STORAGE_TOKEN } from '../../infrastructure/storage/storage.module.js';
 import type { IStorageService } from './application/IStorageService.js';
 import * as schema from '../../common/database/schema.js';
-import { NotFoundError } from '../../common/errors/errors.js';
+import { NotFoundError, BadRequestError } from '../../common/errors/errors.js';
 import type { DemoBid, DemoDocument } from '../../seed/data.js';
 import { TenantContextHolder } from '../../common/security/TenantContext.js';
 
@@ -99,12 +99,23 @@ export class BidsService {
     this.db = 'select' in db ? (db as DrizzleDb) : createDrizzle(db as PGlite);
   }
 
-  public async listBids(): Promise<BidWithDecision[]>;
-  public async listBids(query?: ListBidsQuery): Promise<PaginatedBidsResult | BidWithDecision[]>;
   public async listBids(
     query?: ListBidsQuery,
   ): Promise<PaginatedBidsResult | BidWithDecision[]> {
-    const orgId = TenantContextHolder.get()?.organizationId || 'org_acme_infra_001';
+    const orgId = TenantContextHolder.get()?.organizationId;
+    if (!orgId) {
+      if (query?.page && query?.limit) {
+        return {
+          items: [] as BidWithDecision[],
+          total: 0,
+          page: Number(query.page) || 1,
+          limit: Number(query.limit) || 10,
+          totalPages: 0,
+        };
+      }
+      return [];
+    }
+
     let allBids = await this.db
       .select()
       .from(schema.bids)
@@ -239,21 +250,22 @@ export class BidsService {
   }
 
   public async getBidById(bidId: string): Promise<DemoBid> {
-    const orgId = TenantContextHolder.get()?.organizationId || 'org_acme_infra_001';
+    const orgId = TenantContextHolder.get()?.organizationId;
     const [bidRecord] = await this.db
       .select()
       .from(schema.bids)
-      .where(and(eq(schema.bids.id, bidId), eq(schema.bids.organizationId, orgId)))
+      .where(orgId ? and(eq(schema.bids.id, bidId), eq(schema.bids.organizationId, orgId)) : eq(schema.bids.id, bidId))
       .limit(1);
 
     if (!bidRecord) {
       throw new NotFoundError(`Bid project '${bidId}' not found.`);
     }
 
+    const finalOrgId = orgId || bidRecord.organizationId;
     const docs = await this.db
       .select()
       .from(schema.tenderDocuments)
-      .where(and(eq(schema.tenderDocuments.bidId, bidId), eq(schema.tenderDocuments.organizationId, orgId)))
+      .where(and(eq(schema.tenderDocuments.bidId, bidId), eq(schema.tenderDocuments.organizationId, finalOrgId)))
       .orderBy(asc(schema.tenderDocuments.uploadedAt));
 
     const documents: DemoDocument[] = [];
@@ -309,8 +321,11 @@ export class BidsService {
   }
 
   public async createBid(dto: CreateBidDto): Promise<DemoBid> {
-    const orgId = TenantContextHolder.get()?.organizationId || 'org_acme_infra_001';
-    const userId = TenantContextHolder.get()?.userId || 'usr_bid_mgr_01';
+    const orgId = TenantContextHolder.get()?.organizationId;
+    if (!orgId) {
+      throw new BadRequestError('Tenant organization context is required to create a bid.');
+    }
+    const userId = TenantContextHolder.get()?.userId || 'usr_admin';
     const newBidId = `bid-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
     const title = typeof dto.title === 'string' && dto.title.trim() ? dto.title.trim() : 'Untitled Tender';
     const tenderNumber =
@@ -354,7 +369,10 @@ export class BidsService {
         .where(eq(schema.companies.organizationId, orgId))
         .limit(1);
 
-      companyId = defaultComp?.id ?? 'comp_acme_infra_001';
+      if (!defaultComp) {
+        throw new BadRequestError('No company entity found for this organization. Every organization must have at least one company.');
+      }
+      companyId = defaultComp.id;
     }
 
     const now = new Date();
@@ -412,14 +430,14 @@ export class BidsService {
 
   public async deleteBid(
     bidId: string,
-    organizationId = TenantContextHolder.get()?.organizationId || 'org_acme_infra_001',
+    organizationId = TenantContextHolder.get()?.organizationId || '',
   ): Promise<DeleteBidResult> {
-    const userId = TenantContextHolder.get()?.userId || 'usr_bid_mgr_01';
+    const userId = TenantContextHolder.get()?.userId || 'usr_admin';
     // 1. Verify existence and tenant boundary (Anti-IDOR)
     const [bid] = await this.db
       .select()
       .from(schema.bids)
-      .where(and(eq(schema.bids.id, bidId), eq(schema.bids.organizationId, organizationId)))
+      .where(organizationId ? and(eq(schema.bids.id, bidId), eq(schema.bids.organizationId, organizationId)) : eq(schema.bids.id, bidId))
       .limit(1);
 
     if (!bid) {
@@ -478,11 +496,11 @@ export class BidsService {
    * Calculates comprehensive tender lifecycle milestone deadlines for a bid.
    */
   public async getTenderDeadlines(bidId: string) {
-    const orgId = TenantContextHolder.get()?.organizationId || 'org_acme_infra_001';
+    const orgId = TenantContextHolder.get()?.organizationId;
     const [bid] = await this.db
       .select()
       .from(schema.bids)
-      .where(and(eq(schema.bids.id, bidId), eq(schema.bids.organizationId, orgId)))
+      .where(orgId ? and(eq(schema.bids.id, bidId), eq(schema.bids.organizationId, orgId)) : eq(schema.bids.id, bidId))
       .limit(1);
 
     if (!bid) {
@@ -596,7 +614,24 @@ export class BidsService {
    * Pre-aggregated tenant KPIs and pipeline analytics.
    */
   public async getDashboardMetrics() {
-    const orgId = TenantContextHolder.get()?.organizationId || 'org_acme_infra_001';
+    const orgId = TenantContextHolder.get()?.organizationId;
+    if (!orgId) {
+      return {
+        activePipelineCount: 0,
+        totalPipelineValueRupees: 0,
+        totalFlaggedRequirements: 0,
+        imminentDeadlinesCount: 0,
+        pipelineDistribution: {
+          DRAFT: 0,
+          ANALYZING: 0,
+          REVIEW_READY: 0,
+          SUBMITTED: 0,
+          ARCHIVED: 0,
+        },
+        totalTendersCount: 0,
+        updatedAt: new Date().toISOString(),
+      };
+    }
     const allBids = await this.db
       .select()
       .from(schema.bids)
@@ -654,7 +689,15 @@ export class BidsService {
    * Corrigendum / amendment notification and impact stream across monitored tenders.
    */
   public async getTenderAmendments(bidIdFilter?: string): Promise<TenderAmendmentsResult> {
-    const orgId = TenantContextHolder.get()?.organizationId || 'org_acme_infra_001';
+    const orgId = TenantContextHolder.get()?.organizationId || '';
+    if (!orgId) {
+      return {
+        organizationId: '',
+        totalAmendments: 0,
+        unreadCount: 0,
+        amendments: [],
+      };
+    }
 
     const allBids = await this.db
       .select()

@@ -15,7 +15,6 @@ from tenderpulse_ai.models.llm_client import StructuredLLMClient
 from tenderpulse_ai.security.context import SecurityContext
 from tenderpulse_ai.tools.page_text import PageTextTool
 from tenderpulse_ai.tools.retrieval import DocumentChunk, ScopedRetrievalTool
-from tenderpulse_ai.workflow.graph import build_compliance_workflow_graph
 from tenderpulse_ai.workflow.nodes import WorkflowNodeContext
 from tenderpulse_ai.workflow.state import ComplianceWorkflowState
 
@@ -51,11 +50,61 @@ def _extract_clause_reference(text: str, page_no: int) -> str:
 
 
 def _extract_sentence(pattern: str, text: str) -> str | None:
-    m = re.search(r"([^.\n\r]*?" + pattern + r"[^.\n\r]*?(?:\.|\n|$))", text, re.IGNORECASE)
-    if m:
-        s = m.group(1).strip()
-        if len(s) > 15:
-            return re.sub(r"\s+", " ", s)
+    normalized_text = re.sub(r"\r\n?", "\n", text)
+    keyword = re.search(pattern, normalized_text, re.IGNORECASE)
+    if keyword:
+        line_start = normalized_text.rfind("\n", 0, keyword.start()) + 1
+        sentence_start = line_start
+        list_items = list(
+            re.finditer(r"(?m)^\s*\d+[.)]\s+", normalized_text[: keyword.start()])
+        )
+        if list_items:
+            sentence_start = list_items[-1].start()
+            punctuation_search_start = list_items[-1].end()
+        else:
+            punctuation_search_start = line_start
+        preceding_punctuation = max(
+            normalized_text.rfind(".", punctuation_search_start, keyword.start()),
+            normalized_text.rfind("?", punctuation_search_start, keyword.start()),
+            normalized_text.rfind("!", punctuation_search_start, keyword.start()),
+        )
+        if preceding_punctuation >= punctuation_search_start:
+            sentence_start = preceding_punctuation + 1
+
+        period_position = normalized_text.find(".", keyword.end())
+        paragraph_position = normalized_text.find("\n\n", keyword.end())
+        next_list_item = re.search(
+            r"(?m)^\s*\d+[.)]\s+", normalized_text[keyword.end() :]
+        )
+        end_candidates = [
+            position
+            for position in (
+                period_position + 1 if period_position >= 0 else -1,
+                paragraph_position,
+                keyword.end() + next_list_item.start() if next_list_item else -1,
+            )
+            if position >= 0
+        ]
+        sentence_end = min(end_candidates) if end_candidates else len(normalized_text)
+
+        sentence = normalized_text[sentence_start:sentence_end].strip()
+        if len(sentence) > 15:
+            # Joining only the selected clause prevents earlier line-wrapped page
+            # content from leaking into the provenance quote.
+            return re.sub(r"\s+", " ", sentence)
+
+    # If the keyword itself wraps across extracted lines, fall back to normalized
+    # text while retaining blank lines as paragraph boundaries.
+    normalized_text = re.sub(r"(?<!\n)\n(?!\n)", " ", normalized_text)
+    match = re.search(
+        r"([^.\n]*?" + pattern + r"[^.\n]*?(?:\.|\n|$))",
+        normalized_text,
+        re.IGNORECASE,
+    )
+    if match:
+        sentence = match.group(1).strip()
+        if len(sentence) > 15:
+            return re.sub(r"\s+", " ", sentence)
     return None
 
 
@@ -556,14 +605,17 @@ class ProductionExtractionPipeline:
                 page_text_tool=page_text_tool,
                 llm_client=self.llm_client,
             )
+            from tenderpulse_ai.workflow.graph import build_compliance_workflow_graph
             graph = build_compliance_workflow_graph(node_ctx)
 
             initial_state: ComplianceWorkflowState = {
                 "security_context": sec_ctx.model_dump(),
                 "bid_id": request.bid_id,
                 "document_id": request.document_id,
+                "file_name": request.file_name,
                 "page_number": page.page_number,
                 "raw_page_text": page.text,
+                "pages": [{"page_number": p.page_number, "text": p.text} for p in request.pages],
                 "retrieved_chunks": [],
                 "extracted_candidates": [],
                 "verified_items": [],
@@ -576,7 +628,8 @@ class ProductionExtractionPipeline:
             }
 
             thread_id = (
-                f"tenant_{sec_ctx.tenant_id}:bid_{request.bid_id}:"
+                f"tenant_{sec_ctx.tenant_id}:company_{sec_ctx.company_id or 'unassigned'}:"
+                f"run_{sec_ctx.workflow_run_id}:bid_{request.bid_id}:"
                 f"doc_{request.document_id}:page_{page.page_number}"
             )
             config: Any = {"configurable": {"thread_id": thread_id}}

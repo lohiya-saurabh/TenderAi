@@ -13,64 +13,16 @@ export interface CompanyContextValue {
   createCompany: (input: CreateCompanyInput) => Promise<CompanyItem | null>;
 }
 
-const FALLBACK_COMPANIES: CompanyItem[] = [
-  {
-    id: 'comp_acme_infra_001',
-    organizationId: 'org_acme_infra_001',
-    legalName: 'Acme Infrastructure Solutions Ltd.',
-    slug: 'acme-infra',
-    gstin: '27AAKCA1234F1Z5',
-    pan: 'AAKCA1234F',
-    udyamId: 'UDYAM-MH-12-0049281',
-    constitution: 'PUBLIC_LIMITED',
-    createdAt: '2026-09-01T00:00:00.000Z',
-    updatedAt: '2026-10-01T00:00:00.000Z',
-  },
-  {
-    id: 'comp_acme_tech_002',
-    organizationId: 'org_acme_infra_001',
-    legalName: 'Acme Smart Systems & Surveillance Pvt Ltd',
-    slug: 'acme-tech',
-    gstin: '27AABCS4412Q1ZX',
-    pan: 'AABCS4412Q',
-    udyamId: 'UDYAM-MH-12-0088192',
-    constitution: 'PRIVATE_LIMITED',
-    createdAt: '2026-09-15T00:00:00.000Z',
-    updatedAt: '2026-10-01T00:00:00.000Z',
-  },
-];
-
-function getFallbackCompanies(orgId?: string): CompanyItem[] {
-  if (orgId === 'org_bharat_build_002') {
-    return [
-      {
-        id: 'comp_bharat_heavy_001',
-        organizationId: 'org_bharat_build_002',
-        legalName: 'Bharat Heavy Infrastructure Enterprises Ltd',
-        slug: 'bharat-heavy',
-        gstin: '07AAACB2194P1Z8',
-        pan: 'AAACB2194P',
-        udyamId: 'UDYAM-DL-05-0012948',
-        constitution: 'PUBLIC_LIMITED',
-        createdAt: '2026-09-01T00:00:00.000Z',
-        updatedAt: '2026-10-01T00:00:00.000Z',
-      },
-    ];
-  }
-  return FALLBACK_COMPANIES;
-}
-
 const CompanyContext = createContext<CompanyContextValue | undefined>(undefined);
 
 const STORAGE_KEY_PREFIX = 'tenderpulse_active_company_';
 
 export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isAuthenticated } = useAuth();
-  const orgId = user?.organizationId || 'org_acme_infra_001';
-  const initialFallback = getFallbackCompanies(orgId);
+  const orgId = user?.organizationId || '';
 
-  const [companies, setCompanies] = useState<CompanyItem[]>(initialFallback);
-  const [selectedCompanyId, setSelectedCompanyIdState] = useState<string | null>(initialFallback[0]?.id || null);
+  const [companies, setCompanies] = useState<CompanyItem[]>([]);
+  const [selectedCompanyId, setSelectedCompanyIdState] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -78,9 +30,8 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const reloadCompanies = useCallback(async () => {
     if (!isAuthenticated || !user) {
-      const fallback = getFallbackCompanies();
-      setCompanies(fallback);
-      setSelectedCompanyIdState(fallback[0]?.id || null);
+      setCompanies([]);
+      setSelectedCompanyIdState(null);
       return;
     }
 
@@ -90,7 +41,7 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const result = await listCompanies();
     setIsLoading(false);
 
-    if (result.ok && Array.isArray(result.data) && result.data.length > 0) {
+    if (result.ok && Array.isArray(result.data)) {
       const fetched = result.data;
       setCompanies(fetched);
 
@@ -110,9 +61,8 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setSelectedCompanyIdState(null);
       }
     } else {
-      const fallback = getFallbackCompanies(user.organizationId);
-      setCompanies(fallback);
-      setSelectedCompanyIdState(fallback[0]?.id || null);
+      setCompanies([]);
+      setSelectedCompanyIdState(null);
     }
   }, [isAuthenticated, user, storageKey]);
 

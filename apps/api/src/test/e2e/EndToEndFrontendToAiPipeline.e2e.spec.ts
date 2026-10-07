@@ -2,7 +2,7 @@
  * E2E Integration Suite: Full End-to-End Pipeline
  * Frontend → API Controller/Service → S3 Storage → SQS Job Queue → Ingestion Worker → AI Extraction → PostgreSQL Persistence → SSE Streaming
  */
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { Request, Response } from 'express';
 import { PGlite } from '@electric-sql/pglite';
 import { eq, and } from 'drizzle-orm';
@@ -27,6 +27,7 @@ import { InMemoryEventBus } from '../../common/events/InMemoryEventBus.js';
 import { BidProject } from '../../modules/bids/domain/entities/BidProject.js';
 import { TenderDocument } from '../../modules/bids/domain/entities/TenderDocument.js';
 import { IngestionJob } from '../../modules/bids/domain/entities/IngestionJob.js';
+import type { IngestionJobMessage } from '../../modules/bids/application/IJobQueue.js';
 import { BidStatus } from '../../modules/bids/domain/value-objects/BidStatus.js';
 import { Money } from '../../modules/bids/domain/value-objects/Money.js';
 
@@ -83,7 +84,7 @@ startxref
   beforeEach(async () => {
     // 1. Initialize embedded PostgreSQL
     pglite = new PGlite();
-    await initDatabase(pglite);
+    await initDatabase(pglite, { seedUsers: true, seedFullProfile: true, seedBidsAndCompliance: true });
     db = createDrizzle(pglite);
 
     // 2. Initialize S3 Storage and SQS Queue
@@ -91,7 +92,7 @@ startxref
     jobQueue = new MockSqsJobQueue(3);
 
     // 3. Create DocumentsService and Controller
-    documentsService = new DocumentsService(db, storageService, jobQueue);
+    documentsService = new DocumentsService(db, storageService);
     documentsController = new DocumentsController(documentsService);
 
     // 4. Initialize Repositories and Worker
@@ -109,6 +110,8 @@ startxref
       customFetch: async (_url, init) => {
         const body = JSON.parse(init.body as string);
         expect(body.security_context.tenant_id).toBe(tenantA);
+        expect(body.security_context.company_id).toBeDefined();
+        expect(body.security_context.correlation_id).toBeDefined();
 
         return {
           ok: true,
@@ -175,10 +178,25 @@ startxref
       eventBus
     );
 
+    // Pre-seed company entities
+    await db.insert(schema.companies).values([
+      {
+        id: 'comp_tata_infra_001',
+        organizationId: tenantA,
+        legalName: 'Tata Projects Ltd',
+      },
+      {
+        id: 'comp_lnt_infra_002',
+        organizationId: tenantB,
+        legalName: 'Larsen & Toubro Ltd',
+      },
+    ]);
+
     // 6. Pre-seed the bid in PostgreSQL and in-memory domain repo
     await db.insert(schema.bids).values({
       id: testBidId,
       organizationId: tenantA,
+      companyId: 'comp_tata_infra_001',
       title: 'NHAI Six-Lane Cable Stayed Bridge Over Ganga',
       tenderNumber: 'NHAI/2026/BR-402',
       tenderingAuthority: 'National Highways Authority of India',
@@ -196,6 +214,7 @@ startxref
     const bidEntity = new BidProject({
       id: testBidId,
       organizationId: tenantA,
+      companyId: 'comp_tata_infra_001',
       title: 'NHAI Six-Lane Cable Stayed Bridge Over Ganga',
       tenderNumber: 'NHAI/2026/BR-402',
       tenderingAuthority: 'National Highways Authority of India',
@@ -291,7 +310,18 @@ startxref
     expect(persistedDoc?.storagePath).toBe(storagePath);
     expect(Number(persistedDoc?.fileSizeBytes)).toBe(samplePdfContent.length);
 
-    // Verify SQS received the ingestion message
+    // The production runtime publishes this durable outbox entry. This E2E keeps
+    // the legacy in-memory worker isolated by advancing the outbox-to-queue boundary.
+    const [outboxRecord] = await db
+      .select()
+      .from(schema.documentProcessingOutbox)
+      .where(eq(schema.documentProcessingOutbox.documentId, docId))
+      .limit(1);
+    expect(outboxRecord?.status).toBe('PENDING');
+    if (!outboxRecord) throw new Error('Upload confirmation did not create a durable outbox record.');
+    await jobQueue.enqueue(outboxRecord.payload as IngestionJobMessage);
+
+    // Verify the queue received the message published from the durable outbox
     const queueMessages = await jobQueue.receiveMessages(10, 300);
     expect(queueMessages.length).toBeGreaterThan(0);
 
@@ -394,6 +424,38 @@ startxref
     const dlqMessages = await jobQueue.getDeadLetterMessages();
     expect(dlqMessages.length).toBeGreaterThan(0);
     expect(dlqMessages[0]?.message.jobId).toBe('job-poison-999');
+  });
+
+  it('does not trigger synchronous extraction from the NestJS SSE progress endpoint', async () => {
+    const markSpy = vi.spyOn(documentsService, 'markExtractionComplete');
+    const emittedEvents: Array<{ step: string; progress: number; status?: string }> = [];
+
+    const mockRes = {
+      set: () => {},
+      flushHeaders: () => {},
+      write: (dataStr: string) => {
+        const jsonMatch = dataStr.match(/data:\s*(.+)\n\n/);
+        if (jsonMatch && jsonMatch[1]) {
+          emittedEvents.push(JSON.parse(jsonMatch[1]));
+        }
+      },
+    };
+
+    const mockReq = {
+      on: () => {},
+    };
+
+    TenantContextHolder.run({ organizationId: tenantA, userId, role: 'BID_MANAGER' }, () => {
+      documentsController.streamExtractionProgress(
+        testBidId,
+        mockReq as unknown as Request,
+        mockRes as unknown as Response
+      );
+    });
+
+    expect(markSpy).not.toHaveBeenCalled();
+    expect(emittedEvents[0]?.step).toBe('PARSING_PAGES');
+    expect(emittedEvents[0]?.progress).toBe(25);
   });
 
   it('provides SSE progress streaming from PARSING_PAGES to COMPLETED', async () => {

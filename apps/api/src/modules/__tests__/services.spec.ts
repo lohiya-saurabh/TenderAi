@@ -1,6 +1,9 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
 import { PGlite } from '@electric-sql/pglite';
+import { eq } from 'drizzle-orm';
 import { initDatabase } from '../../common/database/database.provider.js';
+import { createDrizzle } from '../../common/database/database.module.js';
+import * as schema from '../../common/database/schema.js';
 import { AuthService } from '../auth/auth.service.js';
 import { BidsService } from '../bids/bids.service.js';
 import { DocumentsService } from '../documents/documents.service.js';
@@ -41,7 +44,7 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
   beforeAll(async () => {
     // Initialize in-memory PGlite with schema and clean seed state
     db = new PGlite();
-    await initDatabase(db);
+    await initDatabase(db, { seedUsers: true, seedFullProfile: true, seedBidsAndCompliance: true });
 
     mockStorage = new MockStorageService();
     authService = new AuthService(db);
@@ -52,13 +55,25 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
     companyProfileService = new CompanyProfileService(db);
   });
 
+  beforeEach(() => {
+    TenantContextHolder.enter({
+      organizationId: 'org_acme_infra_001',
+      userId: 'usr_bid_mgr_01',
+      role: 'BID_MANAGER',
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   describe('AuthService', () => {
     it('should authenticate demo user with correct credentials', async () => {
       const result = await authService.login('bidmanager@acme.com', 'Password123!');
       expect(result.accessToken).toBeDefined();
       expect(result.refreshToken).toBeDefined();
       expect(result.user.email).toBe('bidmanager@acme.com');
-      expect(result.user.role).toBe('bid_manager');
+      expect(result.user.role).toBe('BID_MANAGER');
     });
 
     it('should throw UnauthorizedError when credentials do not match', async () => {
@@ -87,8 +102,8 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
   describe('BidsService', () => {
     it('should list all demo bids', async () => {
       const bids = await bidsService.listBids();
-      expect(Array.isArray(bids)).toBe(true);
-      expect(bids.length).toBeGreaterThan(0);
+      const items = Array.isArray(bids) ? bids : bids.items;
+      expect(items.length).toBeGreaterThan(0);
     });
 
     it('should get a single bid by ID', async () => {
@@ -212,15 +227,81 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
 
     it('should confirm document upload, persist to database, and update status', async () => {
       const testBid = await bidsService.createBid({ title: 'Test Bid For Documents' });
+      const storagePath = `tenants/org_acme_infra_001/bids/${testBid.id}/doc-test-123/Uploaded_Tender_Document.pdf`;
+      mockStorage.simulateUploadedObject(storagePath, 1024, undefined, Buffer.from(sampleTenderContent));
 
       const res = await documentsService.confirmUpload(testBid.id, 'doc-test-123');
       expect(res.documentId).toBe('doc-test-123');
       expect(res.status).toBe('UPLOADED');
 
       const updatedBid = await bidsService.getBidById(testBid.id);
-      expect(updatedBid.status).toBe('REVIEW_READY');
+      expect(updatedBid.status).toBe('QUEUED');
       expect(updatedBid.documents.length).toBe(1);
       expect(updatedBid.documents[0]!.id).toBe('doc-test-123');
+
+      const [outboxRecord] = await createDrizzle(db)
+        .select()
+        .from(schema.documentProcessingOutbox)
+        .where(eq(schema.documentProcessingOutbox.id, 'outbox-doc-test-123'))
+        .limit(1);
+      expect(outboxRecord?.status).toBe('PENDING');
+      expect(outboxRecord?.payload).toMatchObject({
+        organizationId: 'org_acme_infra_001',
+        companyId: testBid.companyId,
+        bidId: testBid.id,
+        documentId: 'doc-test-123',
+        storageReference: storagePath,
+      });
+    });
+
+    it('should not persist or queue upload confirmation when the object is absent', async () => {
+      const testBid = await bidsService.createBid({ title: 'Bid With Missing Upload' });
+      await expect(documentsService.confirmUpload(testBid.id, 'doc-missing-object')).rejects.toThrow(
+        'Uploaded document is missing or empty in object storage',
+      );
+
+      const documents = await createDrizzle(db)
+        .select()
+        .from(schema.tenderDocuments)
+        .where(eq(schema.tenderDocuments.id, 'doc-missing-object'));
+      const outbox = await createDrizzle(db)
+        .select()
+        .from(schema.documentProcessingOutbox)
+        .where(eq(schema.documentProcessingOutbox.id, 'outbox-doc-missing-object'));
+      expect(documents).toHaveLength(0);
+      expect(outbox).toHaveLength(0);
+    });
+
+    it('should queue reprocessing of a completed document with a new durable job', async () => {
+      const testBid = await bidsService.createBid({ title: 'Bid For Citation Refresh' });
+      const docId = 'doc-citation-refresh';
+      const storagePath = `tenants/org_acme_infra_001/bids/${testBid.id}/${docId}/Uploaded_Tender_Document.pdf`;
+      mockStorage.simulateUploadedObject(storagePath, 2048, undefined, Buffer.from(sampleTenderContent));
+      await documentsService.confirmUpload(testBid.id, docId);
+      await createDrizzle(db)
+        .update(schema.tenderDocuments)
+        .set({ status: 'COMPLETED' })
+        .where(eq(schema.tenderDocuments.id, docId));
+
+      const result = await documentsService.reprocessDocument(testBid.id, docId);
+      expect(result.documentId).toBe(docId);
+      expect(result.status).toBe('QUEUED_FOR_EXTRACTION');
+
+      const [document] = await createDrizzle(db)
+        .select()
+        .from(schema.tenderDocuments)
+        .where(eq(schema.tenderDocuments.id, docId));
+      const [outbox] = await createDrizzle(db)
+        .select()
+        .from(schema.documentProcessingOutbox)
+        .where(eq(schema.documentProcessingOutbox.id, `outbox-${result.jobId}`));
+      expect(document?.status).toBe('QUEUED_FOR_EXTRACTION');
+      expect(outbox?.status).toBe('PENDING');
+      expect(outbox?.payload).toMatchObject({
+        documentId: docId,
+        jobId: result.jobId,
+        storageReference: storagePath,
+      });
     });
 
     it('should mark extraction complete and generate compliance items into PostgreSQL from real document content', async () => {
@@ -245,6 +326,38 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
 
       const updatedBid = await bidsService.getBidById(testBid.id);
       expect(updatedBid.totalRequirements).toBe(7);
+    });
+
+    it('should keep prior tender timeline text out of the EMD provenance quote', async () => {
+      vi.stubEnv('AI_ENGINE_URL', 'http://127.0.0.1:65534');
+      const testBid = await bidsService.createBid({ title: 'Bid For EMD Citation' });
+      const documentId = 'doc-emd-citation';
+      const content = [
+        'https://eprocure.gov.in/eprocure/app CPP portal on or before 09-10-2026 (upto',
+        '16:00 hrs IST). Bids received online will be opened on 12-10-2026 (at 16:00 hrs',
+        'IST)',
+        'Queries/Clarifications if any may be submitted on or before 05-10-2026',
+        'upto 15:00 hrs IST)',
+        'The EMD shall be paid in the form of Bank Guarantee/FDR drawn in',
+        'favour of the Executive Engineer National Highway Division Hassan, obtained',
+        'from any Nationalized/Scheduled Banks payable at Hassan.',
+      ].join('\n');
+      mockStorage.simulateUploadedObject(
+        `tenants/org_acme_infra_001/bids/${testBid.id}/${documentId}/Uploaded_Tender_Document.pdf`,
+        Buffer.byteLength(content),
+        undefined,
+        Buffer.from(content),
+      );
+      await documentsService.confirmUpload(testBid.id, documentId);
+      await documentsService.markExtractionComplete(testBid.id, documentId);
+
+      const items = await complianceService.listItems(testBid.id);
+      const emdItem = items.find((item) => item.title === 'Tender & Bid Security (EMD) Guarantee');
+      expect(emdItem?.provenance.verbatimQuote).toBe(
+        'The EMD shall be paid in the form of Bank Guarantee/FDR drawn in ' +
+          'favour of the Executive Engineer National Highway Division Hassan, obtained ' +
+          'from any Nationalized/Scheduled Banks payable at Hassan.',
+      );
     });
 
     it('should extract 0 compliance items and fabricate no mock data when document contains no compliance clauses', async () => {

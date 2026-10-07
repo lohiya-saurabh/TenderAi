@@ -147,7 +147,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
               <div>
                 <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)' }}>Incorporation Date</span>
                 <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-surface-text)' }}>
-                  {profile.incorporationDate} (14 Years in Operation)
+                  {profile.incorporationDate}
                 </div>
               </div>
               <div>
@@ -171,43 +171,65 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
             </div>
           </Card>
 
-          {/* Quick Stats Grid */}
+          {/* Quick Stats Grid - Computed from Profile Data */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-            <Card padding="md">
-              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)' }}>3-Year Average Turnover</span>
-              <div style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--color-primary-300)', marginTop: '0.25rem' }}>
-                ₹14.83 Crores
-              </div>
-              <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-success)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                <Check size={12} /> All audited with ICAI UDIN
-              </span>
-            </Card>
+            {(() => {
+              const auditedTurnovers = profile.turnoverRecords.filter(t => t.audited && t.isUdinValidated);
+              const avgTurnover = auditedTurnovers.length > 0
+                ? (auditedTurnovers.reduce((sum, t) => sum + t.turnoverInrCrores, 0) / auditedTurnovers.length).toFixed(2)
+                : '0.00';
+              const allVerified = auditedTurnovers.length > 0 && auditedTurnovers.every(t => t.isUdinValidated);
 
-            <Card padding="md">
-              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)' }}>Highest Single Contract Executed</span>
-              <div style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--color-primary-300)', marginTop: '0.25rem' }}>
-                ₹12.80 Crores
-              </div>
-              <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)' }}>Central Railway (ROB Bridge)</span>
-            </Card>
+              const highestContract = profile.pastExperience.length > 0
+                ? profile.pastExperience.reduce((max, e) => e.contractValueInrCrores > max.contractValueInrCrores ? e : max)
+                : null;
 
-            <Card padding="md">
-              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)' }}>Active Bank Solvency</span>
-              <div style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--color-primary-300)', marginTop: '0.25rem' }}>
-                ₹6.00 Crores
-              </div>
-              <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)' }}>State Bank of India</span>
-            </Card>
+              const activeSolvency = profile.solvencyRecords.find(s => s.status === 'VERIFIED' && new Date(s.validUntil) > new Date());
 
-            <Card padding="md">
-              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)' }}>Evidence Documents Linked</span>
-              <div style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--color-primary-300)', marginTop: '0.25rem' }}>
-                {profile.evidenceVault.length} Documents
-              </div>
-              <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-success)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                <Check size={12} /> Tamper-proof hash checked
-              </span>
-            </Card>
+              return (
+                <>
+                  <Card padding="md">
+                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)' }}>3-Year Average Turnover</span>
+                    <div style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--color-primary-300)', marginTop: '0.25rem' }}>
+                      ₹{avgTurnover} Crores
+                    </div>
+                    <span style={{ fontSize: 'var(--text-2xs)', color: allVerified ? 'var(--color-success)' : 'var(--color-warning)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      {allVerified ? <Check size={12} /> : <FileText size={12} />} {allVerified ? 'All audited with ICAI UDIN' : 'Some records pending validation'}
+                    </span>
+                  </Card>
+
+                  <Card padding="md">
+                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)' }}>Highest Single Contract Executed</span>
+                    <div style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--color-primary-300)', marginTop: '0.25rem' }}>
+                      {highestContract ? `₹${highestContract.contractValueInrCrores.toFixed(2)} Crores` : '—'}
+                    </div>
+                    <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)' }}>
+                      {highestContract ? highestContract.clientName : 'No verified contracts'}
+                    </span>
+                  </Card>
+
+                  <Card padding="md">
+                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)' }}>Active Bank Solvency</span>
+                    <div style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--color-primary-300)', marginTop: '0.25rem' }}>
+                      {activeSolvency ? `₹${activeSolvency.solvencyLimitInrCrores.toFixed(2)} Crores` : '—'}
+                    </div>
+                    <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)' }}>
+                      {activeSolvency ? activeSolvency.bankName : 'No active solvency certificate'}
+                    </span>
+                  </Card>
+
+                  <Card padding="md">
+                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)' }}>Evidence Documents Linked</span>
+                    <div style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--color-primary-300)', marginTop: '0.25rem' }}>
+                      {profile.evidenceVault.length} Documents
+                    </div>
+                    <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-success)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <Check size={12} /> Tamper-proof hash checked
+                    </span>
+                  </Card>
+                </>
+              );
+            })()}
           </div>
         </div>
       )}

@@ -98,8 +98,19 @@ export class ComplianceService {
     this.db = 'select' in db ? (db as DrizzleDb) : createDrizzle(db as PGlite);
   }
 
+  private async getOrgIdForBid(bidId: string): Promise<string> {
+    const orgId = TenantContextHolder.get()?.organizationId;
+    if (orgId) return orgId;
+    const [bid] = await this.db
+      .select({ organizationId: schema.bids.organizationId })
+      .from(schema.bids)
+      .where(eq(schema.bids.id, bidId))
+      .limit(1);
+    return bid?.organizationId || '';
+  }
+
   public async listItems(bidId: string): Promise<DemoComplianceItem[]> {
-    const orgId = TenantContextHolder.get()?.organizationId || 'org_acme_infra_001';
+    const orgId = await this.getOrgIdForBid(bidId);
     const records = await this.db
       .select()
       .from(schema.complianceItems)
@@ -115,7 +126,7 @@ export class ComplianceService {
   }
 
   public async getItemById(bidId: string, itemId: string): Promise<DemoComplianceItem> {
-    const orgId = TenantContextHolder.get()?.organizationId || 'org_acme_infra_001';
+    const orgId = await this.getOrgIdForBid(bidId);
     const [item] = await this.db
       .select()
       .from(schema.complianceItems)
@@ -142,7 +153,7 @@ export class ComplianceService {
   public async listReviewTasks(
     bidId: string,
   ): Promise<DemoComplianceItem[]> {
-    const orgId = TenantContextHolder.get()?.organizationId || 'org_acme_infra_001';
+    const orgId = await this.getOrgIdForBid(bidId);
     const records = await this.db
       .select()
       .from(schema.complianceItems)
@@ -179,7 +190,7 @@ export class ComplianceService {
     reviewNeeded: number;
     readinessPct: number | null;
   }> {
-    const orgId = TenantContextHolder.get()?.organizationId || 'org_acme_infra_001';
+    const orgId = await this.getOrgIdForBid(bidId);
     const records = await this.db
       .select()
       .from(schema.complianceItems)
@@ -216,7 +227,7 @@ export class ComplianceService {
    * Maps extracted tender requirements to company-side proof documents.
    */
   public async getEvidenceMatches(bidId: string): Promise<EvidenceMatchesResult> {
-    const orgId = TenantContextHolder.get()?.organizationId || 'org_acme_infra_001';
+    const orgId = await this.getOrgIdForBid(bidId);
 
     const [bid] = await this.db
       .select()
@@ -288,7 +299,7 @@ export class ComplianceService {
    * Consolidated statutory, execution, and commercial risk radar for a bid.
    */
   public async getRiskFindings(bidId: string): Promise<RiskFindingsResult> {
-    const orgId = TenantContextHolder.get()?.organizationId || 'org_acme_infra_001';
+    const orgId = await this.getOrgIdForBid(bidId);
 
     const [bid] = await this.db
       .select()
@@ -462,9 +473,9 @@ export class ComplianceService {
     itemId: string,
     dto: ReviewComplianceDto,
   ): Promise<ReviewComplianceResult> {
-    const orgId = TenantContextHolder.get()?.organizationId || 'org_acme_infra_001';
-    const userId = TenantContextHolder.get()?.userId || 'usr_bid_mgr_01';
-    const reviewer = userId === 'usr_bid_mgr_01' ? 'Vikramaditya Sharma' : 'Reviewer';
+    const orgId = await this.getOrgIdForBid(bidId);
+    const userId = TenantContextHolder.get()?.userId || 'usr_reviewer';
+    const reviewer = 'Reviewer';
 
     const [item] = await this.db
       .select()

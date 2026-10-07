@@ -3,6 +3,8 @@ import { ExtractedComplianceItemInput } from '../../application/BulkIngestCompli
 
 export interface BulkIngestPayload {
   items: ExtractedComplianceItemInput[];
+  workflowRunId?: string;
+  correlationId?: string;
 }
 
 export class BulkIngestComplianceDto {

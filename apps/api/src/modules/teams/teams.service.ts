@@ -5,11 +5,13 @@ import { Injectable, Inject } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcrypt';
+import { Optional } from '@nestjs/common';
 import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '../../common/database/database.module.js';
 import * as schema from '../../common/database/schema.js';
 import { BadRequestError } from '../../common/errors/errors.js';
 import { TenantContextHolder } from '../../common/security/TenantContext.js';
 import { ROLE_PERMISSIONS, type UserRole } from '../../common/security/permissions.js';
+import { EntitlementService } from '../billing/entitlement.service.js';
 
 export interface InviteMemberDto {
   email: string;
@@ -32,7 +34,10 @@ export interface TeamMemberView {
 export class TeamsService {
   private readonly db: DrizzleDb;
 
-  constructor(@Inject(DRIZZLE_TOKEN) db: DrizzleDb | PGlite) {
+  constructor(
+    @Inject(DRIZZLE_TOKEN) db: DrizzleDb | PGlite,
+    @Optional() @Inject(EntitlementService) private readonly entitlementService?: EntitlementService,
+  ) {
     this.db = 'select' in db ? (db as DrizzleDb) : createDrizzle(db as PGlite);
   }
 
@@ -92,6 +97,11 @@ export class TeamsService {
     }
     if (!dto.name || !dto.name.trim()) {
       throw new BadRequestError('Name is required.');
+    }
+
+    // Enforce Tenant Plan Entitlements
+    if (this.entitlementService) {
+      await this.entitlementService.checkUserLimit(orgId);
     }
 
     const normalizedRole = (dto.role || 'VIEWER').toUpperCase().replace(/[\s-]/g, '_');

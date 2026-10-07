@@ -37,6 +37,18 @@ export interface AiServiceExtractResponse {
   items?: RawExtractedItem[];
 }
 
+export type ExtractableDocument = Pick<
+  TenderDocument,
+  'id' | 'bidId' | 'organizationId' | 'documentType' | 'fileName' | 'storagePath'
+>;
+
+export interface DocumentExtractionPort {
+  extract(
+    document: ExtractableDocument,
+    securityContext?: SecurityContextDto,
+  ): Promise<ExtractedComplianceItem[]>;
+}
+
 export interface AiExtractorConfig {
   aiBaseUrl?: string;
   internalServiceKey?: string;
@@ -47,7 +59,7 @@ export interface AiExtractorConfig {
   ) => Promise<{ ok: boolean; status: number; json: () => Promise<AiServiceExtractResponse> }>;
 }
 
-export class AiDocumentExtractor implements IDocumentExtractor {
+export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtractionPort {
   private readonly aiBaseUrl: string;
   private readonly internalServiceKey: string;
   private readonly timeoutMs: number;
@@ -62,23 +74,24 @@ export class AiDocumentExtractor implements IDocumentExtractor {
     config: AiExtractorConfig = {}
   ) {
     this.aiBaseUrl = config.aiBaseUrl ?? process.env.AI_ENGINE_URL ?? 'http://localhost:8000';
-    this.internalServiceKey =
-      config.internalServiceKey ??
-      process.env.INTERNAL_SERVICE_KEY ??
-      'tenderpulse-internal-secret-2026';
+    const internalServiceKey = config.internalServiceKey ?? process.env.INTERNAL_SERVICE_KEY;
+    if (!internalServiceKey && process.env.NODE_ENV === 'production') {
+      throw new Error('INTERNAL_SERVICE_KEY must be configured in production.');
+    }
+    this.internalServiceKey = internalServiceKey ?? 'tenderpulse-internal-secret-2026';
     this.timeoutMs = config.timeoutMs ?? 60000;
     this.customFetch = config.customFetch;
   }
 
   public async extract(
-    document: TenderDocument,
+    document: ExtractableDocument,
     securityContext?: SecurityContextDto
   ): Promise<ExtractedComplianceItem[]> {
     // 1. Fetch document blob from S3 using tenant-scoped object key
-    const rawContent = await this.storageService.getObject(document.s3Key);
+    const rawContent = await this.storageService.getObject(document.storagePath);
     if (!rawContent) {
       throw new Error(
-        `Failed to retrieve document content for key '${document.s3Key}'. Object not found in storage.`
+        `Failed to retrieve document content for key '${document.storagePath}'. Object not found in storage.`
       );
     }
 
@@ -177,6 +190,7 @@ export class AiDocumentExtractor implements IDocumentExtractor {
     const secCtx: SecurityContextDto = securityContext ?? {
       tenantId: document.organizationId,
       userId: 'system-worker',
+      correlationId: `corr-${document.id}`,
       roles: ['ADMIN'],
       workflowRunId: `run-${document.id}-${Date.now()}`,
       allowedDocumentIds: [document.id],
@@ -189,7 +203,9 @@ export class AiDocumentExtractor implements IDocumentExtractor {
       security_context: {
         tenant_id: secCtx.tenantId,
         user_id: secCtx.userId,
+        company_id: secCtx.companyId,
         workflow_run_id: secCtx.workflowRunId,
+        correlation_id: secCtx.correlationId,
         allowed_document_ids: secCtx.allowedDocumentIds,
         allowed_source_ids: secCtx.allowedSourceIds,
         purpose: secCtx.purpose,

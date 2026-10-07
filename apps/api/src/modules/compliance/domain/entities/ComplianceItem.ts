@@ -9,6 +9,7 @@ export interface CreateComplianceItemProps {
   id: string;
   bidId: string;
   organizationId: string;
+  companyId?: string;
   category: string;
   title: string;
   description: string;
@@ -21,11 +22,14 @@ export interface CreateComplianceItemProps {
   reviewedAt?: Date | null;
   createdAt?: Date;
   updatedAt?: Date;
+  workflowRunId?: string;
+  correlationId?: string;
 }
 
 export class ComplianceItem extends AggregateRoot {
   private readonly _bidId: string;
   private readonly _organizationId: string;
+  private readonly _companyId: string | undefined;
   private readonly _category: string;
   private readonly _title: string;
   private readonly _description: string;
@@ -35,6 +39,8 @@ export class ComplianceItem extends AggregateRoot {
   private _userNotes: string | null;
   private _assignedUserId: string | null;
   private _reviewedAt: Date | null;
+  private readonly _workflowRunId: string | undefined;
+  private readonly _correlationId: string | undefined;
 
   constructor(props: CreateComplianceItemProps) {
     super(props.id, props.version ?? 1, props.createdAt, props.updatedAt);
@@ -54,6 +60,7 @@ export class ComplianceItem extends AggregateRoot {
 
     this._bidId = props.bidId;
     this._organizationId = props.organizationId;
+    this._companyId = props.companyId?.trim();
     this._category = props.category.trim();
     this._title = props.title.trim();
     this._description = props.description?.trim() ?? '';
@@ -63,6 +70,8 @@ export class ComplianceItem extends AggregateRoot {
     this._userNotes = props.userNotes ?? null;
     this._assignedUserId = props.assignedUserId ?? null;
     this._reviewedAt = props.reviewedAt ?? null;
+    this._workflowRunId = props.workflowRunId?.trim();
+    this._correlationId = props.correlationId?.trim();
   }
 
   public get bidId(): string {
@@ -71,6 +80,10 @@ export class ComplianceItem extends AggregateRoot {
 
   public get organizationId(): string {
     return this._organizationId;
+  }
+
+  public get companyId(): string | undefined {
+    return this._companyId;
   }
 
   public get category(): string {
@@ -107,6 +120,14 @@ export class ComplianceItem extends AggregateRoot {
 
   public get reviewedAt(): Date | null {
     return this._reviewedAt;
+  }
+
+  public get workflowRunId(): string | undefined {
+    return this._workflowRunId;
+  }
+
+  public get correlationId(): string | undefined {
+    return this._correlationId;
   }
 
   public updateReview(

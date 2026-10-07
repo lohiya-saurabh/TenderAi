@@ -231,9 +231,11 @@ export class IngestionWorker {
       // Derive SecurityContext strictly from trusted backend database records
       const securityContext: SecurityContextDto = {
         tenantId: bid.organizationId,
+        companyId: bid.companyId,
         userId: this.workerId,
         roles: ['ADMIN'],
-        workflowRunId: `run-${job.id}-${Date.now()}`,
+        workflowRunId: `run-${job.id}`,
+        correlationId: `corr-${job.id}`,
         allowedDocumentIds: [document.id],
         allowedSourceIds: ['s3_vault'],
         purpose: 'COMPLIANCE_EXTRACTION',
@@ -381,4 +383,3 @@ export class IngestionWorker {
     }
   }
 }
-

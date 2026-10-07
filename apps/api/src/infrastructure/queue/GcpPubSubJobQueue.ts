@@ -111,15 +111,16 @@ export class GcpPubSubJobQueue implements IJobQueue {
             body,
             receiveCount,
           });
-        } catch {
-          // Corrupted message payload
+        } catch (error) {
+          throw new Error('Pub/Sub message body is not valid JSON.', { cause: error });
         }
       }
 
       return results;
-    } catch {
-      // Handle non-existent subscription or network blips gracefully
-      return [];
+    } catch (error) {
+      throw new Error(`Failed to pull messages from Pub/Sub subscription '${this.subscriptionName}'.`, {
+        cause: error,
+      });
     }
   }
 
@@ -157,7 +158,7 @@ export class GcpPubSubJobQueue implements IJobQueue {
     receiveCount = 1
   ): Promise<void> {
     if (!this.dlqTopicName) {
-      return;
+      throw new Error('Cannot move a Pub/Sub message to the dead-letter queue: GCP_PUBSUB_DLQ_TOPIC is not configured.');
     }
 
     const deadLetterPayload = {

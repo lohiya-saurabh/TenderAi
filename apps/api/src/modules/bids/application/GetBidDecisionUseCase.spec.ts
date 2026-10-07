@@ -65,6 +65,7 @@ describe('GetBidDecisionUseCase — bid/no-bid evaluation pipeline', () => {
     await drizzleDb.insert(schema.bids).values({
       id,
       organizationId,
+      companyId: 'comp_acme_infra_001',
       title: 'Construction of Elevated Corridor',
       tenderNumber: 'NHAI/DEL/2026/EC-24',
       tenderingAuthority: 'NHAI',
@@ -130,6 +131,7 @@ describe('GetBidDecisionUseCase — bid/no-bid evaluation pipeline', () => {
   const seedProfile = async (organizationId: string = orgId) => {
     await drizzleDb.insert(schema.companyProfileVersions).values({
       id: 'cpv-test-01',
+      companyId: 'comp_acme_infra_001',
       organizationId,
       version: 1,
       name: 'FY26 Capability Profile',
@@ -166,8 +168,22 @@ describe('GetBidDecisionUseCase — bid/no-bid evaluation pipeline', () => {
 
   beforeEach(async () => {
     db = new PGlite();
-    await initDatabase(db, { seedFullProfile: false, seedBidsAndCompliance: false });
+    await initDatabase(db, { seedUsers: false, seedFullProfile: false, seedBidsAndCompliance: false });
     drizzleDb = createDrizzle(db);
+
+    await drizzleDb.insert(schema.companies).values([
+      {
+        id: 'comp_acme_infra_001',
+        organizationId: orgId,
+        legalName: 'Acme Infrastructure Solutions Ltd.',
+      },
+      {
+        id: 'comp_rival_infra_999',
+        organizationId: rivalOrgId,
+        legalName: 'Rival Infrastructure Ltd.',
+      },
+    ]).onConflictDoNothing();
+
     fakeClient = new FakeAiDecisionClient(cannedResponse());
     // Structural typing: the fake satisfies the AiDecisionClient contract.
     useCase = new GetBidDecisionUseCase(drizzleDb, fakeClient as unknown as AiDecisionClient);

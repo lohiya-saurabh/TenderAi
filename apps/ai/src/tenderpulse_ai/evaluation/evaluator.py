@@ -24,7 +24,6 @@ from tenderpulse_ai.security.context import SecurityContext
 from tenderpulse_ai.security.exceptions import UnauthorizedDocumentAccessException
 from tenderpulse_ai.tools.page_text import PageTextTool
 from tenderpulse_ai.tools.retrieval import DocumentChunk, ScopedRetrievalTool
-from tenderpulse_ai.workflow.graph import build_compliance_workflow_graph
 from tenderpulse_ai.workflow.nodes import WorkflowNodeContext
 
 
@@ -197,6 +196,7 @@ class ComplianceWorkflowEvaluator:
             page_text_tool=page_text_tool,
             llm_client=llm_client,
         )
+        from tenderpulse_ai.workflow.graph import build_compliance_workflow_graph
         graph = build_compliance_workflow_graph(node_ctx)
 
         initial_state: dict[str, Any] = {

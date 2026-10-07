@@ -16,6 +16,35 @@ export class AuthController {
   }
 
   @Public()
+  @Post('register')
+  async register(
+    @Body()
+    body: {
+      email?: string;
+      password?: string;
+      name?: string;
+      organizationName?: string;
+      companyName?: string;
+      gstin?: string;
+      pan?: string;
+      udyamId?: string;
+      locationState?: string;
+    },
+  ) {
+    return this.authService.register({
+      email: body?.email || '',
+      password: body?.password || '',
+      name: body?.name || '',
+      organizationName: body?.organizationName,
+      companyName: body?.companyName,
+      gstin: body?.gstin,
+      pan: body?.pan,
+      udyamId: body?.udyamId,
+      locationState: body?.locationState,
+    });
+  }
+
+  @Public()
   @Post('refresh')
   async refresh(@Body() body: { refreshToken?: string }) {
     return this.authService.refresh(body?.refreshToken);

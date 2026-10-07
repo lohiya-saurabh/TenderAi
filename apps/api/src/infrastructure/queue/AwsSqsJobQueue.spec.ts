@@ -107,6 +107,17 @@ describe('AwsSqsJobQueue', () => {
   });
 
   describe('moveToDeadLetter', () => {
+    it('should fail rather than acknowledge work when no dead-letter queue is configured', async () => {
+      const queueWithoutDlq = new AwsSqsJobQueue({
+        queueUrl: 'https://sqs.ap-south-1.amazonaws.com/123456789012/test-queue',
+        region: 'ap-south-1',
+      });
+
+      await expect(queueWithoutDlq.moveToDeadLetter(mockPayload, 'permanent failure', 3)).rejects.toThrow(
+        'AWS_SQS_DLQ_URL is not configured',
+      );
+    });
+
     it('should send failure payload to DLQ URL', async () => {
       mockSend.mockResolvedValueOnce({ MessageId: 'dlq-msg-1' });
 

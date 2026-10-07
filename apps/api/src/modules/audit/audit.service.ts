@@ -18,15 +18,17 @@ export class AuditService {
   }
 
   public async listEvents(bidId: string): Promise<DemoAuditEvent[]> {
-    const orgId = TenantContextHolder.get()?.organizationId || 'org_acme_infra_001';
+    const orgId = TenantContextHolder.get()?.organizationId;
     const records = await this.db
       .select()
       .from(schema.auditLogs)
       .where(
-        and(
-          eq(schema.auditLogs.bidId, bidId),
-          eq(schema.auditLogs.organizationId, orgId),
-        ),
+        orgId
+          ? and(
+              eq(schema.auditLogs.bidId, bidId),
+              eq(schema.auditLogs.organizationId, orgId),
+            )
+          : eq(schema.auditLogs.bidId, bidId),
       )
       .orderBy(desc(schema.auditLogs.timestamp));
 

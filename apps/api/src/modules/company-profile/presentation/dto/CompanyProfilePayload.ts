@@ -8,6 +8,7 @@
  */
 
 export interface CompanyTurnoverRecord {
+  entry_id: string;
   financial_year: string;
   turnover_inr_crores: number;
   ca_udin?: string | null;

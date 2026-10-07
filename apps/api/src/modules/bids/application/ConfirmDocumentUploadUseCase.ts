@@ -136,8 +136,14 @@ export class ConfirmDocumentUploadUseCase {
       await this.jobQueue.enqueue({
         jobId,
         organizationId: command.organizationId,
+        companyId: bid.companyId,
         bidId: bid.id,
         documentId: document.id,
+        workflowRunId: `run-${jobId}`,
+        correlationId: `corr-${jobId}`,
+        storageReference: document.s3Key,
+        documentType: document.documentType,
+        fileName: document.fileName,
         timestamp: new Date().toISOString(),
       });
     }

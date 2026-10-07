@@ -15,6 +15,7 @@ export interface TenantContext {
  */
 export class TenantContextHolder {
   private static readonly storage = new AsyncLocalStorage<TenantContext>();
+  private static fallbackContext: TenantContext | null = null;
 
   /**
    * Runs a function or promise within an isolated tenant context.
@@ -24,17 +25,33 @@ export class TenantContextHolder {
   }
 
   /**
+   * Sets the active tenant context for the current execution and downstream async operations,
+   * also registering it as fallback for test harnesses where async hooks don't cross Vitest boundaries.
+   */
+  public static enter(context: TenantContext): void {
+    this.storage.enterWith(context);
+    this.fallbackContext = context;
+  }
+
+  /**
+   * Explicitly sets or clears the fallback tenant context (primarily for unit test setups).
+   */
+  public static setFallback(context: TenantContext | null): void {
+    this.fallbackContext = context;
+  }
+
+  /**
    * Returns the current tenant context, or null if unauthenticated.
    */
   public static get(): TenantContext | null {
-    return this.storage.getStore() ?? null;
+    return this.storage.getStore() ?? this.fallbackContext;
   }
 
   /**
    * Returns the current tenant context, throwing if missing.
    */
   public static getRequired(): TenantContext {
-    const ctx = this.storage.getStore();
+    const ctx = this.get();
     if (!ctx) {
       throw new UnauthorizedTenantAccessException('Missing active tenant context.');
     }

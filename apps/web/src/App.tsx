@@ -1,9 +1,14 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './auth/AuthProvider.js';
 import { CompanyProvider } from './context/CompanyContext.js';
+import { ThemeProvider } from './context/ThemeContext.js';
 import { ProtectedRoute } from './auth/ProtectedRoute.js';
 import { AppShell } from './components/layout/AppShell.js';
+import { LandingPage } from './pages/LandingPage.js';
+import { PricingPage } from './pages/PricingPage.js';
+import { SignupPage } from './pages/SignupPage.js';
+import { OnboardingPage } from './pages/OnboardingPage.js';
 import { LoginPage } from './pages/LoginPage.js';
 import { DashboardPage } from './pages/DashboardPage.js';
 import { CreateBidPage } from './pages/CreateBidPage.js';
@@ -19,16 +24,27 @@ import { PERMISSIONS } from './utils/permissions.js';
 export const App: React.FC = () => {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <CompanyProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <CompanyProvider>
           <Routes>
-            {/* Public Auth Route */}
+            {/* Public Marketing & Pricing Routes */}
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/pricing" element={<PricingPage />} />
+            <Route path="/signup" element={<SignupPage />} />
             <Route path="/login" element={<LoginPage />} />
 
-            {/* Root redirect */}
-            <Route path="/" element={<Navigate to="/bids" replace />} />
+            {/* Protected Onboarding Flow */}
+            <Route
+              path="/onboarding"
+              element={
+                <ProtectedRoute>
+                  <OnboardingPage />
+                </ProtectedRoute>
+              }
+            />
 
-            {/* Protected Application Routes inside AppShell */}
+            {/* Protected Application Workspace inside AppShell */}
             <Route
               element={
                 <ProtectedRoute>
@@ -114,6 +130,7 @@ export const App: React.FC = () => {
           </Routes>
         </CompanyProvider>
       </AuthProvider>
-    </BrowserRouter>
+    </ThemeProvider>
+  </BrowserRouter>
   );
 };

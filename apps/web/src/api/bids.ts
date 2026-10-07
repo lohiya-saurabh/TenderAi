@@ -60,7 +60,15 @@ export interface BidDocument {
   fileSizeBytes: number;
   mimeType: string;
   documentType: 'NIT' | 'BOQ' | 'CORRIGENDUM' | 'TECHNICAL_SPECS' | 'FINANCIAL_BID';
-  status: 'PENDING_UPLOAD' | 'UPLOADED' | 'PROCESSING' | 'EXTRACTED' | 'FAILED';
+  status:
+    | 'PENDING_UPLOAD'
+    | 'UPLOADED'
+    | 'QUEUED_FOR_EXTRACTION'
+    | 'PROCESSING'
+    | 'COMPLETED'
+    | 'EXTRACTED'
+    | 'FAILED'
+    | 'DEAD_LETTER';
   uploadedAt: string;
 }
 
@@ -157,6 +165,17 @@ export function confirmDocumentUpload(
   payload: ConfirmUploadRequest,
 ): Promise<ApiResult<ConfirmUploadResponse>> {
   return apiPost<ConfirmUploadResponse>(`/api/v1/bids/${bidId}/documents/confirm`, payload);
+}
+
+/** Queue a fresh extraction pass for an existing document. */
+export function reprocessDocument(
+  bidId: string,
+  documentId: string,
+): Promise<ApiResult<{ documentId: string; status: string; jobId: string }>> {
+  return apiPost<{ documentId: string; status: string; jobId: string }>(
+    `/api/v1/bids/${bidId}/documents/${documentId}/reprocess`,
+    {},
+  );
 }
 
 /** Get presigned download URL for a document */
@@ -458,6 +477,5 @@ export function getTenderAmendments(
     `/api/v1/tenders/amendments${bidId ? `?bidId=${bidId}` : ''}`,
   );
 }
-
 
 

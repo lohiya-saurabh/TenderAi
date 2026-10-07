@@ -54,9 +54,22 @@ describe('CompanyProfileService — versioned capability profile', () => {
 
   beforeEach(async () => {
     db = new PGlite();
-    await initDatabase(db, { seedFullProfile: false });
+    await initDatabase(db, { seedUsers: false, seedFullProfile: false, seedBidsAndCompliance: false });
     drizzleDb = createDrizzle(db);
     service = new CompanyProfileService(drizzleDb);
+
+    await drizzleDb.insert(schema.companies).values([
+      {
+        id: 'comp_acme_infra_001',
+        organizationId: orgId,
+        legalName: 'Acme Infrastructure Solutions Ltd.',
+      },
+      {
+        id: 'comp_rival_infra_999',
+        organizationId: rivalOrgId,
+        legalName: 'Rival Infrastructure Ltd.',
+      },
+    ]).onConflictDoNothing();
   });
 
   const run = <T>(fn: () => Promise<T>) =>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth.js';
 import { useCompany } from '../context/CompanyContext.js';
+import { useTheme } from '../context/ThemeContext.js';
 import {
   getWorkspaceSettings,
   updateWorkspaceSettings,
@@ -9,6 +10,16 @@ import {
   type WorkspaceSettings,
 } from '../api/settings.js';
 import { listTeamMembers, inviteTeamMember, type TeamMember } from '../api/teams.js';
+import {
+  getSubscription,
+  getUsageSummary,
+  changePlan,
+  getPlans,
+  type SubscriptionView,
+  type UsageSummary,
+  type PlanDefinition,
+  type PlanTier,
+} from '../api/billing.js';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs.js';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card.js';
 import { Badge } from '../components/ui/badge.js';
@@ -17,6 +28,7 @@ import { Input } from '../components/ui/input.js';
 import { Label } from '../components/ui/label.js';
 import { Switch } from '../components/ui/switch.js';
 import { Separator } from '../components/ui/separator.js';
+import { Progress } from '../components/ui/progress.js';
 import {
   Building2,
   Bell,
@@ -32,11 +44,18 @@ import {
   CheckCircle2,
   Mail,
   User,
+  CreditCard,
+  HardDrive,
+  FileText,
+  AlertCircle,
+  Sun,
+  Moon,
 } from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {
   const { user } = useAuth();
   const { companies, selectedCompanyId, setSelectedCompanyId, createCompany } = useCompany();
+  const { theme, toggleTheme } = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const activeTab = searchParams.get('tab') || 'general';
@@ -73,6 +92,13 @@ export const SettingsPage: React.FC = () => {
   const [newGstin, setNewGstin] = useState('');
   const [isSubmittingCompany, setIsSubmittingCompany] = useState(false);
 
+  // Billing & Subscription state
+  const [subscription, setSubscription] = useState<SubscriptionView | null>(null);
+  const [usage, setUsage] = useState<UsageSummary | null>(null);
+  const [plans, setPlans] = useState<PlanDefinition[]>([]);
+  const [isChangingPlan, setIsChangingPlan] = useState(false);
+  const [billingFeedback, setBillingFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
   // Load workspace settings on mount
   useEffect(() => {
     const fetchSettings = async () => {
@@ -99,6 +125,23 @@ export const SettingsPage: React.FC = () => {
         setIsTeamLoading(false);
       };
       fetchTeam();
+    }
+  }, [activeTab]);
+
+  // Load billing & usage when billing tab is active
+  useEffect(() => {
+    if (activeTab === 'billing') {
+      const fetchBillingData = async () => {
+        const [subRes, usageRes, plansRes] = await Promise.all([
+          getSubscription(),
+          getUsageSummary(),
+          getPlans(),
+        ]);
+        if (subRes.ok) setSubscription(subRes.data);
+        if (usageRes.ok) setUsage(usageRes.data);
+        if (plansRes.ok && plansRes.data) setPlans(plansRes.data);
+      };
+      fetchBillingData();
     }
   }, [activeTab]);
 
@@ -181,6 +224,31 @@ export const SettingsPage: React.FC = () => {
     }
   };
 
+  const handleChangePlan = async (tier: PlanTier) => {
+    setIsChangingPlan(true);
+    setBillingFeedback(null);
+
+    const res = await changePlan({ planTier: tier });
+    setIsChangingPlan(false);
+
+    if (res.ok) {
+      setSubscription(res.data);
+      const usageRes = await getUsageSummary();
+      if (usageRes.ok) setUsage(usageRes.data);
+
+      setBillingFeedback({
+        type: 'success',
+        message: `Plan successfully changed to ${res.data.planName}. New entitlements are active.`,
+      });
+      setTimeout(() => setBillingFeedback(null), 4000);
+    } else {
+      setBillingFeedback({
+        type: 'error',
+        message: res.error.message || 'Failed to update subscription plan.',
+      });
+    }
+  };
+
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-12">
       {/* 1. Header */}
@@ -188,13 +256,23 @@ export const SettingsPage: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Workspace &amp; System Settings</h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-            Configure tenant workspace parameters, team members, multi-company entities, and alerts
+            Configure tenant workspace parameters, billing subscriptions, team members, and alerts
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="text-xs font-mono">
-            Tenant: {user?.organizationId || 'org_acme_infra_001'}
+            Tenant: {user?.organizationId || '—'}
           </Badge>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleTheme}
+            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            className="h-8 w-8"
+            title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+          >
+            {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </Button>
         </div>
       </div>
 
@@ -208,24 +286,28 @@ export const SettingsPage: React.FC = () => {
 
       {/* 2. Settings Tabs Navigation */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-        <TabsList className="grid grid-cols-2 sm:grid-cols-5 w-full bg-muted/60 p-1 rounded-lg border border-border">
-          <TabsTrigger value="general" className="gap-2 text-xs">
+        <TabsList className="grid grid-cols-2 sm:grid-cols-6 w-full bg-muted/60 p-1 rounded-lg border border-border">
+          <TabsTrigger value="general" className="gap-1.5 text-xs">
             <Settings className="h-3.5 w-3.5" />
             <span>General</span>
           </TabsTrigger>
-          <TabsTrigger value="notifications" className="gap-2 text-xs">
+          <TabsTrigger value="billing" className="gap-1.5 text-xs">
+            <CreditCard className="h-3.5 w-3.5" />
+            <span>Billing</span>
+          </TabsTrigger>
+          <TabsTrigger value="notifications" className="gap-1.5 text-xs">
             <Bell className="h-3.5 w-3.5" />
             <span>Notifications</span>
           </TabsTrigger>
-          <TabsTrigger value="security" className="gap-2 text-xs">
+          <TabsTrigger value="security" className="gap-1.5 text-xs">
             <Shield className="h-3.5 w-3.5" />
             <span>Security</span>
           </TabsTrigger>
-          <TabsTrigger value="team" className="gap-2 text-xs">
+          <TabsTrigger value="team" className="gap-1.5 text-xs">
             <Users className="h-3.5 w-3.5" />
             <span>Team &amp; RBAC</span>
           </TabsTrigger>
-          <TabsTrigger value="companies" className="gap-2 text-xs">
+          <TabsTrigger value="companies" className="gap-1.5 text-xs">
             <Building2 className="h-3.5 w-3.5" />
             <span>Companies</span>
           </TabsTrigger>
@@ -248,7 +330,7 @@ export const SettingsPage: React.FC = () => {
                   <Label htmlFor="workspaceName">Workspace Name</Label>
                   <Input
                     id="workspaceName"
-                    value={workspaceSettings?.organizationName || user?.organizationName || 'Acme Infrastructure Workspace'}
+                    value={workspaceSettings?.organizationName || user?.organizationName || 'Workspace'}
                     disabled
                     className="bg-muted/40 text-muted-foreground cursor-not-allowed"
                   />
@@ -261,7 +343,7 @@ export const SettingsPage: React.FC = () => {
                   <Label htmlFor="tenantId">Tenant Organization ID</Label>
                   <Input
                     id="tenantId"
-                    value={workspaceSettings?.organizationId || user?.organizationId || 'org_acme_infra_001'}
+                    value={workspaceSettings?.organizationId || user?.organizationId || '—'}
                     disabled
                     className="bg-muted/40 font-mono text-muted-foreground cursor-not-allowed"
                   />
@@ -339,7 +421,266 @@ export const SettingsPage: React.FC = () => {
         </TabsContent>
 
         {/* ================================================================= */}
-        {/* TAB 2: NOTIFICATION PREFERENCES */}
+        {/* TAB 2: BILLING, SUBSCRIPTIONS & ENTITLEMENT USAGE */}
+        {/* ================================================================= */}
+        <TabsContent value="billing" className="space-y-6 mt-0">
+          {billingFeedback && (
+            <div
+              className={`p-3 rounded-lg flex items-center gap-2 text-xs font-medium ${
+                billingFeedback.type === 'success'
+                  ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-500'
+                  : 'bg-destructive/10 border border-destructive/30 text-destructive'
+              }`}
+            >
+              {billingFeedback.type === 'success' ? (
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+              ) : (
+                <AlertCircle className="h-4 w-4 shrink-0" />
+              )}
+              <span>{billingFeedback.message}</span>
+            </div>
+          )}
+
+          {/* Active Subscription Overview Card */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <div>
+                <CardTitle className="text-base font-semibold">Active Subscription Plan</CardTitle>
+                <CardDescription className="text-xs">
+                  Current tier, billing interval, and entitlement boundaries
+                </CardDescription>
+              </div>
+              <Badge
+                variant={subscription?.status === 'ACTIVE' ? 'default' : 'secondary'}
+                className="text-xs uppercase font-mono"
+              >
+                {subscription?.status || 'ACTIVE'}
+              </Badge>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="p-3.5 rounded-lg bg-muted/40 border border-border space-y-1">
+                  <span className="text-[10px] text-muted-foreground uppercase font-semibold">
+                    Current Tier
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-base font-bold text-foreground">
+                      {subscription?.planName || 'Growth Plan'}
+                    </span>
+                    <Badge variant="outline" className="text-[10px] font-mono">
+                      {subscription?.planTier || 'GROWTH'}
+                    </Badge>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    {subscription?.billingInterval === 'ANNUAL' ? 'Billed Annually' : 'Billed Monthly'}
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-lg bg-muted/40 border border-border space-y-1">
+                  <span className="text-[10px] text-muted-foreground uppercase font-semibold">
+                    Price / Interval
+                  </span>
+                  <p className="text-base font-bold text-foreground">
+                    {subscription?.priceInr !== null && subscription?.priceInr !== undefined
+                      ? `₹${subscription.priceInr.toLocaleString('en-IN')} / mo`
+                      : 'Custom Enterprise'}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Provider-Agnostic Invoicing
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-lg bg-muted/40 border border-border space-y-1">
+                  <span className="text-[10px] text-muted-foreground uppercase font-semibold">
+                    Billing Period
+                  </span>
+                  <p className="text-xs font-mono font-medium text-foreground">
+                    {subscription?.currentPeriodStart
+                      ? new Date(subscription.currentPeriodStart).toLocaleDateString()
+                      : 'Active'}{' '}
+                    –{' '}
+                    {subscription?.currentPeriodEnd
+                      ? new Date(subscription.currentPeriodEnd).toLocaleDateString()
+                      : 'Renewal Active'}
+                  </p>
+                  <p className="text-[10px] text-emerald-400">Auto-renewal enabled</p>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Usage & Quota Meters */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                    Current Monthly Usage &amp; Quotas
+                  </h4>
+                  <span className="text-[10px] text-muted-foreground font-mono">
+                    Billing Cycle: {usage?.periodKey || new Date().toISOString().slice(0, 7)}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Companies Meter */}
+                  <div className="p-3 rounded-lg border border-border bg-card space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="flex items-center gap-1.5 font-medium text-foreground">
+                        <Building2 className="h-3.5 w-3.5 text-primary" />
+                        <span>Registered Legal Entities</span>
+                      </span>
+                      <span className="font-mono text-xs text-muted-foreground">
+                        <strong className="text-foreground">{usage?.activeCompanies ?? companies.length}</strong> /{' '}
+                        {(usage?.maxCompanies ?? 5) >= 9999 ? 'Unlimited' : (usage?.maxCompanies ?? 5)}
+                      </span>
+                    </div>
+                    <Progress
+                      value={
+                        (usage?.maxCompanies ?? 5) >= 9999
+                          ? 10
+                          : Math.min(
+                              100,
+                              ((usage?.activeCompanies ?? companies.length) / (usage?.maxCompanies ?? 5)) * 100
+                            )
+                      }
+                      className="h-1.5"
+                    />
+                  </div>
+
+                  {/* Team Users Meter */}
+                  <div className="p-3 rounded-lg border border-border bg-card space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="flex items-center gap-1.5 font-medium text-foreground">
+                        <Users className="h-3.5 w-3.5 text-primary" />
+                        <span>Team User Seats</span>
+                      </span>
+                      <span className="font-mono text-xs text-muted-foreground">
+                        <strong className="text-foreground">{usage?.activeUsers ?? 1}</strong> /{' '}
+                        {(usage?.maxUsers ?? 10) >= 9999 ? 'Unlimited' : (usage?.maxUsers ?? 10)}
+                      </span>
+                    </div>
+                    <Progress
+                      value={
+                        (usage?.maxUsers ?? 10) >= 9999
+                          ? 10
+                          : Math.min(100, ((usage?.activeUsers ?? 1) / (usage?.maxUsers ?? 10)) * 100)
+                      }
+                      className="h-1.5"
+                    />
+                  </div>
+
+                  {/* Monthly Tender Analyses Meter */}
+                  <div className="p-3 rounded-lg border border-border bg-card space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="flex items-center gap-1.5 font-medium text-foreground">
+                        <FileText className="h-3.5 w-3.5 text-primary" />
+                        <span>Tender Ingestions this Month</span>
+                      </span>
+                      <span className="font-mono text-xs text-muted-foreground">
+                        <strong className="text-foreground">{usage?.monthlyAnalyses ?? 0}</strong> /{' '}
+                        {(usage?.maxMonthlyAnalyses ?? 50) >= 9999
+                          ? 'Unlimited'
+                          : (usage?.maxMonthlyAnalyses ?? 50)}
+                      </span>
+                    </div>
+                    <Progress
+                      value={
+                        (usage?.maxMonthlyAnalyses ?? 50) >= 9999
+                          ? 5
+                          : Math.min(
+                              100,
+                              ((usage?.monthlyAnalyses ?? 0) / (usage?.maxMonthlyAnalyses ?? 50)) * 100
+                            )
+                      }
+                      className="h-1.5"
+                    />
+                  </div>
+
+                  {/* Evidence Storage Meter */}
+                  <div className="p-3 rounded-lg border border-border bg-card space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="flex items-center gap-1.5 font-medium text-foreground">
+                        <HardDrive className="h-3.5 w-3.5 text-primary" />
+                        <span>Evidence Storage Limit</span>
+                      </span>
+                      <span className="font-mono text-xs text-muted-foreground">
+                        <strong className="text-foreground">
+                          {usage?.entitlements['evidence_storage.mb'] ?? 500} MB
+                        </strong>
+                      </span>
+                    </div>
+                    <Progress value={25} className="h-1.5" />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Change / Upgrade Plan Selection Grid */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base font-semibold">Change or Upgrade Plan</CardTitle>
+              <CardDescription className="text-xs">
+                Instantly adjust tenant quotas and unlock advanced features
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                {plans.map((p) => {
+                  const isCurrent = subscription?.planTier === p.tier;
+                  return (
+                    <div
+                      key={p.tier}
+                      className={`p-3.5 rounded-lg border flex flex-col justify-between space-y-3 transition-all ${
+                        isCurrent
+                          ? 'bg-primary/10 border-primary ring-1 ring-primary'
+                          : 'bg-card border-border hover:border-border/80'
+                      }`}
+                    >
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-xs text-foreground">{p.name}</span>
+                          {isCurrent && (
+                            <Badge variant="default" className="text-[9px]">
+                              Current
+                            </Badge>
+                          )}
+                        </div>
+
+                        <p className="text-base font-extrabold text-foreground">
+                          {p.monthlyPriceInr !== null
+                            ? `₹${p.monthlyPriceInr.toLocaleString('en-IN')}`
+                            : 'Custom'}
+                          {p.monthlyPriceInr !== null && (
+                            <span className="text-[10px] text-muted-foreground font-normal">/mo</span>
+                          )}
+                        </p>
+
+                        <div className="text-[10px] text-muted-foreground space-y-1 pt-1">
+                          <p>&bull; {p.entitlements['companies.max'] >= 9999 ? 'Unlimited' : p.entitlements['companies.max']} Companies</p>
+                          <p>&bull; {p.entitlements['users.max'] >= 9999 ? 'Unlimited' : p.entitlements['users.max']} Users</p>
+                          <p>&bull; {p.entitlements['tender_analyses.monthly'] >= 9999 ? 'Unlimited' : p.entitlements['tender_analyses.monthly']} Analyses/mo</p>
+                        </div>
+                      </div>
+
+                      <Button
+                        variant={isCurrent ? 'secondary' : 'outline'}
+                        size="sm"
+                        disabled={isCurrent || isChangingPlan}
+                        onClick={() => handleChangePlan(p.tier)}
+                        className="w-full text-xs h-8"
+                      >
+                        {isCurrent ? 'Active Plan' : `Switch to ${p.name.replace(' Plan', '').replace(' Tier', '')}`}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ================================================================= */}
+        {/* TAB 3: NOTIFICATION PREFERENCES */}
         {/* ================================================================= */}
         <TabsContent value="notifications" className="space-y-6 mt-0">
           <Card>
@@ -424,7 +765,7 @@ export const SettingsPage: React.FC = () => {
         </TabsContent>
 
         {/* ================================================================= */}
-        {/* TAB 3: SECURITY & SESSION POLICIES */}
+        {/* TAB 4: SECURITY & SESSION POLICIES */}
         {/* ================================================================= */}
         <TabsContent value="security" className="space-y-6 mt-0">
           <Card>
@@ -498,7 +839,7 @@ export const SettingsPage: React.FC = () => {
         </TabsContent>
 
         {/* ================================================================= */}
-        {/* TAB 4: TEAM & RBAC MEMBERS */}
+        {/* TAB 5: TEAM & RBAC MEMBERS */}
         {/* ================================================================= */}
         <TabsContent value="team" className="space-y-6 mt-0">
           <Card>
@@ -664,7 +1005,7 @@ export const SettingsPage: React.FC = () => {
         </TabsContent>
 
         {/* ================================================================= */}
-        {/* TAB 5: MULTI-COMPANY LEGAL ENTITIES */}
+        {/* TAB 6: MULTI-COMPANY LEGAL ENTITIES */}
         {/* ================================================================= */}
         <TabsContent value="companies" className="space-y-6 mt-0">
           <Card>

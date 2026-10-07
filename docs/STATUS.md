@@ -1,5 +1,262 @@
 # Project Status & Milestone Tracker
 
+## Current implementation milestone: 8-Node Docling LangGraph Document Processing Workflow
+
+The FastAPI AI service ([`apps/ai`](file:///Users/belikesaurabh/main/TenderAi/apps/ai)) now executes an 8-node structured LangGraph document processing workflow:
+
+1. **Node 1 — Parse (`docling_parse`):** Converts PDF layout/pages into structured Docling format (`document_id`, `pages`, `blocks`, `tables`) with security context authorization checks.
+2. **Node 2 — Build Structure (`build_structure`):** Deterministically parses document outline hierarchy (`PART I -> Section 1 -> 1.1`).
+3. **Node 3 — Candidate Detection (`candidate_detection`):** Applies layout + linguistic rules to identify requirement passages (`shall`, `must`, `EMD`, `turnover`, `stamp paper`).
+4. **Node 4 — Context Assembly (`context_assembly`):** Constructs rich LLM context window (section path, current clause, prev/next clause windowing, definitions, referenced clauses).
+5. **Node 5 — LLM Extraction (`llm_extraction`):** Performs tenant-isolated structured extraction with XML prompt injection defense.
+6. **Node 6 — Validate (`validation`):** Performs multi-stage validation (citation support, reference integrity, number preservation, shall/must deontic correctness, exception retention).
+7. **Node 7 — Confidence Routing (`confidence_routing`):** Computes confidence score and routes:
+   - `≥ 95%`: Auto-accept (`AUTO_ACCEPT`).
+   - `80% - 94%`: Reviewer verification queue (`REVIEWER_VERIFICATION`).
+   - `< 80%`: Mandatory human review interrupt (`MANDATORY_HUMAN_REVIEW`).
+8. **Node 8 — Store (`postgres_store`):** Persists verified compliance items, validation audit logs, and provenance directly to PostgreSQL/persistence sink.
+
+Verification: FastAPI test suite passed 80/80 unit, integration, and evaluation regression tests.
+
+## Current implementation milestone: durable asynchronous document processing
+
+The initial reliability/context gaps have a NestJS-hosted processing path implemented and covered by focused tests. This is an incremental bridge, **not** completion of the intended FastAPI queue-worker architecture.
+
+- Upload confirmation now requires a non-empty object-storage object before it writes confirmation state.
+- The document row, bid status, upload audit entry, and stable-ID processing outbox event are committed in one database transaction. Queue publishing is performed by a registered background runtime and retried from the outbox.
+- `DocumentProcessingRuntime` is registered by `DocumentsModule`; it polls the configured `IJobQueue`, checks tenant/company/bid/document/storage claims against database records, leases document processing, validates extraction results, persists compliance items and terminal status transactionally, then acknowledges.
+- Compliance item IDs are deterministic per tenant/company/bid/document/category/normalized title. Duplicate delivery for the same completed document does not extract or persist twice.
+- SQS/Pub/Sub polling errors and missing manual DLQ configuration are explicit failures; a production API no longer silently defaults to the in-memory queue when no provider is configured.
+- Company and correlation context now reach the FastAPI `SecurityContext`; LangGraph thread IDs include tenant, company, workflow run, bid, document, and page.
+
+**Still not aligned with target:** the consumer currently runs in NestJS, `AiDocumentExtractor` retrieves and parses the document in NestJS (`pdf-parse`, no OCR), and then submits normalized pages to FastAPI. FastAPI does not consume the queue, retrieve cloud objects, or persist compliance rows. The NestJS runtime owns PostgreSQL result persistence. Deployments must configure a real queue, storage adapter, database, AI service URL/internal key, and dead-letter handling; local/test mock adapters are not production guarantees.
+
+Verification: API type-check passed; 67 focused API processing, queue, and end-to-end tests passed; FastAPI test suite passed (78 tests). See [ADR-DOCUMENT-PROCESSING-RUNTIME.md](ADR-DOCUMENT-PROCESSING-RUNTIME.md) and the current call-chain updates in the flow docs.
+
+## Current extraction-quality update: complete sentence provenance quotes
+
+FastAPI's default tender extractor and the NestJS local fallback now treat single newlines as visual PDF line wraps while retaining blank-line paragraph boundaries. Provenance excerpts therefore include the remainder of a clause across wrapped lines instead of ending at the first newline. The regression test now uses the supplied [NIT8.pdf](../samples/work_975754/NIT8.pdf): the EMD sentence ends at “payable at Hassan.” on page 2. Text missing from the source itself is not fabricated.
+
+The new `Tdocument.pdf` citation was traced to page 10, checklist item 7 (annual-turnover certificate and audit report). Its Kannada text is returned by PDF text extraction in a legacy-font encoding that renders as strings such as `£ÀqÉ...`; the parser is not translating or inventing those characters. The page also contains a following numbered item, so quote extraction now retains the matching numbered item as context and stops before the next numbered item. The excerpt remains a literal parser result, not a readable Kannada translation.
+
+Completed compliance records keep their existing provenance until explicitly reprocessed. The reprocess endpoint and UI refresh matching items from the current parser output while preserving reviewer state; reprocessing is queued and must complete before the displayed excerpt changes.
+
+## Documentation consolidation
+
+The canonical documentation entry point is now [docs/README.md](README.md). This replaces the older historical snapshot that was redundant with the milestone tracker and the more specific architecture flow docs.
+
+## Historical baseline: document-processing runtime trace (pre-implementation)
+
+Repository execution has now been checked separately from earlier milestone notes. The older “storage-backed queue processing” status below described an HTTP-shaped endpoint and a test worker, not a connected production queue-to-FastAPI pipeline.
+
+- `DocumentsService.confirmUpload()` persists document metadata and audit information, best-effort checks object metadata, enqueues a processing job when a queue is configured, and returns. Missing-object/head errors and queue publish errors are logged but do not stop the response or guarantee a job was accepted.
+- The queue payload carries IDs, workflow/correlation context, and `storageReference`; it does not contain the PDF bytes. No queue subscription, polling loop, or consumer-to-FastAPI HTTP call was found.
+- FastAPI exposes `/api/v1/worker/process-message`, but that is an HTTP endpoint, not a queue consumer. Its `StorageDocumentResolver` uses a known fixture, a local UTF-8 file, or generated fallback text; it does not fetch a cloud object or parse a PDF.
+- LangGraph executes per page when the FastAPI extraction HTTP pipeline is invoked. Its default extractor is deterministic keyword/regex code rather than an external LLM client, and its persistence node only appends to an in-memory list.
+- NestJS `DocumentContentNormalizer` does use `pdf-parse` in the separate NestJS extractor/compatibility path. It returns flat page text and has no OCR. `DocumentsService.markExtractionComplete()` still exists despite an adjacent comment saying it was removed; the upload-confirm route does not call it.
+- The safe E2E uses mock storage/queue, manually invokes the NestJS `IngestionWorker`, and stubs its AI fetch. The worker creates items in memory; the PGlite compliance table remains empty and its bid remains `QUEUED`.
+
+## Historical baseline: reliability, context propagation, and final gap analysis (pre-implementation)
+
+Prompts 9–11 were validated against the queue adapters, worker, FastAPI request path, graph state, persistence code, schema, and focused reliability E2E tests.
+
+- **Delivery/retry:** the test-oriented `IngestionWorker` retries thrown processing failures by changing visibility, has a three-attempt job policy, routes terminal failures to a configured DLQ adapter, and deletes the message after its unit-of-work callback. This is not a production guarantee: the worker is not registered as a consumer, its E2E repositories are in-memory, and `DirectUnitOfWork` does not transact.
+- **Idempotency:** an already-completed duplicate with the same `jobId` is acknowledged without reprocessing. There is no durable unique job key for a document/version or compliance-item fingerprint. A different job ID for the same document or a retry after partial writes can create duplicates.
+- **Tenant/company:** the NestJS test worker resolves job/document/bid by tenant, and a forged cross-tenant message is rejected in tests. However, the worker omits company context from its AI security context and created compliance entities; the legacy SQL writer also omits `company_id`. FastAPI builds its tenant/document allow-list from request fields rather than validating those fields against trusted job/bid/document state.
+- **Queue selection/DLQ:** the API factory selects SQS only from `AWS_SQS_QUEUE_URL`, Pub/Sub only from the required `GCP_*` variables, and otherwise mock. `QUEUE_PROVIDER` is ignored, and checked-in env/Compose examples use mismatched variable names. The SQS factory also does not pass `AWS_SQS_DLQ_URL` to its adapter, so terminal failure can delete the source message without publishing to the configured manual DLQ. The deployed provider cannot be inferred without deployment environment values.
+- **Verification:** focused retry/idempotency/worker failure tests passed (**14 tests** across `AsyncIngestionPipeline.e2e.spec.ts` and `ProductionDocumentAiPipeline.e2e.spec.ts`). They simulate adapters and repositories; they do not verify cloud queues, PostgreSQL rollback, or a running FastAPI queue consumer.
+
+Current architecture finding: P0 gaps are a missing production queue consumer, no real FastAPI object-storage retrieval, no durable queue-result persistence, and no proven ACK-after-PostgreSQL-commit contract. P1 gaps include missing OCR, company context loss, incomplete idempotency, and queue configuration/error handling that can make the upload response look successful without a confirmed job handoff. No code or schema remediation was performed.
+
+See [DOCUMENT_PROCESSING_RELIABILITY.md](DOCUMENT_PROCESSING_RELIABILITY.md), [DOCUMENT_PROCESSING_SECURITY.md](DOCUMENT_PROCESSING_SECURITY.md), and [DOCUMENT_PROCESSING_ARCHITECTURE_GAP.md](DOCUMENT_PROCESSING_ARCHITECTURE_GAP.md) for detailed evidence and the actual-vs-target table.
+
+Detailed evidence:
+
+- [DOCUMENT_PROCESSING_CURRENT_FLOW.md](DOCUMENT_PROCESSING_CURRENT_FLOW.md)
+- [SERVICE_BOUNDARY.md](SERVICE_BOUNDARY.md)
+- [ASYNC_DOCUMENT_HANDOFF.md](ASYNC_DOCUMENT_HANDOFF.md)
+- [FASTAPI_WORKER_FLOW.md](FASTAPI_WORKER_FLOW.md)
+- [LANGGRAPH_DOCUMENT_WORKFLOW.md](LANGGRAPH_DOCUMENT_WORKFLOW.md)
+- [DOCUMENT_EXTRACTION_FLOW.md](DOCUMENT_EXTRACTION_FLOW.md)
+- [COMPLIANCE_PERSISTENCE_FLOW.md](COMPLIANCE_PERSISTENCE_FLOW.md)
+- [END_TO_END_DOCUMENT_PROCESSING_TEST.md](END_TO_END_DOCUMENT_PROCESSING_TEST.md)
+
+## Historical milestone: storage-reference HTTP processing shape (superseded)
+
+- NestJS remains the upload initiation and metadata layer.
+- FastAPI accepts a queue-shaped JSON payload at `/api/v1/worker/process-message` and can return extracted items over HTTP.
+- That endpoint does not subscribe to SQS, Pub/Sub, or another queue; it is not called by the configured NestJS queue provider.
+- Its storage-reference resolver is a fixture/local-file/generated-text resolver, not an object-storage adapter.
+- LangGraph and the in-memory extraction response execute only when the FastAPI HTTP pipeline is actually called.
+
+This HTTP compatibility path should not be described as verified asynchronous queue processing.
+
+## Pre-implementation gap summary (superseded by the current milestone above)
+
+The earlier claims in [DOCUMENT_PROCESSING_ARCHITECTURE_GAP.md](DOCUMENT_PROCESSING_ARCHITECTURE_GAP.md) have been replaced with the verified current-versus-target trace. The current observed boundary is:
+
+| Stage | Current implementation | Evidence-based gap |
+|---|---|---|
+| Upload and metadata | NestJS `DocumentsController` / `DocumentsService`; metadata and audit use Drizzle | Controller method tests are not proof of a real browser/cloud upload |
+| Object storage | Provider adapter selected by runtime configuration; tests use mocks | Confirm's `headObject()` check is best effort and does not gate enqueue |
+| Queue publish | `jobQueue.enqueue()` when configured | Publish errors are logged and swallowed; provider consumer is not wired to FastAPI |
+| Queue consumer | No production consumer found | The NestJS `IngestionWorker` is manually invoked in E2E; FastAPI only has HTTP routes |
+| Document retrieval | NestJS extractor path can read through `IStorageService`; FastAPI resolver does not use object storage | No queue-connected FastAPI object retrieval |
+| Parsing / OCR | NestJS `DocumentContentNormalizer` uses `pdf-parse` for supported binary PDFs | FastAPI does not parse PDFs; neither path performs OCR |
+| Requirement extraction | FastAPI LangGraph pipeline can run by HTTP; default `default_tender_extractor` uses fixed keyword/rule logic | Not called from queue flow; not an external LLM by default |
+| Compliance items | `compliance_items` via separate NestJS `markExtractionComplete()` path; test worker uses an in-memory repository | Queue-produced worker result has no wired PostgreSQL persistence |
+| PostgreSQL result/status | Legacy direct method performs separate Drizzle writes; E2E queue worker updates in-memory test repositories | No durable queue-worker result transaction; final SQL bid status remains `QUEUED` in E2E |
+| Acknowledgement | E2E mock worker deletes its mock message after in-memory writes | No real consumer acknowledgement/deletion behavior is verified |
+
+### Current critical findings
+
+| # | Finding |
+|---|---|
+| 1 | Queue publish currently has no production consumer path to FastAPI. |
+| 2 | FastAPI's `/api/v1/worker/process-message` is callable over HTTP, but its storage-reference resolver does not retrieve a real object. |
+| 3 | FastAPI does not parse binary PDFs or run OCR; PDF text extraction is in the separate NestJS normalizer path. |
+| 4 | The default FastAPI extractor is deterministic keyword/rule code; package/client naming alone does not imply an external LLM call. |
+| 5 | The LangGraph persistence node is in-memory; its HTTP result is not written to PostgreSQL. |
+| 6 | The E2E worker's compliance repository is in-memory; PGlite confirms zero `compliance_items` rows and bid state remains `QUEUED`. |
+| 7 | The legacy direct NestJS writer is non-transactional and omits company/workflow/correlation columns. |
+
+### Current observed paths
+
+Upload confirmation and queue handoff:
+
+```text
+POST /bids/:bidId/documents/confirm
+  → DocumentsController.confirmUpload()
+  → DocumentsService.confirmUpload()
+  → best-effort storage head check
+  → INSERT/UPSERT tender_documents
+  → UPDATE bids (QUEUED when queue configured; otherwise REVIEW_READY)
+  → INSERT audit_logs
+  → jobQueue.enqueue() (if configured; failure is logged and swallowed)
+  → return UPLOADED
+
+MessageQueue
+  → no production consumer found
+```
+
+Separate FastAPI HTTP route (not wired from that queue):
+
+```text
+POST /api/v1/worker/process-message
+  → validate request and build SecurityContext
+  → use supplied pages or StorageDocumentResolver fixture/local/generated text
+  → ProductionExtractionPipeline.execute()
+  → LangGraph per-page workflow
+  → return extraction items over HTTP
+  → no PostgreSQL persistence
+```
+
+Separate legacy NestJS extraction/persistence path:
+
+```text
+DocumentsService.markExtractionComplete()
+  → AiDocumentExtractor.extract()
+  → IStorageService.getObject()
+  → DocumentContentNormalizer.normalize() [NestJS PDFParse]
+  → POST /api/v1/extract (when the HTTP AI service is reachable)
+  → direct Drizzle compliance/bid/audit writes, without an encompassing transaction
+```
+
+The upload-confirm method does **not** invoke the legacy method above.
+
+### Remediation areas (not implemented here)
+
+| Priority | Area |
+|---|---|
+| P0 | Connect the configured queue to a real consumer with explicit retry, failure, and acknowledgement semantics. |
+| P0 | Give the worker a real tenant-safe object-storage adapter and binary PDF/OCR capability. |
+| P1 | Connect extraction output to a durable, transactional compliance persistence path and update bid/document statuses consistently. |
+| P1 | Propagate company/workflow/correlation context into persisted compliance rows where required. |
+| P1 | Decide whether the keyword extractor is an acceptable prototype or replace it with a configured model provider and evaluate grounding/threshold extraction. |
+| P1 | Persist LangGraph checkpoints if restart-safe human review is required. |
+
+---
+
+## 📄 Current Document Processing Flow Analysis (2026-10-06)
+
+**Full trace documented in [`docs/DOCUMENT_PROCESSING_CURRENT_FLOW.md`](DOCUMENT_PROCESSING_CURRENT_FLOW.md)**
+
+Resolved `net::ERR_NAME_NOT_RESOLVED` network errors during tender document upload and fortified the end-to-end object storage pipeline:
+
+1. **Local Object Storage Routing & Domain Normalization**:
+   - **Backend (`DocumentsService`)**: Presigned upload and download URL generation now detects mock/local storage domains (`mock-s3.tenderpulse.local` or `.local/`) and maps them to the local Express/NestJS mock endpoints (`/api/v1/mock-upload/:bidId/:docId/:fileName` and `/api/v1/mock-download/:bidId/:docId/:fileName`) using the request host and protocol dynamically.
+   - **Frontend (`DocumentUploader.tsx`)**: Added URL normalization and network failure fallback to ensure that any local development environment automatically falls back to `/api/v1/mock-upload/...` on DNS/network resolution failure before reporting errors to the user.
+
+2. **Dynamic Tenant & Company Scoping**:
+   - Replaced all hardcoded fallback identifiers with dynamic lookup helpers (`getOrgIdForBid`, `resolveCompanyId`) across `compliance.service.ts`, `documents.service.ts`, and `bids.service.ts`.
+   - Updated database seeding in `database.provider.ts` to use unconditional `onConflictDoNothing()` per-record insertion for `DEMO_USERS` and `DEMO_COMPANIES`, ensuring consistent test and development fixtures without primary key collisions.
+
+3. **Monorepo Quality Gates (366 / 366 tests passing)**:
+   - `apps/api`: **214 / 214 tests passing** across 27 test files.
+   - `apps/web`: **152 / 152 tests passing** across 18 test files.
+   - `npm run type-check`: 0 errors across all monorepo packages.
+   - Verified live authenticated document upload and confirmation flow against PostgreSQL persistence.
+
+---
+
+Successfully completed the purge of all hardcoded dummy data and established clean empty states for true end-to-end happy flow testing:
+
+1. **Clean Database Initialization**:
+   - PostgreSQL (PGlite) boots in an entirely clean state by default (`SEED_DEMO_DATA=false`). Zero pre-seeded users, bids, companies, or compliance items are generated in runtime environments.
+   - Demo seeding options in `initDatabase` are isolated to automated test fixtures where synthetic suites require them.
+   - Fixed schema DDL defaults: eliminated all hardcoded `DEFAULT 'comp_acme_infra_001'` from `bids`, `company_profile_versions`, and `company_profiles`.
+
+2. **Mandatory Company Entity Constraint**:
+   - Enforced rule that **every organization must have at least one company entity**.
+   - `POST /api/v1/auth/register` creates the tenant user (`ADMIN`), initializes workspace settings, and provisions the mandatory primary company legal entity atomically.
+   - `SignupPage.tsx` requires `Primary Company Legal Name *` before submitting registration.
+   - Backend services (`BidsService`, `CompanyProfileService`) enforce that bids and profile versions cannot be created without a valid company entity belonging to the tenant.
+
+3. **Purged Fallbacks & Hardcoded Stubs**:
+   - Removed `FALLBACK_COMPANIES`, `org_acme_infra_001`, and `comp_acme_infra_001` from frontend contexts (`CompanyContext.tsx`, `CompanyProfilePage.tsx`, `ProfilePage.tsx`, `SettingsPage.tsx`, `UserAccountMenu.tsx`).
+   - Cleared default pre-filled credentials from `LoginPage.tsx` and removed credentials logging from `main.ts`.
+
+4. **Monorepo Quality Gates (366 / 366 tests passing)**:
+   - `apps/api`: **214 / 214 tests passing** across 27 test files.
+   - `apps/web`: **152 / 152 tests passing** across 18 test files.
+   - `npm run type-check`: 100% clean across all 4 packages (`@tenderpulse/shared-types`, `@tenderpulse/ui`, `@tenderpulse/api`, `@tenderpulse/web`).
+   - Full live happy flow verified: Register Tenant + Company → Verify Empty Bids List → Create New Bid Project → Generate Isolated Upload URL → Confirm Upload.
+
+---
+
+## 🚀 Tenant Registration, Billing, Multi-Company & Public Experience (2026-10-06)
+
+Implemented, validated, and integrated the complete end-to-end multi-tenant onboarding, provider-agnostic billing/subscription engine, entitlement enforcement, public marketing experience, and authenticated workspace boundaries:
+
+1. **Canonical Multi-Tenant Hierarchy & Entitlements**:
+   - **Domain Relationship**: $1\text{ Tenant (organization\_id)} \rightarrow N\text{ Users} \mid 1\text{ Tenant} \rightarrow N\text{ Companies} \mid 1\text{ Tenant} \rightarrow 1\text{ Subscription}$.
+   - **Database Schema (`schema.ts`, `database.provider.ts`)**: Added `subscriptions` (`id`, `organization_id UNIQUE`, `plan_tier`, `billing_interval`, `status`, `current_period_start`, `current_period_end`, `cancel_at_period_end`, `metadata JSONB`) and `usage_records` (`id`, `organization_id`, `metric_key`, `period_key`, `usage_count`).
+   - **Dynamic Entitlement Engine (`EntitlementService`)**: Enforces runtime limits on `companies.max`, `users.max`, and `tender_analyses.monthly` based on the tenant's active plan subscription.
+
+2. **Provider-Agnostic Billing Module (`apps/api/src/modules/billing/`)**:
+   - **Ports & Adapters Pattern**: `IBillingPort` interface with `MockBillingAdapter` (ready for Razorpay/Stripe infrastructure adapters without domain leakage).
+   - **5 Tiered Plans Catalog**: `FREE` (₹0), `STARTER` (₹999/mo), `GROWTH` (₹2,499/mo), `BUSINESS` (₹6,999/mo), `ENTERPRISE` (Custom).
+   - **REST Endpoints**: `GET /api/v1/billing/plans`, `GET /api/v1/billing/subscription`, `GET /api/v1/billing/usage`, `POST /api/v1/billing/change-plan`.
+
+3. **User Registration & Atomic Workspace Provisioning (`apps/api/src/modules/auth/`)**:
+   - `POST /api/v1/auth/register`: Atomically creates user, initializes tenant workspace, provisions primary company legal entity, and assigns `FREE` subscription tier with JWT signing.
+   - Enforces company registration limits in `CompaniesService` and user seat quotas in `TeamsService`.
+
+4. **Public Marketing & Pricing Pages (`apps/web`)**:
+   - **Landing Page (`LandingPage.tsx`)**: High-density B2B value proposition ("Know which tenders you can win — before wasting weeks preparing bids"), live evaluation mockup preview, 4 core contractor pain points, 6-stage deterministic workflow, zero-trust security isolation spec, and FAQ.
+   - **Pricing Page (`PricingPage.tsx`)**: Monthly/Annual toggle (20% discount badge), 5-tier cards with entitlement meters, feature matrix comparison table, and direct signup links (`/signup?plan=GROWTH`).
+   - **Public Navigation & Footer (`PublicNav.tsx`, `PublicFooter.tsx`)**: Clean branding, links, and authenticated workspace entry.
+
+5. **Registration, Onboarding & In-App Billing UI (`apps/web`)**:
+   - **Signup Flow (`SignupPage.tsx`)**: Workspace + primary company registration form with selected plan pre-population.
+   - **3-Step Onboarding Flow (`OnboardingPage.tsx`)**: Tenant boundary confirmation, sector & turnover configuration, and direct tender launchpad.
+   - **Billing & Usage Settings (`SettingsPage.tsx` - Billing Tab)**: Active subscription card, usage progress meters (Companies, Users, Monthly Analyses, Storage), and 1-click plan switcher.
+   - **Strict Visual Restraint**: Zero emojis anywhere in UI, exclusive Lucide icons, zinc `#09090b` palette.
+
+6. **Monorepo Quality Gates (362 / 362 tests passing)**: 214 in `apps/api` (including 7 in `billing-registration-entitlements.spec.ts`), 148 in `apps/web`. `npm run type-check` completely clean with 0 errors across all monorepo packages.
+
+---
+
 ## ⚠️ Product Pivot (2026-10-04) — Bidder-Side Redesign
 
 `docs/PRODUCT.md` has been rewritten (v2.0): TenderPulse is now a **Tender Intelligence & Bid Readiness Platform for Indian MSMEs, contractors, and service providers** — bidder-side, not procurement-officer-side. The core differentiator is the **persistent Company Capability Profile** (registrations, certifications, financials, experience, work orders, completion certificates, OEM relationships, employees, equipment, geography, previous bid evidence), against which every new tender is evaluated.
@@ -654,4 +911,3 @@ Per the 2026-10-04 audit (`docs/CURRENT_STATE.md`), the next actions are **P0 ha
       - Added `profile-settings.spec.ts` unit test suite (6 new tests).
       - 414 automated tests passing across the monorepo (192 API + 146 Web + 76 AI).
       - 0 TypeScript compiler errors across all monorepo packages.
-

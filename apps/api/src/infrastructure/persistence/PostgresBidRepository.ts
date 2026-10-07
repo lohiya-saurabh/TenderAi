@@ -59,6 +59,7 @@ export class PostgresBidRepository implements IBidRepository {
       .values({
         id: bid.id,
         organizationId: bid.organizationId,
+        companyId: bid.companyId,
         title: bid.title,
         tenderNumber: bid.tenderNumber,
         tenderingAuthority: bid.tenderingAuthority,

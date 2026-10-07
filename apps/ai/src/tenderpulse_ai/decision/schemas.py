@@ -110,6 +110,7 @@ class EquipmentEntry(BaseModel):
 
 
 class FinancialTurnover(BaseModel):
+    entry_id: str | None = None
     financial_year: str = Field(..., min_length=4)  # e.g., "FY24"
     turnover_inr_crores: float = Field(..., ge=0)
     ca_udin: str | None = None

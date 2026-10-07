@@ -7,6 +7,7 @@ import { BidProjectCreatedEvent } from '../events/BidProjectCreatedEvent.js';
 export interface CreateBidProjectProps {
   id: string;
   organizationId: string;
+  companyId?: string;
   title: string;
   tenderNumber: string;
   tenderingAuthority: string;
@@ -20,6 +21,7 @@ export interface CreateBidProjectProps {
 
 export class BidProject extends AggregateRoot {
   private readonly _organizationId: string;
+  private readonly _companyId: string;
   private _title: string;
   private _tenderNumber: string;
   private _tenderingAuthority: string;
@@ -44,6 +46,7 @@ export class BidProject extends AggregateRoot {
     }
 
     this._organizationId = props.organizationId;
+    this._companyId = props.companyId || 'comp_default';
     this._title = props.title.trim();
     this._tenderNumber = props.tenderNumber.trim();
     this._tenderingAuthority = props.tenderingAuthority.trim();
@@ -73,6 +76,10 @@ export class BidProject extends AggregateRoot {
 
   public get organizationId(): string {
     return this._organizationId;
+  }
+
+  public get companyId(): string {
+    return this._companyId;
   }
 
   public get title(): string {

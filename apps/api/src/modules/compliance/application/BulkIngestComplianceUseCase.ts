@@ -19,12 +19,17 @@ export interface ExtractedComplianceItemInput {
   description: string;
   executionRules: ExecutionRulesProps;
   provenance: ProvenanceProps;
+  workflowRunId?: string;
+  correlationId?: string;
+  companyId?: string;
 }
 
 export interface BulkIngestComplianceCommand {
   bidId: string;
   organizationId: string;
   workerId: string;
+  workflowRunId: string;
+  correlationId: string;
   items: ExtractedComplianceItemInput[];
 }
 
@@ -66,11 +71,14 @@ export class BulkIngestComplianceUseCase {
         id: uuidv4(),
         bidId: bid.id,
         organizationId: bid.organizationId,
+        companyId: item.companyId ?? bid.companyId,
         category: item.category,
         title: item.title,
         description: item.description,
         executionRules,
         provenance,
+        workflowRunId: item.workflowRunId ?? command.workflowRunId,
+        correlationId: item.correlationId ?? command.correlationId,
       });
     });
 

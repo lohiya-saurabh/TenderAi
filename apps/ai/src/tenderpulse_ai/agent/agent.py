@@ -17,7 +17,6 @@ from tenderpulse_ai.agent.schemas import (
     RequirementCandidate,
 )
 from tenderpulse_ai.agent.validation import normalize_category, verify_grounding
-from tenderpulse_ai.pipeline import default_tender_extractor
 from tenderpulse_ai.security.context import SecurityContext
 from tenderpulse_ai.security.exceptions import (
     AISecurityException,
@@ -58,6 +57,8 @@ def default_requirement_model(
     Lets the agent run end-to-end without a live LLM (local dev, tests, CI).
     Production injects a structured-output model function with the same signature.
     """
+    from tenderpulse_ai.pipeline import default_tender_extractor
+
     raw_items = default_tender_extractor(system_prompt, user_prompt)
     requirements: list[RequirementCandidate] = []
     for item in raw_items:

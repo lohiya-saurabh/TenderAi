@@ -5,6 +5,7 @@ import {
   getDocumentDownloadUrl,
   deleteBid,
   deleteDocument,
+  reprocessDocument,
   getBidDecision,
   evaluateBidDecision,
   type BidDetail,
@@ -67,12 +68,14 @@ export const BidDetailPage: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [uploadedDocName, setUploadedDocName] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [reprocessNotice, setReprocessNotice] = useState<string | null>(null);
 
   // Deletion modals state
   const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [docToDelete, setDocToDelete] = useState<BidDocument | null>(null);
   const [isDeletingDoc, setIsDeletingDoc] = useState<boolean>(false);
+  const [reprocessingDocId, setReprocessingDocId] = useState<string | null>(null);
 
   // Fetch Bid details
   const fetchBid = useCallback(() => getBid(bidId), [bidId]);
@@ -138,6 +141,27 @@ export const BidDetailPage: React.FC = () => {
       }
     } catch {
       setActionError('Failed to retrieve download URL');
+    }
+  };
+
+  const handleReprocessDocument = async (document: BidDocument) => {
+    setActionError(null);
+    setReprocessNotice(null);
+    setReprocessingDocId(document.id);
+    try {
+      const result = await reprocessDocument(bidId, document.id);
+      if (!result.ok) {
+        setActionError(result.error.message || 'Failed to queue document reprocessing.');
+        return;
+      }
+      setReprocessNotice(
+        `${document.fileName} was queued for reprocessing. Its source citations will refresh after the worker finishes.`,
+      );
+      refetchBid();
+    } catch {
+      setActionError('Network error while attempting to reprocess the document.');
+    } finally {
+      setReprocessingDocId(null);
     }
   };
 
@@ -316,6 +340,19 @@ export const BidDetailPage: React.FC = () => {
       </div>
 
       {actionError && <ErrorBanner message={actionError} onDismiss={() => setActionError(null)} />}
+      {reprocessNotice && (
+        <div
+          role="status"
+          style={{
+            padding: '0.75rem 1rem',
+            borderRadius: 'var(--radius-md)',
+            backgroundColor: 'var(--color-surface-bg)',
+            color: 'var(--color-surface-text)',
+          }}
+        >
+          {reprocessNotice}
+        </div>
+      )}
 
       {/* Real-time SSE extraction progress */}
       {(isProcessing || bid.status === 'ANALYZING') && (
@@ -476,6 +513,16 @@ export const BidDetailPage: React.FC = () => {
                   <Button variant="ghost" size="sm" onClick={() => handleDownload(doc.id)}>
                     Download
                   </Button>
+                  {canUploadDoc && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleReprocessDocument(doc)}
+                      disabled={reprocessingDocId !== null || doc.status === 'PROCESSING' || doc.status === 'QUEUED_FOR_EXTRACTION'}
+                    >
+                      {reprocessingDocId === doc.id ? 'Queueing…' : 'Reprocess'}
+                    </Button>
+                  )}
                   {canUploadDoc && (
                     <Button
                       variant="danger"

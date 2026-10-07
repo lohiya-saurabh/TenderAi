@@ -81,8 +81,8 @@ export class AwsSqsJobQueue implements IJobQueue {
           body: parsedBody,
           receiveCount,
         });
-      } catch {
-        // Corrupted JSON body -> delete or ignore
+      } catch (error) {
+        throw new Error('SQS message body is not valid JSON.', { cause: error });
       }
     }
 
@@ -117,7 +117,7 @@ export class AwsSqsJobQueue implements IJobQueue {
     receiveCount = 1
   ): Promise<void> {
     if (!this.dlqUrl) {
-      return;
+      throw new Error('Cannot move an SQS message to the dead-letter queue: AWS_SQS_DLQ_URL is not configured.');
     }
 
     const deadLetterPayload = {

@@ -18,6 +18,7 @@ import { UsersModule } from './modules/users/users.module.js';
 import { SettingsModule } from './modules/settings/settings.module.js';
 import { TeamsModule } from './modules/teams/teams.module.js';
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
+import { BillingModule } from './modules/billing/billing.module.js';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     SettingsModule,
     TeamsModule,
     NotificationsModule,
+    BillingModule,
   ],
 })
 export class AppModule {}

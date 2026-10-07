@@ -2,6 +2,7 @@ import { InternalServiceGuard } from '../../../common/security/InternalServiceGu
 import {
   BulkIngestComplianceUseCase,
   BulkIngestComplianceResult,
+  BulkIngestComplianceCommand,
 } from '../application/BulkIngestComplianceUseCase.js';
 import { BulkIngestComplianceDto, BulkIngestPayload } from './dto/BulkIngestComplianceDto.js';
 
@@ -21,11 +22,15 @@ export class InternalWorkerController {
     this.serviceGuard.validate(authHeaderKey);
     const dto = new BulkIngestComplianceDto(rawPayload);
 
-    return this.bulkIngestUseCase.execute({
+    const command: BulkIngestComplianceCommand = {
       bidId,
       organizationId,
       workerId,
+      workflowRunId: rawPayload.workflowRunId ?? `run-${Date.now()}`,
+      correlationId: rawPayload.correlationId ?? `corr-${Date.now()}`,
       items: dto.items,
-    });
+    };
+
+    return this.bulkIngestUseCase.execute(command);
   }
 }

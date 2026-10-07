@@ -80,6 +80,7 @@ class VerifiedComplianceItem(BaseModel):
         }
 
 
+
 class AuditEvent(BaseModel):
     timestamp: str
     tenant_id: str
@@ -89,3 +90,86 @@ class AuditEvent(BaseModel):
     entity_type: str
     entity_id: str
     details: dict[str, Any] = Field(default_factory=dict)
+
+
+# ==============================================================================
+# Node 1 - 8 Workflow Domain Schemas
+# ==============================================================================
+
+
+class DoclingBlock(BaseModel):
+    block_id: str = Field(..., min_length=1)
+    type: str = Field(default="paragraph", description="heading, paragraph, list_item, table")
+    level: int | None = Field(default=None, description="Heading level 1, 2, 3...")
+    text: str = Field(..., min_length=1)
+    page_number: int = Field(default=1, ge=1)
+    bbox: list[float] | None = Field(default=None)
+
+
+class DoclingTable(BaseModel):
+    table_id: str = Field(..., min_length=1)
+    page_number: int = Field(default=1, ge=1)
+    headers: list[str] = Field(default_factory=list)
+    rows: list[list[str]] = Field(default_factory=list)
+    caption: str | None = Field(default=None)
+
+
+class DoclingParsedDocument(BaseModel):
+    document_id: str = Field(..., min_length=1)
+    file_name: str = Field(default="document.pdf")
+    pages: list[dict[str, Any]] = Field(default_factory=list)
+    blocks: list[DoclingBlock] = Field(default_factory=list)
+    tables: list[DoclingTable] = Field(default_factory=list)
+
+
+class SectionNode(BaseModel):
+    node_id: str = Field(..., min_length=1)
+    number: str = Field(..., description="PART I, Section 1, 1.1, Clause 4.2.3")
+    title: str = Field(default="")
+    level: int = Field(default=1)
+    parent_id: str | None = Field(default=None)
+    block_ids: list[str] = Field(default_factory=list)
+
+
+class DocumentStructureTree(BaseModel):
+    document_id: str
+    nodes: list[SectionNode] = Field(default_factory=list)
+
+
+class CandidatePassage(BaseModel):
+    candidate_id: str = Field(..., min_length=1)
+    section_number: str = Field(default="Unassigned")
+    section_path: str = Field(default="Document")
+    text: str = Field(..., min_length=1)
+    page_number: int = Field(default=1, ge=1)
+    block_id: str
+    matched_rules: list[str] = Field(default_factory=list)
+
+
+class AssembledClauseContext(BaseModel):
+    candidate_id: str
+    section_path: str
+    clause_reference: str
+    current_clause: str
+    previous_clause: str | None = None
+    following_clause: str | None = None
+    relevant_definitions: dict[str, str] = Field(default_factory=dict)
+    referenced_clauses: list[str] = Field(default_factory=list)
+    page_number: int = 1
+
+
+class NodeValidationCheck(BaseModel):
+    citation_supported: bool = True
+    referenced_clause_exists: bool = True
+    numbers_preserved: bool = True
+    shall_must_correct: bool = True
+    exceptions_retained: bool = True
+    confidence_score: float = Field(default=1.0, ge=0.0, le=1.0)
+    discrepancies: list[str] = Field(default_factory=list)
+
+
+class ConfidenceTier(str, Enum):
+    AUTO_ACCEPT = "AUTO_ACCEPT"  # >= 95%
+    REVIEWER_VERIFICATION = "REVIEWER_VERIFICATION"  # 80-94%
+    MANDATORY_HUMAN_REVIEW = "MANDATORY_HUMAN_REVIEW"  # < 80%
+

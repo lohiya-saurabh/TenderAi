@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { AuthContext, type AuthContextValue } from './AuthContext.js';
-import { login as apiLogin, logout as apiLogout, refreshTokens, type AuthUser } from '../api/auth.js';
+import { login as apiLogin, register as apiRegister, logout as apiLogout, refreshTokens, type AuthUser, type RegisterRequest } from '../api/auth.js';
 import { setTokens, setOnAuthExpired } from '../api/client.js';
 
 interface AuthProviderProps {
@@ -82,6 +82,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     [],
   );
 
+  // Registration handler
+  const handleRegister = useCallback(
+    async (data: RegisterRequest): Promise<{ success: boolean; error?: string; companyId?: string }> => {
+      try {
+        const result = await apiRegister(data);
+        if (!result.ok) {
+          return { success: false, error: result.error.message };
+        }
+
+        setTokens(result.data.accessToken, result.data.refreshToken);
+        setUser(result.data.user);
+        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(result.data.user));
+
+        return {
+          success: true,
+          companyId: result.data.company?.id,
+        };
+      } catch (err) {
+        return {
+          success: false,
+          error: err instanceof Error ? err.message : 'Registration failed unexpectedly',
+        };
+      }
+    },
+    [],
+  );
+
   // RBAC Permission checkers (for UX rendering only)
   const hasPermission = useCallback(
     (permission: string): boolean => {
@@ -115,12 +142,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       isAuthenticated: Boolean(user),
       isLoading,
       login: handleLogin,
+      register: handleRegister,
       logout: handleLogout,
       hasPermission,
       hasAnyPermission,
       hasAllPermissions,
     }),
-    [user, isLoading, handleLogin, handleLogout, hasPermission, hasAnyPermission, hasAllPermissions],
+    [user, isLoading, handleLogin, handleRegister, handleLogout, hasPermission, hasAnyPermission, hasAllPermissions],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -60,9 +60,9 @@ export class DocumentsController {
   ): void {
     const chunks: Buffer[] = [];
     req.on('data', (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
-    req.on('end', () => {
+    req.on('end', async () => {
       const buffer = Buffer.concat(chunks);
-      const orgId = 'org_acme_infra_001';
+      const orgId = await this.documentsService.getOrgIdForBid(bidId);
       const storagePath = `tenants/${orgId}/bids/${bidId}/${docId}/${fileName}`;
       this.documentsService.registerUploadedMockObject(storagePath, buffer);
       res.status(200).json({ status: 'UPLOADED', size: buffer.length });
@@ -76,6 +76,15 @@ export class DocumentsController {
     @Body() body: { documentId?: string },
   ) {
     return this.documentsService.confirmUpload(bidId, body.documentId);
+  }
+
+  @Post('bids/:bidId/documents/:docId/reprocess')
+  @RequirePermission(Permissions.DOCUMENTS_UPLOAD)
+  async reprocessDocument(
+    @Param('bidId') bidId: string,
+    @Param('docId') docId: string,
+  ) {
+    return this.documentsService.reprocessDocument(bidId, docId);
   }
 
   @Get('bids/:bidId/documents/:docId/download-url')
@@ -126,7 +135,7 @@ export class DocumentsController {
   @Get(['bids/:bidId/extraction-progress', 'bids/:bidId/progress', 'bids/:bidId/documents/stream'])
   @RequirePermission(Permissions.BIDS_READ)
   streamExtractionProgress(
-    @Param('bidId') bidId: string,
+    @Param('bidId') _bidId: string,
     @Req() req: Request,
     @Res() res: Response,
   ): void {
@@ -141,19 +150,19 @@ export class DocumentsController {
       res.write(`data: ${JSON.stringify(eventData)}\n\n`);
     };
 
+    // NestJS stays responsible for upload initiation and queue handoff only.
+    // The actual parsing and extraction run asynchronously in the FastAPI worker.
     sendEvent({
       step: 'PARSING_PAGES',
       progress: 25,
-      message: 'Normalizing PDF text blocks and tables...',
+      message: 'Document accepted. Queued for async worker processing...',
     });
-
-    const extractionPromise = this.documentsService.markExtractionComplete(bidId);
 
     const t1 = setTimeout(() => {
       sendEvent({
         step: 'EXTRACTING_COMPLIANCE',
         progress: 55,
-        message: 'Executing compliance extraction on FastAPI AI Engine (LangGraph)...',
+        message: 'FastAPI worker is processing the tender document in the background...',
       });
     }, 700);
 
@@ -161,21 +170,16 @@ export class DocumentsController {
       sendEvent({
         step: 'VERIFYING_CITATIONS',
         progress: 85,
-        message: 'Validating verbatim provenance against source PDF text...',
+        message: 'Awaiting worker completion and persisted compliance results...',
       });
     }, 1500);
 
-    const t3 = setTimeout(async () => {
-      try {
-        await extractionPromise;
-      } catch (err) {
-        console.warn(`[DocumentsController] Extraction execution failed for bid ${bidId}:`, err);
-      }
+    const t3 = setTimeout(() => {
       sendEvent({
         step: 'COMPLETED',
         progress: 100,
-        status: 'REVIEW_READY',
-        message: 'Extraction completed. Compliance items identified and grounded.',
+        status: 'QUEUED',
+        message: 'Upload accepted. The asynchronous processing pipeline is now responsible for compliance extraction.',
       });
     }, 2300);
 

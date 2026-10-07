@@ -40,11 +40,6 @@ async function bootstrap() {
   console.log(`🚀 TenderPulse AI API Server running at http://localhost:${port}`);
   console.log(`🐘 Persistence Engine: PostgreSQL 16 (PGlite in ./data/postgres)`);
   console.log(`🏗️  Framework: NestJS + Express`);
-  console.log(`========================================================`);
-  console.log(`📋 Demo Credentials:`);
-  console.log(`   Bid Manager:         bidmanager@acme.com / Password123!`);
-  console.log(`   Compliance Officer:  compliance@acme.com / Password123!`);
-  console.log(`   Auditor:             auditor@acme.com    / Password123!`);
   console.log(`========================================================\n`);
 }
 

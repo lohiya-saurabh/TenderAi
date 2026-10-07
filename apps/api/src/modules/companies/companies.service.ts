@@ -10,7 +10,9 @@ import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '../../common/datab
 import * as schema from '../../common/database/schema.js';
 import { NotFoundError, BadRequestError } from '../../common/errors/errors.js';
 import { TenantContextHolder } from '../../common/security/TenantContext.js';
+import { Optional } from '@nestjs/common';
 import { CompanyProfileService } from '../company-profile/company-profile.service.js';
+import { EntitlementService } from '../billing/entitlement.service.js';
 import type { CompanyProfilePayload } from '../company-profile/presentation/dto/CompanyProfilePayload.js';
 
 export interface CreateCompanyDto {
@@ -42,6 +44,7 @@ export class CompaniesService {
   constructor(
     @Inject(DRIZZLE_TOKEN) db: DrizzleDb | PGlite,
     private readonly companyProfileService: CompanyProfileService,
+    @Optional() @Inject(EntitlementService) private readonly entitlementService?: EntitlementService,
   ) {
     this.db = 'select' in db ? (db as DrizzleDb) : createDrizzle(db as PGlite);
   }
@@ -93,6 +96,11 @@ export class CompaniesService {
 
     if (!dto.legalName || !dto.legalName.trim()) {
       throw new BadRequestError('Company "legalName" is required.');
+    }
+
+    // Enforce Tenant Plan Entitlements
+    if (this.entitlementService) {
+      await this.entitlementService.checkCompanyLimit(orgId);
     }
 
     const companyId = `comp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;

@@ -93,20 +93,42 @@ export class CompanyProfileService {
       return comp.id;
     }
 
-    // Default: find first company for organization
     const [defaultComp] = await this.db
       .select()
       .from(schema.companies)
       .where(eq(schema.companies.organizationId, orgId))
       .limit(1);
 
-    return defaultComp?.id ?? 'comp_acme_infra_001';
+    if (!defaultComp) {
+      throw new BadRequestError('No company entity found for this organization. Every organization must have at least one company.');
+    }
+
+    return defaultComp.id;
   }
 
   /** Active version + full version history for the company / tenant. */
   public async getProfile(companyId?: string): Promise<CompanyProfileView> {
     const orgId = this.requireOrg();
-    const targetCompId = await this.resolveCompanyId(companyId);
+
+    let targetCompId: string;
+    if (companyId) {
+      targetCompId = await this.resolveCompanyId(companyId);
+    } else {
+      const [defaultComp] = await this.db
+        .select()
+        .from(schema.companies)
+        .where(eq(schema.companies.organizationId, orgId))
+        .limit(1);
+
+      if (!defaultComp) {
+        return {
+          companyId: undefined,
+          active: null,
+          versions: [],
+        };
+      }
+      targetCompId = defaultComp.id;
+    }
 
     const versions = await this.db
       .select()

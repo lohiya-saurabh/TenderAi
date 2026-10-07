@@ -27,6 +27,26 @@ export interface RefreshResponse {
   refreshToken: string;
 }
 
+export interface RegisterResponse extends LoginResponse {
+  company?: {
+    id: string;
+    legalName: string;
+  };
+}
+
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  name: string;
+  organizationName?: string;
+  companyName?: string;
+  gstin?: string;
+  pan?: string;
+  udyamId?: string;
+  locationState?: string;
+  planTier?: string;
+}
+
 /**
  * Authenticate with email + password.
  * Returns JWT tokens and user profile with permissions.
@@ -36,6 +56,15 @@ export function login(
   password: string,
 ): Promise<ApiResult<LoginResponse>> {
   return apiPost<LoginResponse>('/api/v1/auth/login', { email, password });
+}
+
+/**
+ * Register a new user account, tenant workspace, and initial company.
+ */
+export function register(
+  data: RegisterRequest,
+): Promise<ApiResult<RegisterResponse>> {
+  return apiPost<RegisterResponse>('/api/v1/auth/register', data);
 }
 
 /**

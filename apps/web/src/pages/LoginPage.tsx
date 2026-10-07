@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth.js';
 import { Button } from '../components/common/Button.js';
 import { Input } from '../components/common/Input.js';
 import { ErrorBanner } from '../components/common/ErrorBanner.js';
+import { ShieldCheck, ArrowLeft } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
-  const [email, setEmail] = useState<string>('bidmanager@acme.com');
-  const [password, setPassword] = useState<string>('Password123!');
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,7 +60,24 @@ export const LoginPage: React.FC = () => {
           boxShadow: 'var(--shadow-lg)',
         }}
       >
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+        <div style={{ marginBottom: '1rem' }}>
+          <Link
+            to="/"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              fontSize: '0.75rem',
+              color: 'var(--color-surface-muted)',
+              textDecoration: 'none',
+            }}
+          >
+            <ArrowLeft size={13} />
+            <span>Back to overview</span>
+          </Link>
+        </div>
+
+        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
           <div
             style={{
               width: '48px',
@@ -72,7 +90,7 @@ export const LoginPage: React.FC = () => {
               justifyContent: 'center',
               fontWeight: 'bold',
               fontSize: '1.35rem',
-              marginBottom: '1rem',
+              marginBottom: '0.75rem',
             }}
           >
             TP
@@ -81,7 +99,7 @@ export const LoginPage: React.FC = () => {
             TenderPulse AI
           </h1>
           <p style={{ fontSize: '0.85rem', color: 'var(--color-surface-muted)', marginTop: '0.25rem' }}>
-            Enterprise Tender Intelligence & Compliance
+            Enterprise Tender Intelligence &amp; Compliance
           </p>
         </div>
 
@@ -111,9 +129,28 @@ export const LoginPage: React.FC = () => {
           </Button>
         </form>
 
-        <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid var(--color-surface-border)', textAlign: 'center' }}>
-          <p style={{ fontSize: '0.75rem', color: 'var(--color-surface-subtle)' }}>
-            Protected by Tenant Isolation & Multi-Factor Security
+        <div
+          style={{
+            marginTop: '1.5rem',
+            paddingTop: '1.25rem',
+            borderTop: '1px solid var(--color-surface-border)',
+            textAlign: 'center',
+            fontSize: '0.8rem',
+            color: 'var(--color-surface-muted)',
+          }}
+        >
+          <p>
+            New organization?{' '}
+            <Link to="/signup" style={{ color: 'var(--color-primary-400)', fontWeight: 600, textDecoration: 'none' }}>
+              Register Workspace
+            </Link>
+          </p>
+        </div>
+
+        <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+          <p style={{ fontSize: '0.75rem', color: 'var(--color-surface-subtle)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+            <ShieldCheck size={13} style={{ color: '#10b981' }} />
+            <span>Protected by Fiber-Safe Tenant Isolation</span>
           </p>
         </div>
       </div>

@@ -186,14 +186,14 @@ export const ProfilePage: React.FC = () => {
                 Tenant:
               </span>
               <span className="text-base sm:text-lg font-semibold text-foreground tracking-tight">
-                {profile?.organizationName || user?.organizationName || 'Acme Infrastructure Sol'}
+                {profile?.organizationName || user?.organizationName || 'Organization Workspace'}
               </span>
               <Badge variant="outline" className="text-[10px] font-mono border-primary/30 text-primary bg-primary/5">
                 Multi-Tenant Isolated
               </Badge>
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
-              <span>Tenant ID: {profile?.organizationId || user?.organizationId || 'org_acme_infra_001'}</span>
+              <span>Tenant ID: {profile?.organizationId || user?.organizationId || '—'}</span>
               <span>•</span>
               <span>Role: {(profile?.role || user?.role || 'User').replace(/_/g, ' ')}</span>
             </div>
@@ -509,7 +509,7 @@ export const ProfilePage: React.FC = () => {
               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                 Organization Tenant ID
               </span>
-              <p className="font-mono text-foreground">{profile?.organizationId || user?.organizationId || 'org_acme_infra_001'}</p>
+              <p className="font-mono text-foreground">{profile?.organizationId || user?.organizationId || '—'}</p>
             </div>
           </div>
 

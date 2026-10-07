@@ -3,11 +3,20 @@ from typing import Any
 
 from langgraph.types import interrupt
 
+from tenderpulse_ai.domain.candidate_detector import CandidateDetector
+from tenderpulse_ai.domain.context_assembler import ContextAssembler
+from tenderpulse_ai.domain.docling_parser import DoclingParserEngine
 from tenderpulse_ai.domain.models import (
+    AssembledClauseContext,
     CandidateComplianceItem,
+    ConfidenceTier,
+    DoclingParsedDocument,
+    DocumentStructureTree,
     VerifiedComplianceItem,
     WorkflowStatus,
 )
+from tenderpulse_ai.domain.structure_builder import DocumentStructureBuilder
+from tenderpulse_ai.domain.validator import DeterministicValidator
 from tenderpulse_ai.models.llm_client import StructuredLLMClient
 from tenderpulse_ai.review.models import (
     CrossTenantReviewException,
@@ -57,25 +66,34 @@ def create_audit_event(
     }
 
 
-def make_scoped_retrieval_node(ctx: WorkflowNodeContext):
-    async def scoped_retrieval_node(state: ComplianceWorkflowState) -> dict[str, Any]:
+# ==============================================================================
+# Node 1: Docling PDF Parser (includes security & physical page text retrieval)
+# ==============================================================================
+def make_docling_parse_node(ctx: WorkflowNodeContext):
+    async def docling_parse_node(state: ComplianceWorkflowState) -> dict[str, Any]:
         sec_context = SecurityContext(**state["security_context"])
         doc_id = state["document_id"]
-        page_no = state["page_number"]
+        page_no = state.get("page_number", 1)
+        file_name = state.get("file_name", "document.pdf")
+        pages = state.get("pages", [])
 
-        # 1. Deterministic Scoped Retrieval
-        chunks = ctx.retrieval_tool.retrieve(
-            security_context=sec_context,
-            target_document_id=doc_id,
-            query="eligibility EMD turnover experience stamp paper notarization",
-            top_k=3,
-        )
-
-        # 2. Fetch Physical Page Text for Grounding
-        raw_text = ctx.page_text_tool.get_page_text(
+        # Fetch physical page text & perform security authorization check
+        raw_text_fetched = ctx.page_text_tool.get_page_text(
             security_context=sec_context,
             target_document_id=doc_id,
             page_number=page_no,
+        )
+        raw_text = raw_text_fetched or state.get("raw_page_text", "")
+
+        parser = DoclingParserEngine()
+        pdf_ref = state.get("storage_reference") or state.get("pdf_path")
+        pdf_path = pdf_ref if pdf_ref else None
+        docling_doc = parser.parse_document(
+            document_id=doc_id,
+            file_name=file_name,
+            pages=pages,
+            raw_text=raw_text,
+            pdf_path=pdf_path,
         )
 
         audit = create_audit_event(
@@ -83,34 +101,137 @@ def make_scoped_retrieval_node(ctx: WorkflowNodeContext):
             action="SCOPED_RETRIEVAL_COMPLETED",
             entity_type="TenderDocument",
             entity_id=doc_id,
-            details={"chunks_count": len(chunks), "page_number": page_no},
+            details={"blocks_count": len(docling_doc.blocks), "page_number": page_no},
         )
 
         return {
-            "retrieved_chunks": [c.model_dump() for c in chunks],
+            "docling_document": docling_doc.model_dump(),
             "raw_page_text": raw_text,
             "status": WorkflowStatus.RETRIEVED.value,
             "audit_events": [audit],
         }
 
-    return scoped_retrieval_node
+    return docling_parse_node
 
 
-def make_model_extraction_node(ctx: WorkflowNodeContext):
-    async def model_extraction_node(state: ComplianceWorkflowState) -> dict[str, Any]:
+# ==============================================================================
+# Node 2: Build Document Structure
+# ==============================================================================
+def make_build_structure_node(ctx: WorkflowNodeContext):
+    async def build_structure_node(state: ComplianceWorkflowState) -> dict[str, Any]:
+        sec_context = SecurityContext(**state["security_context"])
+        docling_dict = state.get("docling_document")
+        docling_doc = DoclingParsedDocument(**docling_dict) if docling_dict else DoclingParsedDocument(document_id=state["document_id"])
+
+        builder = DocumentStructureBuilder()
+        tree = builder.build_structure(docling_doc)
+
+        audit = create_audit_event(
+            context=sec_context,
+            action="NODE_2_STRUCTURE_BUILD_COMPLETED",
+            entity_type="TenderDocument",
+            entity_id=state["document_id"],
+            details={"section_nodes_count": len(tree.nodes)},
+        )
+
+        return {
+            "document_structure": tree.model_dump(),
+            "audit_events": [audit],
+        }
+
+    return build_structure_node
+
+
+# ==============================================================================
+# Node 3: Candidate Detection
+# ==============================================================================
+def make_candidate_detection_node(ctx: WorkflowNodeContext):
+    async def candidate_detection_node(state: ComplianceWorkflowState) -> dict[str, Any]:
+        sec_context = SecurityContext(**state["security_context"])
+        docling_doc = DoclingParsedDocument(**state["docling_document"])
+        tree = DocumentStructureTree(**state["document_structure"])
+
+        detector = CandidateDetector()
+        candidates = detector.detect_candidates(docling_doc, tree)
+
+        audit = create_audit_event(
+            context=sec_context,
+            action="NODE_3_CANDIDATE_DETECTION_COMPLETED",
+            entity_type="TenderDocument",
+            entity_id=state["document_id"],
+            details={"candidates_detected": len(candidates)},
+        )
+
+        return {
+            "detected_candidates": [c.model_dump() for c in candidates],
+            "audit_events": [audit],
+        }
+
+    return candidate_detection_node
+
+
+# ==============================================================================
+# Node 4: Context Assembly
+# ==============================================================================
+def make_context_assembly_node(ctx: WorkflowNodeContext):
+    async def context_assembly_node(state: ComplianceWorkflowState) -> dict[str, Any]:
+        sec_context = SecurityContext(**state["security_context"])
+        docling_doc = DoclingParsedDocument(**state["docling_document"])
+        tree = DocumentStructureTree(**state["document_structure"])
+
+        assembler = ContextAssembler()
+        from tenderpulse_ai.domain.models import CandidatePassage
+        passages = [CandidatePassage(**c) if isinstance(c, dict) else c for c in state.get("detected_candidates", [])]
+        assembled = assembler.assemble_contexts(docling_doc, tree, passages)
+
+        audit = create_audit_event(
+            context=sec_context,
+            action="NODE_4_CONTEXT_ASSEMBLY_COMPLETED",
+            entity_type="TenderDocument",
+            entity_id=state["document_id"],
+            details={"assembled_contexts_count": len(assembled)},
+        )
+
+        return {
+            "assembled_contexts": [a.model_dump() for a in assembled],
+            "audit_events": [audit],
+        }
+
+    return context_assembly_node
+
+
+# ==============================================================================
+# Node 5: LLM Extraction
+# ==============================================================================
+def make_llm_extraction_node(ctx: WorkflowNodeContext):
+    async def llm_extraction_node(state: ComplianceWorkflowState) -> dict[str, Any]:
         sec_context = SecurityContext(**state["security_context"])
         doc_id = state["document_id"]
-        page_no = state["page_number"]
+        page_no = state.get("page_number", 1)
 
-        # Build prompt using XML Semantic Framing to neutralize prompt injection
+        # 1. Retrieve chunks & verify tenant document authorization
+        chunks = ctx.retrieval_tool.retrieve(
+            security_context=sec_context,
+            target_document_id=doc_id,
+            query="eligibility EMD turnover experience stamp paper notarization",
+            top_k=3,
+        )
+
+        raw_text = state.get("raw_page_text", "")
         chunk_texts = "\n\n".join(
             SecretSanitizer.wrap_untrusted_data(
-                document_id=c.get("document_id", doc_id),
-                page_number=c.get("page_number", page_no),
-                content=c.get("text", "")
+                document_id=c.document_id,
+                page_number=c.page_number,
+                content=c.text,
             )
-            for c in state["retrieved_chunks"]
+            for c in chunks
         )
+        if not chunk_texts:
+            chunk_texts = SecretSanitizer.wrap_untrusted_data(
+                document_id=doc_id,
+                page_number=page_no,
+                content=raw_text,
+            )
 
         system_prompt = (
             "You are an expert Indian Public Procurement compliance extraction engine.\n"
@@ -123,7 +244,6 @@ def make_model_extraction_node(ctx: WorkflowNodeContext):
         if state.get("error_feedback"):
             user_prompt += f"\n\nPRIOR VERIFICATION FEEDBACK (CORRECT THIS):\n{state['error_feedback']}"
 
-        # Invoke LLM with secret scrubbing & structured output
         candidates = await ctx.llm_client.extract_compliance(system_prompt, user_prompt)
 
         audit = create_audit_event(
@@ -131,39 +251,68 @@ def make_model_extraction_node(ctx: WorkflowNodeContext):
             action="MODEL_EXTRACTION_COMPLETED",
             entity_type="BidProject",
             entity_id=state["bid_id"],
-            details={"candidates_count": len(candidates), "retry_count": state["retry_count"]},
+            details={"candidates_count": len(candidates), "retry_count": state.get("retry_count", 0)},
         )
 
         return {
+            "retrieved_chunks": [c.model_dump() for c in chunks],
             "extracted_candidates": candidates,
             "status": WorkflowStatus.EXTRACTED.value,
             "audit_events": [audit],
         }
 
-    return model_extraction_node
+    return llm_extraction_node
 
 
-def make_deterministic_verification_node(ctx: WorkflowNodeContext):
-    async def deterministic_verification_node(state: ComplianceWorkflowState) -> dict[str, Any]:
+# ==============================================================================
+# Node 6: Validate (Deterministic Grounding)
+# ==============================================================================
+def make_validation_node(ctx: WorkflowNodeContext):
+    async def validation_node(state: ComplianceWorkflowState) -> dict[str, Any]:
         sec_context = SecurityContext(**state["security_context"])
-        raw_text = state["raw_page_text"]
+        raw_text = state.get("raw_page_text", "")
+        page_no = state.get("page_number", 1)
         normalized_page = " ".join(raw_text.lower().split())
+
+        tree = DocumentStructureTree(**state.get("document_structure", {"document_id": state["document_id"], "nodes": []}))
+        all_assembled = [AssembledClauseContext(**c) for c in state.get("assembled_contexts", [])]
+        page_assembled = [c for c in all_assembled if c.page_number == page_no]
+        if not page_assembled:
+            page_assembled = all_assembled
+
+        context_map = {c.candidate_id: c for c in page_assembled}
+        validator = DeterministicValidator()
 
         verified: list[VerifiedComplianceItem] = []
         unverified: list[CandidateComplianceItem] = []
         failure_reasons = []
+        reports = []
+        scores = []
 
-        for candidate in state["extracted_candidates"]:
-            # 1. Exact/Normalized Verbatim Substring Grounding
+        for idx, candidate in enumerate(state.get("extracted_candidates", [])):
             clean_quote = " ".join(candidate.provenance.verbatim_quote.lower().split())
-            quote_exists = clean_quote in normalized_page and len(clean_quote) > 0
+            quote_exists = (clean_quote in normalized_page) and len(clean_quote) > 0
 
-            # 2. Execution Rules Deterministic Invariants
             rules = candidate.execution_rules
             rules_valid = True
             if rules.stamp_paper_required and (rules.stamp_paper_denomination_inr is None or rules.stamp_paper_denomination_inr <= 0):
                 rules_valid = False
                 failure_reasons.append(f"Invalid stamp paper denomination for '{candidate.title}'")
+
+            ctx_obj = (
+                (page_assembled[idx] if idx < len(page_assembled) else None)
+                or context_map.get(f"cand_{idx + 1}")
+                or AssembledClauseContext(
+                    candidate_id=f"cand_{idx + 1}",
+                    section_path="Document",
+                    clause_reference=candidate.provenance.clause_reference,
+                    current_clause=raw_text or candidate.provenance.verbatim_quote,
+                    page_number=candidate.provenance.page_number,
+                )
+            )
+            report, _ = validator.validate_item(candidate, ctx_obj, tree)
+            reports.append(report.model_dump())
+            scores.append(report.confidence_score)
 
             if quote_exists and rules_valid:
                 verified.append(
@@ -183,7 +332,12 @@ def make_deterministic_verification_node(ctx: WorkflowNodeContext):
                         f"Quote '{candidate.provenance.verbatim_quote[:60]}...' not found on page {candidate.provenance.page_number}"
                     )
 
+        existing_verified = state.get("verified_items", [])
+        existing_keys = {(v.category, v.title) for v in existing_verified}
+        new_verified = [v for v in verified if (v.category, v.title) not in existing_keys]
+
         feedback = "; ".join(failure_reasons) if failure_reasons else None
+        avg_score = (sum(scores) / len(scores)) if scores else 1.0
 
         audit = create_audit_event(
             context=sec_context,
@@ -198,20 +352,98 @@ def make_deterministic_verification_node(ctx: WorkflowNodeContext):
         )
 
         return {
-            "verified_items": verified,
+            "validation_reports": reports,
+            "verified_items": new_verified,
             "unverified_items": unverified,
+            "confidence_score": avg_score,
             "error_feedback": feedback,
             "status": WorkflowStatus.VERIFIED.value if not unverified else "VERIFICATION_FAILED",
             "audit_events": [audit],
         }
 
-    return deterministic_verification_node
+    return validation_node
 
 
+# ==============================================================================
+# Node 7: Confidence Routing
+# ==============================================================================
+def make_confidence_routing_node(ctx: WorkflowNodeContext):
+    async def confidence_routing_node(state: ComplianceWorkflowState) -> dict[str, Any]:
+        sec_context = SecurityContext(**state["security_context"])
+        score = state.get("confidence_score", 1.0)
+        unverified = state.get("unverified_items", [])
+
+        if len(unverified) == 0 and score >= 0.95:
+            tier = ConfidenceTier.AUTO_ACCEPT.value
+        elif len(unverified) == 0 and score >= 0.80:
+            tier = ConfidenceTier.REVIEWER_VERIFICATION.value
+        else:
+            tier = ConfidenceTier.MANDATORY_HUMAN_REVIEW.value
+
+        audit = create_audit_event(
+            context=sec_context,
+            action="NODE_7_CONFIDENCE_ROUTING_EVALUATED",
+            entity_type="BidProject",
+            entity_id=state["bid_id"],
+            details={"confidence_score": score, "assigned_tier": tier},
+        )
+
+        return {
+            "confidence_tier": tier,
+            "human_review_required": tier == ConfidenceTier.MANDATORY_HUMAN_REVIEW.value,
+            "audit_events": [audit],
+        }
+
+    return confidence_routing_node
+
+
+# ==============================================================================
+# Node 8: PostgreSQL Store
+# ==============================================================================
+def make_postgres_store_node(ctx: WorkflowNodeContext):
+    async def postgres_store_node(state: ComplianceWorkflowState) -> dict[str, Any]:
+        sec_context = SecurityContext(**state["security_context"])
+        items_to_persist = [item.to_api_payload() for item in state.get("verified_items", [])]
+
+        if ctx.api_persistence_sink and hasattr(ctx.api_persistence_sink, "persist_compliance_items"):
+            await ctx.api_persistence_sink.persist_compliance_items(
+                tenant_id=sec_context.tenant_id,
+                bid_id=state["bid_id"],
+                document_id=state["document_id"],
+                items=items_to_persist,
+            )
+
+        ctx.persisted_records.extend(items_to_persist)
+
+        audit = create_audit_event(
+            context=sec_context,
+            action="COMPLIANCE_ITEMS_PERSISTED",
+            entity_type="BidProject",
+            entity_id=state["bid_id"],
+            details={"inserted_count": len(items_to_persist)},
+        )
+
+        final_status = (
+            WorkflowStatus.AWAITING_HUMAN_REVIEW.value
+            if state.get("human_review_required")
+            else WorkflowStatus.COMPLETED.value
+        )
+
+        return {
+            "status": final_status,
+            "audit_events": [audit],
+        }
+
+    return postgres_store_node
+
+
+# ==============================================================================
+# Additional Graph Nodes (Refine & Human Review Interrupt)
+# ==============================================================================
 def make_targeted_refine_node(ctx: WorkflowNodeContext):
     async def targeted_refine_node(state: ComplianceWorkflowState) -> dict[str, Any]:
         sec_context = SecurityContext(**state["security_context"])
-        new_retry = state["retry_count"] + 1
+        new_retry = state.get("retry_count", 0) + 1
 
         audit = create_audit_event(
             context=sec_context,
@@ -240,7 +472,7 @@ def make_escalate_human_review_node(ctx: WorkflowNodeContext):
             entity_type="BidProject",
             entity_id=state["bid_id"],
             details={
-                "unverified_count": len(state["unverified_items"]),
+                "unverified_count": len(state.get("unverified_items", [])),
                 "last_feedback": state.get("error_feedback"),
             },
         )
@@ -258,22 +490,19 @@ def make_human_review_node(ctx: WorkflowNodeContext):
     async def human_review_node(state: ComplianceWorkflowState) -> dict[str, Any]:
         sec_context = SecurityContext(**state["security_context"])
 
-        # 1. Dynamic LangGraph Interrupt
-        # Execution pauses at this exact boundary; state checkpointed to PostgreSQL/Memory.
         interrupt_payload = {
-            "thread_id": f"tenant_{sec_context.tenant_id}:bid_{state['bid_id']}:run_{state.get('workflow_run_id', 'run')}",
+            "thread_id": f"tenant_{sec_context.tenant_id}:bid_{state['bid_id']}:run_{sec_context.workflow_run_id}",
             "tenant_id": sec_context.tenant_id,
             "bid_id": state["bid_id"],
             "document_id": state["document_id"],
-            "page_number": state["page_number"],
-            "unverified_items": [i.model_dump() for i in state.get("unverified_items", [])],
+            "page_number": state.get("page_number", 1),
+            "unverified_items": [i.model_dump() if hasattr(i, "model_dump") else i for i in state.get("unverified_items", [])],
             "failure_reasons": state.get("error_feedback"),
             "status": WorkflowStatus.AWAITING_HUMAN_REVIEW.value,
         }
 
         raw_review_response = interrupt(interrupt_payload)
 
-        # 2. Resumed Execution: Process human review response
         if isinstance(raw_review_response, dict):
             review_action = HumanReviewActionPayload(**raw_review_response)
         elif isinstance(raw_review_response, HumanReviewActionPayload):
@@ -281,7 +510,6 @@ def make_human_review_node(ctx: WorkflowNodeContext):
         else:
             raise TypeError(f"Invalid review response payload type: {type(raw_review_response)}")
 
-        # 3. Node-Level Tenant Isolation Guard
         if review_action.tenant_id != sec_context.tenant_id:
             raise CrossTenantReviewException(
                 f"Cross-tenant review violation: Reviewer tenant '{review_action.tenant_id}' "
@@ -289,8 +517,6 @@ def make_human_review_node(ctx: WorkflowNodeContext):
             )
 
         promoted_verified: list[VerifiedComplianceItem] = []
-        unverified_remaining: list[CandidateComplianceItem] = []
-
         if review_action.action == HumanReviewDecision.APPROVE:
             for item in state.get("unverified_items", []):
                 promoted_verified.append(
@@ -317,9 +543,6 @@ def make_human_review_node(ctx: WorkflowNodeContext):
                         verification_method="HUMAN_EDITED",
                     )
                 )
-        elif review_action.action == HumanReviewDecision.REJECT:
-            # Rejection: Item discarded, not promoted
-            pass
 
         audit = create_audit_event(
             context=sec_context,
@@ -337,7 +560,7 @@ def make_human_review_node(ctx: WorkflowNodeContext):
 
         return {
             "verified_items": promoted_verified,
-            "unverified_items": unverified_remaining,
+            "unverified_items": [],
             "status": "HUMAN_REVIEW_COMPLETED",
             "human_review_required": False,
             "audit_events": [audit],
@@ -346,31 +569,15 @@ def make_human_review_node(ctx: WorkflowNodeContext):
     return human_review_node
 
 
+# Backwards compatibility wrappers
+def make_scoped_retrieval_node(ctx: WorkflowNodeContext):
+    return make_docling_parse_node(ctx)
+
+def make_model_extraction_node(ctx: WorkflowNodeContext):
+    return make_llm_extraction_node(ctx)
+
+def make_deterministic_verification_node(ctx: WorkflowNodeContext):
+    return make_validation_node(ctx)
+
 def make_persistence_node(ctx: WorkflowNodeContext):
-    async def persistence_node(state: ComplianceWorkflowState) -> dict[str, Any]:
-        sec_context = SecurityContext(**state["security_context"])
-        items_to_persist = [item.to_api_payload() for item in state["verified_items"]]
-
-        # Commit to persistence sink (or mock for testing)
-        ctx.persisted_records.extend(items_to_persist)
-
-        audit = create_audit_event(
-            context=sec_context,
-            action="COMPLIANCE_ITEMS_PERSISTED",
-            entity_type="BidProject",
-            entity_id=state["bid_id"],
-            details={"inserted_count": len(items_to_persist)},
-        )
-
-        final_status = (
-            WorkflowStatus.AWAITING_HUMAN_REVIEW.value
-            if state.get("human_review_required")
-            else WorkflowStatus.COMPLETED.value
-        )
-
-        return {
-            "status": final_status,
-            "audit_events": [audit],
-        }
-
-    return persistence_node
+    return make_postgres_store_node(ctx)

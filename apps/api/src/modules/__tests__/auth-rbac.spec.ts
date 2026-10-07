@@ -30,7 +30,7 @@ describe('Security & RBAC Hardening Suite', () => {
     tenantInterceptor = new TenantContextInterceptor();
 
     db = new PGlite();
-    await initDatabase(db);
+    await initDatabase(db, { seedUsers: true, seedFullProfile: true, seedBidsAndCompliance: true });
     authService = new AuthService(db, tokenService);
   });
 
@@ -350,7 +350,7 @@ describe('Security & RBAC Hardening Suite', () => {
       const loginRes = await authService.login('bidmanager@acme.com', 'Password123!');
       expect(loginRes.accessToken).toBeDefined();
       expect(loginRes.refreshToken).toBeDefined();
-      expect(loginRes.user.role).toBe('bid_manager');
+      expect(loginRes.user.role).toBe('BID_MANAGER');
 
       // Verify the returned accessToken is signed by TokenService
       const claims = tokenService.verifyAccessToken(loginRes.accessToken);

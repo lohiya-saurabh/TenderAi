@@ -15,7 +15,7 @@ describe('Infrastructure: PostgresBidRepository Unit & Integration Tests', () =>
 
   beforeEach(async () => {
     db = new PGlite();
-    await initDatabase(db);
+    await initDatabase(db, { seedUsers: true, seedFullProfile: true, seedBidsAndCompliance: true });
     eventBus = new InMemoryEventBus();
     repo = new PostgresBidRepository(db, eventBus);
   });

@@ -68,9 +68,11 @@ export interface InitDatabaseOptions {
 }
 
 export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): Promise<void> {
-  const seedUsers = options?.seedUsers ?? true;
-  const seedFullProfile = options?.seedFullProfile ?? true;
-  const seedBidsAndCompliance = options?.seedBidsAndCompliance ?? true;
+  const isDevOrTest = process.env.NODE_ENV !== 'production';
+  const defaultSeed = process.env.SEED_DEMO_DATA === 'true' || (process.env.SEED_DEMO_DATA !== 'false' && isDevOrTest);
+  const seedUsers = options?.seedUsers ?? defaultSeed;
+  const seedFullProfile = options?.seedFullProfile ?? defaultSeed;
+  const seedBidsAndCompliance = options?.seedBidsAndCompliance ?? defaultSeed;
 
   // 1. Create Tables
   await db.exec(`
@@ -114,7 +116,7 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
     CREATE TABLE IF NOT EXISTS bids (
       id TEXT PRIMARY KEY,
       organization_id TEXT NOT NULL,
-      company_id TEXT NOT NULL DEFAULT 'comp_acme_infra_001',
+      company_id TEXT NOT NULL,
       title TEXT NOT NULL,
       tender_number TEXT NOT NULL DEFAULT '',
       tendering_authority TEXT NOT NULL DEFAULT '',
@@ -130,7 +132,7 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
-    ALTER TABLE bids ADD COLUMN IF NOT EXISTS company_id TEXT NOT NULL DEFAULT 'comp_acme_infra_001';
+    ALTER TABLE bids ADD COLUMN IF NOT EXISTS company_id TEXT;
     ALTER TABLE bids ADD COLUMN IF NOT EXISTS tender_number TEXT NOT NULL DEFAULT '';
     ALTER TABLE bids ADD COLUMN IF NOT EXISTS tendering_authority TEXT NOT NULL DEFAULT '';
     ALTER TABLE bids ADD COLUMN IF NOT EXISTS estimated_value_rupees BIGINT NOT NULL DEFAULT 0;
@@ -150,13 +152,23 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
       mime_type TEXT NOT NULL,
       document_type TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'UPLOADED',
+      processing_attempts INT NOT NULL DEFAULT 0,
+      processing_started_at TIMESTAMPTZ,
+      processing_completed_at TIMESTAMPTZ,
+      last_processing_error TEXT,
       uploaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+
+    ALTER TABLE tender_documents ADD COLUMN IF NOT EXISTS processing_attempts INT NOT NULL DEFAULT 0;
+    ALTER TABLE tender_documents ADD COLUMN IF NOT EXISTS processing_started_at TIMESTAMPTZ;
+    ALTER TABLE tender_documents ADD COLUMN IF NOT EXISTS processing_completed_at TIMESTAMPTZ;
+    ALTER TABLE tender_documents ADD COLUMN IF NOT EXISTS last_processing_error TEXT;
 
     CREATE TABLE IF NOT EXISTS compliance_items (
       id TEXT PRIMARY KEY,
       bid_id TEXT NOT NULL REFERENCES bids(id) ON DELETE CASCADE,
       organization_id TEXT NOT NULL,
+      company_id TEXT,
       category TEXT NOT NULL,
       title TEXT NOT NULL,
       description TEXT NOT NULL,
@@ -171,6 +183,8 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
       company_evidence JSONB,
       risk JSONB,
       rationale JSONB,
+      workflow_run_id TEXT,
+      correlation_id TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
@@ -178,6 +192,28 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
     ALTER TABLE compliance_items ADD COLUMN IF NOT EXISTS company_evidence JSONB;
     ALTER TABLE compliance_items ADD COLUMN IF NOT EXISTS risk JSONB;
     ALTER TABLE compliance_items ADD COLUMN IF NOT EXISTS rationale JSONB;
+    ALTER TABLE compliance_items ADD COLUMN IF NOT EXISTS workflow_run_id TEXT;
+    ALTER TABLE compliance_items ADD COLUMN IF NOT EXISTS correlation_id TEXT;
+    ALTER TABLE compliance_items ADD COLUMN IF NOT EXISTS company_id TEXT;
+
+    CREATE TABLE IF NOT EXISTS document_processing_outbox (
+      id TEXT PRIMARY KEY,
+      organization_id TEXT NOT NULL,
+      document_id TEXT NOT NULL,
+      payload JSONB NOT NULL,
+      status TEXT NOT NULL DEFAULT 'PENDING',
+      attempts INT NOT NULL DEFAULT 0,
+      next_attempt_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      locked_at TIMESTAMPTZ,
+      last_error TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      published_at TIMESTAMPTZ
+    );
+
+    ALTER TABLE document_processing_outbox ADD COLUMN IF NOT EXISTS locked_at TIMESTAMPTZ;
+
+    CREATE INDEX IF NOT EXISTS idx_document_processing_outbox_pending
+      ON document_processing_outbox(status, next_attempt_at);
 
     CREATE TABLE IF NOT EXISTS audit_logs (
       id TEXT PRIMARY KEY,
@@ -194,7 +230,7 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
 
     CREATE TABLE IF NOT EXISTS company_profile_versions (
       id TEXT PRIMARY KEY,
-      company_id TEXT NOT NULL DEFAULT 'comp_acme_infra_001',
+      company_id TEXT NOT NULL,
       organization_id TEXT NOT NULL,
       version INT NOT NULL,
       name TEXT NOT NULL,
@@ -203,7 +239,7 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
-    ALTER TABLE company_profile_versions ADD COLUMN IF NOT EXISTS company_id TEXT NOT NULL DEFAULT 'comp_acme_infra_001';
+    ALTER TABLE company_profile_versions ADD COLUMN IF NOT EXISTS company_id TEXT;
 
     CREATE INDEX IF NOT EXISTS idx_company_profile_versions_org
       ON company_profile_versions(organization_id, version DESC);
@@ -218,7 +254,8 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
-    ALTER TABLE company_profiles ADD COLUMN IF NOT EXISTS company_id TEXT NOT NULL DEFAULT 'comp_acme_infra_001';
+    ALTER TABLE company_profiles ADD COLUMN IF NOT EXISTS id TEXT;
+    ALTER TABLE company_profiles ADD COLUMN IF NOT EXISTS company_id TEXT;
 
     CREATE TABLE IF NOT EXISTS bid_decisions (
       id TEXT PRIMARY KEY,
@@ -254,6 +291,31 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
     CREATE INDEX IF NOT EXISTS idx_notifications_tenant
       ON notifications(organization_id, recipient_user_id, is_read, created_at DESC);
 
+    CREATE TABLE IF NOT EXISTS subscriptions (
+      id TEXT PRIMARY KEY,
+      organization_id TEXT UNIQUE NOT NULL,
+      plan_tier TEXT NOT NULL DEFAULT 'FREE',
+      billing_interval TEXT NOT NULL DEFAULT 'MONTHLY',
+      status TEXT NOT NULL DEFAULT 'ACTIVE',
+      current_period_start TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      current_period_end TIMESTAMPTZ NOT NULL,
+      cancel_at_period_end BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS usage_records (
+      id TEXT PRIMARY KEY,
+      organization_id TEXT NOT NULL,
+      metric TEXT NOT NULL,
+      quantity INTEGER NOT NULL DEFAULT 1,
+      period_key TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_usage_records_tenant_period
+      ON usage_records(organization_id, metric, period_key);
+
     UPDATE bid_decisions
     SET readiness_score = readiness_score / 100
     WHERE readiness_score > 1;
@@ -265,184 +327,152 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
 
   const drizzleDb = drizzle(db, { schema });
 
-  // 2. Seed Users & Companies if empty
+  // 2. Seed Users & Companies
   if (seedUsers) {
-    const userCountResult = await drizzleDb.select({ count: sql<string>`count(*)` }).from(schema.users);
-    const userCount = parseInt(userCountResult[0]?.count || '0', 10);
+    for (const user of DEMO_USERS) {
+      const hashedPassword = await bcrypt.hash(user.password, 10);
+      await drizzleDb
+        .insert(schema.users)
+        .values({
+          id: user.id,
+          email: user.email,
+          password: hashedPassword,
+          name: user.name,
+          role: user.role,
+          permissions: user.permissions,
+          organizationId: user.organizationId,
+          organizationName: user.organizationName,
+        })
+        .onConflictDoNothing();
+    }
 
-    if (userCount === 0) {
-      console.log('🌱 Seeding users into PostgreSQL (with bcrypt password hashes)...');
-      for (const user of DEMO_USERS) {
-        const hashedPassword = await bcrypt.hash(user.password, 10);
-        await drizzleDb
-          .insert(schema.users)
-          .values({
-            id: user.id,
-            email: user.email,
-            password: hashedPassword,
-            name: user.name,
-            role: user.role,
-            permissions: user.permissions,
-            organizationId: user.organizationId,
-            organizationName: user.organizationName,
-          })
-          .onConflictDoNothing();
-      }
-    } else {
-      // Migration: ensure any existing users with plaintext passwords are upgraded to bcrypt hashes
-      const unhashedUsers = await drizzleDb
-        .select({ id: schema.users.id, password: schema.users.password })
-        .from(schema.users)
-        .where(sql`${schema.users.password} NOT LIKE '$2b$%' AND ${schema.users.password} NOT LIKE '$2a$%'`);
+    // Migration: ensure any existing users with plaintext passwords are upgraded to bcrypt hashes
+    const unhashedUsers = await drizzleDb
+      .select({ id: schema.users.id, password: schema.users.password })
+      .from(schema.users)
+      .where(sql`${schema.users.password} NOT LIKE '$2b$%' AND ${schema.users.password} NOT LIKE '$2a$%'`);
 
-      for (const u of unhashedUsers) {
-        const hashedPassword = await bcrypt.hash(u.password, 10);
-        await drizzleDb
-          .update(schema.users)
-          .set({ password: hashedPassword })
-          .where(eq(schema.users.id, u.id));
-      }
+    for (const u of unhashedUsers) {
+      const hashedPassword = await bcrypt.hash(u.password, 10);
+      await drizzleDb
+        .update(schema.users)
+        .set({ password: hashedPassword })
+        .where(eq(schema.users.id, u.id));
     }
 
     // Seed Companies
-    const companyCountResult = await drizzleDb.select({ count: sql<string>`count(*)` }).from(schema.companies);
-    const companyCount = parseInt(companyCountResult[0]?.count || '0', 10);
-    if (companyCount === 0) {
-      console.log('🌱 Seeding enterprise companies into PostgreSQL...');
-      for (const comp of DEMO_COMPANIES) {
-        await drizzleDb
-          .insert(schema.companies)
-          .values({
-            id: comp.id,
-            organizationId: comp.organizationId,
-            legalName: comp.legalName,
-            slug: comp.slug ?? null,
-            gstin: comp.gstin ?? null,
-            pan: comp.pan ?? null,
-            udyamId: comp.udyamId ?? null,
-            constitution: comp.constitution ?? null,
-            createdAt: new Date(comp.createdAt),
-            updatedAt: new Date(comp.updatedAt),
-          })
-          .onConflictDoNothing();
-      }
+    for (const comp of DEMO_COMPANIES) {
+      await drizzleDb
+        .insert(schema.companies)
+        .values({
+          id: comp.id,
+          organizationId: comp.organizationId,
+          legalName: comp.legalName,
+          slug: comp.slug ?? null,
+          gstin: comp.gstin ?? null,
+          pan: comp.pan ?? null,
+          udyamId: comp.udyamId ?? null,
+          constitution: comp.constitution ?? null,
+          createdAt: new Date(comp.createdAt),
+          updatedAt: new Date(comp.updatedAt),
+        })
+        .onConflictDoNothing();
     }
   }
 
-  // 3. Seed Company Capability Profile (11 domains) if empty
+  // 3. Seed Company Capability Profile (11 domains)
   if (seedFullProfile) {
-    const profileCountResult = await drizzleDb
-      .select({ count: sql<string>`count(*)` })
-      .from(schema.companyProfiles);
-    const profileCount = parseInt(profileCountResult[0]?.count || '0', 10);
+    await drizzleDb
+      .insert(schema.companyProfileVersions)
+      .values({
+        id: 'cpv-acme-v1',
+        companyId: 'comp_acme_infra_001',
+        organizationId: 'org_acme_infra_001',
+        version: 1,
+        name: 'V1.0 (Active Baseline)',
+        payload: DEMO_COMPANY_PROFILE_PAYLOAD,
+        createdBy: 'usr_bid_mgr_01',
+        createdAt: new Date('2026-09-01T00:00:00.000Z'),
+      })
+      .onConflictDoNothing();
 
-    if (profileCount === 0) {
-      console.log('🌱 Seeding Enterprise Company Capability Profile (11 domains) into PostgreSQL...');
-      await drizzleDb
-        .insert(schema.companyProfileVersions)
-        .values({
-          id: 'cpv-acme-v1',
-          companyId: 'comp_acme_infra_001',
-          organizationId: 'org_acme_infra_001',
-          version: 1,
-          name: 'V1.0 (Active Baseline)',
-          payload: DEMO_COMPANY_PROFILE_PAYLOAD,
-          createdBy: 'usr_bid_mgr_01',
-          createdAt: new Date('2026-09-01T00:00:00.000Z'),
-        })
-        .onConflictDoNothing();
-
-      await drizzleDb
-        .insert(schema.companyProfiles)
-        .values({
-          id: 'prof_comp_acme_infra_001',
-          companyId: 'comp_acme_infra_001',
-          organizationId: 'org_acme_infra_001',
-          activeVersionId: 'cpv-acme-v1',
-          updatedAt: new Date('2026-09-01T00:00:00.000Z'),
-        })
-        .onConflictDoNothing();
-    }
+    await drizzleDb
+      .insert(schema.companyProfiles)
+      .values({
+        id: 'prof_comp_acme_infra_001',
+        companyId: 'comp_acme_infra_001',
+        organizationId: 'org_acme_infra_001',
+        activeVersionId: 'cpv-acme-v1',
+        updatedAt: new Date('2026-09-01T00:00:00.000Z'),
+      })
+      .onConflictDoNothing();
   }
 
-  // 4. Seed Bids & Tender Documents if empty
+  // 4. Seed Bids & Tender Documents if enabled
   if (seedBidsAndCompliance) {
-    const bidCountResult = await drizzleDb.select({ count: sql<string>`count(*)` }).from(schema.bids);
-    const bidCount = parseInt(bidCountResult[0]?.count || '0', 10);
+    for (const bid of BIDS) {
+      await drizzleDb
+        .insert(schema.bids)
+        .values({
+          id: bid.id,
+          organizationId: 'org_acme_infra_001',
+          companyId: bid.companyId || 'comp_acme_infra_001',
+          title: bid.title,
+          tenderNumber: bid.tenderNumber,
+          tenderingAuthority: bid.tenderingAuthority,
+          estimatedValueRupees: bid.estimatedValueRupees,
+          submissionDeadline: bid.submissionDeadline,
+          locationState: bid.locationState || null,
+          status: bid.status,
+          totalRequirements: bid.totalRequirements,
+          flaggedRequirements: bid.flaggedRequirements,
+          approvedRequirements: bid.approvedRequirements,
+          version: 1,
+          createdAt: new Date(bid.createdAt),
+          updatedAt: new Date(bid.updatedAt),
+        })
+        .onConflictDoNothing();
 
-    if (bidCount === 0) {
-      console.log('🌱 Seeding realistic tender projects into PostgreSQL...');
-      for (const bid of BIDS) {
-        await drizzleDb
-          .insert(schema.bids)
-          .values({
-            id: bid.id,
-            organizationId: 'org_acme_infra_001',
-            companyId: bid.companyId || 'comp_acme_infra_001',
-            title: bid.title,
-            tenderNumber: bid.tenderNumber,
-            tenderingAuthority: bid.tenderingAuthority,
-            estimatedValueRupees: bid.estimatedValueRupees,
-            submissionDeadline: bid.submissionDeadline,
-            locationState: bid.locationState || null,
-            status: bid.status,
-            totalRequirements: bid.totalRequirements,
-            flaggedRequirements: bid.flaggedRequirements,
-            approvedRequirements: bid.approvedRequirements,
-            version: 1,
-            createdAt: new Date(bid.createdAt),
-            updatedAt: new Date(bid.updatedAt),
-          })
-          .onConflictDoNothing();
-
-        // Seed documents for this bid
-        if (bid.documents && bid.documents.length > 0) {
-          for (const doc of bid.documents) {
-            await drizzleDb
-              .insert(schema.tenderDocuments)
-              .values({
-                id: doc.id,
-                bidId: bid.id,
-                organizationId: 'org_acme_infra_001',
-                fileName: doc.fileName,
-                storagePath: `bids/${bid.id}/${doc.id}-${doc.fileName}`,
-                fileSizeBytes: doc.fileSizeBytes,
-                mimeType: doc.mimeType,
-                documentType: doc.documentType,
-                status: doc.status,
-                uploadedAt: new Date(doc.uploadedAt),
-              })
-              .onConflictDoNothing();
-          }
+      // Seed documents for this bid
+      if (bid.documents && bid.documents.length > 0) {
+        for (const doc of bid.documents) {
+          await drizzleDb
+            .insert(schema.tenderDocuments)
+            .values({
+              id: doc.id,
+              bidId: bid.id,
+              organizationId: 'org_acme_infra_001',
+              fileName: doc.fileName,
+              storagePath: `bids/${bid.id}/${doc.id}-${doc.fileName}`,
+              fileSizeBytes: doc.fileSizeBytes,
+              mimeType: doc.mimeType,
+              documentType: doc.documentType,
+              status: doc.status,
+              uploadedAt: new Date(doc.uploadedAt),
+            })
+            .onConflictDoNothing();
         }
-
-        await drizzleDb
-          .insert(schema.auditLogs)
-          .values({
-            id: `aud-init-${bid.id}`,
-            bidId: bid.id,
-            organizationId: 'org_acme_infra_001',
-            userId: 'usr_bid_mgr_01',
-            userName: 'Vikramaditya Sharma',
-            eventType: 'BID_PROJECT_CREATED',
-            aggregateType: 'BidProject',
-            aggregateId: bid.id,
-            payload: { title: bid.title, tenderNumber: bid.tenderNumber },
-            timestamp: new Date(bid.createdAt),
-          })
-          .onConflictDoNothing();
       }
+
+      await drizzleDb
+        .insert(schema.auditLogs)
+        .values({
+          id: `aud-init-${bid.id}`,
+          bidId: bid.id,
+          organizationId: 'org_acme_infra_001',
+          userId: 'usr_bid_mgr_01',
+          userName: 'Vikramaditya Sharma',
+          eventType: 'BID_PROJECT_CREATED',
+          aggregateType: 'BidProject',
+          aggregateId: bid.id,
+          payload: { title: bid.title, tenderNumber: bid.tenderNumber },
+          timestamp: new Date(bid.createdAt),
+        })
+        .onConflictDoNothing();
     }
 
-    // 5. Seed Compliance Items if empty
-    const complianceCountResult = await drizzleDb
-      .select({ count: sql<string>`count(*)` })
-      .from(schema.complianceItems);
-    const complianceCount = parseInt(complianceCountResult[0]?.count || '0', 10);
-
-    if (complianceCount === 0) {
-      console.log('🌱 Seeding grounded compliance items with dual-sided provenance into PostgreSQL...');
-      for (const item of DEMO_COMPLIANCE_ITEMS) {
+    // 5. Seed Compliance Items if enabled
+    for (const item of DEMO_COMPLIANCE_ITEMS) {
         await drizzleDb
           .insert(schema.complianceItems)
           .values({
@@ -468,7 +498,6 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
           })
           .onConflictDoNothing();
       }
-    }
 
     // 6. Seed Persisted Bid Decision if empty
     const decisionCountResult = await drizzleDb
@@ -548,7 +577,46 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
         await drizzleDb.insert(schema.notifications).values(n).onConflictDoNothing();
       }
     }
+
+    // 8. Seed Subscriptions if empty
+    const subCountResult = await drizzleDb
+      .select({ count: sql<string>`count(*)` })
+      .from(schema.subscriptions);
+    const subCount = parseInt(subCountResult[0]?.count || '0', 10);
+
+    if (subCount === 0) {
+      console.log('🌱 Seeding tenant subscriptions into PostgreSQL...');
+      const now = new Date();
+      const periodEnd = new Date(now);
+      periodEnd.setDate(periodEnd.getDate() + 30);
+
+      await drizzleDb
+        .insert(schema.subscriptions)
+        .values([
+          {
+            id: 'sub_acme_growth_001',
+            organizationId: 'org_acme_infra_001',
+            planTier: 'GROWTH',
+            billingInterval: 'MONTHLY',
+            status: 'ACTIVE',
+            currentPeriodStart: now,
+            currentPeriodEnd: periodEnd,
+            cancelAtPeriodEnd: false,
+          },
+          {
+            id: 'sub_bharat_starter_002',
+            organizationId: 'org_bharat_build_002',
+            planTier: 'STARTER',
+            billingInterval: 'MONTHLY',
+            status: 'ACTIVE',
+            currentPeriodStart: now,
+            currentPeriodEnd: periodEnd,
+            cancelAtPeriodEnd: false,
+          },
+        ])
+        .onConflictDoNothing();
+    }
   }
 
-  console.log('✅ PostgreSQL database ready (all tables seeded with rich production data).');
+  console.log(`✅ PostgreSQL database ready (${seedUsers || seedBidsAndCompliance ? 'demo seeded' : 'clean state'}).`);
 }

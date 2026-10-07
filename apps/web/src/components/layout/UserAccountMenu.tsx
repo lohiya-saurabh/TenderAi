@@ -79,7 +79,7 @@ export const UserAccountMenu: React.FC = () => {
             {user?.organizationName || 'Default Organization'}
           </p>
           <p className="font-mono text-[10px] text-muted-foreground mt-0.5">
-            ID: {user?.organizationId || 'org_acme_infra_001'}
+            ID: {user?.organizationId || '—'}
           </p>
         </div>
         <DropdownMenuSeparator />

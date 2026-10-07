@@ -1,8 +1,14 @@
 export interface IngestionJobMessage {
   jobId: string;
   organizationId: string;
+  companyId?: string;
   bidId: string;
   documentId: string;
+  workflowRunId?: string;
+  correlationId?: string;
+  storageReference?: string;
+  documentType?: string;
+  fileName?: string;
   timestamp: string;
 }
 

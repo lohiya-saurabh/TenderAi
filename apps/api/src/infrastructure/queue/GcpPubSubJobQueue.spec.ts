@@ -137,6 +137,28 @@ describe('GcpPubSubJobQueue (Google Cloud Pub/Sub Adapter)', () => {
   });
 
   describe('moveToDeadLetter & getDeadLetterMessages', () => {
+    it('should fail rather than acknowledge work when no dead-letter topic is configured', async () => {
+      const queueWithoutDlq = new GcpPubSubJobQueue({
+        topicName: 'tenderpulse-ingestion-jobs-dev',
+        subscriptionName: 'tenderpulse-ingestion-sub-dev',
+        projectId: 'tenderpulse-gcp-test',
+      });
+
+      await expect(
+        queueWithoutDlq.moveToDeadLetter(
+          {
+            jobId: 'job-999',
+            organizationId: 'org-acme',
+            bidId: 'bid-202',
+            documentId: 'doc-303',
+            timestamp: '2026-10-03T18:00:00.000Z',
+          },
+          'permanent failure',
+          3,
+        ),
+      ).rejects.toThrow('GCP_PUBSUB_DLQ_TOPIC is not configured');
+    });
+
     it('should publish dead letter payload with reason and failed timestamp', async () => {
       const payload: IngestionJobMessage = {
         jobId: 'job-999',

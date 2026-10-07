@@ -3,11 +3,12 @@
  */
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../common/database/database.module.js';
+import { BillingModule } from '../billing/billing.module.js';
 import { TeamsService } from './teams.service.js';
 import { TeamsController } from './teams.controller.js';
 
 @Module({
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, BillingModule],
   controllers: [TeamsController],
   providers: [TeamsService],
   exports: [TeamsService],

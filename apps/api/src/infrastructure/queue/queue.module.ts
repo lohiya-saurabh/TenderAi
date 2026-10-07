@@ -45,6 +45,12 @@ export const QUEUE_TOKEN = 'JOB_QUEUE';
           return service;
         }
 
+        if (process.env.NODE_ENV === 'production') {
+          throw new Error(
+            'A production message queue must be configured with AWS_SQS_QUEUE_URL or GCP Pub/Sub settings.',
+          );
+        }
+
         return new MockSqsJobQueue();
       },
     },

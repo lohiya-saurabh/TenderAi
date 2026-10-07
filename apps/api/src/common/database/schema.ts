@@ -54,7 +54,7 @@ export type NewCompany = typeof companies.$inferInsert;
 export const bids = pgTable('bids', {
   id: text('id').primaryKey(),
   organizationId: text('organization_id').notNull(),
-  companyId: text('company_id').notNull().default('comp_acme_infra_001'),
+  companyId: text('company_id').notNull(),
   title: text('title').notNull(),
   tenderNumber: text('tender_number').notNull(),
   tenderingAuthority: text('tendering_authority').notNull(),
@@ -85,6 +85,10 @@ export const tenderDocuments = pgTable('tender_documents', {
   mimeType: text('mime_type').notNull(),
   documentType: text('document_type').notNull(),
   status: text('status').notNull().default('UPLOADED'),
+  processingAttempts: integer('processing_attempts').notNull().default(0),
+  processingStartedAt: timestamp('processing_started_at', { withTimezone: true }),
+  processingCompletedAt: timestamp('processing_completed_at', { withTimezone: true }),
+  lastProcessingError: text('last_processing_error'),
   uploadedAt: timestamp('uploaded_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -97,6 +101,7 @@ export const complianceItems = pgTable('compliance_items', {
     .notNull()
     .references(() => bids.id, { onDelete: 'cascade' }),
   organizationId: text('organization_id').notNull(),
+  companyId: text('company_id'),
   category: text('category').notNull(),
   title: text('title').notNull(),
   description: text('description').notNull(),
@@ -111,12 +116,31 @@ export const complianceItems = pgTable('compliance_items', {
   companyEvidence: jsonb('company_evidence'),
   risk: jsonb('risk'),
   rationale: jsonb('rationale'),
+  workflowRunId: text('workflow_run_id'),
+  correlationId: text('correlation_id'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
 export type ComplianceItem = typeof complianceItems.$inferSelect;
 export type NewComplianceItem = typeof complianceItems.$inferInsert;
+
+export const documentProcessingOutbox = pgTable('document_processing_outbox', {
+  id: text('id').primaryKey(),
+  organizationId: text('organization_id').notNull(),
+  documentId: text('document_id').notNull(),
+  payload: jsonb('payload').notNull(),
+  status: text('status').notNull().default('PENDING'),
+  attempts: integer('attempts').notNull().default(0),
+  nextAttemptAt: timestamp('next_attempt_at', { withTimezone: true }).notNull().defaultNow(),
+  lockedAt: timestamp('locked_at', { withTimezone: true }),
+  lastError: text('last_error'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  publishedAt: timestamp('published_at', { withTimezone: true }),
+});
+
+export type DocumentProcessingOutboxRecord = typeof documentProcessingOutbox.$inferSelect;
+export type NewDocumentProcessingOutboxRecord = typeof documentProcessingOutbox.$inferInsert;
 
 export const auditLogs = pgTable('audit_logs', {
   id: text('id').primaryKey(),
@@ -145,7 +169,7 @@ export type NewAuditLog = typeof auditLogs.$inferInsert;
  */
 export const companyProfileVersions = pgTable('company_profile_versions', {
   id: text('id').primaryKey(),
-  companyId: text('company_id').notNull().default('comp_acme_infra_001'),
+  companyId: text('company_id').notNull(),
   organizationId: text('organization_id').notNull(),
   version: integer('version').notNull(),
   name: text('name').notNull(),
@@ -218,3 +242,34 @@ export const notifications = pgTable('notifications', {
 export type Notification = typeof notifications.$inferSelect;
 export type NewNotification = typeof notifications.$inferInsert;
 
+// ---------------------------------------------------------------------------
+// Billing & Subscriptions (Tenant-level)
+// ---------------------------------------------------------------------------
+
+export const subscriptions = pgTable('subscriptions', {
+  id: text('id').primaryKey(),
+  organizationId: text('organization_id').unique().notNull(),
+  planTier: text('plan_tier').notNull().default('FREE'), // 'FREE' | 'STARTER' | 'GROWTH' | 'BUSINESS' | 'ENTERPRISE'
+  billingInterval: text('billing_interval').notNull().default('MONTHLY'), // 'MONTHLY' | 'ANNUAL'
+  status: text('status').notNull().default('ACTIVE'), // 'TRIAL' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED'
+  currentPeriodStart: timestamp('current_period_start', { withTimezone: true }).notNull().defaultNow(),
+  currentPeriodEnd: timestamp('current_period_end', { withTimezone: true }).notNull(),
+  cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull().default(false),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type Subscription = typeof subscriptions.$inferSelect;
+export type NewSubscription = typeof subscriptions.$inferInsert;
+
+export const usageRecords = pgTable('usage_records', {
+  id: text('id').primaryKey(),
+  organizationId: text('organization_id').notNull(),
+  metric: text('metric').notNull(), // 'TENDER_ANALYSIS' | 'EVIDENCE_STORAGE_MB' | 'AI_RUN'
+  quantity: integer('quantity').notNull().default(1),
+  periodKey: text('period_key').notNull(), // 'YYYY-MM'
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type UsageRecord = typeof usageRecords.$inferSelect;
+export type NewUsageRecord = typeof usageRecords.$inferInsert;
