@@ -59,16 +59,33 @@ export const ComplianceTable: React.FC<ComplianceTableProps> = ({
   const [activeCitationItem, setActiveCitationItem] = useState<ComplianceItem | null>(null);
   const [activeAssessmentItem, setActiveAssessmentItem] = useState<ComplianceItem | null>(null);
 
+  // Defensive deduplication by id and by (category, title/requirement)
+  const dedupedItems = useMemo(() => {
+    const seenIds = new Set<string>();
+    const seenKeys = new Set<string>();
+    const result: ComplianceItem[] = [];
+    for (const item of items) {
+      if (seenIds.has(item.id)) continue;
+      const title = (item as any).title || item.requirement || '';
+      const key = `${(item.category || '').toLowerCase()}:${title.trim().toLowerCase().replace(/\s+/g, ' ')}`;
+      if (seenKeys.has(key)) continue;
+      seenIds.add(item.id);
+      seenKeys.add(key);
+      result.push(item);
+    }
+    return result;
+  }, [items]);
+
   // Status counts for filter tabs
   const counts = useMemo(() => {
     const allStatuses: ComplianceStatusFilterValue[] = ['ALL', 'PASS', 'FAIL', 'MISSING', 'REVIEW_REQUIRED', 'NOT_APPLICABLE'];
     const result: Record<ComplianceStatusFilterValue, number> = {} as Record<ComplianceStatusFilterValue, number>;
-    result.ALL = items.length;
+    result.ALL = dedupedItems.length;
     allStatuses.slice(1).forEach((status) => {
-      result[status] = items.filter((i) => i.status === status).length;
+      result[status] = dedupedItems.filter((i) => i.status === status).length;
     });
     return result;
-  }, [items]);
+  }, [dedupedItems]);
 
   const hasActiveFilters =
     statusFilter !== 'ALL' ||
@@ -89,7 +106,7 @@ export const ComplianceTable: React.FC<ComplianceTableProps> = ({
   const filteredItems = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
 
-    let result = items.filter((item) => {
+    let result = dedupedItems.filter((item) => {
       // Status filter
       if (statusFilter !== 'ALL' && item.status !== statusFilter) {
         return false;
@@ -146,7 +163,7 @@ export const ComplianceTable: React.FC<ComplianceTableProps> = ({
     });
 
     return result;
-  }, [items, statusFilter, categoryFilter, riskFilter, mandatoryFilter, searchQuery, sortConfig]);
+  }, [dedupedItems, statusFilter, categoryFilter, riskFilter, mandatoryFilter, searchQuery, sortConfig]);
 
   const handleSort = useCallback((key: string) => {
     setSortConfig((prev) => ({
@@ -175,7 +192,7 @@ export const ComplianceTable: React.FC<ComplianceTableProps> = ({
     onInspectAssessment?.(item);
   }, [onInspectAssessment]);
 
-  if (items.length === 0) {
+  if (dedupedItems.length === 0) {
     return (
       <EmptyState
         title="No compliance items extracted yet"
@@ -335,7 +352,7 @@ export const ComplianceTable: React.FC<ComplianceTableProps> = ({
         {/* Reset Filters */}
         {hasActiveFilters && (
           <Button variant="ghost" size="sm" onClick={handleResetFilters}>
-            Reset Filters ({filteredItems.length} of {items.length} items)
+            Reset Filters ({filteredItems.length} of {dedupedItems.length} items)
           </Button>
         )}
       </div>

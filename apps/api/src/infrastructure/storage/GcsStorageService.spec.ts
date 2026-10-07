@@ -17,9 +17,11 @@ const mockBucket = vi.fn().mockImplementation(() => ({
 
 vi.mock('@google-cloud/storage', () => {
   return {
-    Storage: vi.fn().mockImplementation(() => ({
-      bucket: mockBucket,
-    })),
+    Storage: vi.fn().mockImplementation(function () {
+      return {
+        bucket: mockBucket,
+      };
+    }),
   };
 });
 

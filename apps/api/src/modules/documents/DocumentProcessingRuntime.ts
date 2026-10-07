@@ -386,38 +386,39 @@ export class DocumentProcessingRuntime implements OnModuleInit, OnModuleDestroy 
         throw new Error('Document ownership changed or disappeared before result persistence.');
       }
 
-      const existingDocumentItems = await tx
+      const existingBidItems = await tx
         .select({
           id: schema.complianceItems.id,
           category: schema.complianceItems.category,
           title: schema.complianceItems.title,
+          executionRules: schema.complianceItems.executionRules,
+          provenance: schema.complianceItems.provenance,
         })
         .from(schema.complianceItems)
         .where(
           and(
             eq(schema.complianceItems.bidId, message.bidId),
             eq(schema.complianceItems.organizationId, message.organizationId),
-            sql`${schema.complianceItems.provenance}->>'documentId' = ${message.documentId}`,
           ),
         );
       const existingByRequirement = new Map(
-        existingDocumentItems.map((existingItem) => [
+        existingBidItems.map((existingItem) => [
           `${existingItem.category}:${existingItem.title.trim().toLocaleLowerCase().replace(/\s+/g, ' ')}`,
-          existingItem.id,
+          existingItem,
         ]),
       );
 
       for (const item of items) {
         const normalizedTitle = item.title.trim().toLocaleLowerCase().replace(/\s+/g, ' ');
         const requirementKey = `${item.category}:${normalizedTitle}`;
-        const existingItemId = existingByRequirement.get(requirementKey);
+        const existingItem = existingByRequirement.get(requirementKey);
         const itemId = `cmp-${createHash('sha256')
           .update(
-            `${message.organizationId}:${companyId}:${message.bidId}:${message.documentId}:${item.category}:${normalizedTitle}`,
+            `${message.organizationId}:${companyId}:${message.bidId}:${item.category}:${normalizedTitle}`,
           )
           .digest('hex')
           .slice(0, 48)}`;
-        const provenance = {
+        const newProvenance = {
           documentId: message.documentId,
           sourceDocumentId: message.documentId,
           documentName: message.fileName ?? '',
@@ -428,17 +429,54 @@ export class DocumentProcessingRuntime implements OnModuleInit, OnModuleDestroy 
           verbatimQuote: item.provenance.verbatimQuote,
           confidenceScore: item.provenance.confidenceScore,
         };
-        if (existingItemId) {
+        if (existingItem) {
+          const exRules = (existingItem.executionRules ?? {}) as any;
+          const mergedExecutionRules = {
+            ...exRules,
+            ...item.executionRules,
+            stampPaperRequired: Boolean(
+              exRules.stampPaperRequired || item.executionRules?.stampPaperRequired,
+            ),
+            stampPaperDenominationInr: Math.max(
+              exRules.stampPaperDenominationInr || 0,
+              item.executionRules?.stampPaperDenominationInr || 0,
+            ) || undefined,
+            notarizationRequired: Boolean(
+              exRules.notarizationRequired || item.executionRules?.notarizationRequired,
+            ),
+            udinRequired: Boolean(
+              exRules.udinRequired || item.executionRules?.udinRequired,
+            ),
+          };
+
+          const exProv = (existingItem.provenance ?? {}) as any;
+          const curQuote = item.provenance.verbatimQuote || '';
+          const exQuote = exProv.verbatimQuote || '';
+          const preferNewQuote =
+            (!exQuote && Boolean(curQuote)) ||
+            (exQuote.length < 50 && curQuote.length >= 50) ||
+            ((item.provenance.confidenceScore || 0) > (exProv.confidenceScore || 0) &&
+              curQuote.length >= 40);
+
+          const provenanceToSet = preferNewQuote ? newProvenance : existingItem.provenance;
+
           await tx
             .update(schema.complianceItems)
             .set({
               companyId,
-              provenance,
+              executionRules: mergedExecutionRules,
+              provenance: provenanceToSet,
               workflowRunId: message.workflowRunId ?? message.jobId,
               correlationId: message.correlationId ?? message.jobId,
               updatedAt: now,
             })
-            .where(eq(schema.complianceItems.id, existingItemId));
+            .where(eq(schema.complianceItems.id, existingItem.id));
+
+          existingByRequirement.set(requirementKey, {
+            ...existingItem,
+            executionRules: mergedExecutionRules,
+            provenance: provenanceToSet,
+          });
           continue;
         }
 
@@ -455,11 +493,19 @@ export class DocumentProcessingRuntime implements OnModuleInit, OnModuleDestroy 
           reviewNotes: `Extracted from document ${message.documentId}, page ${item.provenance.pageNumber}.`,
           version: 1,
           executionRules: item.executionRules,
-          provenance,
+          provenance: newProvenance,
           workflowRunId: message.workflowRunId ?? message.jobId,
           correlationId: message.correlationId ?? message.jobId,
           createdAt: now,
           updatedAt: now,
+        });
+
+        existingByRequirement.set(requirementKey, {
+          id: itemId,
+          category: item.category,
+          title: item.title,
+          executionRules: item.executionRules,
+          provenance: newProvenance,
         });
       }
 

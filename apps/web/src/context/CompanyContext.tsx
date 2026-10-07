@@ -18,7 +18,7 @@ const CompanyContext = createContext<CompanyContextValue | undefined>(undefined)
 const STORAGE_KEY_PREFIX = 'tenderpulse_active_company_';
 
 export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const orgId = user?.organizationId || '';
 
   const [companies, setCompanies] = useState<CompanyItem[]>([]);
@@ -29,6 +29,11 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const storageKey = user?.organizationId ? `${STORAGE_KEY_PREFIX}${user.organizationId}` : null;
 
   const reloadCompanies = useCallback(async () => {
+    // If auth state is initializing or silently refreshing, hold off on API calls
+    if (authLoading) {
+      return;
+    }
+
     if (!isAuthenticated || !user) {
       setCompanies([]);
       setSelectedCompanyIdState(null);
@@ -64,11 +69,13 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setCompanies([]);
       setSelectedCompanyIdState(null);
     }
-  }, [isAuthenticated, user, storageKey]);
+  }, [authLoading, isAuthenticated, user, storageKey]);
 
   useEffect(() => {
-    reloadCompanies();
-  }, [reloadCompanies]);
+    if (!authLoading) {
+      void reloadCompanies();
+    }
+  }, [reloadCompanies, authLoading]);
 
   const setSelectedCompanyId = useCallback((id: string) => {
     setSelectedCompanyIdState(id);

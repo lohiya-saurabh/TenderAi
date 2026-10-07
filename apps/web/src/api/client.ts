@@ -110,7 +110,7 @@ async function attemptRefresh(): Promise<boolean> {
 /**
  * Coordinated refresh: ensures only one refresh request is in-flight.
  */
-async function coordinatedRefresh(): Promise<boolean> {
+export async function coordinatedRefresh(): Promise<boolean> {
   if (isRefreshing && refreshPromise) {
     return refreshPromise;
   }
@@ -131,6 +131,13 @@ export async function apiFetch<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<ApiResult<T>> {
+  // Proactive refresh on cold start / page reload:
+  // If accessToken is missing in memory, but a refresh token exists in storage,
+  // coordinate a refresh BEFORE firing the request so we never trigger an avoidable 401.
+  if (!accessToken && getRefreshToken() && !path.startsWith('/api/v1/auth/')) {
+    await coordinatedRefresh();
+  }
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string> || {}),

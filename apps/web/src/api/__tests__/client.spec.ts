@@ -127,4 +127,58 @@ describe('API Client', () => {
     expect(onExpired).toHaveBeenCalled();
     expect(getAccessToken()).toBeNull();
   });
+
+  it('proactively refreshes token on cold start when in-memory accessToken is null but refresh token exists', async () => {
+    // Simulate page reload: stub localStorage with refresh token, in-memory accessToken remains null
+    const storageData: Record<string, string> = {
+      tp_refresh_token: 'persisted-refresh-token',
+    };
+    vi.stubGlobal('localStorage', {
+      getItem: (k: string) => storageData[k] ?? null,
+      setItem: (k: string, v: string) => { storageData[k] = v; },
+      removeItem: (k: string) => { delete storageData[k]; },
+    });
+
+    const mockFetch = vi.fn()
+      // Proactive refresh call
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          accessToken: 'restored-access-token',
+          refreshToken: 'rotated-refresh-token',
+        }),
+      })
+      // Actual protected API call with refreshed token
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => [{ id: 'comp_1', legalName: 'ACR' }],
+      });
+
+    vi.stubGlobal('fetch', mockFetch);
+
+    const result = await apiGet<Array<{ id: string }>>('/api/v1/companies');
+
+    expect(result.ok).toBe(true);
+    // Verified: First call was refresh, second call had the Bearer token, NEVER sent unauthenticated call
+    expect(mockFetch).toHaveBeenNthCalledWith(
+      1,
+      '/api/v1/auth/refresh',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ refreshToken: 'persisted-refresh-token' }),
+      }),
+    );
+    expect(mockFetch).toHaveBeenNthCalledWith(
+      2,
+      '/api/v1/companies',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: 'Bearer restored-access-token',
+        }),
+      }),
+    );
+    expect(getAccessToken()).toBe('restored-access-token');
+  });
 });

@@ -1,6 +1,42 @@
 # Project Status & Milestone Tracker
 
-## Current implementation milestone: Configurable Hierarchical Logging (NestJS & FastAPI)
+## Current implementation milestone: Authentication Lifecycle Synchronization & Proactive Token Refresh
+
+1. **Root Cause Analysis (GET /api/v1/companies 401 Unauthorized)**:
+   - **XSS Token Isolation vs Cold Starts**: In `client.ts`, access tokens are retained strictly in-memory (`let accessToken = null`), while the refresh token is persisted in `localStorage` (`tp_refresh_token`). On browser reloads or direct route navigation (e.g. `/bids/:id`), JavaScript memory resets with `accessToken = null`.
+   - **Ungated Mount Execution**: `CompanyContext` previously checked `isAuthenticated` (which returned `true` immediately because the user profile was cached in `localStorage`), but did not check `authLoading` (`isLoading` from `useAuth()`).
+   - **Premature Network Dispatch**: `CompanyContext` immediately dispatched `listCompanies()` before `initAuth()` could complete silent token refresh.
+   - **Browser-Level 401 Logging**: `apiFetch` in `client.ts` dispatched `fetch('/api/v1/companies')` without `Authorization` headers. The browser dev tools logged the HTTP 401 error before the 401 retry interceptor executed. StrictMode double-mounting generated two identical 401 errors.
+
+2. **Architectural Fixes**:
+   - **Proactive Token Refresh (`client.ts`)**: In `apiFetch()`, if in-memory `accessToken` is null on startup but a `refreshToken` exists in storage, `apiFetch` proactively awaits `coordinatedRefresh()` before sending the HTTP request. Protected requests are never dispatched unauthenticated.
+   - **Unified Refresh Lock (`AuthProvider.tsx` & `client.ts`)**: `initAuth()` in `AuthProvider` now shares the single in-flight `refreshPromise` via `coordinatedRefresh()`, eliminating concurrent refresh races between component mounts.
+   - **Context Loading Gate (`CompanyContext.tsx`)**: Added `authLoading` checks in `reloadCompanies()` and `useEffect()`, guaranteeing company fetching is held until auth initialization completes.
+   - **Automated Verification**: Added cold-start unit test in `client.spec.ts` proving zero unauthenticated calls are dispatched when `accessToken` is null and `refreshToken` is present.
+   - **Mock Cleanups**: Fixed constructor mock implementations for GCP PubSub and GCS storage adapters.
+
+3. **Multilingual Status**:
+   - On strict **HOLD** per user instruction. Indic / Kannada font conversion pipeline is paused without interfering with operational procurement workflows.
+
+2. **Operative Clause Extraction & TOC Elimination**:
+   - **Root Cause**: Earlier versions yielded truncated snippets and Table of Contents noise (e.g. `"8 Defect Liability and Maintenance Period ."`, `"14. Taxes and Duties ."`) because candidate pages unconditionally included orientation pages 0..10 and extractors matched the first keyword occurrence without checking for operative obligations.
+   - **TOC Filtering (`AiDocumentExtractor.ts`)**: Implemented `isPureTocPage` detection (>20% dot-leaders/page numbers without operative modals) to prune index/contents pages before dispatching candidate batches to the AI extraction engine.
+   - **Operative Extraction (`pipeline.py` & `documents.service.ts`)**: Implemented `is_toc_or_definition`, `has_operative_obligation`, and `extract_operative_clause`. Candidate keyword matches are ranked by deontic obligation scores (`shall`, `must`, `will be forfeited`, deadlines, amounts) and expanded backwards to clause/section numbers (`GC Sub-Clause 13.3.1 (Page 25)`), producing substantive 150–600 character clause blocks.
+
+3. **Multi-Document Deduplication & Rule Fusion**:
+   - **Root Cause**: Tenders uploaded with multiple volumes (e.g., General Conditions + Special Conditions + Employer Requirements) previously hashed `documentId` into `compliance_items.id`, inserting duplicate rows for PBG, EMD, Turnover, etc.
+   - **Write-Time Deduplication (`DocumentProcessingRuntime.ts`)**: Scoped canonical item ID to `(organizationId, companyId, bidId, category, normalizedTitle)`. Multi-document uploads match existing items and perform rule fusion (takes strictest `stampPaperRequired`, `max(denomination)`, `notarizationRequired`, `udinRequired`, and keeps the most operative verbatim quote).
+   - **Read-Time Deduplication (`compliance.service.ts`)**: Defensive consolidation in `listItems`, `listReviewTasks`, `getReadinessRollup`, `getEvidenceMatches`, and `getRiskFindings`.
+   - **Database Migration**: Consolidated existing duplicate rows in PGlite `./data/postgres`, leaving 9 canonical requirements for `bid-1791271769867-0063q9`.
+   - **Frontend Deduplication**: Added defensive memoized deduplication in `ComplianceTable.tsx`, `BidDetailPage.tsx`, and `useBidComplianceItems.ts` to ensure UI tables and KPI cards remain 100% duplicate-free.
+
+Verification: Full unit, integration, and e2e test suites pass cleanly across all stacks:
+- `@tenderpulse/api`: 28 test suites, 222 tests passed.
+- `@tenderpulse/web`: 18 test suites, 152 tests passed.
+- `apps/ai`: 83 pytest tests passed.
+- All TypeScript workspaces compile cleanly (`npm run type-check`: 0 errors).
+
+## Previous implementation milestone: Configurable Hierarchical Logging (NestJS & FastAPI)
 
 Added environment-driven, multi-level diagnostic logging across both backend services (`apps/api` and `apps/ai`):
 

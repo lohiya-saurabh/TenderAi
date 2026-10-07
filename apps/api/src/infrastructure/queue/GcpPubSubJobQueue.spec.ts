@@ -14,16 +14,20 @@ const mockSubscriptionPath = vi.fn().mockImplementation((proj: string, sub: stri
 
 vi.mock('@google-cloud/pubsub', () => {
   return {
-    PubSub: vi.fn().mockImplementation(() => ({
-      topic: mockTopic,
-    })),
+    PubSub: vi.fn().mockImplementation(function () {
+      return {
+        topic: mockTopic,
+      };
+    }),
     v1: {
-      SubscriberClient: vi.fn().mockImplementation(() => ({
-        subscriptionPath: mockSubscriptionPath,
-        pull: mockPull,
-        acknowledge: mockAcknowledge,
-        modifyAckDeadline: mockModifyAckDeadline,
-      })),
+      SubscriberClient: vi.fn().mockImplementation(function () {
+        return {
+          subscriptionPath: mockSubscriptionPath,
+          pull: mockPull,
+          acknowledge: mockAcknowledge,
+          modifyAckDeadline: mockModifyAckDeadline,
+        };
+      }),
     },
   };
 });

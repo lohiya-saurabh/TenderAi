@@ -228,3 +228,56 @@ def test_api_worker_process_message_fetches_document_from_storage_reference():
     assert data["bid_id"] == "bid_fetch_1"
     assert data["document_id"] == "doc_fetch_1"
     assert len(data["items"]) >= 1
+
+
+@pytest.mark.asyncio
+async def test_toc_and_glossary_definitions_rejected_in_favor_of_operative_clauses(valid_sec_context):
+    toc_text = (
+        "TABLE OF CONTENTS\n"
+        "8 Defect Liability and Maintenance Period . . . . . . . . . . . . 15\n"
+        "13. Performance Security . . . . . . . . . . . . . . . . . . . . . 25\n"
+        "14. Taxes and Duties . . . . . . . . . . . . . . . . . . . . . . . 32\n"
+    )
+    glossary_text = (
+        "SECTION 1 - DEFINITIONS\n"
+        "“Performance Security” means the security(ies) under GC Sub- Clause 13.\n"
+        "“Project Manager” means the person appointed by the Employer in the manner provided in GC Sub-Clause 17.\n"
+    )
+    substantive_gcc_text = (
+        "13. Performance Security\n"
+        "13.3.1 The Contractor shall, within 28 days of the Letter of Acceptance, provide a Performance "
+        "Security for the due performance of the Contract in the amount equivalent to 3% of the Accepted "
+        "Contract Amount. The Performance Security shall be in the form of an unconditional Bank Guarantee.\n"
+        "Failure of the successful Bidder to submit the Performance Security shall constitute sufficient grounds "
+        "for annulment of the award and forfeiture of the Bid Security."
+    )
+
+    request = DocumentExtractionRequest(
+        security_context=valid_sec_context,
+        bid_id="bid_toc_filter_test",
+        document_id="doc_nit_555",
+        document_type="GCC",
+        file_name="GCC_Contract.pdf",
+        pages=[
+            NormalizedPage(page_number=3, text=toc_text),
+            NormalizedPage(page_number=9, text=glossary_text),
+            NormalizedPage(page_number=25, text=substantive_gcc_text),
+        ],
+    )
+
+    response = await ProductionExtractionPipeline().execute(request)
+    assert response.status in ("REVIEW_READY", "HUMAN_REVIEW_REQUIRED")
+
+    # Defect liability was only in TOC — should NOT be emitted
+    defect_item = next((i for i in response.items if i["title"] == "Defect Liability Period (DLP) & Maintenance Guarantee"), None)
+    assert defect_item is None
+
+    # Performance security was in TOC (p3), Glossary (p9), and Substantive (p25)
+    pbg_item = next(i for i in response.items if i["title"] == "Performance Security (PBG) & Security Deposit")
+    assert pbg_item is not None
+    quote = pbg_item["provenance"]["verbatimQuote"]
+    assert "means the security(ies)" not in quote
+    assert "TABLE OF CONTENTS" not in quote
+    assert "The Contractor shall, within 28 days of the Letter of Acceptance, provide a Performance Security" in quote
+    assert pbg_item["provenance"]["pageNumber"] == 25
+

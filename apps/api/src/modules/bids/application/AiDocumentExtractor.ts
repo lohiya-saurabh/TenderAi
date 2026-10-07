@@ -103,10 +103,41 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
       `Retrieved storage object for doc ${document.id}. Normalized ${allPages.length} total pages.`,
     );
 
+    // Helper to detect pure Table of Contents (TOC) / Index pages without operative obligations
+    const isPureTocPage = (text: string): boolean => {
+      if (!text || text.trim().length === 0) return true;
+      const lines = text.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
+      if (lines.length === 0) return true;
+
+      const textLower = text.toLowerCase();
+      const isTocTitle =
+        textLower.includes('table of contents') ||
+        textLower.includes('contents') ||
+        textLower.includes('index of clauses') ||
+        textLower.includes('brief contents');
+
+      let tocLines = 0;
+      for (const line of lines) {
+        if (
+          /\.{3,}|\u2026|\s+\d+$/.test(line) ||
+          /^(section|clause|chapter|part)\s+[\dIVXLCDM]+/i.test(line)
+        ) {
+          tocLines++;
+        }
+      }
+
+      const tocRatio = tocLines / lines.length;
+      const hasOperative = /\b(shall|must|is required to|will be forfeited|undertakes to)\b/i.test(text);
+
+      if (isTocTitle && tocRatio > 0.2 && !hasOperative) return true;
+      if (tocRatio > 0.5 && !hasOperative) return true;
+      return false;
+    };
+
     // If document is large (> 30 pages), execute multi-zone sectional page selection
     let candidatePages = allPages;
     if (allPages.length > 30) {
-      const initialPages = allPages.slice(0, 10);
+      const initialPages = allPages.slice(0, 10).filter((p) => !isPureTocPage(p.text));
       const remainingPages = allPages.slice(10);
 
       const procurementKeywords = [
@@ -163,6 +194,7 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
 
       const scoredPages: { page: NormalizedDocumentPage; score: number }[] = [];
       for (const p of remainingPages) {
+        if (isPureTocPage(p.text)) continue;
         const textLower = p.text.toLowerCase();
         let score = 0;
         for (const kw of procurementKeywords) {
@@ -189,6 +221,11 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
       }
 
       candidatePages = Array.from(combinedMap.values()).sort((a, b) => a.pageNumber - b.pageNumber);
+    } else {
+      const nonTocPages = allPages.filter((p) => !isPureTocPage(p.text));
+      if (nonTocPages.length > 0) {
+        candidatePages = nonTocPages;
+      }
     }
 
     // 3. Fallback or verify SecurityContext

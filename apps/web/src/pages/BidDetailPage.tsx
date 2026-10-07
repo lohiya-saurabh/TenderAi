@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   getBid,
@@ -90,6 +90,24 @@ export const BidDetailPage: React.FC = () => {
     refetch: refetchCompliance,
     setData: setComplianceItems,
   } = useApi<ComplianceItem[]>(fetchCompliance, [bidId]);
+
+  // Memoized & deduplicated compliance items (unconditionally declared before any early returns)
+  const items = useMemo(() => {
+    const raw = complianceItems || [];
+    const seenIds = new Set<string>();
+    const seenKeys = new Set<string>();
+    const result: ComplianceItem[] = [];
+    for (const item of raw) {
+      if (seenIds.has(item.id)) continue;
+      const title = (item as any).title || item.requirement || '';
+      const key = `${(item.category || '').toLowerCase()}:${title.trim().toLowerCase().replace(/\s+/g, ' ')}`;
+      if (seenKeys.has(key)) continue;
+      seenIds.add(item.id);
+      seenKeys.add(key);
+      result.push(item);
+    }
+    return result;
+  }, [complianceItems]);
 
   // Fetch Bid Decision
   const [decision, setDecision] = useState<ReturnType<typeof mapApiDecisionToBidDecision> | null>(null);
@@ -289,7 +307,7 @@ export const BidDetailPage: React.FC = () => {
     );
   }
 
-  const items = complianceItems || [];
+
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>

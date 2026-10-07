@@ -63,7 +63,17 @@ export function useBidComplianceItems(bids: BidSummary[] | null): BidComplianceS
       const failedBidIds: string[] = [];
       for (const { bidId, result } of entries) {
         if (result.ok) {
-          itemsByBid[bidId] = result.data;
+          const seen = new Set<string>();
+          const deduped: ComplianceItem[] = [];
+          for (const item of result.data) {
+            const title = (item as any).title || item.requirement || '';
+            const key = `${(item.category || '').toLowerCase()}:${title.trim().toLowerCase().replace(/\s+/g, ' ')}`;
+            if (!seen.has(key)) {
+              seen.add(key);
+              deduped.push(item);
+            }
+          }
+          itemsByBid[bidId] = deduped;
         } else {
           failedBidIds.push(bidId);
         }

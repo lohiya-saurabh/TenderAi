@@ -122,7 +122,55 @@ export class ComplianceService {
       )
       .orderBy(asc(schema.complianceItems.createdAt));
 
-    return records.map((row) => this.mapComplianceRecord(row));
+    const uniqueMap = new Map<string, (typeof records)[0]>();
+    for (const row of records) {
+      const key = `${row.category}:${row.title.trim().toLowerCase().replace(/\s+/g, ' ')}`;
+      const existing = uniqueMap.get(key);
+      if (!existing) {
+        uniqueMap.set(key, row);
+      } else {
+        const curProv = (row.provenance ?? {}) as any;
+        const exProv = (existing.provenance ?? {}) as any;
+        const curQuote = curProv.verbatimQuote || '';
+        const exQuote = exProv.verbatimQuote || '';
+        const preferCur =
+          (!exQuote && Boolean(curQuote)) ||
+          (exQuote.length < 50 && curQuote.length >= 50) ||
+          ((curProv.confidenceScore || 0) > (exProv.confidenceScore || 0) &&
+            curQuote.length >= 40);
+
+        const chosen = preferCur ? row : existing;
+        const other = preferCur ? existing : row;
+        const chosenRules = (chosen.executionRules ?? {}) as any;
+        const otherRules = (other.executionRules ?? {}) as any;
+
+        const mergedRules = {
+          ...otherRules,
+          ...chosenRules,
+          stampPaperRequired: Boolean(
+            chosenRules.stampPaperRequired || otherRules.stampPaperRequired,
+          ),
+          stampPaperDenominationInr:
+            Math.max(
+              chosenRules.stampPaperDenominationInr || 0,
+              otherRules.stampPaperDenominationInr || 0,
+            ) || undefined,
+          notarizationRequired: Boolean(
+            chosenRules.notarizationRequired || otherRules.notarizationRequired,
+          ),
+          udinRequired: Boolean(
+            chosenRules.udinRequired || otherRules.udinRequired,
+          ),
+        };
+
+        uniqueMap.set(key, {
+          ...chosen,
+          executionRules: mergedRules,
+        });
+      }
+    }
+
+    return Array.from(uniqueMap.values()).map((row) => this.mapComplianceRecord(row));
   }
 
   public async getItemById(bidId: string, itemId: string): Promise<DemoComplianceItem> {
@@ -153,26 +201,13 @@ export class ComplianceService {
   public async listReviewTasks(
     bidId: string,
   ): Promise<DemoComplianceItem[]> {
-    const orgId = await this.getOrgIdForBid(bidId);
-    const records = await this.db
-      .select()
-      .from(schema.complianceItems)
-      .where(
-        and(
-          eq(schema.complianceItems.bidId, bidId),
-          eq(schema.complianceItems.organizationId, orgId),
-        ),
-      )
-      .orderBy(asc(schema.complianceItems.createdAt));
-
-    return records
-      .filter(
-        (row) =>
-          row.status === 'PENDING' ||
-          row.status === 'REVIEW_REQUIRED' ||
-          row.humanReviewRequired,
-      )
-      .map((row) => this.mapComplianceRecord(row));
+    const items = await this.listItems(bidId);
+    return items.filter(
+      (item) =>
+        item.status === 'PENDING' ||
+        item.status === 'REVIEW_REQUIRED' ||
+        item.humanReviewRequired,
+    );
   }
 
   /**
@@ -190,23 +225,13 @@ export class ComplianceService {
     reviewNeeded: number;
     readinessPct: number | null;
   }> {
-    const orgId = await this.getOrgIdForBid(bidId);
-    const records = await this.db
-      .select()
-      .from(schema.complianceItems)
-      .where(
-        and(
-          eq(schema.complianceItems.bidId, bidId),
-          eq(schema.complianceItems.organizationId, orgId),
-        ),
-      );
-
-    const total = records.length;
-    const ready = records.filter((r) => r.status === 'READY' || r.status === 'PASS').length;
-    const flagged = records.filter((r) => r.status === 'FLAGGED' || r.status === 'FAIL').length;
-    const pending = records.filter((r) => r.status === 'PENDING' || r.status === 'MISSING').length;
-    const waived = records.filter((r) => r.status === 'WAIVED' || r.status === 'NOT_APPLICABLE').length;
-    const reviewRequired = records.filter(
+    const items = await this.listItems(bidId);
+    const total = items.length;
+    const ready = items.filter((r) => r.status === 'READY' || r.status === 'PASS').length;
+    const flagged = items.filter((r) => r.status === 'FLAGGED' || r.status === 'FAIL').length;
+    const pending = items.filter((r) => r.status === 'PENDING' || r.status === 'MISSING').length;
+    const waived = items.filter((r) => r.status === 'WAIVED' || r.status === 'NOT_APPLICABLE').length;
+    const reviewRequired = items.filter(
       (r) => r.status === 'REVIEW_REQUIRED' || r.humanReviewRequired,
     ).length;
 
@@ -239,19 +264,9 @@ export class ComplianceService {
       throw new NotFoundError(`Bid project '${bidId}' not found.`);
     }
 
-    const items = await this.db
-      .select()
-      .from(schema.complianceItems)
-      .where(
-        and(
-          eq(schema.complianceItems.bidId, bidId),
-          eq(schema.complianceItems.organizationId, orgId),
-        ),
-      )
-      .orderBy(asc(schema.complianceItems.createdAt));
+    const items = await this.listItems(bidId);
 
-    const matches: EvidenceMatchItem[] = items.map((row) => {
-      const item = this.mapComplianceRecord(row);
+    const matches: EvidenceMatchItem[] = items.map((item) => {
       const hasEvidence = !!item.companyEvidence && !!item.companyEvidence.id;
       let matchStatus: 'MATCHED' | 'UNMATCHED' | 'PARTIAL' | 'EXPIRED' = 'UNMATCHED';
 
@@ -311,16 +326,7 @@ export class ComplianceService {
       throw new NotFoundError(`Bid project '${bidId}' not found.`);
     }
 
-    const items = await this.db
-      .select()
-      .from(schema.complianceItems)
-      .where(
-        and(
-          eq(schema.complianceItems.bidId, bidId),
-          eq(schema.complianceItems.organizationId, orgId),
-        ),
-      )
-      .orderBy(asc(schema.complianceItems.createdAt));
+    const mappedItems = await this.listItems(bidId);
 
     const [decisionRecord] = await this.db
       .select()
@@ -332,9 +338,7 @@ export class ComplianceService {
         ),
       )
       .orderBy(desc(schema.bidDecisions.createdAt))
-      .limit(1);
 
-    const mappedItems = items.map((r) => this.mapComplianceRecord(r));
 
     const statutoryRisks: StatutoryRiskItem[] = [];
     let estimatedFinancialExposureRupees = 0;

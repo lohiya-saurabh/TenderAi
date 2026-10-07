@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { AuthContext, type AuthContextValue } from './AuthContext.js';
-import { login as apiLogin, register as apiRegister, logout as apiLogout, refreshTokens, type AuthUser, type RegisterRequest } from '../api/auth.js';
-import { setTokens, setOnAuthExpired } from '../api/client.js';
+import { login as apiLogin, register as apiRegister, logout as apiLogout, type AuthUser, type RegisterRequest } from '../api/auth.js';
+import { setTokens, setOnAuthExpired, coordinatedRefresh } from '../api/client.js';
 
 interface AuthProviderProps {
   children: React.ReactNode;
@@ -42,10 +42,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       try {
-        const result = await refreshTokens(storedRefreshToken);
-        if (result.ok) {
-          setTokens(result.data.accessToken, result.data.refreshToken);
-        } else {
+        const success = await coordinatedRefresh();
+        if (!success) {
           handleLogout();
         }
       } catch {
