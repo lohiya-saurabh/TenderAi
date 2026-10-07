@@ -1005,14 +1005,23 @@ class ProductionExtractionPipeline:
                         payload["provenance"]["confidenceScore"],
                     )
                     existing["provenance"]["verbatimQuote"] = payload["provenance"]["verbatimQuote"]
-                    existing["provenance"]["sectionOrClause"] = payload["provenance"]["sectionOrClause"]
+                    clause_ref = (
+                        payload["provenance"].get("clauseReference")
+                        or payload["provenance"].get("sectionOrClause")
+                        or existing["provenance"].get("clauseReference")
+                        or existing["provenance"].get("sectionOrClause")
+                    )
+                    existing["provenance"]["clauseReference"] = clause_ref
+                    existing["provenance"]["sectionOrClause"] = clause_ref
                     existing["provenance"]["pageNumber"] = payload["provenance"]["pageNumber"]
 
         formatted_items = list(consolidated_map.values())
         for item in formatted_items:
             pages = sorted(item.pop("supporting_pages", [item["provenance"]["pageNumber"]]))
             if len(pages) > 1:
-                item["provenance"]["sectionOrClause"] = f"Clauses across Pages {', '.join(str(p) for p in pages)}"
+                combined_clause = f"Clauses across Pages {', '.join(str(p) for p in pages)}"
+                item["provenance"]["clauseReference"] = combined_clause
+                item["provenance"]["sectionOrClause"] = combined_clause
             item["provenance"]["sourceDocumentId"] = request.document_id
             item["provenance"]["sourceFileName"] = request.file_name
 
