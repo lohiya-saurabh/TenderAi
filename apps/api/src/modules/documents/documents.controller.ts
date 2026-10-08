@@ -135,7 +135,7 @@ export class DocumentsController {
   @Get(['bids/:bidId/extraction-progress', 'bids/:bidId/progress', 'bids/:bidId/documents/stream'])
   @RequirePermission(Permissions.BIDS_READ)
   streamExtractionProgress(
-    @Param('bidId') _bidId: string,
+    @Param('bidId') bidId: string,
     @Req() req: Request,
     @Res() res: Response,
   ): void {
@@ -151,42 +151,67 @@ export class DocumentsController {
     };
 
     // NestJS stays responsible for upload initiation and queue handoff only.
-    // The actual parsing and extraction run asynchronously in the FastAPI worker.
+    // The actual parsing and extraction run asynchronously in the worker.
     sendEvent({
       step: 'PARSING_PAGES',
       progress: 25,
       message: 'Document accepted. Queued for async worker processing...',
     });
 
-    const t1 = setTimeout(() => {
-      sendEvent({
-        step: 'EXTRACTING_COMPLIANCE',
-        progress: 55,
-        message: 'FastAPI worker is processing the tender document in the background...',
-      });
-    }, 700);
+    let closed = false;
+    let pollInterval: NodeJS.Timeout | null = null;
+    let pollCount = 0;
+    const maxPolls = 120; // 120s safety limit
 
-    const t2 = setTimeout(() => {
-      sendEvent({
-        step: 'VERIFYING_CITATIONS',
-        progress: 85,
-        message: 'Awaiting worker completion and persisted compliance results...',
-      });
-    }, 1500);
+    const check = async () => {
+      if (closed) return;
+      pollCount++;
+      try {
+        const prog = await this.documentsService.getBidExtractionProgress(bidId);
+        if (prog.status === 'COMPLETED') {
+          sendEvent({
+            step: 'COMPLETED',
+            progress: 100,
+            status: 'REVIEW_READY',
+            message: prog.message,
+          });
+          if (pollInterval) clearInterval(pollInterval);
+          if (typeof res.end === 'function') res.end();
+          return;
+        }
 
-    const t3 = setTimeout(() => {
-      sendEvent({
-        step: 'COMPLETED',
-        progress: 100,
-        status: 'QUEUED',
-        message: 'Upload accepted. The asynchronous processing pipeline is now responsible for compliance extraction.',
-      });
-    }, 2300);
+        if (prog.status === 'FAILED') {
+          sendEvent({
+            step: 'FAILED',
+            progress: 100,
+            status: 'FAILED',
+            message: prog.message,
+          });
+          if (pollInterval) clearInterval(pollInterval);
+          if (typeof res.end === 'function') res.end();
+          return;
+        }
+
+        sendEvent({
+          step: prog.step,
+          progress: Math.min(90, prog.progress + Math.min(20, pollCount * 2)),
+          message: prog.message,
+        });
+
+        if (pollCount >= maxPolls) {
+          if (pollInterval) clearInterval(pollInterval);
+          if (typeof res.end === 'function') res.end();
+        }
+      } catch (err) {
+        console.warn(`[DocumentsController] Error polling extraction progress for bid ${bidId}:`, err);
+      }
+    };
+
+    pollInterval = setInterval(check, 1000);
 
     req.on('close', () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
+      closed = true;
+      if (pollInterval) clearInterval(pollInterval);
     });
   }
 }

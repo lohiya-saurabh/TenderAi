@@ -24,7 +24,10 @@ class ContextAssembler:
     """
 
     DEF_PATTERN = re.compile(r'"([^"]+)"\s+(means|shall\s+mean|refers\s+to|is\s+defined\s+as)\b', re.IGNORECASE)
-    REF_PATTERN = re.compile(r'\b(Clause|Section|Article|Part)\s+(\d+(\.\d+)*)\b', re.IGNORECASE)
+    REF_PATTERN = re.compile(
+        r'\b(Clause|Sub-Clause|Section|Article|Part|Schedule|Annexure|Appendix)\s*[-–—]?\s*([A-Za-z\d]+(?:\.[A-Za-z\d]+)*)\b',
+        re.IGNORECASE,
+    )
 
     def assemble_contexts(
         self,

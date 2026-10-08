@@ -1,4 +1,5 @@
 import re
+from typing import ClassVar
 
 from tenderpulse_ai.domain.models import (
     CandidatePassage,
@@ -14,13 +15,22 @@ class CandidateDetector:
     Filters out boilerplate headers/footers to reduce LLM tokens.
     """
 
-    RULES = [
+    RULES: ClassVar[list[tuple[re.Pattern, str]]] = [
         (re.compile(r"\b(shall|must|required\s+to|mandated\s+to)\b", re.IGNORECASE), "DEONTIC_MODAL"),
         (re.compile(r"\b(eligible\s+bidders?|eligibility\s+criteria)\b", re.IGNORECASE), "ELIGIBILITY"),
         (re.compile(r"\b(earnest\s+money|EMD|security\s+deposit|bank\s+guarantee)\b", re.IGNORECASE), "FINANCIAL_SECURITY"),
         (re.compile(r"\b(within\s+\d+\s+days|deadline|due\s+date|closing\s+time)\b", re.IGNORECASE), "DEADLINE"),
         (re.compile(r"\b(stamp\s+paper|notariz(ed|ation)|authorized\s+signatory|udin)\b", re.IGNORECASE), "EXECUTION_RULE"),
         (re.compile(r"\b(turnover|net\s+worth|solvency|audit(ed)?\s+balance\s+sheet)\b", re.IGNORECASE), "FINANCIAL_THRESHOLD"),
+        (re.compile(r"\b(conditions?\s+precedent|appointed\s+date|commercial\s+operation\s+date|COD)\b", re.IGNORECASE), "CONTRACT_LIFECYCLE"),
+        (re.compile(r"\b(liquidated\s+damages|delay\s+damages|damages\s+for\s+delay)\b", re.IGNORECASE), "DAMAGES_PENALTY"),
+        (re.compile(r"\b(escrow\s+account|waterfall|priority\s+of\s+payments)\b", re.IGNORECASE), "ESCROW_WATERFALL"),
+        (re.compile(r"\b(insurance|indemnity|co-insured|all-risk)\b", re.IGNORECASE), "INSURANCE_COVENANT"),
+        (re.compile(r"\b(dispute\s+resolution|arbitration|SAROD|conciliation)\b", re.IGNORECASE), "DISPUTE_RESOLUTION"),
+        (re.compile(r"\b(mobile\s+crane|ambulance|medical\s+aid|rescue\s+post|traffic\s+census|weigh-in-motion)\b", re.IGNORECASE), "SAFETY_OPERATIONS"),
+        (re.compile(r"\b(applicable\s+permits|schedule-e|schedule\s+e|clearance)\b", re.IGNORECASE), "STATUTORY_PERMITS"),
+        (re.compile(r"\b(maintenance\s+requirements?|level\s+of\s+service|time\s+limit\s+for\s+rectification|schedule-k|schedule\s+k)\b", re.IGNORECASE), "MAINTENANCE_SLA"),
+        (re.compile(r"\b(project\s+milestone|completion\s+schedule|schedule-g|schedule\s+g)\b", re.IGNORECASE), "CONSTRUCTION_MILESTONES"),
     ]
 
     def detect_candidates(

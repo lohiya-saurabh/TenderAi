@@ -21,7 +21,8 @@ import { Button } from '../components/common/Button.js';
 import { ErrorBanner } from '../components/common/ErrorBanner.js';
 import { LoadingSkeleton } from '../components/common/LoadingSkeleton.js';
 import { Modal } from '../components/common/Modal.js';
-import { PlusCircleIcon, ChevronRightIcon } from '../components/common/Icons.js';
+import { StatusBadge } from '../components/common/StatusBadge.js';
+import { PlusCircleIcon, ChevronRightIcon, SpinnerIcon } from '../components/common/Icons.js';
 import { DocumentUploader } from '../components/bid/DocumentUploader.js';
 import { ExtractionProgress } from '../components/progress/ExtractionProgress.js';
 import { ComplianceTable } from '../components/compliance/ComplianceTable.js';
@@ -99,7 +100,7 @@ export const BidDetailPage: React.FC = () => {
     const result: ComplianceItem[] = [];
     for (const item of raw) {
       if (seenIds.has(item.id)) continue;
-      const title = (item as any).title || item.requirement || '';
+      const title = (item as { title?: string }).title || item.requirement || '';
       const key = `${(item.category || '').toLowerCase()}:${title.trim().toLowerCase().replace(/\s+/g, ' ')}`;
       if (seenKeys.has(key)) continue;
       seenIds.add(item.id);
@@ -135,6 +136,38 @@ export const BidDetailPage: React.FC = () => {
       fetchDecision();
     }
   }, [bid, fetchDecision]);
+
+  // Check if any document or the bid itself is currently processing/analyzing
+  const hasInFlightProcessing = useMemo(() => {
+    if (isProcessing) return true;
+    if (bid?.status === 'ANALYZING') return true;
+    if (bid?.documents?.some((d) => d.status === 'PROCESSING' || d.status === 'QUEUED_FOR_EXTRACTION')) return true;
+    return false;
+  }, [isProcessing, bid]);
+
+  // When all documents have reached a settled status and bid is no longer analyzing, clear isProcessing
+  React.useEffect(() => {
+    if (isProcessing && bid?.documents && bid.documents.length > 0) {
+      const allSettled = bid.documents.every(
+        (d) => d.status !== 'PROCESSING' && d.status !== 'QUEUED_FOR_EXTRACTION',
+      );
+      if (allSettled && bid.status !== 'ANALYZING') {
+        setIsProcessing(false);
+      }
+    }
+  }, [isProcessing, bid]);
+
+  // Auto-poll bid details and compliance matrix while in-flight extraction is running
+  React.useEffect(() => {
+    if (!hasInFlightProcessing) return;
+
+    const interval = setInterval(() => {
+      refetchBid();
+      refetchCompliance();
+    }, 2500);
+
+    return () => clearInterval(interval);
+  }, [hasInFlightProcessing, refetchBid, refetchCompliance]);
 
   const handleReevaluate = useCallback(async () => {
     setDecisionLoading(true);
@@ -277,9 +310,9 @@ export const BidDetailPage: React.FC = () => {
   };
 
   // -------------------------------------------------------------------------
-  // Loading state
+  // Loading state (initial cold load only)
   // -------------------------------------------------------------------------
-  if (bidLoading) {
+  if (bidLoading && !bid) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         <LoadingSkeleton height="40px" />
@@ -407,7 +440,7 @@ export const BidDetailPage: React.FC = () => {
           </p>
         </div>
 
-        {complianceLoading ? (
+        {complianceLoading && items.length === 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             <LoadingSkeleton height="80px" />
             <LoadingSkeleton height="80px" />
@@ -426,12 +459,12 @@ export const BidDetailPage: React.FC = () => {
       </div>
 
       {/* 4. Risks & missing information */}
-      {!complianceLoading && !complianceError && (
+      {(!complianceLoading || items.length > 0) && !complianceError && (
         <ObligationsCard items={items} />
       )}
 
       {/* 5. Review tasks */}
-      {!complianceLoading && !complianceError && (
+      {(!complianceLoading || items.length > 0) && !complianceError && (
         <ReviewNeededCard items={items} />
       )}
 
@@ -525,9 +558,12 @@ export const BidDetailPage: React.FC = () => {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--color-surface-muted)' }}>
-                    {doc.status.replace(/_/g, ' ')}
-                  </span>
+                  <StatusBadge
+                    status={doc.status}
+                    iconOnly={doc.status === 'PROCESSING' || doc.status === 'QUEUED_FOR_EXTRACTION'}
+                    label={doc.status === 'PROCESSING' ? 'Processing extraction…' : doc.status === 'QUEUED_FOR_EXTRACTION' ? 'Queued for extraction…' : undefined}
+                    size="sm"
+                  />
                   <Button variant="ghost" size="sm" onClick={() => handleDownload(doc.id)}>
                     Download
                   </Button>
@@ -538,7 +574,14 @@ export const BidDetailPage: React.FC = () => {
                       onClick={() => handleReprocessDocument(doc)}
                       disabled={reprocessingDocId !== null || doc.status === 'PROCESSING' || doc.status === 'QUEUED_FOR_EXTRACTION'}
                     >
-                      {reprocessingDocId === doc.id ? 'Queueing…' : 'Reprocess'}
+                      {reprocessingDocId === doc.id ? (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <SpinnerIcon size={12} />
+                          <span>Queueing…</span>
+                        </span>
+                      ) : (
+                        'Reprocess'
+                      )}
                     </Button>
                   )}
                   {canUploadDoc && (

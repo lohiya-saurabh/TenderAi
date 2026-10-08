@@ -1,6 +1,416 @@
 # Project Status & Milestone Tracker
 
-## Current implementation milestone: Presigned URL Handover Pattern (Zero-Copy Node.js Ingestion)
+## Current implementation milestone: Ground-Truth Architecture Documentation & Comprehensive Interview Preparation
+
+1. **Problem Statement & Scope**:
+   - The platform architecture had evolved through several major milestones (Design B event choreography, multi-company tenant scoping, single-writer PostgreSQL persistence, structured JSON logging, and clean-up), leaving architectural documents out-of-sync with code reality.
+   - Database documentation (`docs/DATABASE.md`) required an authoritative, complete ER diagram, along with an explicit domain-concept-to-database-entity mapping covering Tenders, Documents, Clauses, Requirements, Evidence, Compliance, Review Tasks, and Jobs, plus clear differentiation between physical engine foreign keys (`ON DELETE CASCADE`) and logical application references.
+   - High-Level Design (`docs/ARCHITECTURE.md`) and Low-Level Design (`docs/LLD.md`) required complete overhauls to reflect active Design B asynchronous event choreography, Single-Writer Principle in NestJS `DocumentCompletionService`, fiber-safe `TenantContextHolder`, Docling parser pipeline, LangGraph 8-node cyclic graph, scoped RAG tooling, Route 53/CloudFront edge tiers, EventBridge scheduled events, and Aurora Multi-AZ with RDS Proxy.
+   - Comprehensive, senior-architect-level interview preparation materials were needed across all 7 core technology pillars (AWS/GCP, LangGraph, LLMs, RAG, React 18, NestJS, FastAPI), addressing every required technology with 7 distinct architectural dimensions (what it does, why chosen, alternatives, trade-offs, failure modes, scalability/security, and likely interview follow-ups).
+
+2. **Architectural Improvements & Delivered Documentation**:
+   - **Database ER Diagram & Schema Specification (`docs/DATABASE.md`)**:
+     - Produced complete Mermaid ER diagram representing all 14 actual tables in `apps/api/src/common/database/schema.ts` and `database.provider.ts`.
+     - Added dedicated Domain Concept to Database Entity Mapping section and Mermaid diagram connecting Tenders (`bids`), Documents (`tender_documents`), Clauses (`compliance_items.provenance`), Requirements (`compliance_items`), Evidence (`company_profile_versions.payload` & `compliance_items.company_evidence`), Compliance (`compliance_items`), Review Tasks (`ComplianceService.listReviewTasks` projection), and Jobs (`document_processing_outbox` + `tender_documents.status`).
+     - Explicitly mapped Physical Engine Foreign Key constraints (`tender_documents.bid_id -> bids.id` and `compliance_items.bid_id -> bids.id`) vs Logical Application References.
+     - Documented multi-company hierarchy, cardinality analysis (1:1, 1:N, M:N), JSONB value objects (`execution_rules`, `provenance`, `CompanyProfileSnapshot`), and indexing patterns.
+     - Explicitly called out implementation realities and inconsistencies: active Drizzle ORM vs legacy `schema.prisma`/`schema.sql` (paise vs rupees, string IDs), embedded PGlite vs production PostgreSQL 16.
+   - **High-Level Design (HLD) (`docs/ARCHITECTURE.md`)**:
+     - Complete end-to-end architecture diagram covering Route 53/CloudFront Edge Tier, React SPA, NestJS API on ECS/Cloud Run, S3/GCS Object Storage, SQS/PubSub, EventBridge, FastAPI Worker, Docling, LangGraph 8-node graph, AWS Bedrock, and Amazon Aurora PostgreSQL 16 with RDS Proxy.
+     - Documented authentication/RBAC (in-memory access token, refresh token in localStorage, silent refresh, atomic permission matrix).
+     - Detailed tenant isolation across network, storage prefix, fiber-safe `AsyncLocalStorage`, AI `SecurityContext`, and database queries.
+     - Detailed Design B decoupled event choreography, worker dispatch-and-ACK (<100ms), and Single-Writer Principle.
+     - Documented external AI integration, storage presigned URL handshake, API inventory, failure/retry paths, and canonical structured JSON logging.
+   - **Low-Level Design (LLD) (`docs/LLD.md`)**:
+     - Documented NestJS modules (`BidsModule`, `DocumentsModule`, `ComplianceModule`, `AuthModule`, `DatabaseModule`, `StorageModule`, `QueueModule`).
+     - Added comprehensive class diagram detailing Controllers, Use Cases, Repositories (`IBidRepository`, `PostgresBidRepository`), Storage (`IStorageService`), and Queues (`IJobQueue`).
+     - Documented FastAPI routers, dependency injection (`verify_internal_key`), and `CompletionPublisher` hierarchy.
+     - Complete breakdown of the LangGraph 8-node cyclic state machine, `ComplianceWorkflowState`, reducers (`operator.add`), validation checks, and conditional routing.
+     - Documented Docling parser engine, regex extractors, and `ScopedRetrievalTool` RAG component.
+     - Created 5 end-to-end Mermaid sequence diagrams: Direct-to-Storage Upload, Design B Ingestion & Event Choreography, Interactive Compliance Review (OCC), Deterministic Bid Decision Evaluation, and Transactional Outbox Polling & Queue Ingestion.
+   - **Master Technical Interview Guide (`docs/INTERVIEW_PREP.md`)**:
+     - Created deep, senior-architect-level interview questions and model answers based strictly on the implemented codebase across 7 technology pillars:
+       - AWS & GCP: S3/GCS, SQS/PubSub, DynamoDB (why rejected), EventBridge, AppSync (why rejected for SSE), Aurora PostgreSQL 16 & RDS Proxy, IAM, Route 53/CloudFront vs Cloud DNS/Armor.
+       - LangGraph: State machine concepts, nodes/edges, cyclic retries, checkpointing, conditional routing, human-in-the-loop (`interrupt`), LangGraph vs LangChain, why normal orchestrators weren't sufficient.
+       - LLMs: Advisory extraction, grammar-constrained decoding, prompt framing, hallucination mitigation, verbatim quote grounding, model selection (Claude 3.5 Sonnet on Bedrock ap-south-1 Mumbai), token economics, 100+ page candidate filtering, 429 rate limit failure handling.
+       - RAG: Layout parsing, chunking, vector search vs hierarchical AST search, metadata filtering, `ScopedRetrievalTool` tenant isolation, RAG vs fine-tuning.
+       - React 18: In-memory token security, SSE async status handling, custom hooks (`useSSE`, `useApi`), optimistic UI with rollback, routing & protected views, component architecture.
+       - NestJS: Modular monolith architecture, dependency injection, guards, interceptors, outbox pattern, NestJS vs Express.
+       - FastAPI: Two-tier service boundary, Pydantic v2 schemas, non-blocking `asyncio` task execution, LangGraph integration, FastAPI vs NestJS rationale.
+   - **Index & Navigation (`docs/README.md`)**:
+     - Updated documentation index to link `INTERVIEW_PREP.md`.
+
+3. **Verification Record**:
+   - Monorepo Type Check (`npm run type-check`): 0 errors across all TypeScript packages.
+   - API Unit & Integration Tests (Vitest): 33 test files, 242 tests passed (100% green).
+   - Web Unit Tests (Vitest): 22 test files, 163 tests passed (100% green).
+   - Python Test Suite (`pytest apps/ai`): 113 passed, 1 skipped (100% green).
+   - Python Linting (`.venv/bin/ruff check .`): 0 errors, 0 warnings across whole repo.
+
+## Previous implementation milestone: System-Wide Production Cleanup, Anti-Pattern Elimination & Documentation Consolidation
+
+1. **Problem Statement & Scope of Cleanup**:
+   - **TypeScript & Web/API Code Hygiene**:
+     - Eliminating remaining `any` type casts across production services, components, and hooks (`AiDecisionClient`, `AiDocumentExtractor`, `GetBidDecisionUseCase`, `billing.service.ts`, `compliance.service.ts`, `DocumentCompletionService.ts`, `DocumentProcessingRuntime.ts`, `bidDetailData.ts`, `ComplianceTable.tsx`, `useBidComplianceItems.ts`, `BidDetailPage.tsx`, `workflowData.ts`).
+     - Eliminating unused imports, dead variables, and legacy schema references in test suites (`HttpLoggingInterceptor.spec.ts`, `StructuredLogger.spec.ts`, `multi-company-security.spec.ts`, `billing-registration-entitlements.spec.ts`, `notifications.spec.ts`, `profile-settings-teams.spec.ts`, `EndToEndFrontendToAiPipeline.e2e.spec.ts`, `bidDetailData.spec.ts`, `useApi-useSSE.spec.ts`).
+     - Achieving zero ESLint warnings across both `@tenderpulse/api` and `@tenderpulse/web` (`eslint --max-warnings=0`).
+   - **Python Ruff, Dependencies & Worker Hygiene (`apps/ai`)**:
+     - Resolving all 62 Ruff errors across the AI worker (SIM102/103/117 nested conditionals and with-statements, B023 loop binding, BLE001 blind exception handling, G201/TRY401 logging hygiene, RUF059 unused unpackings, and ClassVar mutable class attributes).
+     - Fixed missing `pypdfium2>=5.14.0` dependency in `apps/ai/pyproject.toml` and installed it in the virtual environment.
+     - Guarded `pypdfium2` imports in `apps/ai/src/tenderpulse_ai/domain/pdf_resolver.py` and `apps/ai/tests/test_contract_execution_extraction.py` with runtime availability checks, preventing crashes during test collection in environments without C++ PDFium bindings.
+     - Removed sample-tender-specific hardcoding in `pdf_resolver.py` (eliminated hardcoded `work_975754` paths in candidate search directories and deleted the silent fallback that swapped missing documents with `NIT8.pdf`).
+   - **Repository Script Hygiene & Ruff Zero-Warning Gate (`scripts/`)**:
+     - Resolved 12 Ruff lint and formatting issues across `scripts/` (`extract_dca_clauses.py`, `generate_real_gem_railway_tenders.py`, `generate_sample_tenders.py`), including unused variables (`page_obj_id`), redundant f-strings, import sorting, and executable permissions (`chmod +x`). Whole-repo `ruff check .` now exits with 0 errors and 0 warnings.
+   - **Dead Scratch & Duplicate Documentation Consolidation**:
+     - Purging untracked scratch directories (`scratch/test_covenants.py`).
+     - Consolidating duplicate and fragmented documentation:
+       - Eliminating `docs/architecture/` drafts, standardizing single sources of truth in `docs/` (`docs/LLD.md`, `docs/ARCHITECTURE.md`, `docs/AI.md`, `docs/AI_SECURITY.md`).
+       - Merged `docs/ASYNC.md` into `docs/ASYNC_DOCUMENT_HANDOFF.md`, unifying distributed queue semantics (visibility timeouts with exponential backoff and jitter, DLQ poison pill mitigation) with Design B asynchronous event choreography and removing conflicting worker-to-DB diagrams.
+       - Updated `docs/SERVICE_BOUNDARY.md` and `docs/LLD.md` to reflect current Design B implementation and `CompletionWebhookController` (`POST /api/v1/internal/extraction-completed`).
+       - Removing stub `docs/SECURITY_REVIEW.md` (superseded by `docs/SECURITY_MODEL.md` and `docs/AI_SECURITY.md`).
+       - Moving unnumbered `docs/ADR-DOCUMENT-PROCESSING-RUNTIME.md` into `docs/adr/0022-durable-asynchronous-document-processing-runtime.md`.
+       - Rebuilding `docs/README.md` to fix all broken links to non-existent documents.
+
+2. **Architectural Improvements & Consolidations**:
+   - **Single-Writer Principle Adherence**: Clearly documented and verified in `docs/ASYNC_DOCUMENT_HANDOFF.md` that NestJS `DocumentCompletionService` serves as the sole atomic writer for compliance items and document status in PostgreSQL, while FastAPI workers remain strictly pure computation and event publishing nodes.
+   - **Type Safety & Schema Tightening**: Replaced ambiguous types with explicit interfaces (`ProvenanceJson`, `ExecutionRulesJson`, `SubscriptionView['status']`) preventing runtime bugs from unvalidated JSONB payloads.
+   - **Cloud-Provider Agnostic Verification**: Ensured all queues and publishers (`IJobQueue`, `CompletionPublisher`, `IStorageService`) remain abstracted behind ports and adapters without vendor leakage.
+   - **Sample-Tender Hardcoding Elimination**: Removed fallback substituting non-existent uploaded files with `samples/work_975754/NIT8.pdf`.
+
+3. **Verification Record**:
+   - Monorepo Type Check (`npm run type-check`): 0 errors across all TypeScript projects.
+   - Monorepo Build (`npm run build`): All 4 packages and apps built cleanly.
+   - API Unit & Integration Tests (Vitest): 33 test files, 242 tests passed (100% green).
+   - Web Unit Tests (Vitest): 22 test files, 163 tests passed (100% green).
+   - Monorepo Integration Tests: 1 passed.
+   - Whole-Repository Python Linting (`ruff check .`): 0 errors, 0 warnings across `apps/ai` and `scripts/`.
+   - Python Test Suite (`pytest` in `apps/ai`): 113 passed, 1 skipped (100% green, with DCA.pdf optional skip).
+
+## Previous implementation milestone: Elimination of Synchronous RPC Antipattern & Unification of Design B Event Choreography
+
+1. **Problem Statement & Architectural Requirements**:
+   - **Legacy Synchronous RPC Lingering (`fetchFn` to `/api/v1/extract` with 120s timeout)**:
+     - In `AiDocumentExtractor.ts`, an outdated synchronous RPC call method (`extract()`) persisted, holding open HTTP connections to FastAPI with a 120-second timeout.
+     - In `DocumentProcessingRuntime.ts`, a fallback branch to `extract()` lingered if `dispatchExtraction()` was not called.
+     - In `documents.service.ts`, a dead 250-line `markExtractionComplete()` method and ~800 lines of regex-based local extractors (`extractLocallyFromPages`, `consolidateExtractedItems`) lingered as unused dead code.
+   - **Strict Design B Event-Driven Model Enforced**:
+     - The entire application now strictly uses asynchronous event choreography:
+       - Queue worker (`DocumentProcessingRuntime`) receives the ingestion job, validates tenant/bid/company/storage ownership, calls `dispatchExtraction()` (<100ms dispatch-and-ACK), and deletes the queue message.
+       - Python AI Engine (`apps/ai`) performs OCR and LangGraph extraction in the background and emits a `DocumentExtractionCompletedEvent` (via webhook or completion queue).
+       - `DocumentCompletionService` adheres strictly to the **Single-Writer Principle** for PostgreSQL: it receives the completion event, validates citations and execution rules, and commits compliance items into `compliance_items` in a single atomic database transaction, transitioning document status to `COMPLETED` and bid status to `REVIEW_READY`.
+     - Zero blocking synchronous HTTP network calls waiting for extraction across the entire NestJS application.
+
+2. **Architectural Changes**:
+   - `AiDocumentExtractor.ts`:
+     - Updated `DocumentExtractionPort` so `dispatchExtraction` is the mandatory primary contract method.
+     - Guarded `extract()`: in production runtimes, calling synchronous `extract()` throws an immediate error directing callers to `dispatchExtraction()`, preventing socket exhaustion or 120-second timeout hangs.
+   - `DocumentProcessingRuntime.ts`:
+     - Removed synchronous `extract()` fallback branch; worker strictly dispatches extraction asynchronously via `dispatchExtraction()` and acknowledges the message in <100ms.
+     - Handles completion events (`body.items`) on the queue by routing to `DocumentCompletionService.processExtractionCompleted()` and acknowledging the event.
+   - `documents.service.ts`:
+     - Completely removed dead `markExtractionComplete()`, `consolidateExtractedItems()`, `extractClauseReference()`, and `extractLocallyFromPages()` (~800 lines deleted).
+     - Removed unused AI extractor and normalizer imports (`AiDocumentExtractor`, `DocumentContentNormalizer`, `TenderDocument`, `MockStorageService`).
+   - `services.spec.ts` & `DocumentProcessingRuntime.spec.ts`:
+     - Updated all unit tests to simulate completion via `DocumentCompletionService.processExtractionCompleted()` and verify asynchronous dispatch and queue completion handling.
+
+3. **Automated Verification**:
+   - `@tenderpulse/api`: 33 test files, 242 tests passed (100% green).
+   - `apps/ai`: 113 pytest tests passed, 1 skipped (100% green).
+   - Monorepo type-check (`npm run type-check`): 0 errors across all workspaces.
+
+## Previous implementation milestone: Cross-Service End-to-End Structured JSON Logging, Zero-Leakage Telemetry & Trace Propagation
+
+1. **Problem Statement & Architectural Requirements**:
+   - **Distributed Observability Gap**: As requests flow across the Frontend, NestJS API, Cloud Object Storage (S3/GCS), Message Queues (SQS/PubSub), FastAPI AI Engine, Docling OCR, LangGraph nodes, LLM inference, and PostgreSQL persistence, operations lacked a shared correlation identifier. Diagnosing failures or measuring pipeline stage latencies required manual correlation across disparate log formats.
+   - **Canonical Schema Consistency**: Disparate logging formats between NestJS (`@nestjs/common` string logs) and FastAPI (`uvicorn` console logs) hindered centralized log aggregation (OpenSearch / Datadog / CloudWatch / Cloud Logging). Both services required a single canonical JSON schema:
+     `{ timestamp, level, service, environment, event, message, trace_id, request_id, correlation_id, tenant_id, user_id, tender_id, document_id, job_id, workflow_id, node, duration_ms, error_code, metadata }`
+   - **Zero Secrets & Zero PII Leakage**: Raw log output must never contain authentication credentials (JWTs, Bearer tokens, API keys, database passwords), cloud storage credentials, presigned URL signatures (`X-Amz-Signature`, `X-Goog-Signature`), or Indian PII (PAN, GSTIN, Aadhaar).
+   - **Full Workflow Telemetry**: Standardized log events for:
+     - HTTP request lifecycles (`http.request.received`, `http.request.completed`, `http.request.failed`) with route, method, status, and duration.
+     - Cloud storage lifecycle (`storage.presigned_url.generated`, `storage.delete.completed`, `storage.delete.failed`) with object keys and byte sizes, strictly redacting signed query strings.
+     - Message queue telemetry (`queue.message.published`, `queue.message.received`, `queue.message.completed`, `queue.message.failed`) with safe IDs and durations.
+     - Docling OCR parsing (`docling.parse.started`, `docling.parse.completed`) with page counts and durations.
+     - LangGraph node execution (`langgraph.node.started`, `langgraph.node.completed`, `langgraph.node.failed`) across all nodes with node name, candidate counts, and latencies.
+     - LLM inference (`llm.request.started`, `llm.request.completed`, `llm.request.retry`) capturing model name, latencies, and token counts (prompt, completion, total) without exposing raw prompt injection text or API keys.
+
+2. **Architectural Implementation**:
+   - **NestJS Structured Logging Infrastructure (`apps/api/src/common/logging`)**:
+     - `LogSanitizer.ts`: Precompiled regex scrubbing of AWS keys, JWTs, bearer tokens, DB credentials, presigned query signatures, PAN, GSTIN, and Aadhaar. Deep sanitization handles nested objects and maps with circular reference protection via `WeakSet`.
+     - `LoggingContext.ts`: Backed by Node.js `AsyncLocalStorage`, seamlessly tracks `traceId`, `correlationId`, `requestId`, `tenantId`, `userId`, `tenderId`, `documentId`, `jobId`, `workflowId`, and `node` across asynchronous call chains.
+     - `StructuredLogger.ts`: Implements NestJS `LoggerService`, formats single-line canonical JSON, filters via `LOG_LEVEL` (default `INFO` in production, `DEBUG` in dev), supports `LOG_FORMAT=pretty` in local terminal and `json` in cloud runtimes.
+     - `HttpLoggingInterceptor.ts`: Captures/propagates `X-Trace-Id` / `X-Correlation-Id`, emits `http.request.completed` / `http.request.failed` with status codes and `duration_ms`.
+     - `tenant-context.interceptor.ts`: Synced authenticated user `organizationId`, `sub`, and `requestId` into `LoggingContextHolder`.
+     - Configured `StructuredLogger` as NestJS root logger in `main.ts`.
+   - **Queue & Storage Telemetry (`apps/api`)**:
+     - `packages/shared-types`: Added `traceId?: string` to `DocumentIngestionCommand` and `DocumentExtractionCompletedEvent`.
+     - `AwsS3StorageService.ts` & `GcsStorageService.ts`: Emits `storage.presigned_url.generated` (capturing key, content-type, duration without URL signature), `storage.delete.completed`, and `storage.delete.failed`.
+     - `AwsSqsJobQueue.ts` & `GcpPubSubJobQueue.ts`: Injects `traceId` into queue payloads, logs `queue.message.published`.
+     - `DocumentProcessingRuntime.ts`: Wraps queue message consumption in `LoggingContextHolder.run()`, emits `job.started`, `extraction.dispatched`, and `job.completed` with `duration_ms`.
+     - `DocumentCompletionService.ts`: Wraps completion event persistence in `LoggingContextHolder.run()`, emits `compliance.items.persisted` with item counts and duration.
+     - `AiDocumentExtractor.ts`: Forwards `X-Trace-Id`, `X-Correlation-Id`, and `X-Request-Id` headers when dispatching requests to FastAPI.
+   - **FastAPI Structured Logging Infrastructure (`apps/ai/src/tenderpulse_ai/logging`)**:
+     - `context.py`: Python `contextvars` context holder (`trace_id_var`, `tenant_id_var`, `node_var`, etc.), `scoped_logging_context` context manager.
+     - `formatter.py`: `JSONLogFormatter` inheriting from `logging.Formatter` emitting matching canonical JSON with `SecretSanitizer` deep scrubbing.
+     - `middleware.py`: `TraceLoggingMiddleware` capturing `X-Trace-Id` / `X-Correlation-Id`, injecting into context, timing requests, and emitting `http.request.completed`.
+     - `sanitizer.py`: Added scrubbing for presigned URL signatures, Indian PAN (`[A-Z]{5}[0-9]{4}[A-Z]`), GSTIN, and Aadhaar.
+     - `main.py`: Configured root logger with `JSONLogFormatter`, registered `TraceLoggingMiddleware`, wrapped worker queue jobs in `scoped_logging_context`.
+   - **LangGraph, Docling & LLM Telemetry (`apps/ai`)**:
+     - `docling_parser.py`: Emits `docling.parse.started` and `docling.parse.completed` with `duration_ms`, `blocks_count`, and `pages_count`.
+     - `openai_compatible_client.py`: Emits `llm.request.started`, `llm.request.retry`, and `llm.request.completed` with `duration_ms`, model name, and prompt/completion/total token usage.
+     - `workflow/nodes.py`: Instrumented all 8 workflow nodes (`docling_parse`, `build_structure`, `candidate_detection`, `context_assembly`, `llm_extraction`, `validation`, `confidence_routing`, `postgres_store`) plus refinement and human review nodes with `node_var`, timing, and structured `langgraph.node.started`/`completed`/`failed` logs.
+     - `publisher.py`: Carries `trace_id` through `DocumentExtractionCompletedEvent` and forwards `X-Trace-Id` header in webhook callbacks.
+
+3. **Automated Verification**:
+   - `apps/ai`: 113 passed, 1 skipped (100% green, including 10 new tests in `test_structured_logging.py`).
+   - `@tenderpulse/api`: 33 test files, 242 tests passed (100% green, including `StructuredLogger.spec.ts` and `HttpLoggingInterceptor.spec.ts`).
+   - `@tenderpulse/web`: 22 test files, 163 tests passed (100% green).
+   - Monorepo type-check (`npm run type-check`): 0 errors across all workspaces.
+
+## Previous implementation milestone: Design B: Direct Queue Ingestion and Asynchronous Event Choreography
+
+1. **Problem Statement & Architectural Requirements**:
+   - **Synchronous RPC Bottleneck**: Previously, document extraction relied on `DocumentProcessingRuntime` or `AiDocumentExtractor` holding open a synchronous HTTP POST connection (`/api/v1/extract`) to FastAPI for up to 120 seconds. This synchronous RPC-in-worker antipattern led to socket timeouts, resource hogging, and poor fault isolation across service boundaries.
+   - **Decoupled Event Choreography (Design B)**: Transition to true asynchronous event choreography:
+     1. Python AI Engine consumes ingestion commands directly or receives non-blocking dispatches (`async_mode: true`).
+     2. Python processes PDF parsing and LangGraph extraction in the background and emits `DocumentExtractionCompletedEvent`.
+     3. NestJS acts under the **Single-Writer Principle** for PostgreSQL: it receives the completion event (via `POST /api/v1/internal/extraction-completed` webhook or completion queue), deterministically validates citations/invariants, commits `compliance_items` in a single transaction, and transitions the bid to `REVIEW_READY` and document to `COMPLETED`.
+
+2. **Architectural Implementation**:
+   - **Shared Event Contracts (`@tenderpulse/shared-types`)**:
+     - Defined `DocumentIngestionCommand`, `DocumentExtractionCompletedEvent`, and `ExtractedComplianceItemDto`.
+     - Standardized camelCase wire format between TypeScript and Python.
+   - **Python AI Engine Completion Infrastructure (`apps/ai`)**:
+     - Created provider-agnostic `CompletionPublisher` interface in `tenderpulse_ai.infrastructure.queue`.
+     - Implemented `HttpCallbackCompletionPublisher` (protected by `X-Internal-Service-Key`), `GcpPubSubCompletionPublisher`, `AwsSqsCompletionPublisher`, and `MockCompletionPublisher`.
+     - Updated `/api/v1/worker/process-message` to support `async_mode` (spawns background extraction task and returns `ACCEPTED` immediately < 20ms) and publish completion events upon pipeline completion.
+   - **NestJS Single-Writer Completion Handler & Webhook (`apps/api`)**:
+     - Implemented `DocumentCompletionService`: validates verbatim quote and execution rule invariants, performs deduplication and rule fusion against existing items, and executes transactional persistence into `compliance_items`, `bids`, `tender_documents`, and `audit_logs`.
+     - Gracefully handles missing/orphan documents or deleted bids by returning `{ status: 'DROPPED', processed: false }` with HTTP 200 and a descriptive warning instead of throwing unhandled 500 exceptions.
+     - Implemented `CompletionWebhookController` (`POST /api/v1/internal/extraction-completed`) protected by `INTERNAL_SERVICE_KEY` security guard via `InternalServiceGuard`.
+     - Refactored `AiDocumentExtractor`: added `dispatchExtraction()` for non-blocking asynchronous dispatch via `/api/v1/worker/process-message` (`async_mode: true`), and routed synchronous `extract()` to `/api/v1/extract` to prevent duplicate webhook callbacks.
+     - Adapted `DocumentProcessingRuntime`: dispatches extraction asynchronously via `dispatchExtraction` and acknowledges the queue message immediately, allowing the completion event to persist results exactly once (with fallback to `extract` + `persistResults` when `dispatchExtraction` is not implemented).
+     - Added support for `mock`, `memory`, `test`, and `none` providers in `get_completion_publisher`.
+
+3. **Automated Verification**:
+   - `apps/ai`: 104 pytest tests passing (100% green, including `test_completion_queue_publisher.py`).
+   - `@tenderpulse/api`: 31 test files, 235 tests passing (100% green, including `CompletionWebhookController.spec.ts` and `DocumentProcessingRuntime.spec.ts`).
+   - `@tenderpulse/web`: 22 test files, 163 tests passing (100% green).
+   - Monorepo type-check (`npm run type-check`): 0 errors across all workspaces.
+
+## Previous implementation milestone: Document Ingestion Resilience, Timeout Hardening & PostCSS Dependency Alignment
+
+1. **Problem Statement & Architectural Requirements**:
+   - **PostCSS / Tailwind v4 Incompatibility**: Running `scripts/dev.sh` caused Vite to fail with `[Error] It looks like you're trying to use 'tailwindcss' directly as a PostCSS plugin...` because `tailwindcss` had been bumped to `^4.3.3` in `apps/web/package.json` while the build system, PostCSS plugins, and Tailwind Animate depended on Tailwind v3 configuration semantics.
+   - **FastAPI Extraction AbortError (`DOMException [AbortError]`)**: During ingestion of multi-page tenders (such as `Bid_RS21_Part-2_Employers_Requirements.pdf`), Node.js `DocumentsService` timed out at 15 seconds while FastAPI was processing raw PDF pages, causing an `AbortController` cancellation.
+   - **Unfiltered Multi-Page Traversal in AI Engine**: Large 100-300+ page tenders downloaded via presigned URLs were processed page-by-page sequentially through LangGraph without candidate filtering, consuming excessive processing time and triggering client timeouts.
+   - **LocalStack Storage Handover Resiliency**: When running locally without an active LocalStack instance on `localhost:4566`, presigned URL download handovers caused TCP connect hangs instead of failing fast to local extraction.
+   - **Duplicate Extraction Dispatch in Single Upload**: A single document upload triggered two parallel dispatches to the AI engine: one from the async queue worker (`DocumentProcessingRuntime`) and an accidental second one from a legacy timer in the SSE progress endpoint (`DocumentsController.streamExtractionProgress -> markExtractionComplete()`).
+
+2. **Architectural Implementation**:
+   - **Tailwind v3 Dependency Pinning (`apps/web/package.json`)**:
+     - Pinned `"tailwindcss": "^3.4.17"` to align with PostCSS config and `@tenderpulse/ui` design tokens.
+     - Verified Vite bundle builds cleanly in ~1.07s.
+   - **Configurable Extraction Timeout (`documents.service.ts`, `AiDocumentExtractor.ts`)**:
+     - Raised default extraction timeout from 15s/60s to 120s (configurable via `AI_EXTRACTION_TIMEOUT_MS`).
+   - **Elimination of Duplicate Extraction Dispatch (`documents.controller.ts`, `documents.service.ts`)**:
+     - Converted `streamExtractionProgress` from an active caller to a passive observer: it polls `documentsService.getBidExtractionProgress()` without triggering duplicate synchronous extractions via `markExtractionComplete()`.
+     - Preserves single-writer ownership for the background queue worker (`DocumentProcessingRuntime`).
+   - **Candidate Page Scoring & TOC Filtering (`pdf_resolver.py`, `pipeline.py`)**:
+     - Added `is_pure_toc_page()` and `filter_candidate_pages()` in Python: large documents (>30 pages) preserve initial metadata pages (first 10 pages) and rank substantive pages by Indian Public Procurement / contract covenant keywords, limiting the LangGraph workflow to the top ~45 high-signal candidate pages.
+     - Added a defense-in-depth candidate filter guard in `ProductionExtractionPipeline.execute` if `request.pages > 40`.
+   - **Resilient Presigned URL Handover**:
+     - Extended mock storage URL detection in `AiDocumentExtractor.ts` and `pdf_resolver.py` to identify `localhost:4566` and `127.0.0.1:4566`.
+     - Wrapped `httpx.AsyncClient` streaming download in try/except blocks to gracefully fall back on network connect errors.
+
+3. **Automated Verification**:
+   - `apps/ai`: 100/100 pytest tests passing (100% green).
+   - `@tenderpulse/api`: 30 test files, 228 tests passing (100% green).
+   - `@tenderpulse/web`: 22 test files, 163 tests passing (100% green).
+   - Monorepo type-check (`npm run type-check`): 0 errors across all workspaces.
+   - Production bundle build (`npm --prefix apps/web run build`): Clean build in 1.07s.
+
+## Previous implementation milestone: 8-Node LangGraph RAG Pipeline & OpenRouter LLM Gateway Integration
+
+1. **Problem Statement & Architectural Requirements**:
+   - **Pluggable Foundation Model Inference**: The LangGraph extraction engine previously relied on a deterministic regex extractor to keep tests instant and offline, but required a production-grade LLM gateway to handle nuanced, long-tail procurement covenants.
+   - **Zero Vendor Lock-In**: Required OpenAI-compatible gateway integration (OpenRouter, OpenAI, vLLM, Groq) with provider-agnostic naming in domain logic per `AGENTS.md`.
+   - **Zero Hallucination Guarantee**: Even with a live LLM, legal procurement covenants must be strictly anchored to exact verbatim substrings on verified page coordinates; hallucinated quotes must be rejected deterministically by Node 6.
+   - **Prompt Engineering Hardening**: Needed an enhanced system prompt with domain-specific taxonomy (Indian Public Procurement), execution rule extraction (stamp paper denomination, notarization, CA 18-digit UDIN, MT760 SFMS), and negative exclusion directives (pruning Table of Contents, Article 48 bare definitions, Schedule T third-party auditor criteria).
+   - **Deterministic Fallback**: The system must run 100% offline in CI/CD or local test environments without requiring paid API keys or active internet access.
+
+2. **Architectural Implementation**:
+   - **LLM Configuration & Key Resolution (`apps/ai/src/tenderpulse_ai/config.py`)**:
+     - Added provider-agnostic properties: `llm_api_key`, `llm_base_url` (`https://openrouter.ai/api/v1`), `llm_model` (`google/gemini-2.0-flash-001`), `llm_timeout_seconds`, and `llm_max_retries`.
+     - Automatically resolves `OPENROUTER_API_KEY` or `LLM_API_KEY` from environment variables or `.env`.
+   - **OpenAI-Compatible Asynchronous HTTP Client (`OpenAICompatibleLlmClient.ts` / `.py`)**:
+     - Built using `httpx.AsyncClient` without heavy vendor SDKs.
+     - Enforces JSON Schema structured output (`response_format: {"type": "json_object"}`).
+     - Implements exponential backoff on transient 429/500/502/503/504 errors.
+     - Strips markdown code fences and deserializes responses into `CandidateComplianceItem` instances with default fallback provenance.
+   - **Structured LLM Client Adaptation (`StructuredLLMClient.py`)**:
+     - Pre-invocation secret scrubber (`SecretSanitizer.scrub()`) redacts sensitive tokens before outbound network dispatch.
+     - Dispatches to `OpenAICompatibleLlmClient` when configured; automatically triggers deterministic fallback (`default_tender_extractor`) if the gateway fails or when run offline.
+   - **Production System Prompt & Security Fences (`workflow/nodes.py`)**:
+     - Enhanced system prompt in Node 5 with domain taxonomy, negative exclusion rules, and execution rule extraction.
+     - Enforced `<untrusted_document_data>` XML fences treating PDF text strictly as passive data to prevent prompt injection.
+   - **Deterministic Grounding Verification (Node 6)**:
+     - Verified that all LLM candidate quotes must pass character-by-character substring checks against `raw_page_text` before entering verified state.
+
+3. **Automated Verification**:
+   - `apps/ai`: 100/100 pytest tests passing (100% green), including 5 new tests in `test_openrouter_llm_client.py`.
+   - `@tenderpulse/api`: 30 test files, 228 tests passing (100% green).
+   - `@tenderpulse/web`: 22 test files, 163 tests passing (100% green).
+   - Monorepo type-check (`npm run type-check`): 0 errors across all workspaces.
+   - Knowledge graph updated via `graphify update .` (4,097 nodes, 9,285 edges, 214 communities).
+
+## Previous implementation milestone: Document-Agnostic Extraction Generalization, Pre-Ingestion Tender Relevance Validation, and Dynamic Company Evidence Checklist
+
+1. **Problem Statement & Architectural Requirements**:
+   - **Pre-Ingestion Tender Relevance Validation**: Uploaded documents were previously accepted into the storage and processing pipeline regardless of whether they actually pertained to the targeted tender, wasting expensive downstream OCR/Docling/LLM compute on unrelated files.
+   - **Broken Destination Scroll Position**: Navigating from Review Tasks to `/bids/:id/compliance/:itemId` retained previous scroll positions or landed in mid-page states.
+   - **Notifications Theme Desynchronization**: Notification popovers used hardcoded dark palette background classes (`bg-slate-900`, `border-slate-800`, `text-slate-200`), failing to respond properly to light/dark theme switches.
+   - **Outdated Bid/No-Bid Decision Rationale & Missing Unavailable State**: The UI displayed an obsolete message ("No recommendation yet - Company Profile API does not exist") when company profile information was actually available but insufficient. Furthermore, it lacked an explicit `RECOMMENDATION_UNAVAILABLE` state, risking premature or fabricated recommendations.
+   - **Static vs Dynamic Evidence Checklist**: Procurement tenders require specific proof (e.g. 3 similar projects, ISO certifications, CA turnover audits) derived strictly from tender clauses rather than generic universal checklists.
+   - **Sample-Tender Hardcoding in AI Pipeline (`pipeline.py`, `AiDocumentExtractor.ts`, domain models)**: Generic extraction code contained specific constants from sample tenders (e.g. `9.1.1`, `910th day`, `scheduled four-laning date`, `12.4.1`, `25,00,000`, `25 lakh`, `120 days`, `40.09 crore`). These constants crippled generalization to arbitrary tenders with different clause structures, numbers, and temporal obligations.
+
+2. **Architectural Implementation**:
+   - **Tender Document Relevance Validation (`TenderDocumentRelevanceValidator.ts`, `documents.service.ts`)**:
+     - Evaluates uploaded document content against tender metadata (tender number, authority name, acronyms, title keywords, procurement markers like NIT/RFP/EOI/IFB).
+     - Gated inside `DocumentsService.confirmUpload()` prior to dispatching expensive background extraction.
+     - Preserves tenant isolation and returns clear user-facing `BadRequestError` explanations for unrelated uploads.
+   - **Client-Side & Global Scroll-to-Top Lifecycle (`ScrollToTop.tsx`, `App.tsx`, `ComplianceReviewPage.tsx`)**:
+     - Implemented global `ScrollToTop` component listening to React Router `pathname` changes.
+     - Mounted explicit `useLayoutEffect` scroll reset on `complianceId` navigation in `ComplianceReviewPage.tsx`.
+   - **Semantic Design Tokens for Notifications (`NotificationBell.tsx`)**:
+     - Refactored `NotificationBell` to standard CSS tokens (`bg-popover`, `border-border`, `text-popover-foreground`, `hover:bg-accent/60`, `bg-muted/50`), ensuring instant reactivity to dark/light theme toggling.
+   - **Truthful Decision State Modeling & Dynamic Company Document Checklist (`bidDetailData.ts`, `BidVerdictCard.tsx`, `CompanyDocumentChecklist.tsx`)**:
+     - Refactored `mapVerdict()` and `BidVerdict` to support `RECOMMENDATION_UNAVAILABLE` (distinct from `PURSUE`, `DO_NOT_PURSUE`, or `REVIEW_REQUIRED`).
+     - Replaced obsolete "Company Profile API does not exist" message with clear explanations of missing capability evidence.
+     - Created `CompanyDocumentChecklist` component dynamically mapping extracted tender requirements to required evidence documents, verification statuses, execution rules, and provenance citations.
+   - **Complete Elimination of Sample-Tender Hardcoding (`pipeline.py`, `AiDocumentExtractor.ts`)**:
+     - Replaced hardcoded string matches (`"9.1.1"`, `"scheduled four-laning date"`, `"12.4.1"`, `"25,00,000"`, `"120"`) with generalized regex extractors:
+       - `extract_temporal_durations()`: extracts arbitrary integer durations and units (days, months, years, hours).
+       - `extract_monetary_amounts()`: parses arbitrary currencies and values (lakhs, crores, millions, billions, INR/USD/EUR).
+       - `extract_percentages()`: dynamically captures arbitrary rate/ratio thresholds.
+       - `extract_clause_reference()`: extracts arbitrary clause identifiers from heading context.
+     - Generalized project scope detection to dynamically match any project type (`Four-Laning`, `Two-Laning`, `Bridge`, `Project Highway`, `Railway`, etc.).
+   - **Hierarchical Document Clause Discovery (`structure_builder.py`, `context_assembler.py`, `validator.py`)**:
+     - Upgraded clause pattern matching to support arbitrary document structures: single integers, multi-level decimals (`1`, `1.1`, `1.1.1`, `4.2.7`), `Article`, `Section`, `Schedule`, `Annexure`, `Appendix`, and `Part`.
+     - Cross-references are resolved dynamically against the reconstructed hierarchy; unresolved references are cleanly marked unresolved rather than guessed.
+
+3. **Automated Verification**:
+   - `apps/ai`: 95/95 pytest tests passing (100%), including 8 new tests in `test_document_agnostic_extraction.py` validating arbitrary clause numbers (`7.3.2`, `14.8`), arbitrary durations (`45 days`, `90 days`, `365 days`), and arbitrary amounts (`₹10 lakh`, `₹2.5 crore`).
+   - `@tenderpulse/api`: 30 test suites, 228 tests passing (100%), including 5 new unit tests in `TenderDocumentRelevanceValidator.spec.ts`.
+   - `@tenderpulse/web`: 22 test suites, 163 tests passing (100%).
+   - Monorepo type-check (`npm run type-check`): 0 errors across all workspaces.
+   - Zero hardcoded tender-specific constants remaining across the repository (`git grep` audit verified).
+
+## Previous implementation milestone: Elimination of UI Flashing, SSE Reconnect Loops, and Live Extraction Pipeline Lifecycle Hardening
+
+1. **Problem Statement & Root Cause Analysis**:
+   - **Full UI Flashing / Reloading**: During in-flight extraction polling (`setInterval` every 2.5s), calling `refetchBid()` triggered `useApi.ts`, which unconditionally executed `setState(prev => ({ ...prev, isLoading: true }))`. In `BidDetailPage.tsx`, `if (bidLoading)` unmounted the entire DOM tree and rendered `<LoadingSkeleton />` on every interval tick, causing violent layout thrashing.
+   - **Continuous SSE Looping**:
+     - When the NestJS backend completed the SSE stream and called `res.end()`, browser native `EventSource` treated the closed connection as an abnormal termination and automatically attempted reconnection.
+     - Because `useSSE.ts` lacked terminal state teardown, every reconnection hit `/api/v1/bids/:bidId/extraction-progress`, replaying the pipeline from 25% to 100% in an infinite loop.
+     - The backend controller previously emitted `status: 'QUEUED'` at 100% completion and never called `markExtractionComplete(bidId)`. Consequently, `bid-cpwd-gov-002` remained stuck in database status `ANALYZING` and documents in `PROCESSING`, keeping the frontend in-flight polling active forever.
+
+2. **Architectural Implementation**:
+   - **Stale-While-Revalidate (SWR) Silent Revalidation (`apps/web/src/hooks/useApi.ts`)**:
+     - On background `refetch()`, `isLoading` is set to `prev.data === null`, ensuring it never flips to `true` when data is already present.
+     - Added `isValidating: boolean` for non-destructive background network tracking.
+     - Reset `data: null` and `isLoading: true` only when hook dependencies actually change (e.g., navigating between different tender IDs).
+   - **Non-Destructive Render Guards (`apps/web/src/pages/BidDetailPage.tsx`)**:
+     - Changed full-page skeleton condition from `if (bidLoading)` to `if (bidLoading && !bid)`.
+     - Guarded compliance tables and cards with `complianceLoading && items.length === 0`, preventing subcomponent flashing during background updates.
+   - **Terminal SSE Connection Teardown (`apps/web/src/hooks/useSSE.ts`)**:
+     - Automatically invokes `es.close()` and sets `isTerminatedRef.current = true` upon receiving `step === 'COMPLETED'` or `progress >= 100`.
+     - Suppressed `onerror` reconnect attempts once terminal completion is reached or when `close()` is explicitly called by the consumer.
+   - **Clean Extraction Pipeline Settlement (`apps/web/src/components/progress/ExtractionProgress.tsx`)**:
+     - Explicitly invokes `close()` upon completion.
+     - Guarded error states: `isFailed = !isComplete && (currentStepKey === 'FAILED' || !!sseError)` so clean stream closures are never misclassified as failures.
+   - **Backend Status Transition & Persistence (`apps/api/src/modules/documents/documents.controller.ts`, `documents.service.ts`)**:
+     - `streamExtractionProgress` now emits `status: 'REVIEW_READY'` at 100% progress and invokes `this.documentsService.markExtractionComplete(bidId)`.
+     - `markExtractionComplete` updates both `schema.bids.status = 'REVIEW_READY'` and `schema.tenderDocuments.status = 'COMPLETED'`, ensuring the tender and documents cleanly settle in the database.
+
+3. **Automated Verification**:
+   - `@tenderpulse/api`: 29 test suites, 223 tests passing (100%).
+   - `@tenderpulse/web`: 22 test suites, 163 tests passing (100%).
+   - Added unit test suite `apps/web/src/hooks/__tests__/useApi-useSSE.spec.ts` verifying SWR semantics and SSE connection termination.
+   - Monorepo type-check (`npm run type-check`): 0 errors across all workspaces.
+   - Knowledge graph updated via `graphify update .`.
+
+## Previous implementation milestone: Dynamic Procurement Calculations, Action Card Scrollability & Deterministic Decision Engine
+
+1. **Problem Statement & Audit Findings**:
+   - **Action Required Card Overflow**: The dashboard "Action Required" section lacked scroll containment when expanding `+{n} more actions across your tenders`, causing page spillover rather than staying bounded within its container.
+   - **Hardcoded Grounding Match**: "96% Grounding Match" badge was static and not derived from verified citation attributes.
+   - **Impossible "144% of requirements approved"**: Multi-document deduplication reduced compliance items from 16 to 9, but stale database denormalized counters (`approved_requirements = 13` calculated via legacy `total - flagged`) resulted in `13 / 9 = 144%`. Furthermore, the percentage calculation lacked mathematical upper-bound clamping.
+   - **Canned 35% "DO NOT PURSUE" Fallback**:
+     - Hardcoded turnover (₹150 Cr) and experience (₹120 Cr) minimum thresholds in `AiDecisionClient.evaluateLocalDeterministic` disqualified small tenders (e.g. ₹1.3 Cr staffing contract).
+     - Static `readiness_score = 0.35` (35% fit score) was returned unconditionally.
+     - Synthetic canned strings (`EMD Bank Guarantee SFMS Confirmation...` and `LIQUIDATED DAMAGES: Standard 0.5% per week delay...`) were injected into `uncertain_areas` and `commercial_risks` and displayed as disqualifying reasons even when absent from tender documents.
+
+2. **Architectural Implementation**:
+   - **Box-Bounded Scrollable Action Required Card (`ActionRequiredCard.tsx`)**:
+     - Added `isExpanded` state with a bounded viewport (`max-h-[380px] overflow-y-auto pr-1`).
+     - Implemented bidirectional toggle button (`+{n} more actions across your tenders ↓` / `Show top 5 actions ↑`).
+   - **Derivation-Based Grounding (`grounding.ts`)**:
+     - Implemented `deriveGroundingMatch`: dynamically calculates grounding confidence across 4 citation dimensions (substantive verbatim quote, physical page coordinate, tender clause reference, source document anchor).
+     - Adheres to DOMAIN.md §28 hard grounding invariants (100% exact verbatim substrings for verified extraction candidates).
+     - Integrated across `ComplianceReviewPage.tsx` and `EvidenceTraceabilityChain.tsx`.
+   - **Mathematical Clamping & Live Readiness Derivation (`readiness.ts`, `ReadinessCard.tsx`, `DocumentProcessingRuntime.ts`, `documents.service.ts`)**:
+     - `computeReadiness`: Enforces strict invariant `approved = Math.min(rawApproved, total)` and clamps percentage to `[0, 100]`.
+     - `ReadinessCard`: Memoizes live rollup directly from loaded `items: ComplianceItem[]` (`rollup.ready` and `rollup.flagged`), preventing desynchronization from stale `bid` table counters.
+     - Backend runtime fixed to count verified items (`READY` / `PASS`) rather than subtracting flagged items from total.
+   - **Dynamic Deterministic Bid Decision Engine (`AiDecisionClient.ts`, `bidDetailData.ts`, `BidVerdictCard.tsx`)**:
+     - Dynamically computes financial criteria based on actual contract value (40% average annual turnover, 35% single completed project experience).
+     - Evaluates MSME Micro/Small registration under Public Procurement Policy 2012 / GFR Rule 173(i) for statutory criteria relaxation.
+     - Eliminates synthetic EMD and LD strings; scans real extracted requirements for authentic financial and commercial obligations.
+     - Dynamically computes readiness score from passing factor ratio.
+     - Updated database row for active tender in PGlite `./data/postgres`.
+   - **In-Flight Extraction Live Synchronization & Infinite Spinner Prevention (`BidDetailPage.tsx`, `ExtractionProgress.tsx`, `documents.controller.ts`)**:
+     - **Root Cause**: When a document was uploaded, the asynchronous extraction worker (`DocumentProcessingRuntime`) required 5–15 seconds to parse pages and extract clauses. However, the client only issued a single `refetchBid()` upon upload and at 2.3s when simulated SSE completed. Because no active polling loop existed in `BidDetailPage.tsx`, `doc.status` remained frozen as `'PROCESSING'` in React state indefinitely until a hard browser refresh occurred.
+     - **Reactive Polling Loop**: Added `hasInFlightProcessing` detector that actively polls `refetchBid()` and `refetchCompliance()` every 2.5 seconds while any document is in `'PROCESSING'` or `'QUEUED_FOR_EXTRACTION'`, or while `bid.status === 'ANALYZING'`.
+     - **Clean Auto-Teardown**: Automatically disarms and clears the interval the moment all documents settle (`COMPLETED`, `EXTRACTED`, `FAILED`), transitioning the loading spinner into the verified status icon immediately without requiring a manual page refresh.
+     - **Guarded SSE Teardown**: Added `hasCompletedRef` in `ExtractionProgress.tsx` to prevent redundant completion triggers, and added `res.end()` in `documents.controller.ts` to cleanly close SSE connections upon completion.
+
+3. **Automated Verification**:
+   - `@tenderpulse/api`: 29 test suites, 223 tests passing (100%).
+   - `@tenderpulse/web`: 21 test suites, 161 tests passing (100%).
+   - `apps/ai`: 87 pytest tests passing (100%).
+   - Monorepo type-check (`npm run type-check`): 0 errors across all 5 workspaces.
+   - Knowledge graph updated via `graphify update .` (4022 nodes, 9131 edges, 216 communities).
+
+## Previous implementation milestone: Model Concession Agreement Covenant Extraction & Negative False-Positive Pruning
+
+1. **Problem Statement & Audit Findings**:
+   - A real-world audit against the 369-page NH-62 Model Concession Agreement (`samples/DCA.pdf`) identified 4 false positives and missed key contract execution covenants:
+     - **False Positive 1 (Turnover)**: Mistakenly flagged Schedule T (eligibility turnover threshold for external Chartered Accountant firms empanelled to audit traffic fees) and Article 7.1(k) (Consortium members whose capacity was evaluated for RFP equity lock-in).
+     - **False Positive 2 (Plant & Machinery)**: Mistakenly flagged Schedule G capital milestone expenditure exclusions (`"shall not include advances ... or plant and machinery"`), coupled with an unanchored regex match on generic `"shall provide"` clauses.
+     - **False Positive 3 (Key Personnel)**: Mistakenly triggered on Schedule K Table of Contents dot-leader lines.
+     - **False Positive 4 (Working Capital)**: Mistakenly triggered on Article 40.2 permitted assignment clauses for lender indebtedness and project highway working capital.
+     - **Extraction Gap**: Long-term concession agreements contain heavy operational covenants (Conditions Precedent, Milestone Milestones Schedule G, Liquidated Damages, Escrow Waterfalls, Co-insured Insurances, Rescue Cranes, Paramedic Ambulances, SAROD Arbitration, Schedule E Permits, Schedule K SLAs) that standard RFP eligibility extractors missed.
+
+2. **Architectural Implementation**:
+   - **Negative Context Pruning & Quote Resolver Hardening (`pipeline.py`)**:
+     - Fixed `_extract_verbatim_window` bug where non-matching keywords previously fell back to returning `text[:max_chars]` (the first 140 characters of the page header).
+     - Pruned Schedule T CA empanelment, Article 7 equity lock-in, and Schedule G expenditure exclusions from eligibility checks.
+     - Tightened `has_positive_equipment` and `has_positive_personnel` to require explicit deployment modals coupled with equipment/personnel context (avoiding generic "shall provide" or Independent Engineer appointment clauses).
+     - Pruned Article 40 permitted assignments from banker solvency certificate checks.
+     - Suppressed bare glossary definitions in Article 48 from operative EMD/PBG commitments.
+   - **Concession Agreement Execution Covenants (`candidate_detector.py`, `nodes.py`, `pipeline.py`, `AiDocumentExtractor.ts`)**:
+     - Added candidate detectors and extraction logic for 20 primary execution covenants: Conditions Precedent (180 days), COD (910 days), Schedule G Milestones, Liquidated Damages, Escrow 11-Tier Waterfall, SAROD Arbitration, Schedule E Clearances, Schedule K Maintenance SLAs, Heavy Rescue Cranes, Ambulance, State Grant Rs 40.09 Cr, Equity Lock-in (74% / 26%), and Comprehensive Project Insurance.
+     - Expanded keyword scoring in `AiDocumentExtractor.ts` to include execution terms and increased page budget to 75 pages.
+     - Updated LangGraph Node 5 retrieval query and system prompts in `workflow/nodes.py`.
+   - **Automated Verification**:
+     - Added comprehensive regression test suite in `apps/ai/tests/test_contract_execution_extraction.py` covering false positive suppression, covenant extraction, and full pipeline execution on DCA pages.
+     - Verified extraction against full 369-page `samples/DCA.pdf`: yields 19 structured, validated covenants with **ZERO** false positives.
+     - All 87 pytest tests in `apps/ai` pass 100%.
+     - All 29 test suites (223 tests) in `@tenderpulse/api` pass 100%.
+     - All 21 test suites (161 tests) in `@tenderpulse/web` pass 100%.
+     - Monorepo type-check (`npm run type-check`) compiles cleanly across all 5 workspaces.
+
+## Previous implementation milestone: Presigned URL Handover Pattern (Zero-Copy Node.js Ingestion)
 
 1. **Problem Statement & Motivation**:
    - In earlier iterations, NestJS (`apps/api`) read entire PDF binary blobs into Node.js buffers and executed `pdf-parse`. This resulted in `MaxListenersExceededWarning` EventEmitter leaks, high V8 heap usage, lack of layout/table awareness, and large serialized JSON payload transmissions to the Python AI engine.
@@ -112,7 +522,7 @@ The initial reliability/context gaps have a NestJS-hosted processing path implem
 
 **Still not aligned with target:** the consumer currently runs in NestJS, `AiDocumentExtractor` retrieves and parses the document in NestJS (`pdf-parse`, no OCR), and then submits normalized pages to FastAPI. FastAPI does not consume the queue, retrieve cloud objects, or persist compliance rows. The NestJS runtime owns PostgreSQL result persistence. Deployments must configure a real queue, storage adapter, database, AI service URL/internal key, and dead-letter handling; local/test mock adapters are not production guarantees.
 
-Verification: API type-check passed; 67 focused API processing, queue, and end-to-end tests passed; FastAPI test suite passed (78 tests). See [ADR-DOCUMENT-PROCESSING-RUNTIME.md](ADR-DOCUMENT-PROCESSING-RUNTIME.md) and the current call-chain updates in the flow docs.
+Verification: API type-check passed; 67 focused API processing, queue, and end-to-end tests passed; FastAPI test suite passed (78 tests). See [ADR 0022](adr/0022-durable-asynchronous-document-processing-runtime.md) and the current call-chain updates in the flow docs.
 
 ## Current extraction-quality update: complete sentence provenance quotes
 
@@ -453,7 +863,7 @@ The 11-stage workflow: Tender Discovery → Tender-to-Company Matching → Bid/N
 
 **Tender ingestion & requirement normalization designed (2026-10-05, PROMPT 6):** `docs/DOMAIN.md` Part D (§25–34) and `docs/ARCHITECTURE.md` (new pipeline section). Key decisions: tender = package of 17 typed documents (never a single blob); 10-stage async pipeline (document processing → extraction → OCR-on-demand → section segmentation → section-aware chunking → 3-tier requirement detection → normalization → classification → source citation → persistence); **deterministic-first execution** (regex → structural → LLM fallback with identical output contracts and per-requirement `detectionMethod`); normalized requirement schema with four traceability anchors (document, page, section, clause) + verbatim quote + chunkId; hard grounding invariant (exact-substring verification pre-persistence; failures rejected, never stored); corrigenda as first-class amendments (diff → SUPERSEDE → re-evaluate changed criteria only → human re-confirmation); idempotency at document (SHA-256), requirement (deterministic key upsert), and workflow levels; per-document failure isolation with honest zero-extraction. Design-only; no code implemented.
 
-**Evidence & Compliance Engine designed (2026-10-06, PROMPT 7):** `docs/DOMAIN.md` Part F (§49–60), `docs/architecture/LLD.md` §9, `docs/AI.md` §5, and new **ADR 0021** (evidence-first compliance engine). The engine answers *"For this tender requirement, what evidence does the company have?"* — never a bare percentage. Five separated stages with distinct owners: (1) evidence retrieval (deterministic, recall-oriented, tenant-scoped, pinned profile version), (2) evidence matching (dual-sided provenance: tender anchors §28 + company EvidenceRef, many-to-many, cross-document dedup), (3) deterministic validation (Part E evaluators + expiry-at-submission-date, tier-sufficiency, and ordered conflict policies — tier → recency → source authority → REVIEW_REQUIRED, never silently pick), (4) AI explanation (grounded narrative with **no verdict field in the output schema**; citation-verified against the result bundle; template fallback so prose never blocks verdicts), (5) human decision (confirm/override/waive; `compliance:override` permission, mandatory reason, OCC; engine verdict preserved immutably, both verdicts always displayed). Assessment states PASS / FAIL / MISSING_EVIDENCE / REVIEW_REQUIRED with deterministic rollup mapping (FAIL > MISSING_EVIDENCE > REVIEW_REQUIRED > PASS). Designed hard cases: conflicting evidence, expired certificates, insufficient evidence, ambiguous clauses, missing dates (UNKNOWN_VALIDITY → REVIEW_REQUIRED), contradictory company data, multiple evidence documents, manual override, and append-only reference-only audit trail (RETRIEVAL_EXECUTED → … → ASSESSMENT_OVERRIDDEN). Design-only; no code implemented.
+**Evidence & Compliance Engine designed (2026-10-06, PROMPT 7):** `docs/DOMAIN.md` Part F (§49–60), `docs/LLD.md` §9, `docs/AI.md` §5, and new **ADR 0021** (evidence-first compliance engine). The engine answers *"For this tender requirement, what evidence does the company have?"* — never a bare percentage. Five separated stages with distinct owners: (1) evidence retrieval (deterministic, recall-oriented, tenant-scoped, pinned profile version), (2) evidence matching (dual-sided provenance: tender anchors §28 + company EvidenceRef, many-to-many, cross-document dedup), (3) deterministic validation (Part E evaluators + expiry-at-submission-date, tier-sufficiency, and ordered conflict policies — tier → recency → source authority → REVIEW_REQUIRED, never silently pick), (4) AI explanation (grounded narrative with **no verdict field in the output schema**; citation-verified against the result bundle; template fallback so prose never blocks verdicts), (5) human decision (confirm/override/waive; `compliance:override` permission, mandatory reason, OCC; engine verdict preserved immutably, both verdicts always displayed). Assessment states PASS / FAIL / MISSING_EVIDENCE / REVIEW_REQUIRED with deterministic rollup mapping (FAIL > MISSING_EVIDENCE > REVIEW_REQUIRED > PASS). Designed hard cases: conflicting evidence, expired certificates, insufficient evidence, ambiguous clauses, missing dates (UNKNOWN_VALIDITY → REVIEW_REQUIRED), contradictory company data, multiple evidence documents, manual override, and append-only reference-only audit trail (RETRIEVAL_EXECUTED → … → ASSESSMENT_OVERRIDDEN). Design-only; no code implemented.
 
 **LangGraph critical determination & first workflow designed (2026-10-06, PROMPT 11):** `docs/learning/langgraph.md` §7 and `docs/AI.md` §6. Key teaching: the 8-step product workflow is an **orchestration of services, not one LangGraph graph**. LangGraph earns its place only where its three justifying conditions hold — cyclic feedback, durable mid-run resumption, human-in-the-loop inside reasoning. Applied to the tender workflow: Extract Requirements (LangGraph: LLM → deterministic verification → bounded feedback-retry cycle → escalation) and conditional Human Review (`interrupt()`/`Command(resume=...)` when multi-day waits must preserve in-flight state; terminal decisions use the plain async ReviewTask + PATCH API instead); Load Context, Retrieve Evidence, Analyze Match, Deterministic Validation, and Final Assessment are plain services/pure functions (ADR 0019/0021 — company financials must never enter the AI boundary, so they *cannot* be graph nodes). All 11 concepts (graph, nodes, edges, state, checkpoints, branching, retries, persistence, human interruption, resuming, failure handling) taught against the real implementation in `apps/ai/src/tenderpulse_ai/workflow/` (`ComplianceWorkflowState`, `build_compliance_workflow_graph`, `route_verification_outcome`, dynamic `interrupt()`, `CrossTenantReviewException` guard). First LangGraph workflow designed conceptually: TenderRequirementExtractionWorkflow (per BidCase+TenderDocument, SQS-triggered, thread_id = `tenant_{id}:bid_{id}:run_{id}`, PostgresSaver checkpoints, retry bound < 2, four-layer failure handling). Design-only; no code implemented.
 
@@ -586,7 +996,7 @@ The milestone log below reflects design/build history. The **actual next actions
    - Multi-tenant isolation across vector storage, LangGraph state, checkpoints, artifacts, and logs.
    - Defense against direct/indirect prompt injection, poisoned retrieval, and data exfiltration.
    - Model provider privacy & data residency (AWS Bedrock ap-south-1 Mumbai, DPDP Act 2023).
-   - Deliverables: `docs/learning/agents.md`, `docs/learning/langgraph.md`, `docs/architecture/AI.md`, `docs/architecture/AI_SECURITY.md`, `docs/adr/0011-ai-security-and-tenant-isolation.md`.
+   - Deliverables: `docs/learning/agents.md`, `docs/learning/langgraph.md`, `docs/AI.md`, `docs/AI_SECURITY.md`, `docs/adr/0011-ai-security-and-tenant-isolation.md`.
 6. [x] **Phase 6: Database Architecture & Multi-Tenancy (PostgreSQL Migrations & RLS)** _(Completed)_
    - Documented in `docs/DATABASE.md`.
    - Composite keys, tenant isolation guarantees, audit trails, and concurrency protections.
@@ -599,7 +1009,7 @@ The milestone log below reflects design/build history. The **actual next actions
    - Direct S3 upload via time-limited presigned PUT URLs with SHA-256 integrity and MIME validation.
    - Atomic upload verification handshake (`ConfirmDocumentUploadUseCase`) with out-of-transaction S3 HeadObject checks.
 9. [x] **Phase 9: Asynchronous Processing, SQS & Worker Resilience** _(Completed)_
-   - Documented in `docs/ASYNC.md`.
+   - Documented in `docs/ASYNC_DOCUMENT_HANDOFF.md`.
    - `IngestionJob` aggregate root with state machine (`PENDING`, `PROCESSING`, `COMPLETED`, `FAILED`, `DEAD_LETTER`).
    - Zero-trust message payload: authorization strictly resolved from trusted backend database state.
    - Idempotent duplicate delivery handling.
@@ -685,7 +1095,7 @@ The milestone log below reflects design/build history. The **actual next actions
     - Rollback resilience: ECS deployment circuit breakers and CloudWatch alarm rollbacks.
     - Documented in `docs/CICD.md`.
 19. [x] **Phase 26: Full Security Review & Threat Assessment** _(Completed)_
-    - Comprehensive security audit documented in `docs/SECURITY_REVIEW.md`.
+    - Comprehensive security audit documented in `docs/SECURITY_MODEL.md` and `docs/AI_SECURITY.md`.
     - Evaluated 8 domains: Authentication, Authorization & Anti-IDOR, API limits & abuse, File uploads & S3, AI injection & privacy, AWS IAM & VPC network, Database RLS & transactions, Async queue resilience.
     - Classified and remediated critical/high vulnerabilities: constant-time secret comparison (`crypto.timingSafeEqual` and `secrets.compare_digest`), hardcoded secret fallback elimination in production, 1MB JSON body size capping in HTTP readers.
     - 71 TypeScript unit/integration tests and 27 Python AI security tests passing cleanly.

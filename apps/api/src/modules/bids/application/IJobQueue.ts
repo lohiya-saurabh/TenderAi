@@ -5,6 +5,7 @@ export interface IngestionJobMessage {
   bidId: string;
   documentId: string;
   workflowRunId?: string;
+  traceId?: string;
   correlationId?: string;
   storageReference?: string;
   documentType?: string;

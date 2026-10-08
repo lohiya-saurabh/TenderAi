@@ -50,16 +50,24 @@ describe('Design System Primitives & Tokens Suite', () => {
       expect(naElement.props.status).toBe('NOT_APPLICABLE');
     });
 
-    it('should support legacy status aliases seamlessly', () => {
+    it('should support legacy and document status aliases seamlessly', () => {
       const readyElement = React.createElement(StatusBadge, { status: 'READY' });
       const flaggedElement = React.createElement(StatusBadge, { status: 'FLAGGED' });
       const pendingElement = React.createElement(StatusBadge, { status: 'PENDING' });
       const waivedElement = React.createElement(StatusBadge, { status: 'WAIVED' });
+      const processingElement = React.createElement(StatusBadge, { status: 'PROCESSING', iconOnly: true });
+      const queuedElement = React.createElement(StatusBadge, { status: 'QUEUED_FOR_EXTRACTION', iconOnly: true });
+      const completedElement = React.createElement(StatusBadge, { status: 'COMPLETED' });
 
       expect(readyElement.props.status).toBe('READY');
       expect(flaggedElement.props.status).toBe('FLAGGED');
       expect(pendingElement.props.status).toBe('PENDING');
       expect(waivedElement.props.status).toBe('WAIVED');
+      expect(processingElement.props.status).toBe('PROCESSING');
+      expect(processingElement.props.iconOnly).toBe(true);
+      expect(queuedElement.props.status).toBe('QUEUED_FOR_EXTRACTION');
+      expect(queuedElement.props.iconOnly).toBe(true);
+      expect(completedElement.props.status).toBe('COMPLETED');
     });
   });
 

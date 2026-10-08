@@ -10,9 +10,9 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { PGlite } from '@electric-sql/pglite';
-import { drizzle } from 'drizzle-orm/pglite';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { initDatabase } from '../../common/database/database.provider.js';
+import { createDrizzle, type DrizzleDb } from '../../common/database/database.module.js';
 import * as schema from '../../common/database/schema.js';
 import { TenantContextHolder } from '../../common/security/TenantContext.js';
 import { CompaniesService } from '../companies/companies.service.js';
@@ -20,20 +20,18 @@ import { CompanyProfileService } from '../company-profile/company-profile.servic
 import { BidsService } from '../bids/bids.service.js';
 import { GetBidDecisionUseCase } from '../bids/application/GetBidDecisionUseCase.js';
 import { AiDecisionClient, type AiBidDecisionRequest, type AiBidDecisionResponse } from '../bids/application/AiDecisionClient.js';
-import { NotFoundError, ForbiddenError, BadRequestError } from '../../common/errors/errors.js';
+import { NotFoundError, BadRequestError } from '../../common/errors/errors.js';
 
 describe('Multi-Company Security & Workflow Suite (1 Tenant -> N Companies)', () => {
   let db: PGlite;
-  let drizzleDb: ReturnType<typeof drizzle<typeof schema>>;
+  let drizzleDb: DrizzleDb;
   let companiesService: CompaniesService;
   let companyProfileService: CompanyProfileService;
   let bidsService: BidsService;
   let getBidDecisionUseCase: GetBidDecisionUseCase;
 
   const TENANT_A = 'org_acme_infra_001';
-  const TENANT_B = 'org_bharat_build_002';
   const USER_A_ADMIN = 'usr_admin_01';
-  const USER_B_ADMIN = 'usr_bharat_admin_01';
 
   const COMPANY_A1 = 'comp_acme_infra_001';
   const COMPANY_A2 = 'comp_acme_tech_002';
@@ -42,11 +40,11 @@ describe('Multi-Company Security & Workflow Suite (1 Tenant -> N Companies)', ()
   beforeEach(async () => {
     db = new PGlite();
     await initDatabase(db, { seedUsers: true, seedFullProfile: true, seedBidsAndCompliance: true });
-    drizzleDb = drizzle(db, { schema });
+    drizzleDb = createDrizzle(db);
 
-    companyProfileService = new CompanyProfileService(drizzleDb as any);
-    companiesService = new CompaniesService(drizzleDb as any, companyProfileService);
-    bidsService = new BidsService(drizzleDb as any);
+    companyProfileService = new CompanyProfileService(drizzleDb);
+    companiesService = new CompaniesService(drizzleDb, companyProfileService);
+    bidsService = new BidsService(drizzleDb);
 
     const fakeAiClient = {
       evaluate: async (req: AiBidDecisionRequest): Promise<AiBidDecisionResponse> => ({
@@ -67,7 +65,7 @@ describe('Multi-Company Security & Workflow Suite (1 Tenant -> N Companies)', ()
       }),
     };
 
-    getBidDecisionUseCase = new GetBidDecisionUseCase(drizzleDb as any, fakeAiClient as unknown as AiDecisionClient);
+    getBidDecisionUseCase = new GetBidDecisionUseCase(drizzleDb, fakeAiClient as unknown as AiDecisionClient);
   });
 
   describe('1. Tenant-scoped Company Management', () => {
@@ -148,7 +146,7 @@ describe('Multi-Company Security & Workflow Suite (1 Tenant -> N Companies)', ()
               {
                 company_name: 'Hijacked Company',
                 is_blacklisted: false,
-              } as any,
+              } as unknown as Parameters<typeof companyProfileService.createProfileVersion>[1],
               COMPANY_B1,
             ),
         ),
@@ -187,30 +185,31 @@ describe('Multi-Company Security & Workflow Suite (1 Tenant -> N Companies)', ()
       expect(bid1.companyId).toBe(COMPANY_A1);
       expect(bid2.companyId).toBe(COMPANY_A2);
 
+      const getItems = (res: unknown): { id: string }[] =>
+        Array.isArray(res) ? res : (res as { items: { id: string }[] }).items;
+
       // List all bids for Tenant A
       const allTenantABids = await TenantContextHolder.run(
         { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN' },
         () => bidsService.listBids(),
       );
-      expect((allTenantABids as any).items ? (allTenantABids as any).items.some((b: any) => b.id === bid1.id) : (allTenantABids as any).some((b: any) => b.id === bid1.id)).toBe(true);
+      expect(getItems(allTenantABids).some((b) => b.id === bid1.id)).toBe(true);
 
       // Filter specifically by Company A1
       const compA1Bids = await TenantContextHolder.run(
         { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN' },
         () => bidsService.listBids({ companyId: COMPANY_A1 }),
       );
-      const itemsA1 = (compA1Bids as any).items || compA1Bids;
-      expect(itemsA1.some((b: any) => b.id === bid1.id)).toBe(true);
-      expect(itemsA1.some((b: any) => b.id === bid2.id)).toBe(false);
+      expect(getItems(compA1Bids).some((b) => b.id === bid1.id)).toBe(true);
+      expect(getItems(compA1Bids).some((b) => b.id === bid2.id)).toBe(false);
 
       // Filter specifically by Company A2
       const compA2Bids = await TenantContextHolder.run(
         { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN' },
         () => bidsService.listBids({ companyId: COMPANY_A2 }),
       );
-      const itemsA2 = (compA2Bids as any).items || compA2Bids;
-      expect(itemsA2.some((b: any) => b.id === bid2.id)).toBe(true);
-      expect(itemsA2.some((b: any) => b.id === bid1.id)).toBe(false);
+      expect(getItems(compA2Bids).some((b) => b.id === bid2.id)).toBe(true);
+      expect(getItems(compA2Bids).some((b) => b.id === bid1.id)).toBe(false);
     });
 
     it('rejects bid creation if companyId belongs to another tenant', async () => {

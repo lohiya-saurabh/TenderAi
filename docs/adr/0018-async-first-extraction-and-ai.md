@@ -21,7 +21,7 @@ ADR 0003 mandated an asynchronous pipeline (S3 → SQS → worker → AI → det
 2. **The AI engine is reachable only from the worker path** (and from tests). No application service calls the AI engine inline.
 3. **SSE streams real `WorkflowRun` state** (PENDING → PROCESSING → COMPLETED/FAILED/DEAD_LETTER) with step transitions (PARSING_PAGES → EXTRACTING_COMPLIANCE → MATCHING → VERIFYING_CITATIONS → COMPLETED/REVIEW_READY).
 4. **The regex extractor remains the deterministic production baseline**; the LLM is an adapter behind `StructuredLLMClient` invoked by the worker with identical output contracts. Degradation path: LLM failure → regex baseline, never silence.
-5. **Idempotency, leases, backoff, and DLQ** behavior is exactly as specified in `docs/ASYNC.md` — the tested design finally becomes the shipping design.
+5. **Idempotency, leases, backoff, and DLQ** behavior is exactly as specified in `docs/ASYNC_DOCUMENT_HANDOFF.md` — the tested design finally becomes the shipping design.
 
 ## Consequences
 
@@ -36,4 +36,4 @@ ADR 0003 mandated an asynchronous pipeline (S3 → SQS → worker → AI → det
 
 ## References
 
-ADR 0001 (two-tier boundary), ADR 0003 (SQS async pipeline), `docs/ASYNC.md`, `docs/CURRENT_STATE.md` §14.
+ADR 0001 (two-tier boundary), ADR 0003 (SQS async pipeline), `docs/ASYNC_DOCUMENT_HANDOFF.md`.

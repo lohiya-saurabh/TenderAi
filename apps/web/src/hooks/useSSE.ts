@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { getAccessToken } from '../api/client.js';
 
 export interface SSEProgressEvent {
@@ -19,6 +19,8 @@ interface UseSSEReturn {
 
 /**
  * Hook for subscribing to Server-Sent Events (SSE) for document extraction progress.
+ * Prevents native EventSource auto-reconnect loops once terminal states (COMPLETED or 100%)
+ * are reached or when close() is explicitly called.
  */
 export function useSSE(url: string | null): UseSSEReturn {
   const [lastEvent, setLastEvent] = useState<SSEProgressEvent | null>(null);
@@ -26,12 +28,24 @@ export function useSSE(url: string | null): UseSSEReturn {
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
+  const isTerminatedRef = useRef<boolean>(false);
+
+  const close = useCallback(() => {
+    isTerminatedRef.current = true;
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+      setIsConnected(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!url) {
       setIsConnected(false);
       return;
     }
+
+    isTerminatedRef.current = false;
 
     // Append token if available for authenticated SSE endpoint
     const token = getAccessToken();
@@ -50,28 +64,38 @@ export function useSSE(url: string | null): UseSSEReturn {
         const data = JSON.parse(event.data) as SSEProgressEvent;
         setLastEvent(data);
         setEvents((prev) => [...prev, data]);
+
+        // If completion or 100% progress is reached, immediately close to prevent native auto-reconnect
+        if (data.step === 'COMPLETED' || data.progress >= 100) {
+          isTerminatedRef.current = true;
+          es.close();
+          eventSourceRef.current = null;
+          setIsConnected(false);
+        }
       } catch (err) {
         console.error('Failed to parse SSE event data', err);
       }
     };
 
     es.onerror = () => {
+      // If the stream was terminated normally upon completion or closed explicitly, do not treat as an error
+      if (isTerminatedRef.current) {
+        es.close();
+        eventSourceRef.current = null;
+        setIsConnected(false);
+        return;
+      }
       setError('Connection lost. Reconnecting...');
       setIsConnected(false);
     };
 
     return () => {
+      isTerminatedRef.current = true;
       es.close();
+      eventSourceRef.current = null;
       setIsConnected(false);
     };
   }, [url]);
-
-  const close = () => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      setIsConnected(false);
-    }
-  };
 
   return {
     lastEvent,

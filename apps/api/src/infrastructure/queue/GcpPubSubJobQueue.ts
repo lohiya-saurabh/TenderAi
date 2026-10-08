@@ -5,6 +5,8 @@ import {
   QueueMessage,
   DeadLetterMessage,
 } from '../../modules/bids/application/IJobQueue.js';
+import { StructuredLogger } from '../../common/logging/StructuredLogger.js';
+import { LoggingContextHolder } from '../../common/logging/LoggingContext.js';
 
 export interface GcpPubSubConfig {
   topicName: string;
@@ -28,6 +30,7 @@ export class GcpPubSubJobQueue implements IJobQueue {
   private readonly dlqTopicName?: string;
   private readonly dlqSubscriptionName?: string;
   private readonly projectId: string;
+  private readonly logger = new StructuredLogger('GcpPubSubJobQueue', 'api');
 
   constructor(config: GcpPubSubConfig) {
     this.topicName = config.topicName;
@@ -56,9 +59,28 @@ export class GcpPubSubJobQueue implements IJobQueue {
   }
 
   public async enqueue(payload: IngestionJobMessage): Promise<void> {
+    const context = LoggingContextHolder.get();
+    const enrichedPayload: IngestionJobMessage = {
+      ...payload,
+      traceId: payload.traceId || context.traceId,
+      correlationId: payload.correlationId || context.correlationId,
+    };
+
     const topic = this.pubSub.topic(this.topicName);
-    const dataBuffer = Buffer.from(JSON.stringify(payload));
+    const dataBuffer = Buffer.from(JSON.stringify(enrichedPayload));
     await topic.publishMessage({ data: dataBuffer });
+
+    this.logger.info('queue.message.published', `Published ingestion job ${payload.jobId} to PubSub`, {
+      jobId: payload.jobId,
+      documentId: payload.documentId,
+      bidId: payload.bidId,
+    }, {
+      trace_id: enrichedPayload.traceId,
+      correlation_id: enrichedPayload.correlationId,
+      job_id: payload.jobId,
+      document_id: payload.documentId,
+      tender_id: payload.bidId,
+    });
   }
 
   public async receiveMessages(

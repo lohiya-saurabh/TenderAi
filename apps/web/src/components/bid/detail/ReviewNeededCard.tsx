@@ -86,7 +86,7 @@ export const ReviewNeededCard: React.FC<ReviewNeededCardProps> = ({ items }) => 
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {reviewNeeded.map((item) => {
-                const title = (item as any).title || item.requirement;
+                const title = (item as { title?: string }).title || item.requirement;
                 return (
               <Link
                 key={item.id}

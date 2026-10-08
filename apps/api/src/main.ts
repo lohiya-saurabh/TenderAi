@@ -10,23 +10,27 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
 
-import { Logger } from '@nestjs/common';
+import { StructuredLogger } from './common/logging/StructuredLogger.js';
+import { HttpLoggingInterceptor } from './common/logging/HttpLoggingInterceptor.js';
 import { resolveLogLevels } from './common/logger/log-level.util.js';
 
 // Tune stream pipeline listener headroom for GCS chunked streams and SSE clients
 EventEmitter.defaultMaxListeners = 30;
 
 async function bootstrap() {
-  const logger = new Logger('Bootstrap');
+  const logger = new StructuredLogger('Bootstrap', 'api');
   const app = await NestFactory.create(AppModule, {
-    logger: resolveLogLevels(process.env.LOG_LEVEL),
+    logger,
   });
+
+  // Global HTTP Logging Interceptor for request tracing and latency metrics
+  app.useGlobalInterceptors(new HttpLoggingInterceptor());
 
   // Global CORS — matches the previous server configuration
   app.enableCors({
     origin: '*',
     methods: 'GET,POST,PATCH,PUT,DELETE,OPTIONS',
-    allowedHeaders: 'Content-Type,Authorization,X-Requested-With',
+    allowedHeaders: 'Content-Type,Authorization,X-Requested-With,X-Trace-Id,X-Correlation-Id,X-Request-Id',
   });
 
   // Global exception filter — maps our HttpError subclasses to proper responses
@@ -39,9 +43,11 @@ async function bootstrap() {
   const port = Number(process.env.PORT) || 3000;
   await app.listen(port);
 
-  logger.log(`🚀 TenderPulse AI API Server running at http://localhost:${port}`);
-  logger.log(`🐘 Persistence Engine: PostgreSQL 16 (PGlite in ./data/postgres)`);
-  logger.log(`🏗️  Framework: NestJS + Express (LogLevels: ${resolveLogLevels().join(', ')})`);
+  logger.info('server.started', `🚀 TenderPulse AI API Server running at http://localhost:${port}`, {
+    port,
+    persistence: 'PostgreSQL 16 (PGlite in ./data/postgres)',
+    logLevels: resolveLogLevels().join(', '),
+  });
 }
 
 bootstrap();

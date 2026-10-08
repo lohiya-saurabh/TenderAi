@@ -15,6 +15,8 @@ import { Observable } from 'rxjs';
 import { TenantContextHolder } from '../TenantContext.js';
 import type { UserTokenPayload } from '../TokenService.js';
 
+import { LoggingContextHolder } from '../../logging/LoggingContext.js';
+
 @Injectable()
 export class TenantContextInterceptor implements NestInterceptor {
   public intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
@@ -25,15 +27,23 @@ export class TenantContextInterceptor implements NestInterceptor {
       return next.handle();
     }
 
+    const requestId = (request.headers['x-request-id'] as string) || `req_${Date.now()}`;
+
     return new Observable((subscriber) => {
       TenantContextHolder.run(
         {
           organizationId: user.organizationId,
           userId: user.sub,
           role: user.role,
-          requestId: (request.headers['x-request-id'] as string) || `req_${Date.now()}`,
+          requestId,
         },
         () => {
+          LoggingContextHolder.merge({
+            tenantId: user.organizationId,
+            userId: user.sub,
+            requestId,
+          });
+
           const subscription = next.handle().subscribe({
             next: (val) => subscriber.next(val),
             error: (err) => subscriber.error(err),

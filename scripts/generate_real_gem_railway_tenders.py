@@ -6,6 +6,7 @@ Creates valid multi-page PDF documents in the samples/ folder.
 
 import os
 
+
 def build_pdf_stream(text_lines):
     stream_content = "BT\n/F1 10 Tf\n13 TL\n40 760 Td\n"
     for line in text_lines:
@@ -45,7 +46,6 @@ def generate_pdf(output_path, pages_text_list):
     objects.append(f"<< /Type /Pages /Kids [ {page_refs} ] /Count {page_count} >>")
     
     for i, page_lines in enumerate(pages_text_list):
-        page_obj_id = 3 + i * 2
         content_obj_id = 4 + i * 2
         
         # Page object
@@ -74,8 +74,7 @@ def generate_pdf(output_path, pages_text_list):
         xref_offset = f.tell()
         f.write(f"xref\n0 {len(objects) + 1}\n".encode("latin1"))
         f.write(b"0000000000 65535 f \n")
-        for offset in offsets:
-            f.write(f"{offset:010d} 00000 n \n".encode("latin1"))
+        f.writelines(f"{offset:010d} 00000 n \n".encode("latin1") for offset in offsets)
         
         trailer = (
             f"trailer\n<< /Size {len(objects) + 1} /Root 1 0 R >>\n"
@@ -262,7 +261,7 @@ def main():
     generate_pdf(gem_file, gem_pages)
     generate_pdf(railway_file, railway_pages)
 
-    print(f"✅ Generated exact real-world sample tender PDFs:")
+    print("✅ Generated exact real-world sample tender PDFs:")
     print(f"   1. {gem_file} ({len(gem_pages)} pages)")
     print(f"   2. {railway_file} ({len(railway_pages)} pages)")
 

@@ -1,127 +1,281 @@
-# Async Document Handoff — Current Implementation
+# Asynchronous Document Ingestion & Compliance Persistence Architecture (Design B)
 
-## Implementation update
+## 1. Executive Summary & Architectural Overview
 
-`DocumentsService.confirmUpload()` now uses an outbox instead of a best-effort direct queue call:
+TenderPulse uses a **decoupled, two-tier asynchronous architecture** for tender document ingestion and AI-driven compliance extraction, conforming to **Design B (Asynchronous Event Choreography)**.
 
-1. It requires `headObject(storagePath)` to confirm a non-empty object.
-2. One PostgreSQL transaction writes `tender_documents`, sets the bid to `QUEUED`, writes the upload audit record, and inserts `document_processing_outbox`.
-3. The registered `DocumentProcessingRuntime` claims outbox entries with a five-minute recovery lease, publishes through `IJobQueue`, and retries failed publications with backoff.
-4. The same NestJS runtime polls the queue, processes jobs, and ACKs only after the result transaction commits.
+In Indian public procurement, tender documents typically span 50 to 500+ pages of dense, multi-schedule legal conditions. Synchronous HTTP extraction causes reverse proxy timeouts (HTTP 504), Node.js event-loop starvation, and complete loss of progress on transient network or model failures.
 
-The queue payload is metadata only: `jobId`, organization/tenant ID, company ID, bid ID, document ID, stable workflow/correlation IDs, exact `storageReference`, document type, filename, and timestamp. No PDF bytes are sent. The consumer verifies those claims against PostgreSQL before using the object key.
+To solve this, TenderPulse separates responsibilities across two services using cloud-agnostic ports and adapters:
+- **Application & Ingestion Tier (`apps/api` - NestJS / TypeScript)**: Manages authenticated client uploads, enforces multi-tenant boundaries, writes durable outbox records, polls message queues, and serves as the **exclusive, atomic single-writer to PostgreSQL**.
+- **AI Extraction & Intelligence Worker Tier (`apps/ai` - FastAPI / Python)**: Executes heavy PDF layout parsing (Docling / PyMuPDF), linguistic candidate filtering, and stateful LangGraph agentic extraction workflows, publishing asynchronous completion events back to the message broker upon finishing.
 
-Provider choice is still runtime configuration: SQS takes precedence, then Pub/Sub; local environments use `MockSqsJobQueue`. Production startup now fails if neither real provider is configured. `AWS_SQS_DLQ_URL` / `GCP_PUBSUB_DLQ_TOPIC` must be configured for the manual DLQ path to complete; missing DLQ configuration is an explicit error and does not ACK the source message.
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Bid Manager
+    participant Web as Web Client (React)
+    participant S3 as Object Storage (S3 / GCS)
+    participant API as API Server (NestJS)
+    participant DB as PostgreSQL (Drizzle ORM)
+    participant Queue as Message Queue (SQS / PubSub)
+    participant AI as AI Worker (FastAPI / LangGraph)
+    participant Pub as Completion Topic / Queue
 
-**Boundary limitation:** the consumer currently lives in NestJS, not FastAPI. It retrieves/parses in NestJS and sends normalized page text to FastAPI; FastAPI remains an HTTP extraction service and does not consume the queue or persist PostgreSQL results.
+    User->>API: 1. POST /api/v1/bids/:id/upload-url
+    API-->>User: Presigned PUT URL + storagePath
+    User->>S3: 2. Direct PUT document.pdf (bytes)
+    User->>API: 3. POST /api/v1/bids/:id/documents/confirm
+    API->>S3: 4. headObject(storagePath) verify
+    API->>DB: 5. Atomic Tx: tender_documents + Outbox record + Bid=QUEUED
+    API-->>User: 200 OK { documentId, status: "QUEUED" }
 
-This documents the implemented handoff from NestJS upload confirmation to a queue and the state of the consumer integration. It distinguishes configured adapters and test code from the production runtime path.
+    Note over API,Queue: Asynchronous Outbox Poller & Queue Dispatch
+    API->>DB: 6. Claim Outbox (5-min lease)
+    API->>Queue: 7. Enqueue IngestionJobMessage (metadata only)
 
-## Summary
+    Note over API,AI: Queue Consumer & Worker Execution
+    API->>Queue: 8. Poll job message
+    API->>AI: 9. Dispatch extraction (HTTP or Queue worker)
+    AI->>S3: 10. Fetch PDF / Parse via Docling / PyMuPDF
+    AI->>AI: 11. Run LangGraph Workflow (Extract -> Grounding Verify)
+    AI->>Pub: 12. Publish DocumentExtractionCompletedEvent
 
-| Item | Current implementation |
-|---|---|
-| **Producer** | `DocumentsController.confirmUpload()` → `DocumentsService.confirmUpload()` → transactional `document_processing_outbox` |
-| **Queue provider** | `AwsSqsJobQueue`, `GcpPubSubJobQueue`, or `MockSqsJobQueue` for non-production; production requires SQS or Pub/Sub configuration. |
-| **Topic/Queue** | Runtime environment values: `AWS_SQS_QUEUE_URL` (takes precedence) or `GCP_PUBSUB_TOPIC` plus `GCP_PUBSUB_SUBSCRIPTION`. Deployment-specific names are not determined by source code. |
-| **Consumer** | Registered NestJS `DocumentProcessingRuntime`; FastAPI remains HTTP-only and does not subscribe/pull messages. |
-| **Message schema** | JSON `IngestionJobMessage` with stable job ID and tenant/company/bid/document/workflow/correlation/storage context; no document bytes. |
-| **Object reference** | Exact persisted `storagePath` carried as `storageReference`, such as `tenants/<organizationId>/bids/<bidId>/<documentId>/<fileName>`. |
-
-## Historical pre-outbox audit
-
-The following analysis describes the implementation before the outbox/runtime milestone and is retained for context.
-
-The active controller route is `POST /api/v1/bids/:bidId/documents/confirm`. It calls `DocumentsService.confirmUpload()`; this is the runtime producer path, rather than `ConfirmDocumentUploadUseCase`.
-
-`DocumentsService.confirmUpload()` resolves the tenant/bid and document metadata, makes two `headObject(storagePath)` calls when storage is available, writes the document row and audit record, then attempts to enqueue the job if the optional queue is injected. The browser uploads through the URL returned by `POST /api/v1/bids/:bidId/upload-url`; NestJS derives the storage key when generating that URL.
-
-### Object-existence verification is not a publish gate
-
-The current service logs a warning if `headObject` reports a missing/empty object or throws, but it continues to persist metadata and attempt queue publication. Thus the active controller path does **not** guarantee that an uploaded object exists before publishing.
-
-There is a separate `ConfirmDocumentUploadUseCase.execute()` that calls `headObject` and throws if the object is absent or the size differs. However, the `DocumentsController.confirmUpload()` route above invokes `DocumentsService.confirmUpload()` directly; the stricter use case is not the guard for this endpoint.
-
-Also note that `DocumentsService.confirmUpload()` catches queue publication errors and logs a warning before returning success. The API response can therefore report upload confirmation even when no durable queue handoff occurred.
-
-## Provider selection and configuration
-
-`QueueModule` registers `QUEUE_TOKEN` globally and chooses its adapter in this order:
-
-1. `AWS_SQS_QUEUE_URL` set → `AwsSqsJobQueue`; optional `AWS_SQS_DLQ_URL`, `AWS_REGION` (default `ap-south-1`), and `SQS_ENDPOINT`.
-2. Otherwise, all of `GCP_PROJECT_ID`, `GCP_PUBSUB_TOPIC`, and `GCP_PUBSUB_SUBSCRIPTION` set → `GcpPubSubJobQueue`; optional `GCP_PUBSUB_DLQ_TOPIC`, credentials via `GOOGLE_APPLICATION_CREDENTIALS`, and emulator endpoint via `PUBSUB_EMULATOR_HOST`.
-3. Otherwise → `MockSqsJobQueue` (in-memory).
-
-When both provider configurations are present, SQS wins because its check runs first.
-
-The checked-in templates and Compose wiring use different names: `.env.example`/`docker-compose.yml` refer to `SQS_INGESTION_QUEUE_URL`, `INGESTION_QUEUE_TOPIC`, and `INGESTION_QUEUE_SUBSCRIPTION`; `.env.gcp.example` also uses `INGESTION_QUEUE_TOPIC` and `INGESTION_QUEUE_SUBSCRIPTION`. `QueueModule` does not read these names. The sample GCP file sets `GCP_PROJECT_ID`, but does not set the `GCP_PUBSUB_TOPIC` and `GCP_PUBSUB_SUBSCRIPTION` variables needed to select Pub/Sub. Consequently, those samples alone select the mock queue, not SQS or Pub/Sub.
-
-The source defines adapter behavior but does not establish the actual production topic/queue name. Terraform/ADR and adapter tests contain example names; they are not proof that the running service is configured to use those names.
-
-## Message schema
-
-`IJobQueue.enqueue()` accepts `IngestionJobMessage`; the SQS and Pub/Sub adapters serialize the object as JSON. The active `DocumentsService.confirmUpload()` producer supplies:
-
-| JSON field | Type in interface | Supplied by producer? | Meaning |
-|---|---|---:|---|
-| `jobId` | `string` | Yes | Generated ingestion job identifier |
-| `organizationId` | `string` | Yes | Tenant/organization context; field is not named `tenant_id` |
-| `companyId` | `string?` | Yes, possibly `undefined` | Company context |
-| `bidId` | `string` | Yes | Bid identifier; there is no separate `tenderId` field |
-| `documentId` | `string` | Yes | Uploaded document identifier |
-| `workflowRunId` | `string?` | Yes | Workflow correlation context |
-| `correlationId` | `string?` | Yes | Request/job correlation context |
-| `storageReference` | `string?` | Yes | Object key (`storagePath`); not PDF bytes |
-| `documentType` | `string?` | Yes | Document type |
-| `fileName` | `string?` | Yes | Original file name |
-| `timestamp` | `string` | Yes | ISO timestamp |
-
-There is no `eventType` or `DocumentProcessingRequested` discriminator in the interface/payload; the message is represented as an `IngestionJobMessage`. Optional fields whose runtime value is `undefined` may be omitted when JSON is serialized.
-
-The message contains a storage reference and workflow identifiers rather than the PDF binary, matching the desired small-message handoff.
-
-## Consumer status: queue and FastAPI are not connected
-
-There are two separate pieces of implementation, but they do not form an end-to-end production consumer:
-
-- `apps/api/src/modules/bids/application/IngestionWorker.ts` has `pollAndProcess()`, which calls the `IJobQueue.receiveMessages()` port and processes a message. Repository references show its construction/use in E2E tests; it is not registered as a NestJS provider or started by the application module.
-- FastAPI exposes `POST /api/v1/worker/process-message` in `apps/ai/src/tenderpulse_ai/main.py`. It is an HTTP endpoint, not a queue listener: it accepts a posted request and does not pull from SQS/Pub/Sub.
-- No production code was found that forwards the queue message from an actual queue poller to that FastAPI endpoint. Nor is the NestJS `IngestionWorker` wired to call this FastAPI route; its extractor is an injected interface and its default implementation returns fixed sample items.
-
-Therefore the demonstrated implementation is **NestJS upload confirmation → configured queue adapter (or mock)**. The next arrow, **MessageQueue → FastAPI Worker**, is not wired in the production runtime. The FastAPI endpoint is available for an HTTP caller, but it is not itself the consumer.
-
-The endpoint's `StorageDocumentResolver` is also not a production object-storage adapter: it resolves a hard-coded fixture, reads a local path, or constructs fallback text. It does not use the NestJS object-storage provider to fetch the object. This does not establish real object retrieval from GCS/S3.
-
-## Actual call chain
-
-```text
-POST /api/v1/bids/:bidId/upload-url
-  → DocumentsController.generateUploadUrl()
-  → DocumentsService.generateUploadUrl()
-  → IStorageService.generatePresignedUploadUrl(storagePath, ...)
-
-Browser uploads PDF bytes to returned URL
-
-POST /api/v1/bids/:bidId/documents/confirm
-  → DocumentsController.confirmUpload()
-  → DocumentsService.confirmUpload()
-      → best-effort IStorageService.headObject(storagePath)
-      → persist tender_documents metadata and audit log
-      → optional IJobQueue.enqueue(IngestionJobMessage)
-          → AwsSqsJobQueue, GcpPubSubJobQueue, or MockSqsJobQueue
-
-No production queue-consumer connection found:
-  MessageQueue  -/-> IngestionWorker (NestJS class is exercised in tests)
-  MessageQueue  -/-> FastAPI POST /api/v1/worker/process-message
+    Note over API,DB: Atomic Single-Writer Persistence
+    API->>Pub: 13. Receive DocumentExtractionCompletedEvent
+    API->>DB: 14. Atomic Tx: Verify tenant -> Clean old rows -> Insert compliance_items -> Update Bid counters -> Update doc=COMPLETED -> Write audit
+    API->>Queue: 15. Acknowledge / Delete Queue Message
 ```
 
-## Findings against the intended handoff
+---
 
-- **Keep:** a small message containing document identity, tenant/workflow context, and a storage key; the PDF bytes are not put on the queue.
-- **Mismatch:** the active service logs and proceeds on a failed/missing-object check instead of refusing to publish.
-- **Mismatch:** configured provider variable names differ from the names in the checked-in examples and Compose file, so the examples do not select the advertised cloud adapters.
-- **Gap:** no active queue consumer is wired to FastAPI.
-- **Gap:** the queue message is not explicitly named `DocumentProcessingRequested`, and tenant/tender fields use `organizationId`/`bidId` names rather than `tenant_id`/`tender_id`.
-- **Gap:** queue publication failure is swallowed by `DocumentsService.confirmUpload()` after warning; the caller can still receive a success-shaped confirmation.
+## 2. Ingestion & Outbox Stage (NestJS)
 
-No implementation changes are included in this document.
+### 2.1 Direct-to-Storage Upload Handshake
+1. The client requests a presigned upload URL via `POST /api/v1/bids/:id/upload-url`.
+2. The API derives a tenant-isolated storage path: `tenants/{organizationId}/bids/{bidId}/{documentId}/{fileName}`.
+3. The client uploads raw PDF bytes directly to object storage via HTTP PUT. Raw document bytes never traverse the API process memory.
+
+### 2.2 Upload Confirmation & Transactional Outbox
+1. The client confirms the upload via `POST /api/v1/bids/:id/documents/confirm`.
+2. The server verifies physical object presence and non-zero size via `IStorageService.headObject(storagePath)`.
+3. An atomic PostgreSQL transaction performs four operations:
+   - Inserts the `tender_documents` row (`status = 'PENDING'`).
+   - Updates `bids.status = 'QUEUED'`.
+   - Inserts an audit event `DOCUMENT_UPLOADED`.
+   - Inserts an outbox record into `document_processing_outbox`.
+
+### 2.3 Outbox Record Schema
+```typescript
+{
+  id: string; // UUID
+  organizationId: string;
+  companyId: string;
+  bidId: string;
+  documentId: string;
+  payload: IngestionJobMessage;
+  status: 'PENDING' | 'CLAIMED' | 'PUBLISHED' | 'FAILED';
+  leaseExpiresAt?: Date;
+  retryCount: number;
+  lastError?: string;
+  createdAt: Date;
+}
+```
+
+---
+
+## 3. Queue Dispatch & Consumer Runtime (NestJS)
+
+### 3.1 Outbox Poller & Durable Handoff
+`DocumentProcessingRuntime` runs in the API application and handles durable handoff:
+- Queries `document_processing_outbox` for `PENDING` records or expired leases (`leaseExpiresAt < NOW()`).
+- Claims records using optimistic concurrency (`UPDATE ... WHERE status = 'PENDING'`).
+- Dispatches the payload to the configured `IJobQueue`.
+- Marks the outbox row as `PUBLISHED`.
+
+### 3.2 Cloud-Agnostic Queue Port (`IJobQueue`)
+The queue abstraction is strictly cloud-agnostic:
+- **AWS SQS Adapter (`AwsSqsJobQueue`)**: Used when `AWS_SQS_QUEUE_URL` is set.
+- **GCP Pub/Sub Adapter (`GcpPubSubJobQueue`)**: Used when `GCP_PUBSUB_TOPIC` and `GCP_PUBSUB_SUBSCRIPTION` are set.
+- **In-Memory Mock Adapter (`MockSqsJobQueue`)**: Used for local development and unit tests.
+
+### 3.3 Message Payload Contract (`IngestionJobMessage`)
+The message carries metadata only; raw PDF bytes are never placed in message queues:
+```json
+{
+  "jobId": "job-550e8400-e29b-41d4-a716-446655440000",
+  "organizationId": "org-tenant-alpha",
+  "companyId": "comp-12345",
+  "bidId": "bid-98765",
+  "documentId": "doc-54321",
+  "workflowRunId": "wf-112233",
+  "correlationId": "corr-445566",
+  "storageReference": "tenants/org-tenant-alpha/bids/bid-98765/doc-54321/nit_volume_1.pdf",
+  "documentType": "TENDER_NOTICE",
+  "fileName": "nit_volume_1.pdf",
+  "timestamp": "2026-10-08T02:00:00.000Z"
+}
+```
+
+---
+
+## 4. AI Worker & Extraction Pipeline (FastAPI)
+
+### 4.1 Worker Ingestion & Security Guard
+The AI worker exposes `POST /api/v1/extract` and `POST /api/v1/worker/process-message`:
+- **Mutual Authentication**: Validated via `X-Internal-Service-Key` header against `INTERNAL_SERVICE_KEY`.
+- **Security Context**: Tenant and company context are passed directly in the verified request, establishing an immutable `SecurityContext`.
+
+### 4.2 Document Parsing
+1. **Docling Document Converter (`DoclingDocumentParser`)**: Uses native Docling layout analysis to extract sections, tables, headers, and hierarchical reading order.
+2. **Text Normalization Fallback (`PyMuPDF / pdf_resolver`)**: In environments where native Docling libraries are absent, PyMuPDF streams pages and normalizes layout markers.
+3. **Table of Contents (TOC) Filtering**: Pages with high TOC density (>50%) lacking operative deontic modals are automatically excluded to preserve token budget.
+
+### 4.3 Stateful LangGraph Extraction Workflow
+The pipeline executes a multi-node LangGraph state machine:
+1. **Candidate Detector Node**: Regex and linguistic scanning for deontic modals (`shall`, `must`, `required to`), financial covenants (EMD, PBG), and submission rules.
+2. **LLM Extraction Node**: Invokes OpenRouter LLM (Claude 3.5 Sonnet / GPT-4o) using structured Pydantic output schemas.
+3. **Deterministic Grounding & Quote Verifier Node**: Verifies that every extracted verbatim quote actually exists character-for-character within the source page text. Discrepancies apply confidence penalties.
+4. **Human Review Router Node**:
+   - Confidence score $\ge 0.95$: `AUTO_ACCEPT`
+   - Confidence score $0.80 - 0.94$: `REVIEWER_VERIFICATION`
+   - Confidence score $< 0.80$: `MANDATORY_HUMAN_REVIEW`
+
+---
+
+## 5. Asynchronous Completion Event Dispatch (FastAPI)
+
+Upon workflow completion, the AI worker publishes a `DocumentExtractionCompletedEvent` via `CompletionPublisher`:
+
+### 5.1 Event Contract Schema
+```json
+{
+  "eventId": "evt-778899",
+  "eventType": "DocumentExtractionCompleted",
+  "documentId": "doc-54321",
+  "bidId": "bid-98765",
+  "organizationId": "org-tenant-alpha",
+  "companyId": "comp-12345",
+  "status": "SUCCESS",
+  "extractedCount": 18,
+  "extractedItems": [
+    {
+      "title": "Earnest Money Deposit (EMD)",
+      "category": "FINANCIAL",
+      "description": "Bidder shall submit an Earnest Money Deposit of INR 50,00,000 in the form of Bank Guarantee.",
+      "executionRules": {
+        "isMandatory": true,
+        "penalties": "Forfeiture of bid security",
+        "gracePeriodDays": 0
+      },
+      "provenance": {
+        "documentId": "doc-54321",
+        "documentName": "nit_volume_1.pdf",
+        "pageNumber": 14,
+        "clauseReference": "Clause 4.2.1",
+        "verbatimQuote": "The Bidder shall furnish, as part of its Bid, a Bid Security amounting to INR 50,00,000...",
+        "confidenceScore": 0.98
+      },
+      "isVerified": true,
+      "confidenceScore": 0.98
+    }
+  ],
+  "workflowRunId": "wf-112233",
+  "traceId": "trace-998877",
+  "correlationId": "corr-445566",
+  "timestamp": "2026-10-08T02:05:00.000Z"
+}
+```
+
+### 5.2 Completion Publisher Adapters
+- **GCP Pub/Sub (`GcpPubSubCompletionPublisher`)**: Publishes to configured topic.
+- **AWS SQS (`AwsSqsCompletionPublisher`)**: Sends message to configured completion queue.
+- **Mock Publisher (`MockCompletionPublisher`)**: Records events in memory during test execution.
+
+---
+
+## 6. Atomic Single-Writer PostgreSQL Persistence (NestJS)
+
+To maintain absolute data integrity and prevent race conditions, **the AI worker never writes directly to PostgreSQL**. NestJS `DocumentCompletionService` acts as the **exclusive single writer**.
+
+### 6.1 Database Schema (`compliance_items`)
+```sql
+CREATE TABLE compliance_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES organizations(id),
+    company_id UUID REFERENCES companies(id),
+    bid_id UUID NOT NULL REFERENCES bids(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    category VARCHAR(50) NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'EXTRACTED',
+    human_review_required BOOLEAN NOT NULL DEFAULT FALSE,
+    execution_rules JSONB DEFAULT '{}'::jsonb,
+    provenance JSONB NOT NULL DEFAULT '{}'::jsonb,
+    workflow_run_id VARCHAR(100),
+    correlation_id VARCHAR(100),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+### 6.2 Transactional Persistence Flow
+When `DocumentCompletionService.handleExtractionCompleted(event)` receives the event:
+
+1. **Authorization & Tenant Re-Derivation**:
+   - Re-queries `bids` and `tender_documents` from PostgreSQL using `organization_id`.
+   - If `bid.organization_id !== event.organizationId` or `doc.bid_id !== event.bidId`, aborts immediately with `ForbiddenException`.
+2. **PostgreSQL Transaction Acquisition**:
+   - Acquires row-level locks on `bids` and `tender_documents`.
+3. **Idempotent Document Clean-up**:
+   - Deletes any existing `compliance_items` associated with `event.documentId` in `provenance->>'documentId'`. This ensures safe retries and prevents duplicate entries.
+4. **Deterministic Batch Insert**:
+   - Generates deterministic UUIDs (`UUIDv5` based on `bidId + documentId + clauseReference + index`).
+   - Inserts all extracted items in a single SQL `INSERT INTO compliance_items VALUES (...)` batch.
+5. **Bid Status & Counters Recalculation**:
+   - Computes total requirements count and high-risk requirement counts.
+   - Updates `bids.status = 'IN_PROGRESS'` (or `'ACTIVE'`).
+   - Updates `tender_documents.status = 'COMPLETED'`.
+6. **Audit Trail Recording**:
+   - Inserts an `audit_logs` record with event `AI_INGESTION_COMPLETED`.
+7. **Queue Message Acknowledgment**:
+   - The queue message is deleted/acknowledged **only after the PostgreSQL transaction successfully commits**.
+
+---
+
+## 7. Reliability, Retries & Dead Letter Queues (DLQ)
+
+### 7.1 Distributed Delivery & Idempotency
+- **At-Least-Once Delivery Guarantee**: Distributed brokers (AWS SQS, GCP Pub/Sub) guarantee that every message is delivered at least once. Duplicate deliveries occur during network partitions or acknowledgment latency.
+- **Strict Idempotency**: All consumers and database persisters are idempotent. Existing document extraction items are purged within the database transaction prior to inserting newly extracted items with deterministic UUIDs.
+
+### 7.2 Visibility Timeout, Heartbeats & Exponential Backoff
+- **Visibility Timeout (Leases)**: When a worker receives a message, the broker starts a visibility timeout clock (default: 300 seconds). During this window, the message is hidden from peer workers.
+- **Heartbeat Renewal**: For long-running extractions, `DocumentProcessingRuntime` periodically renews visibility via a background heartbeat interval (`changeMessageVisibility`).
+- **Exponential Backoff with Jitter**: Transient errors (e.g. rate limits or brief network partitions) trigger exponential retry backoff:
+  $$\text{Timeout} = \min(\text{InitialTimeout} \times 2^{\text{attempt}}, \text{MaxTimeout}) + \text{jitter}$$
+
+### 7.3 Dead Letter Queues (DLQ) & Poison Pill Mitigation
+- **Poison Pills**: Malformed or unparseable payloads (corrupted binaries or malformed schemas) fail every processing attempt.
+- **Max Receive Limit**: If a message fails `maxReceiveCount` times (default: 3 attempts), the message broker routes it directly to a dedicated Dead-Letter Queue (DLQ).
+- **Terminal State**: NestJS transitions the document state to `DEAD_LETTER`, records `last_processing_error`, and emits a critical operational alert without infinitely looping.
+
+### 7.4 Failure Matrix & Recovery Mechanisms
+
+| Failure Scenario | Recovery Mechanism |
+|---|---|
+| **Storage unavailable during confirmation** | `headObject` fails before database write; returns HTTP 400/404; no orphaned DB row. |
+| **Outbox publication failure** | Outbox record remains `PENDING`; retry poller picks it up with exponential backoff. |
+| **AI Worker process crash during extraction** | Visibility timeout expires on message queue; message is redelivered to available worker. |
+| **Persistence transaction rollback** | Queue message remains unacknowledged; will be retried up to `maxReceiveCount`. |
+| **Exceeded max retries (Poison message)** | Queue provider routes message to configured Dead Letter Queue (`AWS_SQS_DLQ_URL` / `GCP_PUBSUB_DLQ_TOPIC`). |
+| **Replay / Redelivery** | Safe and idempotent: document rows are cleaned up inside the transaction before re-inserting new items with deterministic IDs. |
+
+---
+
+## 8. Summary of Architectural Decisions & Invariants
+
+1. **Cloud-Provider Agnostic**: All queues, object storage, and event publishers use ports and adapters. Swapping AWS and GCP requires zero business logic changes.
+2. **Never Trust the LLM for Authorization**: Tenant isolation and ownership are verified from trusted PostgreSQL rows, never from LLM outputs or untrusted client headers.
+3. **Single Writer Principle**: Only the NestJS API writes to PostgreSQL. The AI worker is a pure computational service that receives inputs and emits events.
+4. **Persist-Before-Ack**: A message is acknowledged if and only if its persistent side effects have successfully committed to the database.

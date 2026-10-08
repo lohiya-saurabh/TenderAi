@@ -124,13 +124,12 @@ export class GetBidDecisionUseCase {
     // 2. Pinned company profile for the bid's company
     const targetCompanyId = bid.companyId;
 
-    let pointerCondition = eq(schema.companyProfiles.organizationId, orgId);
-    if (targetCompanyId) {
-      pointerCondition = and(
-        eq(schema.companyProfiles.organizationId, orgId),
-        eq(schema.companyProfiles.companyId, targetCompanyId),
-      ) as any;
-    }
+    const pointerCondition = targetCompanyId
+      ? and(
+          eq(schema.companyProfiles.organizationId, orgId),
+          eq(schema.companyProfiles.companyId, targetCompanyId),
+        )
+      : eq(schema.companyProfiles.organizationId, orgId);
 
     const [pointer] = await this.db
       .select()

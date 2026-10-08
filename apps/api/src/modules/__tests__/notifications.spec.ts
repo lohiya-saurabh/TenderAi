@@ -3,17 +3,17 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { PGlite } from '@electric-sql/pglite';
-import { drizzle } from 'drizzle-orm/pglite';
 import { initDatabase } from '../../common/database/database.provider.js';
-import * as schema from '../../common/database/schema.js';
 import { TenantContextHolder } from '../../common/security/TenantContext.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { SettingsService } from '../settings/settings.service.js';
-import { NotFoundError, BadRequestError } from '../../common/errors/errors.js';
+import { NotFoundError } from '../../common/errors/errors.js';
+import { createDrizzle, type DrizzleDb } from '../../common/database/database.module.js';
+import * as schema from '../../common/database/schema.js';
 
 describe('Notifications Integration & Preference Gating Suite', () => {
   let db: PGlite;
-  let drizzleDb: ReturnType<typeof drizzle<typeof schema>>;
+  let drizzleDb: DrizzleDb;
   let notificationsService: NotificationsService;
   let settingsService: SettingsService;
 
@@ -24,10 +24,10 @@ describe('Notifications Integration & Preference Gating Suite', () => {
   beforeEach(async () => {
     db = new PGlite();
     await initDatabase(db, { seedUsers: true, seedFullProfile: true, seedBidsAndCompliance: true });
-    drizzleDb = drizzle(db, { schema });
+    drizzleDb = createDrizzle(db);
 
-    notificationsService = new NotificationsService(drizzleDb as any);
-    settingsService = new SettingsService(drizzleDb as any);
+    notificationsService = new NotificationsService(drizzleDb);
+    settingsService = new SettingsService(drizzleDb);
   });
 
   describe('1. Notifications Listing & Read State', () => {

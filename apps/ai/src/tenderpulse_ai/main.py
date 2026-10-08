@@ -1,6 +1,9 @@
+import asyncio
 import logging
 import secrets
+import sys
 from pathlib import Path
+from typing import ClassVar
 
 from fastapi import Depends, FastAPI, Header, HTTPException, status
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
@@ -17,6 +20,15 @@ from tenderpulse_ai.decision import (
     BidDecisionRequest,
     BidDecisionResponse,
 )
+from tenderpulse_ai.infrastructure.queue import (
+    DocumentExtractionCompletedEvent,
+    get_completion_publisher,
+)
+from tenderpulse_ai.logging import (
+    JSONLogFormatter,
+    TraceLoggingMiddleware,
+    scoped_logging_context,
+)
 from tenderpulse_ai.pipeline import (
     DocumentExtractionRequest,
     DocumentExtractionResponse,
@@ -27,12 +39,15 @@ from tenderpulse_ai.security.context import SecurityContext
 from tenderpulse_ai.tools.page_text import PageTextTool
 from tenderpulse_ai.tools.retrieval import ScopedRetrievalTool
 
-# Initialize root logging from settings
+# Initialize structured JSON root logging
 numeric_level = getattr(logging, settings.log_level.upper(), logging.INFO)
-logging.basicConfig(
-    level=numeric_level,
-    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
-)
+root_logger = logging.getLogger()
+root_logger.setLevel(numeric_level)
+for handler in list(root_logger.handlers):
+    root_logger.removeHandler(handler)
+stream_handler = logging.StreamHandler(sys.stdout)
+stream_handler.setFormatter(JSONLogFormatter(service_name="fastapi"))
+root_logger.addHandler(stream_handler)
 logger = logging.getLogger("tenderpulse_ai.main")
 
 app = FastAPI(
@@ -40,6 +55,7 @@ app = FastAPI(
     description="Internal AI extraction and document intelligence worker service",
     version="0.1.0",
 )
+app.add_middleware(TraceLoggingMiddleware)
 
 
 class HealthResponse(BaseModel):
@@ -77,6 +93,10 @@ class QueueProcessingRequest(BaseModel):
         min_length=1,
         validation_alias=AliasChoices("workflow_run_id", "workflowRunId"),
     )
+    trace_id: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("trace_id", "traceId"),
+    )
     correlation_id: str = Field(
         ...,
         min_length=1,
@@ -85,6 +105,14 @@ class QueueProcessingRequest(BaseModel):
     storage_reference: str | None = Field(
         default=None,
         validation_alias=AliasChoices("storage_reference", "storageReference"),
+    )
+    download_url: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("download_url", "downloadUrl"),
+    )
+    async_mode: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("async_mode", "asyncMode", "async_execution", "asyncExecution"),
     )
     document_type: str = Field(default="NIT", validation_alias=AliasChoices("document_type", "documentType"))
     file_name: str = Field(default="document.pdf", validation_alias=AliasChoices("file_name", "fileName"))
@@ -108,7 +136,7 @@ class QueueProcessingResponse(BaseModel):
 class StorageDocumentResolver:
     """Resolve queued documents from their storage reference when pages are absent."""
 
-    _known_documents: dict[str, str] = {
+    _known_documents: ClassVar[dict[str, str]] = {
         "tenants/org_worker_1/bids/bid_fetch_1/doc_fetch_1/NIT.pdf": (
             "The bidder must submit an Earnest Money Deposit (EMD) of INR 5,00,000 on a 100 Rupee stamp paper. "
             "All bids must be signed by the authorized signatory and submitted before the tender closing time. "
@@ -196,6 +224,90 @@ async def extract_document(request: DocumentExtractionRequest):
     return result
 
 
+async def _execute_and_publish_extraction(
+    request: QueueProcessingRequest,
+    pages: list[NormalizedPage],
+    download_url: str | None,
+) -> DocumentExtractionResponse:
+    publisher = get_completion_publisher()
+    trace_id = request.trace_id or request.correlation_id or request.job_id
+    with scoped_logging_context(
+        trace_id=trace_id,
+        correlation_id=request.correlation_id,
+        job_id=request.job_id,
+        tenant_id=request.organization_id,
+        tender_id=request.bid_id,
+        document_id=request.document_id,
+        workflow_id=request.workflow_run_id,
+    ):
+        try:
+            security_context = SecurityContext(
+                tenant_id=request.organization_id,
+                user_id="tenderpulse-worker",
+                company_id=request.company_id,
+                workflow_run_id=request.workflow_run_id,
+                roles=["WORKER"],
+                permissions=["document.processing"],
+                allowed_document_ids=[request.document_id],
+                allowed_source_ids=[request.storage_reference] if request.storage_reference else [],
+                purpose="COMPLIANCE_EXTRACTION",
+            )
+
+            extraction_request = DocumentExtractionRequest(
+                security_context=security_context,
+                bid_id=request.bid_id,
+                document_id=request.document_id,
+                document_type=request.document_type,
+                file_name=request.file_name,
+                download_url=download_url,
+                pages=pages,
+            )
+
+            pipeline = ProductionExtractionPipeline()
+            result = await pipeline.execute(extraction_request)
+
+            event = DocumentExtractionCompletedEvent(
+                job_id=request.job_id,
+                organization_id=request.organization_id,
+                company_id=request.company_id,
+                bid_id=request.bid_id,
+                document_id=request.document_id,
+                status="COMPLETED",
+                items=result.items,
+                workflow_run_id=request.workflow_run_id,
+                trace_id=trace_id,
+                correlation_id=request.correlation_id,
+            )
+            await publisher.publish_completion(event)
+            return result
+        except Exception as exc:
+            logger.error(
+                "Extraction pipeline failed for job_id=%s, doc_id=%s: %s",
+                request.job_id,
+                request.document_id,
+                exc,
+                extra={"event": "extraction.failed", "error_code": "ERR_EXTRACTION_FAILED"},
+            )
+            fail_event = DocumentExtractionCompletedEvent(
+                job_id=request.job_id,
+                organization_id=request.organization_id,
+                company_id=request.company_id,
+                bid_id=request.bid_id,
+                document_id=request.document_id,
+                status="FAILED",
+                items=[],
+                error=str(exc),
+                workflow_run_id=request.workflow_run_id,
+                trace_id=trace_id,
+                correlation_id=request.correlation_id,
+            )
+            try:
+                await publisher.publish_completion(fail_event)
+            except Exception as pub_err:  # noqa: BLE001
+                logger.warning("Failed to publish failure completion event: %s", pub_err)
+            raise
+
+
 @app.post(
     "/api/v1/worker/process-message",
     response_model=QueueProcessingResponse,
@@ -204,47 +316,56 @@ async def extract_document(request: DocumentExtractionRequest):
 async def process_queue_message(request: QueueProcessingRequest):
     """Queue-consumer entrypoint for the async document processing worker.
 
-    This is the FastAPI-side processing step that validates the queued job, builds a
-    strict security context, and executes the document extraction workflow on the
-    document pages included with the work item or retrieved from the referenced object.
+    Validates the queued job, executes document extraction (synchronously or asynchronously
+    depending on async_mode), and publishes completion events to the configured completion sink.
     """
     logger.info(
-        "Received worker queue message for job_id=%s, doc_id=%s, bid_id=%s",
+        "Received worker queue message for job_id=%s, doc_id=%s, bid_id=%s (async=%s)",
         request.job_id,
         request.document_id,
         request.bid_id,
+        request.async_mode,
     )
     pages = request.pages
-    if not pages:
+    if not pages and not request.download_url:
         pages = StorageDocumentResolver.resolve_pages(
             storage_reference=request.storage_reference,
             file_name=request.file_name,
             document_type=request.document_type,
         )
 
-    security_context = SecurityContext(
-        tenant_id=request.organization_id,
-        user_id="tenderpulse-worker",
-        company_id=request.company_id,
-        workflow_run_id=request.workflow_run_id,
-        roles=["WORKER"],
-        permissions=["document.processing"],
-        allowed_document_ids=[request.document_id],
-        allowed_source_ids=[request.storage_reference] if request.storage_reference else [],
-        purpose="COMPLIANCE_EXTRACTION",
-    )
+    if request.async_mode:
+        logger.info(
+            "Dispatching asynchronous background extraction task for job_id=%s, doc_id=%s",
+            request.job_id,
+            request.document_id,
+        )
+        asyncio.create_task(
+            _execute_and_publish_extraction(
+                request=request,
+                pages=pages,
+                download_url=request.download_url,
+            )
+        )
+        return QueueProcessingResponse(
+            processed=True,
+            status="ACCEPTED",
+            job_id=request.job_id,
+            organization_id=request.organization_id,
+            company_id=request.company_id,
+            bid_id=request.bid_id,
+            document_id=request.document_id,
+            workflow_run_id=request.workflow_run_id,
+            correlation_id=request.correlation_id,
+            storage_reference=request.storage_reference,
+            items=[],
+        )
 
-    extraction_request = DocumentExtractionRequest(
-        security_context=security_context,
-        bid_id=request.bid_id,
-        document_id=request.document_id,
-        document_type=request.document_type,
-        file_name=request.file_name,
+    result = await _execute_and_publish_extraction(
+        request=request,
         pages=pages,
+        download_url=request.download_url,
     )
-
-    pipeline = ProductionExtractionPipeline()
-    result = await pipeline.execute(extraction_request)
 
     return QueueProcessingResponse(
         processed=True,

@@ -11,6 +11,8 @@ import {
   QueueMessage,
   DeadLetterMessage,
 } from '../../modules/bids/application/IJobQueue.js';
+import { StructuredLogger } from '../../common/logging/StructuredLogger.js';
+import { LoggingContextHolder } from '../../common/logging/LoggingContext.js';
 
 export interface AwsSqsConfig {
   queueUrl: string;
@@ -27,6 +29,7 @@ export class AwsSqsJobQueue implements IJobQueue {
   private readonly sqsClient: SQSClient;
   private readonly queueUrl: string;
   private readonly dlqUrl?: string;
+  private readonly logger = new StructuredLogger('AwsSqsJobQueue', 'api');
 
   constructor(config: AwsSqsConfig) {
     this.queueUrl = config.queueUrl;
@@ -42,12 +45,31 @@ export class AwsSqsJobQueue implements IJobQueue {
   }
 
   public async enqueue(payload: IngestionJobMessage): Promise<void> {
+    const context = LoggingContextHolder.get();
+    const enrichedPayload: IngestionJobMessage = {
+      ...payload,
+      traceId: payload.traceId || context.traceId,
+      correlationId: payload.correlationId || context.correlationId,
+    };
+
     const command = new SendMessageCommand({
       QueueUrl: this.queueUrl,
-      MessageBody: JSON.stringify(payload),
+      MessageBody: JSON.stringify(enrichedPayload),
     });
 
     await this.sqsClient.send(command);
+
+    this.logger.info('queue.message.published', `Published ingestion job ${payload.jobId} to SQS`, {
+      jobId: payload.jobId,
+      documentId: payload.documentId,
+      bidId: payload.bidId,
+    }, {
+      trace_id: enrichedPayload.traceId,
+      correlation_id: enrichedPayload.correlationId,
+      job_id: payload.jobId,
+      document_id: payload.documentId,
+      tender_id: payload.bidId,
+    });
   }
 
   public async receiveMessages(

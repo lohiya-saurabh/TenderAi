@@ -1,4 +1,3 @@
-import pytest
 from unittest.mock import MagicMock
 
 from tenderpulse_ai.domain.docling_parser import DoclingParserEngine

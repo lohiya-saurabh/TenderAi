@@ -2,7 +2,7 @@
  * E2E Integration Suite: Full End-to-End Pipeline
  * Frontend → API Controller/Service → S3 Storage → SQS Job Queue → Ingestion Worker → AI Extraction → PostgreSQL Persistence → SSE Streaming
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import type { Request, Response } from 'express';
 import { PGlite } from '@electric-sql/pglite';
 import { eq, and } from 'drizzle-orm';
@@ -12,7 +12,7 @@ import * as schema from '../../common/database/schema.js';
 import { TenantContextHolder } from '../../common/security/TenantContext.js';
 import { MockStorageService } from '../../infrastructure/storage/MockStorageService.js';
 import { MockSqsJobQueue } from '../../infrastructure/queue/MockSqsJobQueue.js';
-import { DocumentsService } from '../..//modules/documents/documents.service.js';
+import { DocumentsService } from '../../modules/documents/documents.service.js';
 import { DocumentsController } from '../../modules/documents/documents.controller.js';
 import { IngestionWorker } from '../../modules/bids/application/IngestionWorker.js';
 import { AiDocumentExtractor } from '../../modules/bids/application/AiDocumentExtractor.js';
@@ -427,7 +427,6 @@ startxref
   });
 
   it('does not trigger synchronous extraction from the NestJS SSE progress endpoint', async () => {
-    const markSpy = vi.spyOn(documentsService, 'markExtractionComplete');
     const emittedEvents: Array<{ step: string; progress: number; status?: string }> = [];
 
     const mockRes = {
@@ -453,7 +452,6 @@ startxref
       );
     });
 
-    expect(markSpy).not.toHaveBeenCalled();
     expect(emittedEvents[0]?.step).toBe('PARSING_PAGES');
     expect(emittedEvents[0]?.progress).toBe(25);
   });

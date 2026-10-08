@@ -1,7 +1,6 @@
 import re
 
 from tenderpulse_ai.domain.models import (
-    DoclingBlock,
     DoclingParsedDocument,
     DocumentStructureTree,
     SectionNode,
@@ -20,10 +19,16 @@ class DocumentStructureBuilder:
      └── Section 2
     """
 
-    # Regex patterns for section titles & numbers
-    PART_PATTERN = re.compile(r"^(PART\s+[I|V|X\d]+)", re.IGNORECASE)
-    SECTION_PATTERN = re.compile(r"^(SECTION\s+\d+|ARTICLE\s+\d+)", re.IGNORECASE)
-    CLAUSE_PATTERN = re.compile(r"^(\d+(\.\d+)+|\d+\.\b)", re.IGNORECASE)
+    # Regex patterns for arbitrary document hierarchy & section titles
+    PART_PATTERN = re.compile(
+        r"^(PART\s+[I|V|X\d]+|SCHEDULE\s*[-–—]?\s*[A-Za-z\dIVX]+|ANNEXURE\s*[-–—]?\s*[A-Za-z\d]+|APPENDIX\s*[-–—]?\s*[A-Za-z\d]+)",
+        re.IGNORECASE,
+    )
+    SECTION_PATTERN = re.compile(r"^(SECTION\s+[\dA-Za-z]+|ARTICLE\s+[\dA-Za-z]+)", re.IGNORECASE)
+    CLAUSE_PATTERN = re.compile(
+        r"^(?:(?:Clause|Sub-Clause)\s+)?(\d+(?:\.\d+)*|\d+\.)(?:\s+|$)",
+        re.IGNORECASE,
+    )
 
     def build_structure(self, doc: DoclingParsedDocument) -> DocumentStructureTree:
         tree = DocumentStructureTree(document_id=doc.document_id, nodes=[])

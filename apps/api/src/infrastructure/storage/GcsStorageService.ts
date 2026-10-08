@@ -4,6 +4,7 @@ import {
   IStorageService,
   HeadObjectResult,
 } from '../../modules/bids/application/IStorageService.js';
+import { StructuredLogger } from '../../common/logging/StructuredLogger.js';
 
 // Tune stream pipeline listener headroom for GCS chunked streams
 EventEmitter.defaultMaxListeners = Math.max(EventEmitter.defaultMaxListeners || 10, 30);
@@ -22,6 +23,7 @@ export interface GcsStorageConfig {
 export class GcsStorageService implements IStorageService {
   private readonly storage: Storage;
   private readonly bucketName: string;
+  private readonly logger = new StructuredLogger('GcsStorageService', 'api');
 
   constructor(config: GcsStorageConfig) {
     this.bucketName = config.bucketName;
@@ -54,6 +56,13 @@ export class GcsStorageService implements IStorageService {
       contentType,
     });
 
+    this.logger.info('storage.presigned_url.generated', 'Generated presigned upload URL', {
+      storagePath,
+      contentType,
+      expiresInSeconds,
+      mode: 'UPLOAD',
+    });
+
     return url;
   }
 
@@ -71,6 +80,13 @@ export class GcsStorageService implements IStorageService {
       action: 'read',
       expires: Date.now() + expiresInSeconds * 1000,
       responseDisposition: `attachment; filename="${encodedFileName}"`,
+    });
+
+    this.logger.info('storage.presigned_url.generated', 'Generated presigned download URL', {
+      storagePath,
+      downloadFileName,
+      expiresInSeconds,
+      mode: 'DOWNLOAD',
     });
 
     return url;
@@ -138,8 +154,9 @@ export class GcsStorageService implements IStorageService {
       const bucket = this.storage.bucket(this.bucketName);
       const file = bucket.file(storagePath);
       await file.delete({ ignoreNotFound: true });
+      this.logger.info('storage.delete.completed', 'Deleted object from storage', { storagePath });
     } catch (err) {
-      console.warn(`[GcsStorageService] Failed to delete object ${storagePath}:`, err);
+      this.logger.warn('storage.delete.failed', `Failed to delete object ${storagePath}`, { storagePath, error: err });
     }
   }
 
@@ -147,8 +164,9 @@ export class GcsStorageService implements IStorageService {
     try {
       const bucket = this.storage.bucket(this.bucketName);
       await bucket.deleteFiles({ prefix, force: true });
+      this.logger.info('storage.delete_prefix.completed', `Deleted objects with prefix ${prefix}`, { prefix });
     } catch (err) {
-      console.warn(`[GcsStorageService] Failed to delete prefix ${prefix}:`, err);
+      this.logger.warn('storage.delete_prefix.failed', `Failed to delete prefix ${prefix}`, { prefix, error: err });
     }
   }
 }

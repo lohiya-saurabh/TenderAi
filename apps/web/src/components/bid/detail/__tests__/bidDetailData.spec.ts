@@ -2,11 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   mapVerdict,
   mapApiDecisionToBidDecision,
-  extractReasons,
   formatReasonItem,
-  formatDisqualifierItem,
-  formatMissingItem,
-  formatUncertainItem,
   formatCommercialRiskItem,
   type ApiBidDecisionSummary,
 } from '../bidDetailData.js';
@@ -111,7 +107,7 @@ describe('bidDetailData — Robust Reason & Decision Formatting', () => {
             mitigationAdvice: '',
             level: 'MEDIUM',
             summary: 'Standard 0.5% per week delay penalty capped at 10% of contract value.',
-          } as any,
+          } as unknown as NonNullable<ApiBidDecisionSummary['commercialRisks']>[number],
         ],
         evidenceCitations: [],
         reviewTriggers: [],
@@ -145,8 +141,10 @@ describe('bidDetailData — Robust Reason & Decision Formatting', () => {
       expect(mapVerdict('NO_GO')).toBe('DO_NOT_PURSUE');
       expect(mapVerdict('DO_NOT_PURSUE')).toBe('DO_NOT_PURSUE');
       expect(mapVerdict('REVIEW_REQUIRED')).toBe('REVIEW_REQUIRED');
-      expect(mapVerdict(null)).toBe('REVIEW_REQUIRED');
-      expect(mapVerdict(undefined)).toBe('REVIEW_REQUIRED');
+      expect(mapVerdict(null)).toBe('RECOMMENDATION_UNAVAILABLE');
+      expect(mapVerdict(undefined)).toBe('RECOMMENDATION_UNAVAILABLE');
+      expect(mapVerdict('RECOMMENDATION_UNAVAILABLE')).toBe('RECOMMENDATION_UNAVAILABLE');
+      expect(mapVerdict('INSUFFICIENT_DATA')).toBe('RECOMMENDATION_UNAVAILABLE');
     });
   });
 });

@@ -54,7 +54,7 @@ export class BillingService {
         planTier: planDef.tier,
         planName: planDef.name,
         billingInterval: interval,
-        status: sub.status as any,
+        status: sub.status as SubscriptionView['status'],
         currentPeriodStart: sub.currentPeriodStart instanceof Date ? sub.currentPeriodStart.toISOString() : String(sub.currentPeriodStart),
         currentPeriodEnd: sub.currentPeriodEnd instanceof Date ? sub.currentPeriodEnd.toISOString() : String(sub.currentPeriodEnd),
         cancelAtPeriodEnd: sub.cancelAtPeriodEnd,

@@ -685,7 +685,7 @@ def main():
             f.write(f"- **Clause Reference:** `{item['clause']}` (Page {item['page']})\n")
             f.write(f"- **Summary & Scope:** {item['description']}\n")
             f.write(f"- **Key Actionable Parameters:** `{json.dumps(item['parameters'])}`\n")
-            f.write(f"- **Verbatim Contractual Text:**\n")
+            f.write("- **Verbatim Contractual Text:**\n")
             f.write(f"  > \"{item['quote']}\"\n\n")
 
     print(f"Saved: {output_md_path}")

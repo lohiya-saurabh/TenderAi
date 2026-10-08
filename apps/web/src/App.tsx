@@ -20,10 +20,12 @@ import { SettingsPage } from './pages/SettingsPage.js';
 import { AuditHistoryPage } from './pages/AuditHistoryPage.js';
 import { NotFoundPage } from './pages/NotFoundPage.js';
 import { PERMISSIONS } from './utils/permissions.js';
+import { ScrollToTop } from './components/common/ScrollToTop.js';
 
 export const App: React.FC = () => {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <ThemeProvider>
         <AuthProvider>
           <CompanyProvider>

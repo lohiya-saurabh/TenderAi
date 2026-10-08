@@ -10,7 +10,6 @@ import {
   Bot,
   CheckCircle2,
   CircleAlert,
-  Zap,
   Check,
   Loader2,
   Circle,
@@ -93,18 +92,24 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
   onComplete,
   onRetry,
 }) => {
-  const { lastEvent, isConnected, error: sseError } = useSSE(`/api/v1/bids/${bidId}/extraction-progress`);
+  const { lastEvent, isConnected, error: sseError, close } = useSSE(`/api/v1/bids/${bidId}/extraction-progress`);
 
   const currentStepKey = (lastEvent?.step || (lastEvent?.status === 'REVIEW_READY' ? 'COMPLETED' : 'PARSING_PAGES')) as PipelineStageKey;
   const progressPercent = lastEvent?.progress ?? (currentStepKey === 'COMPLETED' ? 100 : 35);
-  const isFailed = currentStepKey === 'FAILED' || !!sseError;
   const isComplete = currentStepKey === 'COMPLETED' || progressPercent === 100;
+  const isFailed = !isComplete && (currentStepKey === 'FAILED' || !!sseError);
+
+  const hasCompletedRef = React.useRef(false);
 
   React.useEffect(() => {
-    if (isComplete) {
+    if (isComplete && !hasCompletedRef.current) {
+      hasCompletedRef.current = true;
+      close();
       onComplete?.();
+    } else if (!isComplete) {
+      hasCompletedRef.current = false;
     }
-  }, [isComplete, onComplete]);
+  }, [isComplete, onComplete, close]);
 
   // Determine active step index
   const getCurrentStepIndex = (): number => {
@@ -148,7 +153,7 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
             ) : isComplete ? (
               <CheckCircle2 size={22} className="text-emerald-500" />
             ) : (
-              <Zap size={22} className="text-primary animate-pulse" />
+              <Loader2 size={22} className="text-primary animate-spin" />
             )}
           </div>
           <div>
@@ -157,7 +162,7 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
                 ? 'Document Extraction Failed'
                 : isComplete
                   ? 'Tender Intelligence & Compliance Matrix Ready'
-                  : 'Live Tender Processing Pipeline'}
+                  : 'Live Tender Extraction Pipeline'}
             </h3>
             <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)' }}>
               Document: <strong>{documentName}</strong>

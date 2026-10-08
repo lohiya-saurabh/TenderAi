@@ -1,6 +1,7 @@
 import logging
-from pathlib import Path
 import re
+import time
+from pathlib import Path
 from typing import Any
 
 from tenderpulse_ai.domain.models import DoclingBlock, DoclingParsedDocument, DoclingTable
@@ -53,7 +54,7 @@ class DoclingParserEngine:
                 conv_result = self._converter.convert(str(target_path))
                 doc = conv_result.document
                 return self._map_native_docling_document(document_id, target_path.name, doc)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.warning(
                     f"Native Docling parsing failed for {pdf_path}, falling back to text normalizer: {e}"
                 )
@@ -168,6 +169,18 @@ class DoclingParserEngine:
         pdf_path: str | Path | None = None,
     ) -> DoclingParsedDocument:
         """Parses document from file path (with native Docling) or from pre-extracted pages/text."""
+        start_time = time.perf_counter()
+        logger.info(
+            "Starting Docling parse for doc_id=%s, file=%s",
+            document_id,
+            file_name,
+            extra={
+                "event": "docling.parse.started",
+                "document_id": document_id,
+                "metadata": {"file_name": file_name, "has_pdf_path": bool(pdf_path)},
+            },
+        )
+
         if pdf_path and Path(pdf_path).is_file() and self.use_native:
             return self.parse_pdf_file(document_id, pdf_path)
 
@@ -198,9 +211,7 @@ class DoclingParserEngine:
                 if "|" in line or "\t" in line:
                     cells = [c.strip() for c in re.split(r"[|\t]", line) if c.strip()]
                     if len(cells) >= 2:
-                        if parsed_tables and parsed_tables[-1].page_number == page_no and not parsed_tables[-1].rows:
-                            parsed_tables[-1].rows.append(cells)
-                        elif parsed_tables and parsed_tables[-1].page_number == page_no:
+                        if parsed_tables and parsed_tables[-1].page_number == page_no and not parsed_tables[-1].rows or parsed_tables and parsed_tables[-1].page_number == page_no:
                             parsed_tables[-1].rows.append(cells)
                         else:
                             parsed_tables.append(
@@ -225,6 +236,26 @@ class DoclingParserEngine:
                     )
                 )
                 block_counter += 1
+
+        duration_ms = round((time.perf_counter() - start_time) * 1000, 1)
+        logger.info(
+            "Docling parsed %d blocks, %d tables across %d pages for doc_id=%s (%.1fms)",
+            len(parsed_blocks),
+            len(parsed_tables),
+            len(parsed_pages),
+            document_id,
+            duration_ms,
+            extra={
+                "event": "docling.parse.completed",
+                "document_id": document_id,
+                "duration_ms": duration_ms,
+                "metadata": {
+                    "blocks_count": len(parsed_blocks),
+                    "tables_count": len(parsed_tables),
+                    "pages_count": len(parsed_pages),
+                },
+            },
+        )
 
         return DoclingParsedDocument(
             document_id=document_id,

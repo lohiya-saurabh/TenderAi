@@ -43,7 +43,7 @@ export class ConfirmDocumentUploadUseCase {
     private readonly jobRepository?: IIngestionJobRepository,
     private readonly jobQueue?: IJobQueue,
     private readonly eventBus?: IEventBus
-  ) {}
+  ) { }
 
   public async execute(
     command: ConfirmDocumentUploadCommand

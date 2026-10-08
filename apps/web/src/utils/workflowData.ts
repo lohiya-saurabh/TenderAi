@@ -498,7 +498,7 @@ export function deriveEvidenceCitations(
   items: ComplianceItem[],
   company: CompanyCapabilityProfile,
 ): EvidenceMappingCitation[] {
-  const getTitle = (item: ComplianceItem) => (item as any).title || item.requirement;
+  const getTitle = (item: ComplianceItem) => (item as { title?: string }).title || item.requirement;
   
   if (items.length > 0) {
     return items.map((item, idx) => ({

@@ -21,7 +21,15 @@ class SecretSanitizer:
         # Private Keys
         (re.compile(r"-----BEGIN (RSA|EC|OPENSSH) PRIVATE KEY-----[\s\S]+?-----END \1 PRIVATE KEY-----"), "[REDACTED_PRIVATE_KEY]"),
         # Generic API Keys / Passwords in JSON / query params
-        (re.compile(r"(?i)(api[_-]?key|password|secret)\s*[:=]\s*['\"][^'\"]{8,}['\"]"), r"\1='[REDACTED]'"),
+        (re.compile(r"(?i)(api[_-]?key|password|secret|internal[_-]?service[_-]?key)\s*[:=]\s*['\"][^'\"]{8,}['\"]"), r"\1='[REDACTED]'"),
+        # Presigned S3/GCS URL query parameters containing signatures/tokens
+        (re.compile(r"([?&](X-Amz-Signature|X-Goog-Signature|Signature|sig|signature|token|access_token|apiKey)=)[^&\"'\s]+", re.IGNORECASE), r"\1[REDACTED]"),
+        # Indian GSTIN (15 characters)
+        (re.compile(r"\b[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}\b"), "[REDACTED_GSTIN]"),
+        # Indian PAN (10 characters)
+        (re.compile(r"\b[A-Z]{5}[0-9]{4}[A-Z]{1}\b"), "[REDACTED_PAN]"),
+        # Indian Aadhaar (12 digits)
+        (re.compile(r"\b[2-9][0-9]{3}\s?[0-9]{4}\s?[0-9]{4}\b"), "[REDACTED_AADHAAR]"),
     ]
 
     @classmethod

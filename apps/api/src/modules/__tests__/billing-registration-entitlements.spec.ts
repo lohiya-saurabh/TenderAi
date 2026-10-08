@@ -1,7 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { PGlite } from '@electric-sql/pglite';
-import { drizzle } from 'drizzle-orm/pglite';
-import * as schema from '../../common/database/schema.js';
 import { initDatabase } from '../../common/database/database.provider.js';
 import { AuthService } from '../auth/auth.service.js';
 import { BillingService } from '../billing/billing.service.js';

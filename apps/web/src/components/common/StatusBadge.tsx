@@ -31,6 +31,11 @@ export type LegacyStatusVariant =
   | 'EXTRACTED'
   | 'FAILED'
   | 'QUEUED'
+  | 'QUEUED_FOR_EXTRACTION'
+  | 'EXTRACTING'
+  | 'COMPLETED'
+  | 'PROCESSED'
+  | 'DEAD_LETTER'
   | 'FINALIZED';
 
 export type StatusVariant = SemanticStatusVariant | LegacyStatusVariant | string;
@@ -40,6 +45,7 @@ export interface StatusBadgeProps {
   label?: string;
   size?: 'sm' | 'md' | 'lg';
   showIcon?: boolean;
+  iconOnly?: boolean;
   className?: string;
   style?: React.CSSProperties;
 }
@@ -57,6 +63,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
   label,
   size = 'md',
   showIcon = true,
+  iconOnly = false,
   className = '',
   style,
 }) => {
@@ -64,12 +71,14 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
 
   const getVisualConfig = (): StatusVisualConfig => {
     switch (normalized) {
-      // 1. Canonical PASS / Ready
+      // 1. Canonical PASS / Ready / Completed
       case 'PASS':
       case 'READY':
       case 'EXTRACTED':
       case 'SUBMITTED':
       case 'FINALIZED':
+      case 'COMPLETED':
+      case 'PROCESSED':
         return {
           bg: 'var(--status-pass-bg)',
           color: 'var(--status-pass-text)',
@@ -78,10 +87,11 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
           defaultLabel: normalized === 'PASS' ? 'Pass' : normalized.replace(/_/g, ' '),
         };
 
-      // 2. Canonical FAIL / Flagged
+      // 2. Canonical FAIL / Flagged / Failed
       case 'FAIL':
       case 'FLAGGED':
       case 'FAILED':
+      case 'DEAD_LETTER':
         return {
           bg: 'var(--status-fail-bg)',
           color: 'var(--status-fail-text)',
@@ -113,16 +123,18 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
           defaultLabel: 'Review Required',
         };
 
-      // In-flight processing
+      // In-flight processing / extraction
       case 'ANALYZING':
       case 'PROCESSING':
       case 'QUEUED':
+      case 'QUEUED_FOR_EXTRACTION':
+      case 'EXTRACTING':
         return {
           bg: 'rgba(59, 130, 246, 0.12)',
           color: '#3b82f6',
           border: 'rgba(59, 130, 246, 0.3)',
           icon: SpinnerIcon,
-          defaultLabel: normalized.replace(/_/g, ' '),
+          defaultLabel: normalized === 'QUEUED_FOR_EXTRACTION' ? 'Queued' : normalized.replace(/_/g, ' '),
         };
 
       // 5. Canonical NOT_APPLICABLE / Waived / Archived
@@ -148,24 +160,24 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
     switch (size) {
       case 'sm':
         return {
-          padding: '0.15rem 0.45rem',
+          padding: iconOnly ? '0.22rem' : '0.15rem 0.45rem',
           fontSize: 'var(--text-2xs)',
-          iconSize: 11,
+          iconSize: iconOnly ? 13 : 11,
           gap: '0.3rem',
         };
       case 'lg':
         return {
-          padding: '0.35rem 0.85rem',
+          padding: iconOnly ? '0.4rem' : '0.35rem 0.85rem',
           fontSize: 'var(--text-sm)',
-          iconSize: 16,
+          iconSize: iconOnly ? 18 : 16,
           gap: '0.45rem',
         };
       case 'md':
       default:
         return {
-          padding: '0.22rem 0.65rem',
+          padding: iconOnly ? '0.3rem' : '0.22rem 0.65rem',
           fontSize: 'var(--text-xs)',
-          iconSize: 13,
+          iconSize: iconOnly ? 15 : 13,
           gap: '0.375rem',
         };
     }
@@ -178,11 +190,13 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
     <span
       role="status"
       aria-label={`Status: ${displayLabel}`}
+      title={displayLabel}
       className={`status-badge ${className}`}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        gap: sizeStyle.gap,
+        justifyContent: 'center',
+        gap: iconOnly ? 0 : sizeStyle.gap,
         padding: sizeStyle.padding,
         fontSize: sizeStyle.fontSize,
         fontWeight: 'var(--font-semibold)' as unknown as number,
@@ -201,7 +215,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
       {showIcon && IconComponent && (
         <IconComponent size={sizeStyle.iconSize} color={config.color} />
       )}
-      <span>{displayLabel}</span>
+      {!iconOnly && <span>{displayLabel}</span>}
     </span>
   );
 };

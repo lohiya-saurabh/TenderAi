@@ -49,7 +49,7 @@ class DeterministicValidator:
         referenced_clause_exists = True
         tree_clause_numbers = {n.number for n in tree.nodes}
         for ref in context.referenced_clauses:
-            ref_num = re.sub(r"^(Clause|Section|Article|Part)\s+", "", ref, flags=re.IGNORECASE)
+            ref_num = re.sub(r"^(Clause|Sub-Clause|Section|Article|Part|Schedule|Annexure|Appendix)\s*[-–—]?\s*", "", ref, flags=re.IGNORECASE)
             ref_in_text = ref.lower() in clause_text.lower() or ref_num.lower() in clause_text.lower()
             if not ref_in_text and ref_num not in tree_clause_numbers and ref not in tree_clause_numbers:
                 referenced_clause_exists = False
@@ -70,19 +70,23 @@ class DeterministicValidator:
 
         # 4. SHALL/MUST Interpretation Check
         shall_must_correct = True
-        if "shall not" in clause_text.lower() or "must not" in clause_text.lower():
-            if "prohibited" not in item.description.lower() and "not allowed" not in item.description.lower():
-                shall_must_correct = False
-                discrepancies.append("Clause contains prohibition ('shall not'/'must not') but item description sounds affirmative.")
-                score_penalty += 0.30
+        if ("shall not" in clause_text.lower() or "must not" in clause_text.lower()) and (
+            "prohibited" not in item.description.lower() and "not allowed" not in item.description.lower()
+        ):
+            shall_must_correct = False
+            discrepancies.append("Clause contains prohibition ('shall not'/'must not') but item description sounds affirmative.")
+            score_penalty += 0.30
 
         # 5. Exception Preservation Check
         exceptions_retained = True
-        if any(kw in clause_text.lower() for kw in ["except", "unless", "provided that", "subject to"]):
-            if "except" not in item.description.lower() and "unless" not in item.description.lower():
-                exceptions_retained = False
-                discrepancies.append("Clause contains conditional exception ('except'/'unless') that may be missing from description.")
-                score_penalty += 0.10
+        if (
+            any(kw in clause_text.lower() for kw in ["except", "unless", "provided that", "subject to"])
+            and "except" not in item.description.lower()
+            and "unless" not in item.description.lower()
+        ):
+            exceptions_retained = False
+            discrepancies.append("Clause contains conditional exception ('except'/'unless') that may be missing from description.")
+            score_penalty += 0.10
 
         final_score = max(0.0, min(1.0, 1.0 - score_penalty))
 

@@ -129,8 +129,21 @@ export class ComplianceService {
       if (!existing) {
         uniqueMap.set(key, row);
       } else {
-        const curProv = (row.provenance ?? {}) as any;
-        const exProv = (existing.provenance ?? {}) as any;
+        interface ProvenanceJson {
+          verbatimQuote?: string;
+          confidenceScore?: number;
+          pageNumber?: number;
+          clauseReference?: string;
+        }
+        interface ExecutionRulesJson {
+          stampPaperRequired?: boolean;
+          stampPaperDenominationInr?: number;
+          notarizationRequired?: boolean;
+          udinRequired?: boolean;
+          signingAuthorityRank?: string;
+        }
+        const curProv = (row.provenance ?? {}) as ProvenanceJson;
+        const exProv = (existing.provenance ?? {}) as ProvenanceJson;
         const curQuote = curProv.verbatimQuote || '';
         const exQuote = exProv.verbatimQuote || '';
         const preferCur =
@@ -141,8 +154,8 @@ export class ComplianceService {
 
         const chosen = preferCur ? row : existing;
         const other = preferCur ? existing : row;
-        const chosenRules = (chosen.executionRules ?? {}) as any;
-        const otherRules = (other.executionRules ?? {}) as any;
+        const chosenRules = (chosen.executionRules ?? {}) as ExecutionRulesJson;
+        const otherRules = (other.executionRules ?? {}) as ExecutionRulesJson;
 
         const mergedRules = {
           ...otherRules,

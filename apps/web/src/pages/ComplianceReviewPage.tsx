@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getComplianceItem, reviewComplianceItem, type ComplianceItem } from '../api/compliance.js';
 import { useApi } from '../hooks/useApi.js';
@@ -16,9 +16,18 @@ import { SourceCitationDrawer } from '../components/compliance/SourceCitationDra
 import { AssessmentPanel } from '../components/compliance/AssessmentPanel.js';
 import { ChevronLeftIcon } from '../components/common/Icons.js';
 import { Check, X, Bot, AlertTriangle, FileWarning } from 'lucide-react';
+import { deriveGroundingMatch } from '../utils/grounding.js';
 
 export const ComplianceReviewPage: React.FC = () => {
   const { id: bidId = '', itemId = '' } = useParams<{ id: string; itemId: string }>();
+
+  // Scroll to top automatically when navigating to any compliance item
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    document.documentElement.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    document.body.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [bidId, itemId]);
+
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [copiedQuote, setCopiedQuote] = useState<boolean>(false);
@@ -95,6 +104,7 @@ export const ComplianceReviewPage: React.FC = () => {
     );
   }
 
+  const grounding = deriveGroundingMatch(item);
   const confidenceScore = item.provenance?.confidenceScore ?? item.sourceCitation?.confidenceScore ?? 0;
   const confidencePct = Math.round(confidenceScore * 100);
 
@@ -103,8 +113,10 @@ export const ComplianceReviewPage: React.FC = () => {
   if (item.humanReviewRequired) {
     reviewTriggers.push('Triggered by System: Mandatory human sign-off required for this clause category.');
   }
-  if (confidenceScore < 0.8) {
-    reviewTriggers.push(`Low Grounding Confidence (${confidencePct}%): Extraction model flagged potential text ambiguity.`);
+  if (!grounding.isExactVerbatim) {
+    reviewTriggers.push(`Incomplete Citation Anchors (${grounding.matchPct}%): Source document coordinates or verbatim text partially unverified.`);
+  } else if (confidenceScore < 0.8 && confidenceScore > 0) {
+    reviewTriggers.push(`Extraction Model Flag (${confidencePct}%): Extraction model flagged potential text ambiguity.`);
   }
   if (!item.companyEvidence || item.companyEvidence.status === 'MISSING') {
     reviewTriggers.push('Evidence Gap: No verified company credential currently matches this requirement.');
@@ -302,12 +314,13 @@ export const ComplianceReviewPage: React.FC = () => {
                 fontWeight: 600,
                 padding: '0.2rem 0.5rem',
                 borderRadius: 'var(--radius-sm)',
-                backgroundColor: confidencePct >= 80 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                color: confidencePct >= 80 ? 'var(--color-success)' : 'var(--color-warning)',
-                border: `1px solid ${confidencePct >= 80 ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
+                backgroundColor: grounding.matchPct >= 80 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                color: grounding.matchPct >= 80 ? 'var(--color-success)' : 'var(--color-warning)',
+                border: `1px solid ${grounding.matchPct >= 80 ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
               }}
+              title={grounding.citationNote}
             >
-              {confidencePct}% Grounding Match
+              {grounding.badgeLabel}
             </span>
             <Button variant="ghost" size="sm" onClick={() => setIsCitationDrawerOpen(true)}>
               Full Citation ↗

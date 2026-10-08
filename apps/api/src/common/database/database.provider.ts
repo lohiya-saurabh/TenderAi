@@ -408,9 +408,15 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
       .onConflictDoNothing();
   }
 
-  // 4. Seed Bids & Tender Documents if enabled
+  // 4. Seed Bids & Tender Documents if enabled (only on fresh database)
   if (seedBidsAndCompliance) {
-    for (const bid of BIDS) {
+    const existingBidsCountResult = await drizzleDb
+      .select({ count: sql<string>`count(*)` })
+      .from(schema.bids);
+    const existingBidsCount = parseInt(existingBidsCountResult[0]?.count || '0', 10);
+
+    if (existingBidsCount === 0) {
+      for (const bid of BIDS) {
       await drizzleDb
         .insert(schema.bids)
         .values({
@@ -497,6 +503,7 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
           updatedAt: new Date(item.updatedAt),
         })
         .onConflictDoNothing();
+    }
     }
 
     // 6. Seed Persisted Bid Decision if empty

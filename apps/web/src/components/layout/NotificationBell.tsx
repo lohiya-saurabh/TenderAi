@@ -157,10 +157,10 @@ export const NotificationBell: React.FC = () => {
       <DropdownMenuContent
         align="end"
         sideOffset={8}
-        className="w-80 sm:w-96 p-0 border border-border bg-[#121215] shadow-2xl z-50 text-foreground overflow-hidden"
+        className="w-80 sm:w-96 p-0 border border-border bg-popover shadow-2xl z-50 text-popover-foreground overflow-hidden"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-[#18181b]">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/40">
           <div className="flex items-center gap-2">
             <span className="font-semibold text-sm text-foreground">Notifications</span>
             {unreadCount > 0 && (
@@ -201,7 +201,7 @@ export const NotificationBell: React.FC = () => {
         </div>
 
         {/* List Content */}
-        <div className="max-h-[380px] overflow-y-auto divide-y divide-border/60 bg-[#121215]">
+        <div className="max-h-[380px] overflow-y-auto divide-y divide-border bg-popover">
           {notifications.length === 0 ? (
             <div className="p-8 text-center text-xs text-muted-foreground">
               <Bell className="mx-auto h-8 w-8 mb-2 opacity-40 text-muted-foreground" />
@@ -213,15 +213,15 @@ export const NotificationBell: React.FC = () => {
               <div
                 key={notif.id}
                 onClick={() => handleNotificationClick(notif)}
-                className={`flex items-start gap-3 p-3.5 text-xs transition-colors cursor-pointer hover:bg-[#1a1a1f] ${
-                  !notif.isRead ? 'bg-[#18181f]/80' : 'opacity-75'
+                className={`flex items-start gap-3 p-3.5 text-xs transition-colors cursor-pointer hover:bg-accent/60 ${
+                  !notif.isRead ? 'bg-accent/25 hover:bg-accent/50' : 'opacity-80 hover:bg-accent/40'
                 }`}
               >
                 {renderCategoryIcon(notif.category)}
 
                 <div className="flex-1 min-w-0 space-y-1">
                   <div className="flex items-center justify-between gap-1">
-                    <p className={`truncate ${!notif.isRead ? 'text-foreground font-semibold' : 'text-zinc-300 font-medium'}`}>
+                    <p className={`truncate ${!notif.isRead ? 'text-foreground font-semibold' : 'text-muted-foreground font-medium'}`}>
                       {notif.title}
                     </p>
                     <span className="text-[10px] text-muted-foreground shrink-0">

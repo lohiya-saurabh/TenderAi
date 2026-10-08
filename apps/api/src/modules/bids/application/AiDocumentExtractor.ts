@@ -9,7 +9,8 @@ import {
   ExtractedComplianceItem,
 } from './IngestionWorker.js';
 export type { ExtractedComplianceItem };
-import { Logger } from '@nestjs/common';
+import { StructuredLogger } from '../../../common/logging/StructuredLogger.js';
+import { LoggingContextHolder } from '../../../common/logging/LoggingContext.js';
 import { SecurityContextDto } from '@tenderpulse/shared-types';
 
 export interface RawExtractedItem {
@@ -43,8 +44,19 @@ export type ExtractableDocument = Pick<
   'id' | 'bidId' | 'organizationId' | 'documentType' | 'fileName' | 'storagePath'
 >;
 
+export interface DispatchExtractionResult {
+  dispatched: boolean;
+  status: string;
+  jobId: string;
+  documentId: string;
+}
+
 export interface DocumentExtractionPort {
-  extract(
+  dispatchExtraction(
+    document: ExtractableDocument,
+    securityContext?: SecurityContextDto,
+  ): Promise<DispatchExtractionResult>;
+  extract?(
     document: ExtractableDocument,
     securityContext?: SecurityContextDto,
   ): Promise<ExtractedComplianceItem[]>;
@@ -61,7 +73,7 @@ export interface AiExtractorConfig {
 }
 
 export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtractionPort {
-  private readonly logger = new Logger(AiDocumentExtractor.name);
+  private readonly logger = new StructuredLogger(AiDocumentExtractor.name, 'api');
   private readonly aiBaseUrl: string;
   private readonly internalServiceKey: string;
   private readonly timeoutMs: number;
@@ -81,7 +93,7 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
       throw new Error('INTERNAL_SERVICE_KEY must be configured in production.');
     }
     this.internalServiceKey = internalServiceKey ?? 'tenderpulse-internal-secret-2026';
-    this.timeoutMs = config.timeoutMs ?? 60000;
+    this.timeoutMs = config.timeoutMs ?? (process.env.AI_EXTRACTION_TIMEOUT_MS ? parseInt(process.env.AI_EXTRACTION_TIMEOUT_MS, 10) : 120000);
     this.customFetch = config.customFetch;
   }
 
@@ -89,6 +101,12 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
     document: ExtractableDocument,
     securityContext?: SecurityContextDto
   ): Promise<ExtractedComplianceItem[]> {
+    if (!this.customFetch) {
+      throw new Error(
+        `Synchronous extraction via AiDocumentExtractor.extract() is disabled. Ingestion must use dispatchExtraction() for asynchronous queue/event choreography.`
+      );
+    }
+
     // 1. Verify object existence in storage (metadata check, avoiding loading full blob into memory)
     let exists = true;
     try {
@@ -125,26 +143,28 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
         document.fileName,
         900 // 15-minute lease
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       this.logger.warn(
-        `Failed to generate presigned download URL for doc ${document.id}: ${err?.message}. Falling back to inline buffer normalization.`
+        `Failed to generate presigned download URL for doc ${document.id}: ${(err as Error)?.message}. Falling back to inline buffer normalization.`
       );
     }
 
-    // 4. Candidate pages: on happy path with real cloud storage presigned URL handover (GCS/S3), Node.js passes an empty pages array
-    // so FastAPI streams and parses the document directly with native PDFium / Docling.
-    // If presigned URL is unavailable OR points to in-memory mock storage (where no remote cloud object exists),
-    // extract candidate pages from local buffer.
-    const isMockStorage = Boolean(
-      downloadUrl?.includes('mock-s3.tenderpulse.local') || downloadUrl?.includes('.local')
-    );
     let candidatePages: NormalizedDocumentPage[] = [];
-    if (!downloadUrl || isMockStorage) {
-      candidatePages = await this.extractCandidatePagesLocally(document);
-    }
 
     // 5. Dispatch request to FastAPI AI Engine
     const payload = {
+      job_id: `job-${document.id}`,
+      organization_id: secCtx.tenantId,
+      company_id: secCtx.companyId,
+      bid_id: document.bidId,
+      document_id: document.id,
+      workflow_run_id: secCtx.workflowRunId,
+      correlation_id: secCtx.correlationId,
+      storage_reference: document.storagePath,
+      document_type: document.documentType,
+      file_name: document.fileName,
+      download_url: downloadUrl,
+      async_mode: false,
       security_context: {
         tenant_id: secCtx.tenantId,
         user_id: secCtx.userId,
@@ -155,34 +175,36 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
         allowed_source_ids: secCtx.allowedSourceIds,
         purpose: secCtx.purpose,
       },
-      bid_id: document.bidId,
-      document_id: document.id,
-      document_type: document.documentType,
-      file_name: document.fileName,
-      download_url: downloadUrl,
       pages: candidatePages.map((p) => ({
         page_number: p.pageNumber,
         text: p.text,
       })),
     };
 
-    const fetchFn = this.customFetch ?? globalThis.fetch;
+    const fetchFn = this.customFetch;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
 
+    const endpoint = `${this.aiBaseUrl}/api/v1/extract`;
+
     this.logger.log(
-      `Dispatching document ${document.id} to AI engine (${this.aiBaseUrl}/api/v1/extract) via ${
-        downloadUrl ? 'presigned URL handover' : `${candidatePages.length} locally extracted pages`
+      `Dispatching document ${document.id} to AI engine (${endpoint}) via ${downloadUrl ? 'presigned URL handover' : `${candidatePages.length} locally extracted pages`
       }...`,
     );
 
+    const context = LoggingContextHolder.get();
+    const requestHeaders: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-Internal-Service-Key': this.internalServiceKey,
+    };
+    if (context.traceId) requestHeaders['X-Trace-Id'] = context.traceId;
+    if (context.correlationId) requestHeaders['X-Correlation-Id'] = context.correlationId;
+    if (context.requestId) requestHeaders['X-Request-Id'] = context.requestId;
+
     try {
-      const response = await fetchFn(`${this.aiBaseUrl}/api/v1/extract`, {
+      const response = await fetchFn(endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Internal-Service-Key': this.internalServiceKey,
-        },
+        headers: requestHeaders,
         body: JSON.stringify(payload),
         signal: controller.signal,
       });
@@ -230,6 +252,133 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
           },
         };
       });
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  public async dispatchExtraction(
+    document: ExtractableDocument,
+    securityContext?: SecurityContextDto,
+  ): Promise<DispatchExtractionResult> {
+    let exists = true;
+    try {
+      const head = await this.storageService.headObject(document.storagePath);
+      exists = head.exists;
+    } catch {
+      const raw = await this.storageService.getObject(document.storagePath);
+      exists = Boolean(raw);
+    }
+
+    if (!exists) {
+      throw new Error(
+        `Failed to retrieve document content for key '${document.storagePath}'. Object not found in storage.`
+      );
+    }
+
+    const secCtx: SecurityContextDto = securityContext ?? {
+      tenantId: document.organizationId,
+      userId: 'system-worker',
+      correlationId: `corr-${document.id}`,
+      roles: ['ADMIN'],
+      workflowRunId: `run-${document.id}-${Date.now()}`,
+      allowedDocumentIds: [document.id],
+      allowedSourceIds: ['s3_vault'],
+      purpose: 'COMPLIANCE_EXTRACTION',
+    };
+
+    let downloadUrl: string | undefined;
+    try {
+      downloadUrl = await this.storageService.generatePresignedDownloadUrl(
+        document.storagePath,
+        document.fileName,
+        900,
+      );
+    } catch (err: unknown) {
+      this.logger.warn(
+        `Failed to generate presigned download URL for doc ${document.id}: ${(err as Error)?.message}`,
+      );
+    }
+
+    const isMockStorage = Boolean(
+      downloadUrl?.includes('mock-s3.tenderpulse.local') ||
+      downloadUrl?.includes('.local') ||
+      downloadUrl?.includes('localhost:4566') ||
+      downloadUrl?.includes('127.0.0.1:4566')
+    );
+    let candidatePages: NormalizedDocumentPage[] = [];
+    if (!downloadUrl || isMockStorage) {
+      candidatePages = await this.extractCandidatePagesLocally(document);
+    }
+
+    const jobId = `job-${document.id}-${Date.now()}`;
+    const payload = {
+      job_id: jobId,
+      organization_id: secCtx.tenantId,
+      company_id: secCtx.companyId,
+      bid_id: document.bidId,
+      document_id: document.id,
+      workflow_run_id: secCtx.workflowRunId,
+      correlation_id: secCtx.correlationId,
+      storage_reference: document.storagePath,
+      document_type: document.documentType,
+      file_name: document.fileName,
+      download_url: downloadUrl,
+      async_mode: true,
+      security_context: {
+        tenant_id: secCtx.tenantId,
+        user_id: secCtx.userId,
+        company_id: secCtx.companyId,
+        workflow_run_id: secCtx.workflowRunId,
+        correlation_id: secCtx.correlationId,
+        allowed_document_ids: secCtx.allowedDocumentIds,
+        allowed_source_ids: secCtx.allowedSourceIds,
+        purpose: secCtx.purpose,
+      },
+      pages: candidatePages.map((p) => ({
+        page_number: p.pageNumber,
+        text: p.text,
+      })),
+    };
+
+    const fetchFn = this.customFetch ?? globalThis.fetch;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    this.logger.log(
+      `Dispatching asynchronous extraction command for doc ${document.id} to ${this.aiBaseUrl}/api/v1/worker/process-message`,
+    );
+
+    const context = LoggingContextHolder.get();
+    const requestHeaders: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-Internal-Service-Key': this.internalServiceKey,
+    };
+    if (context.traceId) requestHeaders['X-Trace-Id'] = context.traceId;
+    if (context.correlationId) requestHeaders['X-Correlation-Id'] = context.correlationId;
+    if (context.requestId) requestHeaders['X-Request-Id'] = context.requestId;
+
+    try {
+      const response = await fetchFn(`${this.aiBaseUrl}/api/v1/worker/process-message`, {
+        method: 'POST',
+        headers: requestHeaders,
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `AI worker service returned HTTP ${response.status} for async dispatch.`,
+        );
+      }
+
+      const data = await response.json();
+      return {
+        dispatched: true,
+        status: data.status ?? 'ACCEPTED',
+        jobId,
+        documentId: document.id,
+      };
     } finally {
       clearTimeout(timeoutId);
     }
@@ -334,6 +483,44 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
         'gst',
         'gstin',
         'taxes and duties',
+        // Contract Execution & Concession Agreement covenants
+        'conditions precedent',
+        'project milestone',
+        'completion schedule',
+        'schedule-g',
+        'schedule g',
+        'scheduled completion date',
+        'commercial operation date',
+        'completion date',
+        'cod',
+        'applicable permits',
+        'schedule-e',
+        'schedule e',
+        'maintenance criteria',
+        'maintenance manual',
+        'schedule-k',
+        'schedule k',
+        'rectification',
+        'pothole',
+        'rescue post',
+        'mobile crane',
+        'ambulance',
+        'medical aid',
+        'construction support',
+        'grant',
+        'escrow account',
+        'priority of payments',
+        'co-insured',
+        'all-risk',
+        'sarod',
+        'dispute resolution',
+        'arbitration',
+        'conciliation',
+        'change of scope',
+        'weigh-in-motion',
+        'location tracking',
+        'fatality',
+        'grievous injury',
       ];
 
       const scoredPages: { page: NormalizedDocumentPage; score: number }[] = [];
@@ -352,7 +539,7 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
       }
 
       scoredPages.sort((a, b) => b.score - a.score);
-      const topScored = scoredPages.slice(0, 50).map((s) => s.page);
+      const topScored = scoredPages.slice(0, 75).map((s) => s.page);
 
       const combinedMap = new Map<number, NormalizedDocumentPage>();
       for (const p of initialPages) {

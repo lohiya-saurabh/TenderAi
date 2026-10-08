@@ -14,6 +14,7 @@ import {
   IStorageService,
   HeadObjectResult,
 } from '../../modules/bids/application/IStorageService.js';
+import { StructuredLogger } from '../../common/logging/StructuredLogger.js';
 
 export interface AwsS3StorageConfig {
   bucketName: string;
@@ -29,6 +30,7 @@ export interface AwsS3StorageConfig {
 export class AwsS3StorageService implements IStorageService {
   private readonly s3Client: S3Client;
   private readonly bucketName: string;
+  private readonly logger = new StructuredLogger('AwsS3StorageService', 'api');
 
   constructor(config: AwsS3StorageConfig) {
     this.bucketName = config.bucketName;
@@ -54,9 +56,18 @@ export class AwsS3StorageService implements IStorageService {
       ContentType: contentType,
     });
 
-    return getSignedUrl(this.s3Client, command, {
+    const url = await getSignedUrl(this.s3Client, command, {
       expiresIn: expiresInSeconds,
     });
+
+    this.logger.info('storage.presigned_url.generated', 'Generated presigned upload URL', {
+      objectKey: s3Key,
+      contentType,
+      expiresInSeconds,
+      mode: 'UPLOAD',
+    });
+
+    return url;
   }
 
   public async generatePresignedDownloadUrl(
@@ -71,9 +82,18 @@ export class AwsS3StorageService implements IStorageService {
       ResponseContentDisposition: `attachment; filename="${encodedFileName}"`,
     });
 
-    return getSignedUrl(this.s3Client, command, {
+    const url = await getSignedUrl(this.s3Client, command, {
       expiresIn: expiresInSeconds,
     });
+
+    this.logger.info('storage.presigned_url.generated', 'Generated presigned download URL', {
+      objectKey: s3Key,
+      downloadFileName,
+      expiresInSeconds,
+      mode: 'DOWNLOAD',
+    });
+
+    return url;
   }
 
   public async headObject(s3Key: string): Promise<HeadObjectResult> {
@@ -137,8 +157,9 @@ export class AwsS3StorageService implements IStorageService {
           Key: s3Key,
         }),
       );
+      this.logger.info('storage.delete.completed', 'Deleted object from storage', { objectKey: s3Key });
     } catch (err) {
-      console.warn(`[AwsS3StorageService] Failed to delete object ${s3Key}:`, err);
+      this.logger.warn('storage.delete.failed', `Failed to delete object ${s3Key}`, { objectKey: s3Key, error: err });
     }
   }
 
@@ -159,9 +180,10 @@ export class AwsS3StorageService implements IStorageService {
             Delete: { Objects: objects },
           }),
         );
+        this.logger.info('storage.delete_prefix.completed', `Deleted objects with prefix ${prefix}`, { prefix, count: objects.length });
       }
     } catch (err) {
-      console.warn(`[AwsS3StorageService] Failed to delete prefix ${prefix}:`, err);
+      this.logger.warn('storage.delete_prefix.failed', `Failed to delete prefix ${prefix}`, { prefix, error: err });
     }
   }
 }

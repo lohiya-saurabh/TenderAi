@@ -66,7 +66,7 @@ export const ComplianceTable: React.FC<ComplianceTableProps> = ({
     const result: ComplianceItem[] = [];
     for (const item of items) {
       if (seenIds.has(item.id)) continue;
-      const title = (item as any).title || item.requirement || '';
+      const title = (item as { title?: string }).title || item.requirement || '';
       const key = `${(item.category || '').toLowerCase()}:${title.trim().toLowerCase().replace(/\s+/g, ' ')}`;
       if (seenKeys.has(key)) continue;
       seenIds.add(item.id);

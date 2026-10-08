@@ -23,8 +23,24 @@ export interface ReadinessCardProps {
  * documented as missing APIs.
  */
 export const ReadinessCard: React.FC<ReadinessCardProps> = ({ bid, items }) => {
-  const readiness = computeReadiness(bid);
   const rollup = getComplianceRollup(items, bid);
+
+  // Directly derive live readiness from compliance items when available to prevent desynchronization
+  const readiness = React.useMemo(() => {
+    if (items && items.length > 0) {
+      const total = items.length;
+      const approved = rollup.ready;
+      const flagged = rollup.flagged;
+      return {
+        total,
+        approved,
+        flagged,
+        pct: total > 0 ? Math.min(100, Math.max(0, Math.round((approved / total) * 100))) : null,
+      };
+    }
+    return computeReadiness(bid);
+  }, [items, bid, rollup.ready, rollup.flagged]);
+
   const pct = readiness.pct;
 
   const barColor =

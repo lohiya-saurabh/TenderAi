@@ -70,6 +70,9 @@ export const ActionRequiredCard: React.FC<ActionRequiredCardProps> = ({
     [bids, complianceByBid],
   );
 
+  const [isExpanded, setIsExpanded] = React.useState(false);
+  const displayedItems = isExpanded ? actionItems : actionItems.slice(0, MAX_VISIBLE_ITEMS);
+
   return (
     <Card className="shadow-xs">
       <CardHeader className="flex flex-row items-center justify-between pb-3">
@@ -110,52 +113,70 @@ export const ActionRequiredCard: React.FC<ActionRequiredCardProps> = ({
           </div>
         ) : (
           <div className="flex flex-col gap-2">
-            {actionItems.slice(0, MAX_VISIBLE_ITEMS).map((item) => (
-              <Link
-                key={item.id}
-                to={item.actionUrl}
-                className={cn(
-                  'flex items-start justify-between p-3 rounded-lg bg-card/60 border transition-colors hover:bg-accent/50',
-                  urgencyBorderClass(item.urgency)
-                )}
-              >
-                <div className="flex items-start gap-2.5 min-w-0">
-                  <span className="mt-0.5 shrink-0 inline-flex">
-                    <ActionIcon item={item} />
-                  </span>
+            <div
+              className={cn(
+                'flex flex-col gap-2 transition-all',
+                isExpanded && 'max-h-[380px] overflow-y-auto pr-1'
+              )}
+            >
+              {displayedItems.map((item) => (
+                <Link
+                  key={item.id}
+                  to={item.actionUrl}
+                  className={cn(
+                    'flex items-start justify-between p-3 rounded-lg bg-card/60 border transition-colors hover:bg-accent/50',
+                    urgencyBorderClass(item.urgency)
+                  )}
+                >
+                  <div className="flex items-start gap-2.5 min-w-0">
+                    <span className="mt-0.5 shrink-0 inline-flex">
+                      <ActionIcon item={item} />
+                    </span>
 
-                  <div className="flex flex-col min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-semibold text-foreground">
-                        {item.headline}
-                      </span>
-                      {item.category && (
-                        <Badge variant={CATEGORY_BADGE_VARIANT[item.category]} className="text-[10px] px-1.5 py-0">
-                          {item.category}
-                        </Badge>
-                      )}
-                      <span className="text-[10px] font-mono text-muted-foreground">
-                        № {item.tenderNumber}
-                      </span>
+                    <div className="flex flex-col min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-semibold text-foreground">
+                          {item.headline}
+                        </span>
+                        {item.category && (
+                          <Badge variant={CATEGORY_BADGE_VARIANT[item.category]} className="text-[10px] px-1.5 py-0">
+                            {item.category}
+                          </Badge>
+                        )}
+                        <span className="text-[10px] font-mono text-muted-foreground">
+                          № {item.tenderNumber}
+                        </span>
+                      </div>
+
+                      <p className="text-xs text-muted-foreground mt-0.5 leading-snug line-clamp-2">
+                        {item.description}
+                      </p>
                     </div>
-
-                    <p className="text-xs text-muted-foreground mt-0.5 leading-snug line-clamp-2">
-                      {item.description}
-                    </p>
                   </div>
-                </div>
 
-                <span className="text-muted-foreground/60 inline-flex items-center ml-2 shrink-0">
-                  <ChevronRightIcon size={14} />
-                </span>
-              </Link>
-            ))}
+                  <span className="text-muted-foreground/60 inline-flex items-center ml-2 shrink-0">
+                    <ChevronRightIcon size={14} />
+                  </span>
+                </Link>
+              ))}
+            </div>
 
             {actionItems.length > MAX_VISIBLE_ITEMS && (
-              <div className="text-[11px] text-muted-foreground text-center pt-1 font-medium">
-                +{actionItems.length - MAX_VISIBLE_ITEMS} more action
-                {actionItems.length - MAX_VISIBLE_ITEMS === 1 ? '' : 's'} across your tenders
-              </div>
+              <button
+                type="button"
+                onClick={() => setIsExpanded((prev) => !prev)}
+                className="w-full pt-1.5 pb-0.5 text-[11px] text-muted-foreground hover:text-foreground text-center transition-colors font-medium cursor-pointer focus:outline-hidden"
+                aria-expanded={isExpanded}
+              >
+                {isExpanded ? (
+                  <span>Show top {MAX_VISIBLE_ITEMS} actions ↑</span>
+                ) : (
+                  <span>
+                    +{actionItems.length - MAX_VISIBLE_ITEMS} more action
+                    {actionItems.length - MAX_VISIBLE_ITEMS === 1 ? '' : 's'} across your tenders ↓
+                  </span>
+                )}
+              </button>
             )}
           </div>
         )}

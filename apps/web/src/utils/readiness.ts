@@ -22,14 +22,16 @@ export interface ReadinessSummary {
  * matrix is "pending intake", not "0% ready".
  */
 export function computeReadiness(bid: Pick<BidSummary, 'totalRequirements' | 'approvedRequirements' | 'flaggedRequirements'>): ReadinessSummary {
-  const total = bid.totalRequirements || 0;
-  const approved = bid.approvedRequirements || 0;
-  const flagged = bid.flaggedRequirements || 0;
+  const total = Math.max(0, bid.totalRequirements || 0);
+  const rawApproved = Math.max(0, bid.approvedRequirements || 0);
+  // An approved count can NEVER mathematically exceed the total requirements extracted
+  const approved = Math.min(rawApproved, total);
+  const flagged = Math.min(Math.max(0, bid.flaggedRequirements || 0), total);
   return {
     total,
     approved,
     flagged,
-    pct: total > 0 ? Math.round((approved / total) * 100) : null,
+    pct: total > 0 ? Math.min(100, Math.max(0, Math.round((approved / total) * 100))) : null,
   };
 }
 

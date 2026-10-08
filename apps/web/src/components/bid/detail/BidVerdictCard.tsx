@@ -12,6 +12,7 @@ import type { ComplianceItem } from '../../../api/compliance.js';
 import {
   getComplianceRollup,
   getDeadlineBufferDays,
+  formatCommercialRiskItem,
   type BidDecision,
   type BidRecommendation,
 } from './bidDetailData.js';
@@ -56,6 +57,8 @@ const formatDecisionStateText = (state?: string | null): string => {
   return state.replace(/_/g, ' ');
 };
 
+import { CompanyDocumentChecklist } from './CompanyDocumentChecklist.js';
+
 const verdictColors: Record<BidRecommendation, { border: string; bg: string; color: string; icon: React.ReactNode }> = {
   PURSUE: {
     border: 'var(--color-success-border)',
@@ -74,6 +77,12 @@ const verdictColors: Record<BidRecommendation, { border: string; bg: string; col
     bg: 'var(--color-warning-bg)',
     color: 'var(--color-warning)',
     icon: <ReviewRequiredIcon size={20} />,
+  },
+  RECOMMENDATION_UNAVAILABLE: {
+    border: 'var(--color-surface-border)',
+    bg: 'var(--color-surface-card-subtle)',
+    color: 'var(--color-surface-muted)',
+    icon: <InfoIcon size={20} />,
   },
 };
 
@@ -112,8 +121,8 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
               {(decision.verdict || 'REVIEW_REQUIRED').replace(/_/g, ' ')}
             </Badge>
           ) : (
-            <Badge variant="neutral" size="sm" dot>
-              Not evaluated
+            <Badge variant="warning" size="sm" dot>
+              Recommendation unavailable
             </Badge>
           )
         }
@@ -168,7 +177,7 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
                 {decision.reasons.length > 0 && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                     <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-surface-text)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      Reasons
+                      {decision.verdict === 'DO_NOT_PURSUE' ? 'Disqualifying Factors & Shortfalls' : decision.verdict === 'PURSUE' ? 'Reasons to Pursue' : 'Evaluation Factors & Review Triggers'}
                     </div>
                     <ul style={{ margin: 0, paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                       {decision.reasons.map((reason, index) => (
@@ -176,6 +185,25 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
                           {reason}
                         </li>
                       ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Commercial & Contractual Risks */}
+                {decision.commercialRisks && decision.commercialRisks.length > 0 && decision.verdict !== 'DO_NOT_PURSUE' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-surface-text)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Commercial & Contractual Risks
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      {decision.commercialRisks.map((risk, index) => {
+                        const formatted = formatCommercialRiskItem(risk);
+                        return formatted ? (
+                          <li key={index} style={{ fontSize: 'var(--text-sm)', color: 'var(--color-surface-muted)', lineHeight: 'var(--leading-normal)' }}>
+                            {formatted}
+                          </li>
+                        ) : null;
+                      })}
                     </ul>
                   </div>
                 )}
@@ -229,7 +257,7 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
               </>
             );
           })() : (
-            /* Honest current state: no recommendation without the engine */
+            /* Factual state: recommendation unavailable due to missing company evidence */
             <>
               <div
                 style={{
@@ -242,26 +270,28 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
                   border: '1px dashed var(--color-surface-border)',
                 }}
               >
-                <span style={{ color: 'var(--color-primary-400)', flexShrink: 0, marginTop: '0.1rem', display: 'inline-flex' }}>
+                <span style={{ color: 'var(--color-warning)', flexShrink: 0, marginTop: '0.1rem', display: 'inline-flex' }}>
                   <InfoIcon size={16} />
                 </span>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                   <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-surface-text)' }}>
-                    No recommendation yet
+                    Recommendation unavailable
                   </span>
                   <p style={{ margin: 0, fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)', lineHeight: 'var(--leading-normal)' }}>
-                    The bid / no-bid verdict is computed by the eligibility engine evaluating your
-                    Company Capability Profile against this tender's statutory, financial, technical,
-                    and experience criteria. Neither the engine nor the Company Profile API exists
-                    yet, so no verdict is shown rather than a fabricated one.
+                    A trustworthy bid / no-bid recommendation cannot be determined because required company capability information and supporting evidence have not been uploaded for this tender's criteria. The Company Profile API is available, but sufficient factual evidence is required before the deterministic eligibility engine can produce an evaluation.
                   </p>
                 </div>
               </div>
 
-              {/* Real input signals the future engine will consume */}
-              <div>
+              {/* Dynamic Company Document Checklist derived from tender requirements */}
+              <div style={{ marginTop: '0.75rem' }}>
+                <CompanyDocumentChecklist complianceItems={complianceItems} />
+              </div>
+
+              {/* Signals available today */}
+              <div style={{ marginTop: '0.75rem' }}>
                 <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-surface-text)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.5rem' }}>
-                  Signals available today (inputs, not a verdict)
+                  Signals available today
                 </div>
                 <div
                   style={{

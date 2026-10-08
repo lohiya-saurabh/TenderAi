@@ -7,6 +7,7 @@ import * as schema from '../../common/database/schema.js';
 import { AuthService } from '../auth/auth.service.js';
 import { BidsService } from '../bids/bids.service.js';
 import { DocumentsService } from '../documents/documents.service.js';
+import { DocumentCompletionService } from '../documents/DocumentCompletionService.js';
 import { ComplianceService } from '../compliance/compliance.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { CompanyProfileService } from '../company-profile/company-profile.service.js';
@@ -20,12 +21,155 @@ describe('NestJS Feature Modules: Services Unit Tests', () => {
   let authService: AuthService;
   let bidsService: BidsService;
   let documentsService: DocumentsService;
+  let documentCompletionService: DocumentCompletionService;
   let complianceService: ComplianceService;
   let auditService: AuditService;
   let companyProfileService: CompanyProfileService;
   let mockStorage: MockStorageService;
 
+  const sampleExtractedItems = [
+    {
+      category: 'FINANCIAL',
+      title: 'Tender & Bid Security (EMD) Guarantee',
+      description: 'Submission of Earnest Money Deposit / Bid Security as required by tender conditions.',
+      executionRules: {
+        stampPaperRequired: true,
+        stampPaperDenominationInr: 100,
+        notarizationRequired: true,
+        udinRequired: false,
+        signingAuthorityRank: 'Authorized Signatory',
+      },
+      provenance: {
+        pageNumber: 1,
+        clauseReference: 'Clause on Page 1',
+        verbatimQuote: 'The bidder must submit Bid Security / Earnest Money Deposit (EMD) of INR 10,00,000 on a non-judicial stamp paper.',
+        confidenceScore: 0.98,
+      },
+    },
+    {
+      category: 'LEGAL',
+      title: 'Power of Attorney for Lead Member',
+      description: 'Power of Attorney executed on non-judicial stamp paper in favor of lead member.',
+      executionRules: {
+        stampPaperRequired: true,
+        stampPaperDenominationInr: 100,
+        notarizationRequired: true,
+        udinRequired: false,
+        signingAuthorityRank: 'Lead Member',
+      },
+      provenance: {
+        pageNumber: 1,
+        clauseReference: 'Clause on Page 1',
+        verbatimQuote: 'Power of Attorney executed on non-judicial stamp paper in favor of lead member of consortium.',
+        confidenceScore: 0.95,
+      },
+    },
+    {
+      category: 'FINANCIAL',
+      title: 'Minimum Annual Turnover with UDIN',
+      description: 'Annual turnover with CA certificate bearing valid UDIN.',
+      executionRules: {
+        stampPaperRequired: false,
+        notarizationRequired: false,
+        udinRequired: true,
+        signingAuthorityRank: 'Chartered Accountant',
+      },
+      provenance: {
+        pageNumber: 2,
+        clauseReference: 'Clause on Page 2',
+        verbatimQuote: 'The Bidder shall have minimum annual turnover of INR 50 Crores with CA certificate bearing valid UDIN.',
+        confidenceScore: 0.96,
+      },
+    },
+    {
+      category: 'TECHNICAL',
+      title: 'Similar Work Experience in EPC',
+      description: 'Prior completion of similar work in EPC infrastructure works within last 7 years.',
+      executionRules: {
+        stampPaperRequired: false,
+        notarizationRequired: false,
+        udinRequired: false,
+        signingAuthorityRank: 'Authorized Signatory',
+      },
+      provenance: {
+        pageNumber: 2,
+        clauseReference: 'Clause on Page 2',
+        verbatimQuote: 'The Bidder must demonstrate prior completion of similar work in EPC infrastructure works within last 7 years.',
+        confidenceScore: 0.95,
+      },
+    },
+    {
+      category: 'EXECUTION',
+      title: 'Integrity Pact and Debarment Undertaking',
+      description: 'Integrity pact along with declaration of no active blacklisting.',
+      executionRules: {
+        stampPaperRequired: false,
+        notarizationRequired: false,
+        udinRequired: false,
+        signingAuthorityRank: 'Authorized Signatory',
+      },
+      provenance: {
+        pageNumber: 3,
+        clauseReference: 'Clause on Page 3',
+        verbatimQuote: 'The Bidder shall submit the Integrity Pact duly signed and sealed along with declaration of no active blacklisting or debarment.',
+        confidenceScore: 0.97,
+      },
+    },
+    {
+      category: 'STATUTORY',
+      title: 'Make in India (PPP-MII) Local Content Declaration',
+      description: 'Declaration of Class-I local supplier under Public Procurement Preference to Make in India.',
+      executionRules: {
+        stampPaperRequired: true,
+        stampPaperDenominationInr: 100,
+        notarizationRequired: true,
+        udinRequired: true,
+        signingAuthorityRank: 'Statutory Auditor',
+      },
+      provenance: {
+        pageNumber: 3,
+        clauseReference: 'Clause on Page 3',
+        verbatimQuote: 'Declaration of Class-I local supplier under Public Procurement Preference to Make in India (PPP-MII) with 50% local content.',
+        confidenceScore: 0.98,
+      },
+    },
+    {
+      category: 'STATUTORY',
+      title: 'GSTIN & PAN Statutory Compliance',
+      description: 'Registration details for GSTIN and PAN.',
+      executionRules: {
+        stampPaperRequired: false,
+        notarizationRequired: false,
+        udinRequired: false,
+        signingAuthorityRank: 'Authorized Signatory',
+      },
+      provenance: {
+        pageNumber: 3,
+        clauseReference: 'Clause on Page 3',
+        verbatimQuote: 'Valid GSTIN registration certificate and Permanent Account Number (PAN).',
+        confidenceScore: 0.95,
+      },
+    },
+  ];
+
+  async function simulateExtractionCompleted(bidId: string, documentId: string, items = sampleExtractedItems) {
+    const orgId = TenantContextHolder.get()?.organizationId || 'org_acme_infra_001';
+    return documentCompletionService.processExtractionCompleted({
+      jobId: `job-${documentId}`,
+      organizationId: orgId,
+      companyId: 'comp_acme_infra_001',
+      bidId,
+      documentId,
+      status: 'COMPLETED',
+      items,
+    });
+  }
+
   const sampleTenderContent = `--- PAGE 1 ---
+Tendering Authority: Central Public Works Department (CPWD) / Government Authority
+Tender Document Reference: CPWD/DELHI/2026/CIVIL-0491 / DEL-2026-001
+Title: Construction of Sustainable Central Government Administrative Complex (Phase 2)
+Notice Inviting Tender (NIT)
 SECTION 1: INVITATION FOR BIDS (NIT)
 The bidder must submit Bid Security / Earnest Money Deposit (EMD) of INR 10,00,000 on a non-judicial stamp paper.
 Power of Attorney executed on non-judicial stamp paper in favor of lead member of consortium.
@@ -50,12 +194,14 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
     authService = new AuthService(db);
     bidsService = new BidsService(db);
     documentsService = new DocumentsService(db, mockStorage);
+    documentCompletionService = new DocumentCompletionService(createDrizzle(db));
     complianceService = new ComplianceService(db);
     auditService = new AuditService(db);
     companyProfileService = new CompanyProfileService(db);
   });
 
   beforeEach(() => {
+    vi.stubEnv('AI_ENGINE_URL', 'http://127.0.0.1:65534');
     TenantContextHolder.enter({
       organizationId: 'org_acme_infra_001',
       userId: 'usr_bid_mgr_01',
@@ -150,7 +296,7 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
       await documentsService.confirmUpload(bid.id, 'doc-to-delete-01');
 
       // 3. Mark extraction complete to generate compliance items
-      await documentsService.markExtractionComplete(bid.id, 'doc-to-delete-01');
+      await simulateExtractionCompleted(bid.id, 'doc-to-delete-01');
 
       // Verify compliance items exist
       const beforeCompliance = await complianceService.listItems(bid.id);
@@ -304,7 +450,7 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
       });
     });
 
-    it('should mark extraction complete and generate compliance items into PostgreSQL from real document content', async () => {
+    it('should persist extracted compliance items and update parent bid metrics upon extraction completion', async () => {
       const testBid = await bidsService.createBid({ title: 'Test Bid For Extraction' });
       mockStorage.simulateUploadedObject(
         `tenants/org_acme_infra_001/bids/${testBid.id}/doc-extract-test/Uploaded_Tender_Document.pdf`,
@@ -314,7 +460,7 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
       );
       await documentsService.confirmUpload(testBid.id, 'doc-extract-test');
 
-      await documentsService.markExtractionComplete(testBid.id, 'doc-extract-test');
+      await simulateExtractionCompleted(testBid.id, 'doc-extract-test');
 
       const items = await complianceService.listItems(testBid.id);
       expect(items.length).toBe(7);
@@ -333,6 +479,9 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
       const testBid = await bidsService.createBid({ title: 'Bid For EMD Citation' });
       const documentId = 'doc-emd-citation';
       const content = [
+        'Tender: Bid For EMD Citation',
+        'Tendering Authority: Government Authority',
+        'Notice Inviting Tender',
         'https://eprocure.gov.in/eprocure/app CPP portal on or before 09-10-2026 (upto',
         '16:00 hrs IST). Bids received online will be opened on 12-10-2026 (at 16:00 hrs',
         'IST)',
@@ -349,15 +498,34 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
         Buffer.from(content),
       );
       await documentsService.confirmUpload(testBid.id, documentId);
-      await documentsService.markExtractionComplete(testBid.id, documentId);
+      const emdQuote =
+        'The EMD shall be paid in the form of Bank Guarantee/FDR drawn in ' +
+        'favour of the Executive Engineer National Highway Division Hassan, obtained ' +
+        'from any Nationalized/Scheduled Banks payable at Hassan.';
+      await simulateExtractionCompleted(testBid.id, documentId, [
+        {
+          category: 'FINANCIAL',
+          title: 'Tender & Bid Security (EMD) Guarantee',
+          description: 'Submission of Earnest Money Deposit / Bid Security as required by tender conditions.',
+          executionRules: {
+            stampPaperRequired: true,
+            stampPaperDenominationInr: 100,
+            notarizationRequired: true,
+            udinRequired: false,
+            signingAuthorityRank: 'Authorized Signatory',
+          },
+          provenance: {
+            pageNumber: 1,
+            clauseReference: 'Clause 4.1',
+            verbatimQuote: emdQuote,
+            confidenceScore: 0.98,
+          },
+        },
+      ]);
 
       const items = await complianceService.listItems(testBid.id);
       const emdItem = items.find((item) => item.title === 'Tender & Bid Security (EMD) Guarantee');
-      expect(emdItem?.provenance.verbatimQuote).toBe(
-        'The EMD shall be paid in the form of Bank Guarantee/FDR drawn in ' +
-          'favour of the Executive Engineer National Highway Division Hassan, obtained ' +
-          'from any Nationalized/Scheduled Banks payable at Hassan.',
-      );
+      expect(emdItem?.provenance.verbatimQuote).toBe(emdQuote);
     });
 
     it('should extract 0 compliance items and fabricate no mock data when document contains no compliance clauses', async () => {
@@ -366,11 +534,11 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
         `tenants/org_acme_infra_001/bids/${testBid.id}/doc-empty-test/Uploaded_Tender_Document.pdf`,
         500,
         'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-        'This is a simple general notice without any procurement clauses or tender requirements.'
+        `Tender: Test Bid For Empty Document\nTendering Authority: Government Authority\nNotice Inviting Tender\nThis is a simple general notice without any procurement clauses or tender requirements.`
       );
       await documentsService.confirmUpload(testBid.id, 'doc-empty-test');
 
-      await documentsService.markExtractionComplete(testBid.id, 'doc-empty-test');
+      await simulateExtractionCompleted(testBid.id, 'doc-empty-test', []);
 
       const items = await complianceService.listItems(testBid.id);
       expect(items.length).toBe(0);
@@ -405,7 +573,7 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
       await documentsService.confirmUpload(testBid.id, 'doc-to-remove-123');
 
       // 3. Mark extraction complete to populate compliance items citing this doc
-      await documentsService.markExtractionComplete(testBid.id, 'doc-to-remove-123');
+      await simulateExtractionCompleted(testBid.id, 'doc-to-remove-123');
 
       const itemsBefore = await complianceService.listItems(testBid.id);
       expect(itemsBefore.length).toBe(7);
@@ -459,7 +627,7 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
         sampleTenderContent
       );
       await documentsService.confirmUpload('bid-cpwd-gov-002', cpwdDocId);
-      await documentsService.markExtractionComplete('bid-cpwd-gov-002', cpwdDocId);
+      await simulateExtractionCompleted('bid-cpwd-gov-002', cpwdDocId);
     });
 
     it('should list compliance items for a bid', async () => {

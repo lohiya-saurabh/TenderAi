@@ -1,19 +1,21 @@
 # Service Boundary — NestJS vs FastAPI
 
-## Implementation update
+## Implementation Architecture (Design B)
 
-The earlier audit below describes pre-runtime behavior. Current responsibilities are:
+Responsibilities across the two-tier boundary are:
 
-| Concern | Current location |
-|---|---|
-| Upload authorization, metadata, object verification, transactional outbox | NestJS `DocumentsService.confirmUpload()` |
-| Queue publishing and queue consumption | NestJS `DocumentProcessingRuntime` via `IJobQueue` |
-| Tenant/company claim validation and document-state coordination | NestJS runtime, using PostgreSQL records |
-| Object retrieval, PDF text normalization, and parser fallback | NestJS `AiDocumentExtractor` / `DocumentContentNormalizer` |
-| Requirement extraction and LangGraph invocation | FastAPI `/api/v1/extract` |
-| Compliance persistence, bid counters, and terminal document status | NestJS runtime, in a PostgreSQL transaction |
-
-This is asynchronous relative to the upload request, but NestJS is now the queue worker and still performs object retrieval/parsing. FastAPI does not consume the queue, retrieve storage objects, or persist results; OCR is not implemented. The target FastAPI worker boundary therefore remains incomplete.
+| Concern | Location | Implementation Component |
+|---|---|---|
+| Upload authorization, tenant isolation, and presigned URL signing | NestJS API | `DocumentsController.generateUploadUrl()` via `IStorageService` |
+| Direct client upload to cloud storage (bypassing server memory) | S3 / GCS | Direct client `PUT` request with SHA-256 integrity validation |
+| Upload confirmation, object existence verification, transactional outbox | NestJS API | `DocumentsService.confirmUpload()` & `document_processing_outbox` |
+| Asynchronous queue dispatch & lease-locking | NestJS API | `DocumentProcessingRuntime` via `IJobQueue` |
+| Direct PDF download & streaming parse (C++ PDFium / Docling) | FastAPI Worker | `tenderpulse_ai.domain.pdf_resolver.resolve_pdf_to_pages()` |
+| Stateful AI extraction & grounding verification (LangGraph) | FastAPI Worker | `ProductionExtractionPipeline` / 8-node LangGraph workflow |
+| Asynchronous completion event publication | FastAPI Worker | `CompletionPublisher` (`DocumentExtractionCompletedEvent`) |
+| Invariant checking, tenant re-verification & deduplication | NestJS API | `DocumentCompletionService.processExtractionCompleted()` |
+| Exclusive, atomic PostgreSQL persistence (**Single-Writer Principle**) | NestJS API | PostgreSQL transaction in `DocumentCompletionService` |
+| Queue message acknowledgment / DLQ routing | NestJS API | `DocumentProcessingRuntime` (Persist-Before-Ack pattern) |
 
 ## Overview
 This document maps every document‑processing operation to its current implementation location and indicates whether it should remain in NestJS or be moved to the FastAPI worker. The analysis is based on the current codebase (as of the `DOCUMENT_PROCESSING_CURRENT_FLOW.md` trace) and the intended architecture outlined in the design notes.

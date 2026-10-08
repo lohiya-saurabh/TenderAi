@@ -3,19 +3,17 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { PGlite } from '@electric-sql/pglite';
-import { drizzle } from 'drizzle-orm/pglite';
-import bcrypt from 'bcrypt';
 import { initDatabase } from '../../common/database/database.provider.js';
-import * as schema from '../../common/database/schema.js';
+import { createDrizzle, type DrizzleDb } from '../../common/database/database.module.js';
 import { TenantContextHolder } from '../../common/security/TenantContext.js';
 import { UsersService } from '../users/users.service.js';
 import { SettingsService } from '../settings/settings.service.js';
 import { TeamsService } from '../teams/teams.service.js';
-import { UnauthorizedError, BadRequestError } from '../../common/errors/errors.js';
+import { UnauthorizedError } from '../../common/errors/errors.js';
 
 describe('Profile, Settings & Teams Integration Suite', () => {
   let db: PGlite;
-  let drizzleDb: ReturnType<typeof drizzle<typeof schema>>;
+  let drizzleDb: DrizzleDb;
   let usersService: UsersService;
   let settingsService: SettingsService;
   let teamsService: TeamsService;
@@ -26,11 +24,11 @@ describe('Profile, Settings & Teams Integration Suite', () => {
   beforeEach(async () => {
     db = new PGlite();
     await initDatabase(db, { seedUsers: true, seedFullProfile: true, seedBidsAndCompliance: true });
-    drizzleDb = drizzle(db, { schema });
+    drizzleDb = createDrizzle(db);
 
-    usersService = new UsersService(drizzleDb as any);
-    settingsService = new SettingsService(drizzleDb as any);
-    teamsService = new TeamsService(drizzleDb as any);
+    usersService = new UsersService(drizzleDb);
+    settingsService = new SettingsService(drizzleDb);
+    teamsService = new TeamsService(drizzleDb);
   });
 
   describe('1. UsersService — Profile & Password Management', () => {

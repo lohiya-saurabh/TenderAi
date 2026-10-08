@@ -13,10 +13,14 @@ import { DocumentContentNormalizer } from '../bids/application/DocumentContentNo
 import { STORAGE_TOKEN } from '../../infrastructure/storage/storage.module.js';
 import type { IStorageService } from '../bids/application/IStorageService.js';
 
+import { CompletionWebhookController } from './CompletionWebhookController.js';
+import { DocumentCompletionService } from './DocumentCompletionService.js';
+
 @Module({
-  controllers: [DocumentsController],
+  controllers: [DocumentsController, CompletionWebhookController],
   providers: [
     DocumentsService,
+    DocumentCompletionService,
     {
       provide: DOCUMENT_EXTRACTOR_TOKEN,
       useFactory: (storage: IStorageService) => {
@@ -33,6 +37,6 @@ import type { IStorageService } from '../bids/application/IStorageService.js';
     },
     DocumentProcessingRuntime,
   ],
-  exports: [DocumentsService],
+  exports: [DocumentsService, DocumentCompletionService],
 })
 export class DocumentsModule {}
