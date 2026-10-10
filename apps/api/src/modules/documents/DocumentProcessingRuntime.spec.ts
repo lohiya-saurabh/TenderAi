@@ -123,6 +123,7 @@ describe('DocumentProcessingRuntime', () => {
       generatePresignedDownloadUrl: async () => 'unused',
       headObject: async () => ({ exists: true, sizeBytes: 2048 }),
       getObject: async () => Buffer.from('unused'),
+      findFilesByPrefix: async () => [],
       deleteObject: async () => {},
       deletePrefix: async () => {},
     };
@@ -305,6 +306,7 @@ describe('DocumentProcessingRuntime', () => {
       generatePresignedDownloadUrl: async () => 'unused',
       headObject: async () => ({ exists: true, sizeBytes: 2048 }),
       getObject: async () => Buffer.from('unused'),
+      findFilesByPrefix: async () => [],
       deleteObject: async () => {},
       deletePrefix: async () => {},
     };

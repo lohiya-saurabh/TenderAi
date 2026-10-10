@@ -18,7 +18,7 @@ export class MockSqsJobQueue implements IJobQueue {
   private readonly messages: Map<string, InternalQueueItem> = new Map();
   private readonly deadLetterQueue: DeadLetterMessage<IngestionJobMessage>[] = [];
 
-  constructor(public readonly maxReceiveCount = 3) {}
+  constructor(public readonly maxReceiveCount = 3) { }
 
   public async enqueue(payload: IngestionJobMessage): Promise<void> {
     const id = uuidv4();

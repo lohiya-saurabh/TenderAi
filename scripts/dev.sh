@@ -22,14 +22,26 @@ npm run build -w @tenderpulse/api
 # Function to kill child processes on exit (Ctrl+C)
 cleanup() {
   echo -e "\n\n${YELLOW}🛑 Shutting down TenderPulse AI servers...${NC}"
-  kill 0
+  kill $AI_PID $TSC_PID $API_PID 2>/dev/null || true
+  sleep 0.3
+  kill -9 $AI_PID $TSC_PID $API_PID 2>/dev/null || true
+  kill 0 2>/dev/null || true
   exit 0
 }
 trap cleanup SIGINT SIGTERM EXIT
 
+# Pre-flight: Clean up any stale/orphaned processes on ports 8000, 3000, 5173
+for port in 8000 3000 5173; do
+  pids=$(lsof -ti:$port 2>/dev/null || true)
+  if [ -n "$pids" ]; then
+    echo -e "${YELLOW}🧹 Clearing stale process on port $port (PID: $pids)...${NC}"
+    echo "$pids" | xargs kill -9 2>/dev/null || true
+  fi
+done
+
 # 2. Start FastAPI AI Worker on Port 8000
 echo -e "${GREEN}🧠 Starting FastAPI AI Worker on http://localhost:8000...${NC}"
-./apps/ai/.venv/bin/uvicorn tenderpulse_ai.main:app --port 8000 --app-dir apps/ai/src --reload &
+./apps/ai/.venv/bin/uvicorn tenderpulse_ai.main:app --port 8000 --app-dir apps/ai/src --reload --reload-dir apps/ai/src &
 AI_PID=$!
 
 # 3. Start TypeScript Watcher & Backend API Server on Port 3000
@@ -38,7 +50,7 @@ npx tsc -w --preserveWatchOutput -p apps/api/tsconfig.json &
 TSC_PID=$!
 
 echo -e "${GREEN}🌐 Starting Backend API on http://localhost:3000...${NC}"
-SEED_DEMO_DATA=${SEED_DEMO_DATA:-true} node --watch-path=apps/api/dist apps/api/dist/main.js &
+SEED_DEMO_DATA=${SEED_DEMO_DATA:-true} node scripts/watch-api.js &
 API_PID=$!
 
 # Wait a moment for API to bind to port

@@ -98,19 +98,18 @@ export class ComplianceService {
     this.db = 'select' in db ? (db as DrizzleDb) : createDrizzle(db as PGlite);
   }
 
-  private async getOrgIdForBid(bidId: string): Promise<string> {
+  /**
+   * Resolves tenant organization ID from authenticated JWT context.
+   * If TenantContext is missing (e.g. unauthenticated test harness), falls back to 'org_default'.
+   */
+  private getTenantOrgId(): string {
     const orgId = TenantContextHolder.get()?.organizationId;
     if (orgId) return orgId;
-    const [bid] = await this.db
-      .select({ organizationId: schema.bids.organizationId })
-      .from(schema.bids)
-      .where(eq(schema.bids.id, bidId))
-      .limit(1);
-    return bid?.organizationId || '';
+    return 'org_default';
   }
 
   public async listItems(bidId: string): Promise<DemoComplianceItem[]> {
-    const orgId = await this.getOrgIdForBid(bidId);
+    const orgId = this.getTenantOrgId();
     const records = await this.db
       .select()
       .from(schema.complianceItems)
@@ -187,7 +186,7 @@ export class ComplianceService {
   }
 
   public async getItemById(bidId: string, itemId: string): Promise<DemoComplianceItem> {
-    const orgId = await this.getOrgIdForBid(bidId);
+    const orgId = this.getTenantOrgId();
     const [item] = await this.db
       .select()
       .from(schema.complianceItems)
@@ -265,7 +264,7 @@ export class ComplianceService {
    * Maps extracted tender requirements to company-side proof documents.
    */
   public async getEvidenceMatches(bidId: string): Promise<EvidenceMatchesResult> {
-    const orgId = await this.getOrgIdForBid(bidId);
+    const orgId = this.getTenantOrgId();
 
     const [bid] = await this.db
       .select()
@@ -327,7 +326,7 @@ export class ComplianceService {
    * Consolidated statutory, execution, and commercial risk radar for a bid.
    */
   public async getRiskFindings(bidId: string): Promise<RiskFindingsResult> {
-    const orgId = await this.getOrgIdForBid(bidId);
+    const orgId = this.getTenantOrgId();
 
     const [bid] = await this.db
       .select()
@@ -490,7 +489,7 @@ export class ComplianceService {
     itemId: string,
     dto: ReviewComplianceDto,
   ): Promise<ReviewComplianceResult> {
-    const orgId = await this.getOrgIdForBid(bidId);
+    const orgId = this.getTenantOrgId();
     const userId = TenantContextHolder.get()?.userId || 'usr_reviewer';
     const reviewer = 'Reviewer';
 

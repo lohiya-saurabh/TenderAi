@@ -1,6 +1,101 @@
 # Project Status & Milestone Tracker
 
-## Current implementation milestone: Ground-Truth Architecture Documentation & Comprehensive Interview Preparation
+## Current implementation milestone: S3 Direct Upload CORS Configuration & Polymorphic Storage PutObject Port Hardening
+
+1. **Problem Statement & Root Cause Analysis**:
+   - When attempting document uploads via the web UI (`DocumentUploader.tsx`) with AWS S3 configured (`AWS_S3_BUCKET=tenderai-ap-south-1-1029`), upload confirmation failed with:
+     ```
+     Uploaded document is missing or empty in object storage: tenants/org_acme_infra_001/bids/bid-nhai-44-001/doc-1791492806819/Bid_RS21_Part-2_Employers_Requirements.pdf
+     ```
+   - **Root Cause 1 (S3 Bucket CORS)**: The target AWS S3 bucket lacked a CORS configuration (`NoSuchCORSConfiguration`). When the browser at `http://localhost:5173` attempted a direct HTTP `PUT` to the S3 presigned URL (`https://tenderai-ap-south-1-1029.s3.ap-south-1.amazonaws.com/...`), the browser blocked the cross-origin request.
+   - **Root Cause 2 (Fallback Buffer Drop)**: Upon direct upload failure in the browser, `DocumentUploader.tsx` attempted a fallback upload to the NestJS API (`PUT /api/v1/mock-upload/...`). In `DocumentsController.mockUpload`, the incoming stream was passed to `registerUploadedMockObject`, but that method only wrote to storage if `storageService` had `.simulateUploadedObject` (i.e. `MockStorageService`). When running against `AwsS3StorageService`, the buffer was discarded. Subsequent `confirmUpload` calls checked `headObject` on S3, found nothing, and threw an error.
+
+2. **Architectural Improvements & Deliverables**:
+   - **S3 Bucket CORS Rule Configuration**:
+     - Applied and verified standard CORS rules on `tenderai-ap-south-1-1029` allowing `PUT`, `POST`, `GET`, `HEAD` methods from `http://localhost:5173` and `http://localhost:3000` with exposed `ETag` headers. Direct browser uploads to S3 now succeed natively.
+   - **Polymorphic Storage Port Extension (`IStorageService.putObject`)**:
+     - Extended domain port interface `IStorageService` (`apps/api/src/modules/bids/application/IStorageService.ts`) with optional method `putObject(storagePath: string, content: Buffer, contentType?: string): Promise<void>`.
+     - Implemented `putObject` across all storage adapters:
+       - `AwsS3StorageService`: native `PutObjectCommand` committing binary stream to S3 bucket.
+       - `GcsStorageService`: native `file.save()` uploading buffer to Google Cloud Storage.
+       - `MockStorageService`: in-memory buffer simulation via `simulateUploadedObject`.
+   - **Resilient Fallback Upload Pipeline**:
+     - Updated `DocumentsService.registerUploadedMockObject` to asynchronously commit buffers directly into whichever cloud storage adapter is active (`await this.storageService.putObject(...)`).
+     - Hardened `DocumentsController.mockUpload` to await persistence and return proper HTTP 500 error responses on failure. Even if a client is behind a strict firewall or browser privacy extension blocking direct S3 connections, local proxy uploads persist reliably to AWS S3.
+
+3. **Verification Record**:
+   - S3 Bucket CORS Verification (`GetBucketCorsCommand`): Verified active rules on `tenderai-ap-south-1-1029`.
+   - S3 Direct Presigned PUT Verification: Successfully uploaded and verified test PDF via presigned URL handshake.
+   - API Unit & Integration Tests (Vitest): 33 test files, 245 tests passed (100% green).
+   - Monorepo Type Check (`npm run type-check`): 0 errors across all workspaces.
+
+## Previous implementation milestone: Local Development File-Watcher Decoupling & Embedded PGlite Infinite Restart Resolution
+
+1. **Problem Statement & Root Cause Analysis**:
+   - When launching the local development environment via `npm run dev` (`scripts/dev.sh`), the NestJS API server entered an infinite restart loop:
+     ```
+     Change detected in '/Users/belikesaurabh/main/TenderAi/data/postgres/base/5/pg_internal.init'
+     Restarting 'apps/api/dist/main.js'
+     Change detected in '/Users/belikesaurabh/main/TenderAi/data/postgres/pg_wal/000000010000000000000001'
+     Restarting 'apps/api/dist/main.js'
+     ```
+   - **Root Cause**: Node.js's native `--watch` / `--watch-path` runtime flag monitors not only the specified paths, but automatically monitors every file opened/read by the running process via `fs` or native bindings. Embedded PGlite (`@electric-sql/pglite`) reads its catalog and write-ahead log (`pg_wal`, `pg_internal.init`) in `./data/postgres/` on startup and continuously flushes checkpoints and transaction states to disk. Node's watcher falsely interpreted these database state updates as source code changes, killing and restarting `apps/api/dist/main.js` indefinitely.
+   - Native Node.js lacks an `--ignore` or `--exclude` flag for `--watch`.
+
+2. **Architectural Improvements & Deliverables**:
+   - **Isolated File-Watcher Runner (`scripts/watch-api.js`)**:
+     - Created a zero-external-dependency Node.js runner that supervises the NestJS API process using native `child_process.spawn` and `node:fs.watch`.
+     - Strictly scopes recursive directory monitoring to `apps/api/dist/`, ignoring embedded database writes in `data/postgres/` and ephemeral frontend caches in `apps/web/node_modules/`.
+     - Filters events exclusively to compiled JavaScript (`*.js`) and schema/metadata (`*.json`) artifacts, ignoring `.d.ts` or temporary swap files.
+     - Implements a 350ms debounce window to ensure batched multi-file writes from `tsc -w` finish compiling before restarting the server.
+     - Implements graceful process lifecycle management: sends `SIGTERM`, waits for the old child process to release port 3000 and database locks before launching a replacement, and enforces a 2.0s `SIGKILL` safety fallback to prevent orphaned processes or port collisions (`EADDRINUSE`).
+   - **Unified Dev Runner Integration (`scripts/dev.sh`)**:
+     - Replaced `node $ENV_FLAG --watch-path=apps/api/dist apps/api/dist/main.js` with `node scripts/watch-api.js &`.
+     - Hardened the trap shutdown sequence to broadcast `SIGTERM` followed by a grace delay and `SIGKILL`, ensuring PGlite flushes cleanly and all child background workers terminate properly on `Ctrl+C`.
+
+3. **Verification Record**:
+   - API Unit & Integration Tests (Vitest): 33 test files, 245 tests passed (100% green).
+   - Monorepo Type Check (`npm run type-check`): 0 errors across all workspaces.
+   - Monorepo Build (`npm run build`): All 4 packages and apps built cleanly.
+   - Development Runner (`./scripts/dev.sh`): Verified that FastAPI AI Worker (:8000), TypeScript Watcher (`tsc -w`), NestJS API (:3000), and Frontend Vite (:5173) start reliably with zero restart loops and clean shutdown.
+
+## Previous implementation milestone: Zero-Trust Tenant Resolution & Anti-IDOR Boundary Enforcement
+
+1. **Problem Statement & Vulnerability Remediation**:
+   - In `DocumentsService` (`apps/api/src/modules/documents/documents.service.ts`) and `ComplianceService` (`apps/api/src/modules/compliance/compliance.service.ts`), tenant identity (`orgId`) had previously fallen back to resolving via database queries (`SELECT organizationId FROM bids WHERE id = :bidId`) through `getOrgIdForBid(bidId)`.
+   - Under Zero-Trust SaaS multi-tenancy (ADR 0001, ADR 0014, and AGENTS.md), looking up tenant context from client-supplied resource IDs (`bidId`) on authenticated routes creates a critical **Confused Deputy / Insecure Direct Object Reference (IDOR)** vulnerability: an authenticated attacker from Tenant A supplying Tenant B's `bidId` could cause services to adopt Tenant B's tenant context.
+   - The verified JSON Web Token (JWT) is the sole cryptographic trust anchor for caller identity. The caller's `organizationId` must be derived strictly from `TenantContextHolder` (populated by `JwtAuthGuard` and `TenantContextInterceptor`).
+   - Furthermore, `generateUploadUrl` had lacked upfront bid ownership validation, allowing presigned upload URLs to be registered for bids not owned by the caller's tenant.
+
+2. **Architectural Improvements & Deliverables**:
+   - **Zero-Trust JWT Tenant Anchoring**:
+     - Standardized `resolveTenantOrgId()` in `DocumentsService` and `getTenantOrgId()` in `ComplianceService` to strictly read the caller's verified `organizationId` from `TenantContextHolder.get()?.organizationId` (falling back to `'org_default'` only in unauthenticated unit test harnesses).
+     - Confined raw database `getOrgIdForBid(bidId)` strictly to the unauthenticated public endpoint (`PUT /api/v1/mock-upload/:bidId/:docId/:fileName`), which emulates direct AWS S3 presigned PUT uploads where browsers send raw binary streams without authorization headers.
+   - **Anti-IDOR Database Boundary Checks**:
+     - Hardened `generateUploadUrl` in `DocumentsService` to verify that `bids` records exist and match the caller's tenant (`WHERE id = :bidId AND organization_id = :orgId`) before generating presigned URLs or recording `pendingUploads`. If the bid is not owned by the caller, it returns `404 NotFoundError`, preventing tenant resource enumeration.
+     - Cleaned up metadata resolution in `confirmUpload`: eliminated scoping errors, unified `existingDoc` and `pendingUploads` lookups, and guaranteed fallback filename `Uploaded_Tender_Document.pdf` to eliminate `undefined` storage paths.
+     - Replaced cross-tenant lookups across `reprocessDocument`, `getDownloadUrl`, `getBidExtractionProgress`, and `deleteDocument` with caller-scoped `orgId`, and corrected folder prefix pruning in `deleteDocument` (`tenants/${orgId}/bids/${bidId}/${docId}/`).
+     - Refactored `ComplianceService` methods (`listItems`, `getItemById`, `getEvidenceMatches`, `getRiskFindings`, `reviewItem`) to strictly scope all compliance queries and mutations to the authenticated caller's tenant boundary.
+   - **Comprehensive Anti-IDOR Test Verification**:
+     - Added dedicated unit tests in `services.spec.ts` verifying that `generateUploadUrl` and `confirmUpload` reject foreign tenant bids with `NotFoundError`, and that `listItems` in `ComplianceService` returns an empty array for foreign bids.
+   - **Cloud-Provider-Agnostic Storage Port Refactoring**:
+     - Promoted `findFilesByPrefix(prefix: string): Promise<string[]>` to the domain port interface `IStorageService` (`apps/api/src/modules/bids/application/IStorageService.ts`), eliminating leaky concrete provider dependencies from `DocumentsService`.
+     - Implemented `findFilesByPrefix` across all infrastructure adapters:
+       - `AwsS3StorageService`: native `ListObjectsV2Command` filtering prefix keys.
+       - `GcsStorageService`: native `bucket.getFiles({ prefix })`.
+       - `MockStorageService`: native in-memory prefix key filtering.
+     - Fully decoupled `DocumentsService` from `GcsStorageService`: removed infrastructure imports, type union casts `(IStorageService & Partial<GcsStorageService>)`, and internal `gcsStorageService` getter, enabling pure polymorphic storage operations across AWS S3, Google Cloud Storage, and Mock Storage.
+    - **ORM JSONB Schema Type Hardening**:
+      - Strongly typed `complianceItems.provenance` in Drizzle ORM schema (`apps/api/src/common/database/schema.ts`) using `.$type<ComplianceItemProvenance>()`.
+      - Resolved `unknown` type inference across test suites and application queries, eliminating unsafe type casts while preserving full backwards compatibility for nullable JSON attributes.
+
+3. **Verification Record**:
+   - API Unit & Integration Tests (Vitest): 33 test files, 245 tests passed (100% green).
+   - Monorepo Type Check (`npm run type-check`): 0 errors across all TypeScript packages.
+   - Web Unit Tests (Vitest): 22 test files, 163 tests passed (100% green).
+   - Python Test Suite (`pytest apps/ai`): 113 passed, 1 skipped (100% green).
+
+## Previous implementation milestone: Ground-Truth Architecture Documentation & Comprehensive Interview Preparation
 
 1. **Problem Statement & Scope**:
    - The platform architecture had evolved through several major milestones (Design B event choreography, multi-company tenant scoping, single-writer PostgreSQL persistence, structured JSON logging, and clean-up), leaving architectural documents out-of-sync with code reality.

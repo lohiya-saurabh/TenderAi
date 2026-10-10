@@ -58,4 +58,4 @@ export const QUEUE_TOKEN = 'JOB_QUEUE';
   ],
   exports: [QUEUE_TOKEN],
 })
-export class QueueModule {}
+export class QueueModule { }

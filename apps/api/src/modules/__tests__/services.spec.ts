@@ -334,6 +334,7 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
         generatePresignedDownloadUrl: async () => 'https://vault.s3.ap-south-1.amazonaws.com/doc.pdf?sig=test',
         headObject: async () => ({ exists: true, sizeBytes: 100 }),
         getObject: async () => Buffer.from('test'),
+        findFilesByPrefix: async () => [],
         deleteObject: async () => {},
         deletePrefix: async () => {},
       };
@@ -369,6 +370,32 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
       expect(res.documentId).toMatch(/^doc-/);
       expect(res.uploadUrl).toContain('/api/v1/mock-upload/');
       expect(res.storagePath).toContain('tenants/org_acme_infra_001/bids/bid-cpwd-gov-002');
+    });
+
+    it('should throw NotFoundError when generating upload URL for non-existent or cross-tenant bid (Anti-IDOR)', async () => {
+      await expect(
+        documentsService.generateUploadUrl('bid-non-existent-999', 'doc.pdf')
+      ).rejects.toThrow(NotFoundError);
+
+      await TenantContextHolder.run(
+        { organizationId: 'org_competitor_foreign', userId: 'usr_foreign', role: 'ADMIN' },
+        async () => {
+          await expect(
+            documentsService.generateUploadUrl('bid-cpwd-gov-002', 'doc.pdf')
+          ).rejects.toThrow(NotFoundError);
+        }
+      );
+    });
+
+    it('should throw NotFoundError when confirming upload for cross-tenant bid (Anti-IDOR)', async () => {
+      await TenantContextHolder.run(
+        { organizationId: 'org_competitor_foreign', userId: 'usr_foreign', role: 'ADMIN' },
+        async () => {
+          await expect(
+            documentsService.confirmUpload('bid-cpwd-gov-002', 'doc-test-123')
+          ).rejects.toThrow(NotFoundError);
+        }
+      );
     });
 
     it('should confirm document upload, persist to database, and update status', async () => {
@@ -634,6 +661,16 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
       const items = await complianceService.listItems('bid-cpwd-gov-002');
       expect(Array.isArray(items)).toBe(true);
       expect(items.length).toBeGreaterThan(0);
+    });
+
+    it('should return empty list when querying compliance items for a foreign tenant bid (Anti-IDOR)', async () => {
+      await TenantContextHolder.run(
+        { organizationId: 'org_competitor_foreign', userId: 'usr_foreign', role: 'ADMIN' },
+        async () => {
+          const items = await complianceService.listItems('bid-cpwd-gov-002');
+          expect(items).toEqual([]);
+        }
+      );
     });
 
     it('should get a single compliance item by ID', async () => {

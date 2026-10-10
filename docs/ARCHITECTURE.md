@@ -95,7 +95,7 @@ flowchart TD
     AUTH_GUARD --> ROLES_GUARD --> CTX_INTERCEPTOR --> LOG_INTERCEPTOR
     LOG_INTERCEPTOR --> BIDS_SVC
     BIDS_SVC -->|3. Generate Presigned PUT| STORAGE
-    BIDS_SVC -->>|4. Return Upload URL| SPA
+    BIDS_SVC -.->|4. Return Upload URL| SPA
     SPA -->|5. HTTP PUT Direct 50MB PDF| STORAGE
     SPA -->|6. POST /api/v1/bids/:id/documents/confirm| BIDS_SVC
 

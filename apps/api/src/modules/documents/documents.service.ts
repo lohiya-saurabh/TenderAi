@@ -8,7 +8,6 @@ import { eq, and, inArray } from 'drizzle-orm';
 import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '../../common/database/database.module.js';
 import * as schema from '../../common/database/schema.js';
 import { STORAGE_TOKEN } from '../../infrastructure/storage/storage.module.js';
-import { GcsStorageService } from '../../infrastructure/storage/GcsStorageService.js';
 import type { IStorageService } from '../bids/application/IStorageService.js';
 import { ConflictError, NotFoundError, BadRequestError } from '../../common/errors/errors.js';
 import { TenderDocumentRelevanceValidator } from './TenderDocumentRelevanceValidator.js';
@@ -57,24 +56,35 @@ export class DocumentsService {
 
   constructor(
     @Inject(DRIZZLE_TOKEN) db: DrizzleDb | PGlite,
-    @Inject(STORAGE_TOKEN) private readonly storageService: (IStorageService & Partial<GcsStorageService>) | null,
+    @Inject(STORAGE_TOKEN) private readonly storageService: IStorageService | null,
   ) {
     this.db = 'select' in db ? (db as DrizzleDb) : createDrizzle(db as PGlite);
   }
 
-  public registerUploadedMockObject(storagePath: string, content: Buffer): void {
-    if (this.storageService && typeof (this.storageService as unknown as Record<string, unknown>).simulateUploadedObject === 'function') {
-      (this.storageService as unknown as { simulateUploadedObject: (p: string, s: number, c?: string, b?: Buffer) => void }).simulateUploadedObject(storagePath, content.length, undefined, content);
+  public async registerUploadedMockObject(storagePath: string, content: Buffer): Promise<void> {
+    if (this.storageService) {
+      if (typeof this.storageService.putObject === 'function') {
+        await this.storageService.putObject(storagePath, content, 'application/pdf');
+      } else if (typeof (this.storageService as unknown as Record<string, unknown>).simulateUploadedObject === 'function') {
+        (this.storageService as unknown as { simulateUploadedObject: (p: string, s: number, c?: string, b?: Buffer) => void }).simulateUploadedObject(storagePath, content.length, undefined, content);
+      }
     }
   }
 
-  private get gcsStorageService(): GcsStorageService | null {
-    if (this.storageService && typeof this.storageService.findFilesByPrefix === 'function') {
-      return this.storageService as GcsStorageService;
-    }
-    return null;
+  /**
+   * Resolves tenant organization ID from authenticated JWT context.
+   * If TenantContext is missing (e.g. unauthenticated test harness), falls back to 'org_default'.
+   */
+  public resolveTenantOrgId(): string {
+    const orgId = TenantContextHolder.get()?.organizationId;
+    if (orgId) return orgId;
+    return 'org_default';
   }
 
+  /**
+   * Lookup helper used strictly for unauthenticated mock upload simulation (S3 PUT emulation),
+   * where HTTP callers send raw binary streams directly to the mock storage endpoint without a Bearer token.
+   */
   public async getOrgIdForBid(bidId: string): Promise<string> {
     const orgId = TenantContextHolder.get()?.organizationId;
     if (orgId) return orgId;
@@ -94,7 +104,19 @@ export class DocumentsService {
     rawSizeBytes?: number,
     rawDocumentType?: string,
   ): Promise<UploadUrlResult> {
-    const orgId = await this.getOrgIdForBid(bidId);
+    const orgId = this.resolveTenantOrgId();
+
+    // Verify bid exists and belongs to the caller's authenticated tenant boundary (Anti-IDOR)
+    const [bidRecord] = await this.db
+      .select({ id: schema.bids.id })
+      .from(schema.bids)
+      .where(and(eq(schema.bids.id, bidId), eq(schema.bids.organizationId, orgId)))
+      .limit(1);
+
+    if (!bidRecord) {
+      throw new NotFoundError(`Bid project '${bidId}' not found.`);
+    }
+
     const docId = `doc-${Date.now()}`;
     const fileName = typeof rawFileName === 'string' && rawFileName.trim() ? rawFileName.trim() : 'document.pdf';
     const storagePath = `tenants/${orgId}/bids/${bidId}/${docId}/${fileName}`;
@@ -143,7 +165,7 @@ export class DocumentsService {
   }
 
   public async confirmUpload(bidId: string, rawDocumentId?: string): Promise<ConfirmUploadResult> {
-    const orgId = await this.getOrgIdForBid(bidId);
+    const orgId = this.resolveTenantOrgId();
     const userId = TenantContextHolder.get()?.userId || 'usr_admin';
 
     const [bidRecord] = await this.db
@@ -175,15 +197,15 @@ export class DocumentsService {
       )
       .limit(1);
 
-    let fileName = pending?.fileName || (existingDoc && existingDoc.fileName !== 'Uploaded_Tender_Document.pdf' ? existingDoc.fileName : undefined);
+    let fileName = pending?.fileName || existingDoc?.fileName;
     let storagePath = pending?.storagePath || existingDoc?.storagePath;
     const mimeType = pending?.mimeType || existingDoc?.mimeType || 'application/pdf';
     const documentType = pending?.documentType || existingDoc?.documentType || 'NIT';
 
-    // If fileName or storagePath is not known or generic, discover real file name from GCS
-    if ((!fileName || !storagePath || fileName === 'Uploaded_Tender_Document.pdf') && this.gcsStorageService) {
+    // If fileName or storagePath is not known or generic, discover real file name from object storage
+    if ((!fileName || !storagePath) && this.storageService) {
       try {
-        const matchedFiles = await this.gcsStorageService.findFilesByPrefix(
+        const matchedFiles = await this.storageService.findFilesByPrefix(
           `tenants/${orgId}/bids/${bidId}/${docId}/`,
         );
         if (matchedFiles.length > 0) {
@@ -191,7 +213,7 @@ export class DocumentsService {
           fileName = storagePath.split('/').pop() || fileName;
         }
       } catch (err) {
-        console.warn(`[DocumentsService] Failed to find files by prefix in GCS for ${docId}:`, err);
+        console.warn(`[DocumentsService] Failed to find files by prefix in storage for ${docId}:`, err);
       }
     }
 
@@ -315,7 +337,7 @@ export class DocumentsService {
         bidId,
         organizationId: orgId,
         userId,
-        userName: userId === 'usr_bid_mgr_01' ? 'Vikramaditya Sharma' : 'Authorized User',
+        userName: userId,
         eventType: 'DOCUMENT_UPLOADED',
         aggregateType: 'TenderDocument',
         aggregateId: docId,
@@ -491,9 +513,9 @@ export class DocumentsService {
     let storagePath =
       docRow?.storagePath || `tenants/${orgId}/bids/${bidId}/${docId}/${fileName}`;
 
-    if (this.gcsStorageService) {
+    if (this.storageService) {
       try {
-        const matchedFiles = await this.gcsStorageService.findFilesByPrefix(
+        const matchedFiles = await this.storageService.findFilesByPrefix(
           `tenants/${orgId}/bids/${bidId}/${docId}/`,
         );
 
@@ -501,7 +523,7 @@ export class DocumentsService {
           storagePath = matchedFiles[0]!;
           fileName = storagePath.split('/').pop() || fileName;
 
-          const downloadUrl = await this.gcsStorageService.generatePresignedDownloadUrl(
+          const downloadUrl = await this.storageService.generatePresignedDownloadUrl(
             storagePath,
             fileName,
             3600,
@@ -512,7 +534,7 @@ export class DocumentsService {
           };
         }
       } catch (err) {
-        console.warn(`[DocumentsService] Failed to generate GCS download URL for ${storagePath}:`, err);
+        console.warn(`[DocumentsService] Failed to generate download URL for ${storagePath}:`, err);
       }
     }
 

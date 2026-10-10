@@ -61,11 +61,15 @@ export class DocumentsController {
     const chunks: Buffer[] = [];
     req.on('data', (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
     req.on('end', async () => {
-      const buffer = Buffer.concat(chunks);
-      const orgId = await this.documentsService.getOrgIdForBid(bidId);
-      const storagePath = `tenants/${orgId}/bids/${bidId}/${docId}/${fileName}`;
-      this.documentsService.registerUploadedMockObject(storagePath, buffer);
-      res.status(200).json({ status: 'UPLOADED', size: buffer.length });
+      try {
+        const buffer = Buffer.concat(chunks);
+        const orgId = await this.documentsService.getOrgIdForBid(bidId);
+        const storagePath = `tenants/${orgId}/bids/${bidId}/${docId}/${fileName}`;
+        await this.documentsService.registerUploadedMockObject(storagePath, buffer);
+        res.status(200).json({ status: 'UPLOADED', size: buffer.length });
+      } catch (err: unknown) {
+        res.status(500).json({ status: 'FAILED', message: err instanceof Error ? err.message : String(err) });
+      }
     });
   }
 

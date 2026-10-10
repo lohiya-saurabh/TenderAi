@@ -149,6 +149,39 @@ export class AwsS3StorageService implements IStorageService {
     }
   }
 
+  public async putObject(s3Key: string, content: Buffer, contentType = 'application/pdf'): Promise<void> {
+    const command = new PutObjectCommand({
+      Bucket: this.bucketName,
+      Key: s3Key,
+      Body: content,
+      ContentType: contentType,
+    });
+    await this.s3Client.send(command);
+    this.logger.info('storage.object.uploaded', 'Uploaded object directly to S3', {
+      objectKey: s3Key,
+      sizeBytes: content.length,
+      contentType,
+    });
+  }
+
+  public async findFilesByPrefix(prefix: string): Promise<string[]> {
+    try {
+      const list = await this.s3Client.send(
+        new ListObjectsV2Command({
+          Bucket: this.bucketName,
+          Prefix: prefix,
+        }),
+      );
+      if (!list.Contents || list.Contents.length === 0) {
+        return [];
+      }
+      return list.Contents.map((obj) => obj.Key).filter((key): key is string => Boolean(key));
+    } catch (err) {
+      this.logger.warn('storage.find_files_by_prefix.failed', `Failed to list files with prefix ${prefix}`, { prefix, error: err });
+      return [];
+    }
+  }
+
   public async deleteObject(s3Key: string): Promise<void> {
     try {
       await this.s3Client.send(

@@ -46,6 +46,14 @@ export class MockStorageService implements IStorageService {
     return obj.content ?? Buffer.from('Default simulated document binary content');
   }
 
+  public async putObject(
+    storagePath: string,
+    content: Buffer,
+    _contentType = 'application/pdf',
+  ): Promise<void> {
+    this.simulateUploadedObject(storagePath, content.length, undefined, content);
+  }
+
   public simulateUploadedObject(
     s3Key: string,
     sizeBytes: number,
@@ -57,6 +65,10 @@ export class MockStorageService implements IStorageService {
 
   public clear(): void {
     this.objects.clear();
+  }
+
+  public async findFilesByPrefix(prefix: string): Promise<string[]> {
+    return Array.from(this.objects.keys()).filter((key) => key.startsWith(prefix));
   }
 
   public async deleteObject(s3Key: string): Promise<void> {

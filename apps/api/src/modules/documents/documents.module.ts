@@ -24,9 +24,9 @@ import { DocumentCompletionService } from './DocumentCompletionService.js';
     {
       provide: DOCUMENT_EXTRACTOR_TOKEN,
       useFactory: (storage: IStorageService) => {
-        const aiBaseUrl = process.env.AI_ENGINE_URL ?? process.env.AI_SERVICE_URL;
+        const aiBaseUrl = process.env.AI_ENGINE_URL
         if (process.env.NODE_ENV === 'production' && !aiBaseUrl) {
-          throw new Error('AI_ENGINE_URL or AI_SERVICE_URL must be configured in production.');
+          throw new Error('AI_ENGINE_URL must be configured in production.');
         }
         return new AiDocumentExtractor(storage, new DocumentContentNormalizer(), {
           aiBaseUrl: aiBaseUrl ?? 'http://localhost:8000',
@@ -39,4 +39,4 @@ import { DocumentCompletionService } from './DocumentCompletionService.js';
   ],
   exports: [DocumentsService, DocumentCompletionService],
 })
-export class DocumentsModule {}
+export class DocumentsModule { }

@@ -139,6 +139,24 @@ export class GcsStorageService implements IStorageService {
     }
   }
 
+  public async putObject(
+    storagePath: string,
+    content: Buffer,
+    contentType = 'application/pdf',
+  ): Promise<void> {
+    const bucket = this.storage.bucket(this.bucketName);
+    const file = bucket.file(storagePath);
+    await file.save(content, {
+      contentType,
+      resumable: false,
+    });
+    this.logger.info('storage.object.uploaded', 'Uploaded object directly to GCS', {
+      storagePath,
+      sizeBytes: content.length,
+      contentType,
+    });
+  }
+
   public async findFilesByPrefix(prefix: string): Promise<string[]> {
     try {
       const bucket = this.storage.bucket(this.bucketName);

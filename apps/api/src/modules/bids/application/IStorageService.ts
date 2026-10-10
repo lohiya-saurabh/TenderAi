@@ -21,6 +21,14 @@ export interface IStorageService {
 
   getObject(storagePath: string): Promise<string | Buffer | null>;
 
+  putObject?(
+    storagePath: string,
+    content: Buffer,
+    contentType?: string
+  ): Promise<void>;
+
+  findFilesByPrefix(prefix: string): Promise<string[]>;
+
   deleteObject(storagePath: string): Promise<void>;
 
   deletePrefix(prefix: string): Promise<void>;

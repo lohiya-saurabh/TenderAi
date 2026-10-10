@@ -66,8 +66,8 @@ export interface TenderTableViewProps {
 const PAGE_SIZE_OPTIONS = [10, 25, 50] as const;
 
 const COLUMN_WIDTHS: Record<ColumnKey, string> = {
-  tender: '20%',
-  organization: '13%',
+  tender: '22%',
+  organization: '14%',
   value: '8%',
   deadline: '11%',
   status: '9%',
@@ -76,6 +76,19 @@ const COLUMN_WIDTHS: Record<ColumnKey, string> = {
   risk: '7%',
   readiness: '10%',
   actions: '6%',
+};
+
+const COLUMN_MIN_WIDTHS: Record<ColumnKey, string> = {
+  tender: 'min-w-[260px] max-w-[380px]',
+  organization: 'min-w-[150px] max-w-[220px]',
+  value: 'min-w-[110px]',
+  deadline: 'min-w-[125px]',
+  status: 'min-w-[120px]',
+  fit: 'min-w-[90px]',
+  recommendation: 'min-w-[120px]',
+  risk: 'min-w-[100px]',
+  readiness: 'min-w-[130px]',
+  actions: 'min-w-[90px]',
 };
 
 const NOT_EVALUATED_TOOLTIP =
@@ -97,11 +110,15 @@ export const TenderTableSkeleton: React.FC<{
   rows?: number;
 }> = ({ visibleColumns, rows = 8 }) => (
   <div className="rounded-lg border border-border bg-card overflow-hidden shadow-xs">
-    <Table>
+    <Table className="w-full min-w-[1100px] table-auto">
       <TableHeader>
         <TableRow>
           {visibleColumns.map((column) => (
-            <TableHead key={column} style={{ width: COLUMN_WIDTHS[column] }}>
+            <TableHead
+              key={column}
+              style={{ width: COLUMN_WIDTHS[column] }}
+              className={COLUMN_MIN_WIDTHS[column]}
+            >
               <Skeleton className="h-3 w-16" />
             </TableHead>
           ))}
@@ -111,7 +128,13 @@ export const TenderTableSkeleton: React.FC<{
         {Array.from({ length: rows }).map((_, rowIndex) => (
           <TableRow key={rowIndex}>
             {visibleColumns.map((column) => (
-              <TableCell key={column} className={column === 'value' || column === 'actions' ? 'text-right' : 'text-left'}>
+              <TableCell
+                key={column}
+                className={cn(
+                  column === 'value' || column === 'actions' ? 'text-right' : 'text-left',
+                  COLUMN_MIN_WIDTHS[column],
+                )}
+              >
                 <Skeleton className={cn('h-3.5', column === 'actions' ? 'w-12 ml-auto' : 'w-24')} />
               </TableCell>
             ))}
@@ -143,7 +166,14 @@ function SortableHeader({
 
   if (!columnSortKey) {
     return (
-      <TableHead className={cn(align === 'right' && 'text-right', 'text-xs font-semibold uppercase tracking-wider')} style={{ width: COLUMN_WIDTHS[columnKey] }}>
+      <TableHead
+        className={cn(
+          align === 'right' && 'text-right',
+          'text-xs font-semibold uppercase tracking-wider',
+          COLUMN_MIN_WIDTHS[columnKey],
+        )}
+        style={{ width: COLUMN_WIDTHS[columnKey] }}
+      >
         {label}
       </TableHead>
     );
@@ -153,7 +183,11 @@ function SortableHeader({
 
   return (
     <TableHead
-      className={cn(align === 'right' && 'text-right', 'text-xs font-semibold uppercase tracking-wider')}
+      className={cn(
+        align === 'right' && 'text-right',
+        'text-xs font-semibold uppercase tracking-wider',
+        COLUMN_MIN_WIDTHS[columnKey],
+      )}
       style={{ width: COLUMN_WIDTHS[columnKey] }}
       aria-sort={isActive ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
     >
@@ -293,19 +327,23 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
         return (
           <Link
             to={`/bids/${bid.id}`}
-            className="flex flex-col gap-0.5 no-underline group"
+            className="flex flex-col gap-0.5 no-underline group max-w-full"
+            title={bid.title}
           >
-            <span className="text-xs font-semibold text-foreground leading-snug group-hover:text-primary transition-colors">
+            <span className="text-xs font-semibold text-foreground leading-snug group-hover:text-primary transition-colors line-clamp-2 break-words">
               {bid.title}
             </span>
-            <span className="text-[10px] font-mono text-muted-foreground">
+            <span className="text-[10px] font-mono text-muted-foreground truncate">
               № {bid.tenderNumber}
             </span>
           </Link>
         );
       case 'organization':
         return (
-          <span className="text-xs text-foreground font-medium truncate block">
+          <span
+            className="text-xs text-foreground font-medium line-clamp-2 break-words block"
+            title={bid.tenderingAuthority}
+          >
             {bid.tenderingAuthority}
           </span>
         );
@@ -367,7 +405,7 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
   return (
     <div className="flex flex-col">
       <div className="rounded-lg border border-border bg-card overflow-hidden shadow-xs">
-        <Table>
+        <Table className="w-full min-w-[1100px] table-auto">
           <TableHeader>
             <TableRow className="hover:bg-transparent border-b border-border bg-muted/40">
               <SortableHeader
@@ -411,12 +449,18 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
                 onSortChange={onSortChange}
               />
               {visibleColumns.includes('fit') && (
-                <TableHead style={{ width: COLUMN_WIDTHS.fit }} className="text-xs font-semibold uppercase tracking-wider">
+                <TableHead
+                  style={{ width: COLUMN_WIDTHS.fit }}
+                  className={cn('text-xs font-semibold uppercase tracking-wider', COLUMN_MIN_WIDTHS.fit)}
+                >
                   Fit
                 </TableHead>
               )}
               {visibleColumns.includes('recommendation') && (
-                <TableHead style={{ width: COLUMN_WIDTHS.recommendation }} className="text-xs font-semibold uppercase tracking-wider">
+                <TableHead
+                  style={{ width: COLUMN_WIDTHS.recommendation }}
+                  className={cn('text-xs font-semibold uppercase tracking-wider', COLUMN_MIN_WIDTHS.recommendation)}
+                >
                   Recommendation
                 </TableHead>
               )}
@@ -436,7 +480,10 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
                 sortDirection={sortDirection}
                 onSortChange={onSortChange}
               />
-              <TableHead style={{ width: COLUMN_WIDTHS.actions }} className="text-right text-xs font-semibold uppercase tracking-wider">
+              <TableHead
+                style={{ width: COLUMN_WIDTHS.actions }}
+                className={cn('text-right text-xs font-semibold uppercase tracking-wider', COLUMN_MIN_WIDTHS.actions)}
+              >
                 Actions
               </TableHead>
             </TableRow>
@@ -446,7 +493,14 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
             {pageBids.map((bid) => (
               <TableRow key={bid.id} className="border-b border-border/60 hover:bg-accent/40">
                 {visibleColumns.map((column) => (
-                  <TableCell key={column} className={cn(column === 'value' || column === 'actions' ? 'text-right' : 'text-left', 'py-3')}>
+                  <TableCell
+                    key={column}
+                    className={cn(
+                      column === 'value' || column === 'actions' ? 'text-right' : 'text-left',
+                      'py-3',
+                      COLUMN_MIN_WIDTHS[column],
+                    )}
+                  >
                     {renderCell(bid, column)}
                   </TableCell>
                 ))}

@@ -95,6 +95,18 @@ export const tenderDocuments = pgTable('tender_documents', {
 export type TenderDocument = typeof tenderDocuments.$inferSelect;
 export type NewTenderDocument = typeof tenderDocuments.$inferInsert;
 
+export interface ComplianceItemProvenance {
+  documentId?: string | null;
+  sourceDocumentId?: string | null;
+  documentName?: string | null;
+  sourceFileName?: string | null;
+  pageNumber?: number | null;
+  clauseReference?: string | null;
+  sectionOrClause?: string | null;
+  verbatimQuote?: string | null;
+  confidenceScore?: number | null;
+}
+
 export const complianceItems = pgTable('compliance_items', {
   id: text('id').primaryKey(),
   bidId: text('bid_id')
@@ -112,7 +124,7 @@ export const complianceItems = pgTable('compliance_items', {
   reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
   version: integer('version').notNull().default(1),
   executionRules: jsonb('execution_rules').notNull(),
-  provenance: jsonb('provenance').notNull(),
+  provenance: jsonb('provenance').notNull().$type<ComplianceItemProvenance>(),
   companyEvidence: jsonb('company_evidence'),
   risk: jsonb('risk'),
   rationale: jsonb('rationale'),

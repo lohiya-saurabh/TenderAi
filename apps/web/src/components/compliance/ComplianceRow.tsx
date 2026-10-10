@@ -107,10 +107,9 @@ export const ComplianceRow: React.FC<ComplianceRowProps> = ({
                 fontSize: 'var(--text-xs)',
                 fontWeight: 600,
                 color: 'var(--color-surface-text)',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
+                lineHeight: 1.4,
               }}
+              className="line-clamp-2 break-words"
               title={item.requirement}
             >
               {item.requirement}

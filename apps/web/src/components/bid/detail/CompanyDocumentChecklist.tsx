@@ -92,6 +92,35 @@ function deriveAdditionalInfo(item: ComplianceItem): string {
   return parts.length > 0 ? parts.join(' • ') : 'Standard verification';
 }
 
+function renderCitationBadges(citationRef: string) {
+  // Support multiple citations split by comma, semicolon, bullet, or newline
+  const citations = citationRef
+    .split(/[,;\n•]+/)
+    .map((c) => c.trim())
+    .filter(Boolean);
+
+  if (citations.length <= 1) {
+    return (
+      <span className="font-mono text-[11px] bg-muted/40 px-1.5 py-0.5 rounded border border-border/50 break-words leading-relaxed inline-block max-w-full">
+        {citationRef}
+      </span>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {citations.map((cite, idx) => (
+        <span
+          key={idx}
+          className="font-mono text-[11px] bg-muted/40 px-1.5 py-0.5 rounded border border-border/50 break-words leading-relaxed inline-block"
+        >
+          {cite}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export const CompanyDocumentChecklist: React.FC<CompanyDocumentChecklistProps> = ({
   complianceItems,
 }) => {
@@ -167,42 +196,42 @@ export const CompanyDocumentChecklist: React.FC<CompanyDocumentChecklistProps> =
             No extracted compliance requirements available for this tender yet.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
+          <div className="overflow-x-auto w-full">
+            <table className="w-full text-left text-xs border-collapse min-w-[1050px]">
               <thead>
                 <tr className="border-b border-border bg-muted/30 text-muted-foreground font-semibold">
-                  <th className="py-2.5 px-4">Tender Requirement</th>
-                  <th className="py-2.5 px-4">Required Evidence Type</th>
-                  <th className="py-2.5 px-4">Evidence Status</th>
-                  <th className="py-2.5 px-4">Execution &amp; Validity Rules</th>
-                  <th className="py-2.5 px-4">Source Citation</th>
+                  <th className="py-2.5 px-4 min-w-[260px] max-w-[340px]">Tender Requirement</th>
+                  <th className="py-2.5 px-4 min-w-[200px] max-w-[260px]">Required Evidence Type</th>
+                  <th className="py-2.5 px-4 min-w-[160px] whitespace-nowrap">Evidence Status</th>
+                  <th className="py-2.5 px-4 min-w-[200px] max-w-[280px]">Execution &amp; Validity Rules</th>
+                  <th className="py-2.5 px-4 min-w-[220px] max-w-[320px]">Source Citation</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60">
                 {rows.map((row) => (
                   <tr key={row.id} className="hover:bg-muted/15 transition-colors">
                     {/* Requirement */}
-                    <td className="py-3 px-4 max-w-[280px]">
+                    <td className="py-3 px-4 min-w-[260px] max-w-[340px]">
                       <div className="flex items-center gap-1.5 mb-1">
                         <Badge variant="neutral" className="text-[10px] px-1 py-0 uppercase">
                           {row.category}
                         </Badge>
                       </div>
-                      <p className="font-medium text-foreground line-clamp-2 leading-relaxed">
+                      <p className="font-medium text-foreground line-clamp-2 leading-relaxed break-words" title={row.requirement}>
                         {row.requirement}
                       </p>
                     </td>
 
                     {/* Required Evidence Type */}
-                    <td className="py-3 px-4 font-medium text-foreground max-w-[220px]">
+                    <td className="py-3 px-4 font-medium text-foreground min-w-[200px] max-w-[260px]">
                       <div className="flex items-center gap-1.5">
                         <FileText size={14} className="text-primary shrink-0" />
-                        <span>{row.evidenceType}</span>
+                        <span className="break-words leading-relaxed">{row.evidenceType}</span>
                       </div>
                     </td>
 
                     {/* Evidence Status */}
-                    <td className="py-3 px-4 whitespace-nowrap">
+                    <td className="py-3 px-4 whitespace-nowrap min-w-[160px]">
                       {row.statusLabel === 'Uploaded' ? (
                         <span className="inline-flex items-center gap-1 text-emerald-500 font-semibold">
                           <CheckCircle2 size={14} />
@@ -222,15 +251,13 @@ export const CompanyDocumentChecklist: React.FC<CompanyDocumentChecklistProps> =
                     </td>
 
                     {/* Additional Requirements */}
-                    <td className="py-3 px-4 text-muted-foreground max-w-[220px]">
-                      <span className="leading-relaxed">{row.additionalRequirements}</span>
+                    <td className="py-3 px-4 text-muted-foreground min-w-[200px] max-w-[280px]">
+                      <span className="leading-relaxed break-words">{row.additionalRequirements}</span>
                     </td>
 
                     {/* Source Citation */}
-                    <td className="py-3 px-4 whitespace-nowrap text-muted-foreground">
-                      <span className="font-mono text-[11px] bg-muted/40 px-1.5 py-0.5 rounded border border-border/50">
-                        {row.citationRef}
-                      </span>
+                    <td className="py-3 px-4 text-muted-foreground min-w-[220px] max-w-[320px]">
+                      {renderCitationBadges(row.citationRef)}
                     </td>
                   </tr>
                 ))}

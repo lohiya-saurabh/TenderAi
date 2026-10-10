@@ -357,70 +357,73 @@ export const ComplianceTable: React.FC<ComplianceTableProps> = ({
         )}
       </div>
 
-      {/* 3. Table Column Headers */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: COLUMNS.map((c) => c.width).join(' '),
-          gap: '0.75rem',
-          padding: '0.6rem 1rem',
-          backgroundColor: 'var(--color-surface-bg)',
-          border: '1px solid var(--color-surface-border)',
-          borderRadius: 'var(--radius-md)',
-          fontSize: '0.7rem',
-          fontWeight: 700,
-          textTransform: 'uppercase',
-          letterSpacing: '0.05em',
-          color: 'var(--color-surface-muted)',
-          position: 'sticky',
-          top: 0,
-          zIndex: 10,
-        }}
-      >
-        {COLUMNS.map((col) => (
-          <ColumnSorter
-            key={col.key}
-            columnKey={col.key}
-            label={col.label}
-            currentSort={sortConfig}
-            onSort={handleSort}
-          />
-        ))}
-      </div>
+      {/* 3. Table Column Headers & 4. Table Row List */}
+      <div style={{ overflowX: 'auto', width: '100%' }}>
+        <div style={{ minWidth: '1050px', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: COLUMNS.map((c) => c.width).join(' '),
+              gap: '0.75rem',
+              padding: '0.6rem 1rem',
+              backgroundColor: 'var(--color-surface-bg)',
+              border: '1px solid var(--color-surface-border)',
+              borderRadius: 'var(--radius-md)',
+              fontSize: '0.7rem',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              color: 'var(--color-surface-muted)',
+              position: 'sticky',
+              top: 0,
+              zIndex: 10,
+            }}
+          >
+            {COLUMNS.map((col) => (
+              <ColumnSorter
+                key={col.key}
+                columnKey={col.key}
+                label={col.label}
+                currentSort={sortConfig}
+                onSort={handleSort}
+              />
+            ))}
+          </div>
 
-      {/* 4. Table Row List */}
-      {filteredItems.length === 0 ? (
-        <EmptyState
-          title="No compliance items match your filters"
-          description="Try broadening your search query or clearing the status/category filters."
-          action={
-            <Button variant="secondary" size="sm" onClick={handleResetFilters}>
-              Clear All Filters
-            </Button>
-          }
-        />
-      ) : (
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.5rem',
-          }}
-        >
-          {filteredItems.map((item) => (
-            <ComplianceRow
-              key={item.id}
-              item={item}
-              isExpanded={expandedRowId === item.id}
-              onToggleExpand={toggleExpanded}
-              onReview={onReviewItem}
-              onInspectEvidence={handleInspectEvidence}
-              onInspectCitation={handleInspectCitation}
-              onInspectAssessment={handleInspectAssessment}
+          {filteredItems.length === 0 ? (
+            <EmptyState
+              title="No compliance items match your filters"
+              description="Try broadening your search query or clearing the status/category filters."
+              action={
+                <Button variant="secondary" size="sm" onClick={handleResetFilters}>
+                  Clear All Filters
+                </Button>
+              }
             />
-          ))}
+          ) : (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem',
+              }}
+            >
+              {filteredItems.map((item) => (
+                <ComplianceRow
+                  key={item.id}
+                  item={item}
+                  isExpanded={expandedRowId === item.id}
+                  onToggleExpand={toggleExpanded}
+                  onReview={onReviewItem}
+                  onInspectEvidence={handleInspectEvidence}
+                  onInspectCitation={handleInspectCitation}
+                  onInspectAssessment={handleInspectAssessment}
+                />
+              ))}
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* 5. Drawers / Detail Panels */}
       {/* Evidence Inspection Drawer */}
