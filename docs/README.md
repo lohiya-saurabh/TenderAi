@@ -1,16 +1,15 @@
-# Documentation Index
+# Technical Documentation
 
-Welcome to the TenderPulse technical documentation. This directory contains the complete architecture specifications, domain models, implementation guides, and Architectural Decision Records (ADRs) for the TenderPulse platform.
+Welcome to the TenderPulse technical documentation. This directory contains the complete architecture specifications, domain models, implementation guides, and Architectural Decision Records (ADRs) for the TenderPulse enterprise SaaS platform.
 
 ---
 
-## 1. Canonical Entry Points
+## 1. System Foundations
 
-- [STATUS.md](STATUS.md) — Active milestone tracker, implementation progress, and test verification record.
-- [PRODUCT.md](PRODUCT.md) — Bidder-side product vision, target market, and feature specifications.
-- [MVP.md](MVP.md) — MVP delivery scope, timelines, and release milestones.
-- [ARCHITECTURE.md](ARCHITECTURE.md) — System architecture, two-tier service boundaries, and target design.
-- [LLD.md](LLD.md) — Low-Level Design (LLD): Tender ingestion, worker dispatch, and compliance management.
+- [PRODUCT.md](PRODUCT.md) — Product vision, bidder-side workflows, target market, and requirements.
+- [MVP.md](MVP.md) — Core delivery scope, release milestones, and feature boundaries.
+- [ARCHITECTURE.md](ARCHITECTURE.md) — System architecture, two-tier service boundaries, and target topology.
+- [LLD.md](LLD.md) — Low-Level Design (LLD): Tender ingestion, worker dispatch, and compliance lifecycle.
 - [DOMAIN.md](DOMAIN.md) — Procurement domain model, aggregates, entities, and business invariants.
 - [SECURITY_MODEL.md](SECURITY_MODEL.md) — Platform security architecture, tenant isolation, and defense-in-depth.
 
@@ -19,7 +18,7 @@ Welcome to the TenderPulse technical documentation. This directory contains the 
 ## 2. Core Platform & Architecture Specifications
 
 - [SERVICE_BOUNDARY.md](SERVICE_BOUNDARY.md) — Service responsibilities, contracts, and handoff boundaries.
-- [ASYNC_DOCUMENT_HANDOFF.md](ASYNC_DOCUMENT_HANDOFF.md) — Authoritative asynchronous document ingestion, outbox pattern, worker execution, idempotency, and PostgreSQL persistence guide (Design B).
+- [ASYNC_DOCUMENT_HANDOFF.md](ASYNC_DOCUMENT_HANDOFF.md) — Asynchronous document ingestion, outbox pattern, worker execution, idempotency, and PostgreSQL persistence guide (Design B).
 - [STORAGE_ARCHITECTURE.md](STORAGE_ARCHITECTURE.md) — Direct-to-storage upload, object integrity verification, and bucket policies.
 - [DATABASE.md](DATABASE.md) — Relational schema, Drizzle ORM models, indexes, and audit logs.
 - [EVENTS.md](EVENTS.md) — Domain events, message broker choreography, and event schemas.
@@ -33,9 +32,6 @@ Welcome to the TenderPulse technical documentation. This directory contains the 
 - [AI.md](AI.md) — AI systems architecture, LangGraph state machine, and LLM orchestration.
 - [AI_SECURITY.md](AI_SECURITY.md) — Multi-tenant isolation, prompt injection defense, and grounding checks.
 - [AI_EVALUATION.md](AI_EVALUATION.md) — Evaluation harness, regression testing, and precision/recall benchmarks.
-- [DCA_COMPREHENSIVE_CLAUSES.md](DCA_COMPREHENSIVE_CLAUSES.md) — Concession agreement clause taxonomy and extraction rules.
-- [EXTRACTION_GAP_ANALYSIS.md](EXTRACTION_GAP_ANALYSIS.md) — Gap analysis across procurement documents and extraction coverage.
-- [deep-research-report.md](deep-research-report.md) — Domain research on Indian public procurement and legal precedents.
 
 ---
 
@@ -74,13 +70,3 @@ All architectural decisions are documented in the [`adr/`](adr/) directory:
 - [ADR 0020: External Data Connectors Enrichment Port](adr/0020-external-data-connectors-enrichment-port.md)
 - [ADR 0021: Evidence-First Compliance Engine](adr/0021-evidence-first-compliance-engine.md)
 - [ADR 0022: Durable Asynchronous Document Processing Runtime](adr/0022-durable-asynchronous-document-processing-runtime.md)
-
----
-
-## 6. Learning & Reference Materials
-
-Found in [`learning/`](learning/) and [`INTERVIEW_PREP.md`](INTERVIEW_PREP.md):
-- [INTERVIEW_PREP.md](INTERVIEW_PREP.md) — Master technical interview preparation guide across AWS/GCP, LangGraph, LLM, RAG, React, NestJS, and FastAPI.
-- [`learning/agents.md`](learning/agents.md) — Core principles of autonomous AI agents.
-- [`learning/langgraph.md`](learning/langgraph.md) — Guide to LangGraph stateful cyclic graphs.
-
