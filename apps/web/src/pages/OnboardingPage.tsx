@@ -12,7 +12,10 @@ import {
   ArrowRight,
   Briefcase,
   FileCheck2,
+  ShieldCheck,
+  Loader2,
 } from 'lucide-react';
+import { verifyGstin, createCompanyProfileVersion } from '../api/companies.js';
 
 const SECTORS = [
   'Civil Infrastructure & Highways',
@@ -25,13 +28,35 @@ const SECTORS = [
 
 export const OnboardingPage: React.FC = () => {
   const { user } = useAuth();
-  const { companies } = useCompany();
+  const { companies, reloadCompanies } = useCompany();
   const navigate = useNavigate();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [selectedSectors, setSelectedSectors] = useState<string[]>(['Civil Infrastructure & Highways']);
   const [turnoverRange, setTurnoverRange] = useState<string>('50_to_250_cr');
   const [isFinishing, setIsFinishing] = useState(false);
+
+  // IRIS IRP GSTIN Verification during onboarding
+  const [gstinInput, setGstinInput] = useState('27AABCU9603R1ZM');
+  const [isVerifyingGstin, setIsVerifyingGstin] = useState(false);
+  const [gstinVerifySuccess, setGstinVerifySuccess] = useState<string | null>(null);
+  const [gstinVerifyError, setGstinVerifyError] = useState<string | null>(null);
+
+  const handleVerifyGstin = async () => {
+    if (!gstinInput.trim() || companies.length === 0) return;
+    setIsVerifyingGstin(true);
+    setGstinVerifyError(null);
+    setGstinVerifySuccess(null);
+    const targetCompId = companies[0]!.id;
+    const res = await verifyGstin(targetCompId, gstinInput.trim().toUpperCase());
+    setIsVerifyingGstin(false);
+    if (res.ok) {
+      setGstinVerifySuccess(`Verified with IRIS IRP: ${(res.data.data.legalName as string) || 'Taxpayer Active'}`);
+      await reloadCompanies();
+    } else {
+      setGstinVerifyError(res.error.message);
+    }
+  };
 
   const toggleSector = (sec: string) => {
     if (selectedSectors.includes(sec)) {
@@ -41,11 +66,25 @@ export const OnboardingPage: React.FC = () => {
     }
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     setIsFinishing(true);
+    if (companies.length > 0 && companies[0]) {
+      const compId = companies[0].id;
+      try {
+        await createCompanyProfileVersion(compId, {
+          name: 'Onboarding Capability Baseline',
+          payload: {
+            company_name: companies[0].legalName || 'Enterprise Contractor',
+            operating_regions: selectedSectors,
+          },
+        });
+      } catch (err) {
+        console.warn('[OnboardingPage] Failed to persist initial capabilities profile:', err);
+      }
+    }
     setTimeout(() => {
       navigate('/bids', { replace: true });
-    }, 600);
+    }, 400);
   };
 
   return (
@@ -128,10 +167,67 @@ export const OnboardingPage: React.FC = () => {
                             {c.gstin && <p className="text-[10px] font-mono text-muted-foreground">GSTIN: {c.gstin}</p>}
                           </div>
                         </div>
-                        <Badge variant="default" className="text-[10px]">Active Entity</Badge>
+                        <div className="flex items-center gap-1.5">
+                          {c.gstinVerifiedAt ? (
+                            <Badge variant="default" className="text-[10px] bg-emerald-600">IRIS Verified</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px]">Active Entity</Badge>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
+                </div>
+
+                {/* Instant GSTIN Verification with IRIS IRP */}
+                <div className="p-3.5 rounded-lg border border-border bg-muted/20 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <ShieldCheck className="h-4 w-4 text-primary" />
+                      <span className="text-xs font-semibold text-foreground">Verify Identity via IRIS IRP GSP</span>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground">Auto-imports official name &amp; PAN</span>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={gstinInput}
+                      onChange={(e) => setGstinInput(e.target.value.toUpperCase())}
+                      placeholder="Enter 15-character GSTIN (e.g. 27AABCU9603R1ZM)"
+                      className="flex-1 px-3 py-1.5 text-xs rounded-md border border-border bg-background text-foreground font-mono outline-none"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleVerifyGstin}
+                      disabled={isVerifyingGstin || !gstinInput.trim()}
+                      className="text-xs shrink-0"
+                    >
+                      {isVerifyingGstin ? (
+                        <>
+                          <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                          Verifying...
+                        </>
+                      ) : (
+                        'Fetch & Verify'
+                      )}
+                    </Button>
+                  </div>
+
+                  {gstinVerifySuccess && (
+                    <div className="text-[11px] text-emerald-600 flex items-center gap-1">
+                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                      <span>{gstinVerifySuccess}</span>
+                    </div>
+                  )}
+
+                  {gstinVerifyError && (
+                    <div className="text-[11px] text-red-500">
+                      {gstinVerifyError}
+                    </div>
+                  )}
                 </div>
 
                 <div className="pt-2 flex justify-end">

@@ -88,19 +88,19 @@ function getRefreshToken(): string | null {
  */
 async function attemptRefresh(): Promise<boolean> {
   const refreshToken = getRefreshToken();
-  if (!refreshToken) return false;
 
   try {
     const response = await fetch('/api/v1/auth/refresh', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken }),
+      body: JSON.stringify(refreshToken ? { refreshToken } : {}),
+      credentials: 'include',
     });
 
     if (!response.ok) return false;
 
     const data = await response.json();
-    setTokens(data.accessToken, data.refreshToken);
+    setTokens(data.accessToken, data.refreshToken || refreshToken || '');
     return true;
   } catch {
     return false;
@@ -148,14 +148,14 @@ export async function apiFetch<T>(
   }
 
   try {
-    let response = await fetch(path, { ...options, headers });
+    let response = await fetch(path, { ...options, headers, credentials: 'include' });
 
     // On 401, attempt silent refresh and retry once (except on auth endpoints)
     if (response.status === 401 && !path.startsWith('/api/v1/auth/')) {
       const refreshed = await coordinatedRefresh();
       if (refreshed) {
         headers['Authorization'] = `Bearer ${accessToken}`;
-        response = await fetch(path, { ...options, headers });
+        response = await fetch(path, { ...options, headers, credentials: 'include' });
       } else {
         // Refresh failed — session expired
         clearTokens();

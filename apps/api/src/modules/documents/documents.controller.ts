@@ -58,6 +58,14 @@ export class DocumentsController {
     @Req() req: Request,
     @Res() res: Response,
   ): void {
+    if (process.env.NODE_ENV === 'production') {
+      res.status(403).json({
+        status: 'FORBIDDEN',
+        message: 'Mock direct upload endpoint is disabled in production environments. Use presigned cloud storage URLs.',
+      });
+      return;
+    }
+
     const chunks: Buffer[] = [];
     req.on('data', (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
     req.on('end', async () => {

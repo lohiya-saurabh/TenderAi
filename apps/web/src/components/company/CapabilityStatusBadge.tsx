@@ -24,12 +24,29 @@ export const CapabilityStatusBadge: React.FC<CapabilityStatusBadgeProps> = ({
   const getConfig = () => {
     switch (status) {
       case 'VERIFIED':
+      case 'SOURCE_VERIFIED':
         return {
-          defaultLabel: 'Verified',
+          defaultLabel: status === 'SOURCE_VERIFIED' ? 'Source Verified' : 'Verified',
           icon: PassIcon,
           bg: 'rgba(16, 185, 129, 0.12)',
           color: 'var(--color-success)',
           border: '1px solid rgba(16, 185, 129, 0.35)',
+        };
+      case 'IMPORTED':
+        return {
+          defaultLabel: 'Imported',
+          icon: PassIcon,
+          bg: 'rgba(59, 130, 246, 0.12)',
+          color: 'var(--color-info, #3b82f6)',
+          border: '1px solid rgba(59, 130, 246, 0.35)',
+        };
+      case 'EXTRACTED':
+        return {
+          defaultLabel: 'Extracted',
+          icon: ReviewRequiredIcon,
+          bg: 'rgba(139, 92, 246, 0.12)',
+          color: '#a78bfa',
+          border: '1px solid rgba(139, 92, 246, 0.35)',
         };
       case 'EXPIRING_SOON':
         return {
@@ -46,6 +63,14 @@ export const CapabilityStatusBadge: React.FC<CapabilityStatusBadgeProps> = ({
           bg: 'rgba(239, 68, 68, 0.12)',
           color: 'var(--color-danger)',
           border: '1px solid rgba(239, 68, 68, 0.35)',
+        };
+      case 'REJECTED':
+        return {
+          defaultLabel: 'Rejected',
+          icon: FailIcon,
+          bg: 'rgba(239, 68, 68, 0.18)',
+          color: 'var(--color-danger)',
+          border: '1px solid rgba(239, 68, 68, 0.45)',
         };
       case 'MISSING':
         return {

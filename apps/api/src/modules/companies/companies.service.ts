@@ -33,6 +33,12 @@ export interface CompanyView {
   pan: string | null;
   udyamId: string | null;
   constitution: string | null;
+  gstinVerifiedAt?: string | null;
+  gstinVerificationData?: Record<string, unknown> | null;
+  udyamVerifiedAt?: string | null;
+  udyamVerificationData?: Record<string, unknown> | null;
+  digilockerLinkedAt?: string | null;
+  digilockerMetadata?: Record<string, unknown> | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -170,6 +176,12 @@ export class CompaniesService {
       pan: r.pan,
       udyamId: r.udyamId,
       constitution: r.constitution,
+      gstinVerifiedAt: r.gstinVerifiedAt ? (r.gstinVerifiedAt instanceof Date ? r.gstinVerifiedAt.toISOString() : String(r.gstinVerifiedAt)) : null,
+      gstinVerificationData: (r.gstinVerificationData as Record<string, unknown>) ?? null,
+      udyamVerifiedAt: r.udyamVerifiedAt ? (r.udyamVerifiedAt instanceof Date ? r.udyamVerifiedAt.toISOString() : String(r.udyamVerifiedAt)) : null,
+      udyamVerificationData: (r.udyamVerificationData as Record<string, unknown>) ?? null,
+      digilockerLinkedAt: r.digilockerLinkedAt ? (r.digilockerLinkedAt instanceof Date ? r.digilockerLinkedAt.toISOString() : String(r.digilockerLinkedAt)) : null,
+      digilockerMetadata: (r.digilockerMetadata as Record<string, unknown>) ?? null,
       createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
       updatedAt: r.updatedAt instanceof Date ? r.updatedAt.toISOString() : String(r.updatedAt),
     };

@@ -51,7 +51,7 @@ export function useSSE(url: string | null): UseSSEReturn {
     const token = getAccessToken();
     const sseUrl = token ? `${url}${url.includes('?') ? '&' : '?'}token=${token}` : url;
 
-    const es = new EventSource(sseUrl);
+    const es = new EventSource(sseUrl, { withCredentials: true });
     eventSourceRef.current = es;
 
     es.onopen = () => {

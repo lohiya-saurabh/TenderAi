@@ -27,6 +27,23 @@ let restartDebounceTimer = null;
 let isShuttingDown = false;
 let isRestarting = false;
 
+function parseEnvFile(filePath) {
+  const envVars = {};
+  if (!fs.existsSync(filePath)) return envVars;
+  const content = fs.readFileSync(filePath, 'utf-8');
+  for (const line of content.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx > 0) {
+      const key = trimmed.slice(0, eqIdx).trim();
+      const val = trimmed.slice(eqIdx + 1).trim();
+      envVars[key] = val;
+    }
+  }
+  return envVars;
+}
+
 function launchApiServer() {
   if (isShuttingDown) return;
 
@@ -36,10 +53,13 @@ function launchApiServer() {
   }
   nodeArgs.push(path.join(distDir, 'main.js'));
 
+  const fileEnv = parseEnvFile(envFile);
+  const childEnv = { ...process.env, ...fileEnv };
+
   childProcess = spawn('node', nodeArgs, {
     cwd: rootDir,
     stdio: 'inherit',
-    env: { ...process.env },
+    env: childEnv,
   });
 
   childProcess.on('exit', (code, signal) => {

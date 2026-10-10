@@ -50,7 +50,7 @@ npx tsc -w --preserveWatchOutput -p apps/api/tsconfig.json &
 TSC_PID=$!
 
 echo -e "${GREEN}🌐 Starting Backend API on http://localhost:3000...${NC}"
-SEED_DEMO_DATA=${SEED_DEMO_DATA:-true} node scripts/watch-api.js &
+node scripts/watch-api.js &
 API_PID=$!
 
 # Wait a moment for API to bind to port

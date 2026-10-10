@@ -7,7 +7,16 @@
  * "Maintain your company information once and reuse it across tenders."
  */
 
-export type CapabilityStatus = 'VERIFIED' | 'EXPIRING_SOON' | 'EXPIRED' | 'MISSING' | 'NEEDS_REVIEW';
+export type CapabilityStatus =
+  | 'VERIFIED'
+  | 'SOURCE_VERIFIED'
+  | 'IMPORTED'
+  | 'EXTRACTED'
+  | 'EXPIRING_SOON'
+  | 'EXPIRED'
+  | 'MISSING'
+  | 'NEEDS_REVIEW'
+  | 'REJECTED';
 
 export type CapabilitySectionId =
   | 'overview'

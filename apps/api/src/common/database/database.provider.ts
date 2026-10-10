@@ -68,8 +68,21 @@ export interface InitDatabaseOptions {
 }
 
 export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): Promise<void> {
-  const isDevOrTest = process.env.NODE_ENV !== 'production';
-  const defaultSeed = process.env.SEED_DEMO_DATA === 'true' || (process.env.SEED_DEMO_DATA !== 'false' && isDevOrTest);
+  let seedDemoEnv = process.env.SEED_DEMO_DATA;
+  const envFilePath = path.resolve(process.cwd(), '.env');
+  if (fs.existsSync(envFilePath)) {
+    try {
+      const envContent = fs.readFileSync(envFilePath, 'utf-8');
+      const match = envContent.match(/^SEED_DEMO_DATA=(.*)$/m);
+      if (match) {
+        seedDemoEnv = match[1]?.trim();
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  const defaultSeed = seedDemoEnv === 'true';
   const seedUsers = options?.seedUsers ?? defaultSeed;
   const seedFullProfile = options?.seedFullProfile ?? defaultSeed;
   const seedBidsAndCompliance = options?.seedBidsAndCompliance ?? defaultSeed;
@@ -107,11 +120,90 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
       pan TEXT,
       udyam_id TEXT,
       constitution TEXT,
+      gstin_verified_at TIMESTAMPTZ,
+      gstin_verification_data JSONB,
+      udyam_verified_at TIMESTAMPTZ,
+      udyam_verification_data JSONB,
+      digilocker_linked_at TIMESTAMPTZ,
+      digilocker_metadata JSONB,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    ALTER TABLE companies ADD COLUMN IF NOT EXISTS cin TEXT;
+    ALTER TABLE companies ADD COLUMN IF NOT EXISTS gstin_verified_at TIMESTAMPTZ;
+    ALTER TABLE companies ADD COLUMN IF NOT EXISTS gstin_verification_data JSONB;
+    ALTER TABLE companies ADD COLUMN IF NOT EXISTS udyam_verified_at TIMESTAMPTZ;
+    ALTER TABLE companies ADD COLUMN IF NOT EXISTS udyam_verification_data JSONB;
+    ALTER TABLE companies ADD COLUMN IF NOT EXISTS mca_verified_at TIMESTAMPTZ;
+    ALTER TABLE companies ADD COLUMN IF NOT EXISTS mca_verification_data JSONB;
+    ALTER TABLE companies ADD COLUMN IF NOT EXISTS digilocker_linked_at TIMESTAMPTZ;
+    ALTER TABLE companies ADD COLUMN IF NOT EXISTS digilocker_metadata JSONB;
+
     CREATE INDEX IF NOT EXISTS idx_companies_org ON companies(organization_id);
+
+    CREATE TABLE IF NOT EXISTS company_evidence_documents (
+      id TEXT PRIMARY KEY,
+      organization_id TEXT NOT NULL,
+      company_id TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+      file_name TEXT NOT NULL,
+      storage_path TEXT NOT NULL,
+      file_size_bytes BIGINT NOT NULL,
+      mime_type TEXT NOT NULL,
+      sha256_hash TEXT NOT NULL,
+      evidence_type TEXT NOT NULL DEFAULT 'OTHER',
+      issuer TEXT,
+      reference_number TEXT,
+      valid_from TIMESTAMPTZ,
+      valid_to TIMESTAMPTZ,
+      source_provider TEXT NOT NULL DEFAULT 'LOCAL_UPLOAD',
+      source_reference TEXT,
+      imported_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      verification_status TEXT NOT NULL DEFAULT 'IMPORTED',
+      verification_method TEXT,
+      verified_at TIMESTAMPTZ,
+      verified_by TEXT,
+      discrepancy_notes TEXT,
+      extracted_attributes JSONB,
+      metadata JSONB,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    ALTER TABLE company_evidence_documents ADD COLUMN IF NOT EXISTS evidence_type TEXT NOT NULL DEFAULT 'OTHER';
+    ALTER TABLE company_evidence_documents ADD COLUMN IF NOT EXISTS issuer TEXT;
+    ALTER TABLE company_evidence_documents ADD COLUMN IF NOT EXISTS reference_number TEXT;
+    ALTER TABLE company_evidence_documents ADD COLUMN IF NOT EXISTS valid_from TIMESTAMPTZ;
+    ALTER TABLE company_evidence_documents ADD COLUMN IF NOT EXISTS valid_to TIMESTAMPTZ;
+    ALTER TABLE company_evidence_documents ADD COLUMN IF NOT EXISTS source_provider TEXT NOT NULL DEFAULT 'LOCAL_UPLOAD';
+    ALTER TABLE company_evidence_documents ADD COLUMN IF NOT EXISTS source_reference TEXT;
+    ALTER TABLE company_evidence_documents ADD COLUMN IF NOT EXISTS imported_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+    ALTER TABLE company_evidence_documents ADD COLUMN IF NOT EXISTS verification_method TEXT;
+    ALTER TABLE company_evidence_documents ADD COLUMN IF NOT EXISTS verified_by TEXT;
+    ALTER TABLE company_evidence_documents ADD COLUMN IF NOT EXISTS discrepancy_notes TEXT;
+    ALTER TABLE company_evidence_documents ADD COLUMN IF NOT EXISTS extracted_attributes JSONB;
+    ALTER TABLE company_evidence_documents ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+    CREATE INDEX IF NOT EXISTS idx_comp_ev_docs_comp ON company_evidence_documents(company_id);
+    CREATE INDEX IF NOT EXISTS idx_comp_ev_docs_org ON company_evidence_documents(organization_id);
+    CREATE INDEX IF NOT EXISTS idx_comp_ev_status ON company_evidence_documents(company_id, verification_status);
+
+    CREATE TABLE IF NOT EXISTS evidence_verification_history (
+      id TEXT PRIMARY KEY,
+      organization_id TEXT NOT NULL,
+      company_id TEXT NOT NULL,
+      evidence_document_id TEXT NOT NULL REFERENCES company_evidence_documents(id) ON DELETE CASCADE,
+      previous_status TEXT NOT NULL,
+      new_status TEXT NOT NULL,
+      verification_method TEXT NOT NULL,
+      verified_by TEXT NOT NULL,
+      verification_payload JSONB,
+      discrepancy_notes TEXT,
+      timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_ev_hist_doc ON evidence_verification_history(evidence_document_id);
+    CREATE INDEX IF NOT EXISTS idx_ev_hist_comp ON evidence_verification_history(company_id);
 
     CREATE TABLE IF NOT EXISTS bids (
       id TEXT PRIMARY KEY,
@@ -142,6 +234,8 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
     ALTER TABLE bids ADD COLUMN IF NOT EXISTS flagged_requirements INT NOT NULL DEFAULT 0;
     ALTER TABLE bids ADD COLUMN IF NOT EXISTS approved_requirements INT NOT NULL DEFAULT 0;
 
+    CREATE INDEX IF NOT EXISTS idx_bids_org ON bids(organization_id);
+
     CREATE TABLE IF NOT EXISTS tender_documents (
       id TEXT PRIMARY KEY,
       bid_id TEXT NOT NULL REFERENCES bids(id) ON DELETE CASCADE,
@@ -163,6 +257,8 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
     ALTER TABLE tender_documents ADD COLUMN IF NOT EXISTS processing_started_at TIMESTAMPTZ;
     ALTER TABLE tender_documents ADD COLUMN IF NOT EXISTS processing_completed_at TIMESTAMPTZ;
     ALTER TABLE tender_documents ADD COLUMN IF NOT EXISTS last_processing_error TEXT;
+
+    CREATE INDEX IF NOT EXISTS idx_tender_documents_bid_org ON tender_documents(bid_id, organization_id);
 
     CREATE TABLE IF NOT EXISTS compliance_items (
       id TEXT PRIMARY KEY,
@@ -195,6 +291,8 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
     ALTER TABLE compliance_items ADD COLUMN IF NOT EXISTS workflow_run_id TEXT;
     ALTER TABLE compliance_items ADD COLUMN IF NOT EXISTS correlation_id TEXT;
     ALTER TABLE compliance_items ADD COLUMN IF NOT EXISTS company_id TEXT;
+
+    CREATE INDEX IF NOT EXISTS idx_compliance_items_bid_org ON compliance_items(bid_id, organization_id);
 
     CREATE TABLE IF NOT EXISTS document_processing_outbox (
       id TEXT PRIMARY KEY,
@@ -272,6 +370,8 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
 
     ALTER TABLE bid_decisions ADD COLUMN IF NOT EXISTS company_id TEXT;
 
+    CREATE INDEX IF NOT EXISTS idx_bid_decisions_bid ON bid_decisions(bid_id, organization_id);
+
     CREATE TABLE IF NOT EXISTS notifications (
       id TEXT PRIMARY KEY,
       organization_id TEXT NOT NULL,
@@ -315,6 +415,18 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
 
     CREATE INDEX IF NOT EXISTS idx_usage_records_tenant_period
       ON usage_records(organization_id, metric, period_key);
+
+    CREATE TABLE IF NOT EXISTS refresh_tokens (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      token_hash TEXT UNIQUE NOT NULL,
+      revoked_at TIMESTAMPTZ,
+      expires_at TIMESTAMPTZ NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_refresh_tokens_hash ON refresh_tokens(token_hash);
+    CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user ON refresh_tokens(user_id);
 
     UPDATE bid_decisions
     SET readiness_score = readiness_score / 100
@@ -417,93 +529,93 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
 
     if (existingBidsCount === 0) {
       for (const bid of BIDS) {
-      await drizzleDb
-        .insert(schema.bids)
-        .values({
-          id: bid.id,
-          organizationId: 'org_acme_infra_001',
-          companyId: bid.companyId || 'comp_acme_infra_001',
-          title: bid.title,
-          tenderNumber: bid.tenderNumber,
-          tenderingAuthority: bid.tenderingAuthority,
-          estimatedValueRupees: bid.estimatedValueRupees,
-          submissionDeadline: bid.submissionDeadline,
-          locationState: bid.locationState || null,
-          status: bid.status,
-          totalRequirements: bid.totalRequirements,
-          flaggedRequirements: bid.flaggedRequirements,
-          approvedRequirements: bid.approvedRequirements,
-          version: 1,
-          createdAt: new Date(bid.createdAt),
-          updatedAt: new Date(bid.updatedAt),
-        })
-        .onConflictDoNothing();
+        await drizzleDb
+          .insert(schema.bids)
+          .values({
+            id: bid.id,
+            organizationId: 'org_acme_infra_001',
+            companyId: bid.companyId || 'comp_acme_infra_001',
+            title: bid.title,
+            tenderNumber: bid.tenderNumber,
+            tenderingAuthority: bid.tenderingAuthority,
+            estimatedValueRupees: bid.estimatedValueRupees,
+            submissionDeadline: bid.submissionDeadline,
+            locationState: bid.locationState || null,
+            status: bid.status,
+            totalRequirements: bid.totalRequirements,
+            flaggedRequirements: bid.flaggedRequirements,
+            approvedRequirements: bid.approvedRequirements,
+            version: 1,
+            createdAt: new Date(bid.createdAt),
+            updatedAt: new Date(bid.updatedAt),
+          })
+          .onConflictDoNothing();
 
-      // Seed documents for this bid
-      if (bid.documents && bid.documents.length > 0) {
-        for (const doc of bid.documents) {
-          await drizzleDb
-            .insert(schema.tenderDocuments)
-            .values({
-              id: doc.id,
-              bidId: bid.id,
-              organizationId: 'org_acme_infra_001',
-              fileName: doc.fileName,
-              storagePath: `bids/${bid.id}/${doc.id}-${doc.fileName}`,
-              fileSizeBytes: doc.fileSizeBytes,
-              mimeType: doc.mimeType,
-              documentType: doc.documentType,
-              status: doc.status,
-              uploadedAt: new Date(doc.uploadedAt),
-            })
-            .onConflictDoNothing();
+        // Seed documents for this bid
+        if (bid.documents && bid.documents.length > 0) {
+          for (const doc of bid.documents) {
+            await drizzleDb
+              .insert(schema.tenderDocuments)
+              .values({
+                id: doc.id,
+                bidId: bid.id,
+                organizationId: 'org_acme_infra_001',
+                fileName: doc.fileName,
+                storagePath: `bids/${bid.id}/${doc.id}-${doc.fileName}`,
+                fileSizeBytes: doc.fileSizeBytes,
+                mimeType: doc.mimeType,
+                documentType: doc.documentType,
+                status: doc.status,
+                uploadedAt: new Date(doc.uploadedAt),
+              })
+              .onConflictDoNothing();
+          }
         }
+
+        await drizzleDb
+          .insert(schema.auditLogs)
+          .values({
+            id: `aud-init-${bid.id}`,
+            bidId: bid.id,
+            organizationId: 'org_acme_infra_001',
+            userId: 'usr_bid_mgr_01',
+            userName: 'Vikramaditya Sharma',
+            eventType: 'BID_PROJECT_CREATED',
+            aggregateType: 'BidProject',
+            aggregateId: bid.id,
+            payload: { title: bid.title, tenderNumber: bid.tenderNumber },
+            timestamp: new Date(bid.createdAt),
+          })
+          .onConflictDoNothing();
       }
 
-      await drizzleDb
-        .insert(schema.auditLogs)
-        .values({
-          id: `aud-init-${bid.id}`,
-          bidId: bid.id,
-          organizationId: 'org_acme_infra_001',
-          userId: 'usr_bid_mgr_01',
-          userName: 'Vikramaditya Sharma',
-          eventType: 'BID_PROJECT_CREATED',
-          aggregateType: 'BidProject',
-          aggregateId: bid.id,
-          payload: { title: bid.title, tenderNumber: bid.tenderNumber },
-          timestamp: new Date(bid.createdAt),
-        })
-        .onConflictDoNothing();
-    }
-
-    // 5. Seed Compliance Items if enabled
-    for (const item of DEMO_COMPLIANCE_ITEMS) {
-      await drizzleDb
-        .insert(schema.complianceItems)
-        .values({
-          id: item.id,
-          bidId: item.bidId,
-          organizationId: 'org_acme_infra_001',
-          category: item.category,
-          title: item.title,
-          description: item.description,
-          status: item.status,
-          humanReviewRequired: item.humanReviewRequired,
-          reviewNotes: item.reviewNotes,
-          reviewedBy: item.reviewedBy,
-          reviewedAt: item.reviewedAt ? new Date(item.reviewedAt) : null,
-          version: item.version,
-          executionRules: item.executionRules,
-          provenance: item.provenance,
-          companyEvidence: item.companyEvidence ?? null,
-          risk: item.risk ?? null,
-          rationale: item.rationale ?? null,
-          createdAt: new Date(item.createdAt),
-          updatedAt: new Date(item.updatedAt),
-        })
-        .onConflictDoNothing();
-    }
+      // 5. Seed Compliance Items if enabled
+      for (const item of DEMO_COMPLIANCE_ITEMS) {
+        await drizzleDb
+          .insert(schema.complianceItems)
+          .values({
+            id: item.id,
+            bidId: item.bidId,
+            organizationId: 'org_acme_infra_001',
+            category: item.category,
+            title: item.title,
+            description: item.description,
+            status: item.status,
+            humanReviewRequired: item.humanReviewRequired,
+            reviewNotes: item.reviewNotes,
+            reviewedBy: item.reviewedBy,
+            reviewedAt: item.reviewedAt ? new Date(item.reviewedAt) : null,
+            version: item.version,
+            executionRules: item.executionRules,
+            provenance: item.provenance,
+            companyEvidence: item.companyEvidence ?? null,
+            risk: item.risk ?? null,
+            rationale: item.rationale ?? null,
+            createdAt: new Date(item.createdAt),
+            updatedAt: new Date(item.updatedAt),
+          })
+          .onConflictDoNothing();
+      }
     }
 
     // 6. Seed Persisted Bid Decision if empty

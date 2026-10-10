@@ -66,7 +66,7 @@ export const SignupPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-background text-foreground flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center space-y-2">
         <Link to="/" className="inline-flex items-center gap-2.5 group">
           <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-primary-foreground font-bold text-base shadow-sm group-hover:scale-105 transition-transform">
@@ -82,7 +82,7 @@ export const SignupPage: React.FC = () => {
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-lg">
-        <div className="bg-card py-8 px-4 shadow-xl sm:rounded-xl sm:px-10 border border-border space-y-6">
+        <div className="bg-card text-card-foreground py-8 px-4 shadow-xl sm:rounded-xl sm:px-10 border border-border space-y-6">
           {/* Selected Plan Banner */}
           <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-between">
             <div className="flex items-center gap-2">

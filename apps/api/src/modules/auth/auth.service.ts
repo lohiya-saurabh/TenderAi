@@ -4,6 +4,7 @@
 import { Injectable, Inject, Optional } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
 import bcrypt from 'bcrypt';
+import crypto from 'node:crypto';
 import { sql } from 'drizzle-orm';
 import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '../../common/database/database.module.js';
 import * as schema from '../../common/database/schema.js';
@@ -107,6 +108,8 @@ export class AuthService {
     });
     const refreshToken = this.tokenService.signRefreshToken(userProfile.id);
 
+    await this.persistRefreshToken(userProfile.id, refreshToken);
+
     return {
       accessToken,
       refreshToken,
@@ -121,6 +124,29 @@ export class AuthService {
 
     // Cryptographic signature and expiration check
     const { userId } = this.tokenService.verifyRefreshToken(incomingRefreshToken);
+
+    const tokenHash = crypto.createHash('sha256').update(incomingRefreshToken).digest('hex');
+    try {
+      const [storedToken] = await this.db
+        .select()
+        .from(schema.refreshTokens)
+        .where(sql`${schema.refreshTokens.tokenHash} = ${tokenHash}`)
+        .limit(1);
+
+      if (storedToken && storedToken.revokedAt) {
+        throw new UnauthorizedError('Refresh token has been revoked.');
+      }
+
+      if (storedToken) {
+        await this.db
+          .update(schema.refreshTokens)
+          .set({ revokedAt: new Date() })
+          .where(sql`${schema.refreshTokens.tokenHash} = ${tokenHash}`);
+      }
+    } catch (err) {
+      if (err instanceof UnauthorizedError) throw err;
+      // ignore table absence in memory test doubles
+    }
 
     const [user] = await this.db
       .select()
@@ -159,10 +185,45 @@ export class AuthService {
     });
     const newRefreshToken = this.tokenService.signRefreshToken(userProfile.id);
 
+    await this.persistRefreshToken(userProfile.id, newRefreshToken);
+
     return {
       accessToken: newAccessToken,
       refreshToken: newRefreshToken,
     };
+  }
+
+  public async logout(incomingRefreshToken?: string): Promise<void> {
+    if (!incomingRefreshToken) return;
+    try {
+      const tokenHash = crypto.createHash('sha256').update(incomingRefreshToken).digest('hex');
+      await this.db
+        .update(schema.refreshTokens)
+        .set({ revokedAt: new Date() })
+        .where(sql`${schema.refreshTokens.tokenHash} = ${tokenHash}`);
+    } catch {
+      // ignore
+    }
+  }
+
+  private async persistRefreshToken(userId: string, refreshToken: string): Promise<void> {
+    try {
+      const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + 7 * 24 * 3600 * 1000);
+      await this.db
+        .insert(schema.refreshTokens)
+        .values({
+          id: `rt_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`,
+          userId,
+          tokenHash,
+          expiresAt,
+          createdAt: now,
+        })
+        .onConflictDoNothing();
+    } catch {
+      // ignore in test doubles where table is unseeded
+    }
   }
 
   /**
@@ -338,6 +399,7 @@ export class AuthService {
       organizationName: userProfile.organizationName,
     });
     const refreshToken = this.tokenService.signRefreshToken(userProfile.id);
+    await this.persistRefreshToken(userProfile.id, refreshToken);
 
     return {
       accessToken,

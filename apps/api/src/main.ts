@@ -43,9 +43,21 @@ async function bootstrap() {
   // Global HTTP Logging Interceptor for request tracing and latency metrics
   app.useGlobalInterceptors(new HttpLoggingInterceptor());
 
-  // Global CORS — matches the previous server configuration
+  // Global CORS — configured for secure credentials & cookie handling
+  const allowedOrigins = process.env.APP_BASE_URL
+    ? [process.env.APP_BASE_URL, 'http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173']
+    : ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'];
+
   app.enableCors({
-    origin: '*',
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+      // Allow non-browser requests or allowed frontend origins
+      if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS blocked for origin: ${origin}`));
+      }
+    },
+    credentials: true,
     methods: 'GET,POST,PATCH,PUT,DELETE,OPTIONS',
     allowedHeaders: 'Content-Type,Authorization,X-Requested-With,X-Trace-Id,X-Correlation-Id,X-Request-Id',
   });

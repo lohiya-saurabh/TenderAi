@@ -77,9 +77,14 @@ export function refreshTokens(
 }
 
 /**
- * Log out (client-side only for now — clears tokens).
- * The backend revokes refresh tokens on the server side.
+ * Log out (revokes refresh token session on the backend and clears client-side tokens).
  */
-export function logout(): void {
-  clearTokens();
+export async function logout(): Promise<void> {
+  try {
+    await apiPost('/api/v1/auth/logout', {});
+  } catch {
+    // Ignore network failures on logout to guarantee client-side cleanup
+  } finally {
+    clearTokens();
+  }
 }

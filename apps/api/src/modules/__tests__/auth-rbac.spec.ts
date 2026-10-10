@@ -235,6 +235,28 @@ describe('Security & RBAC Hardening Suite', () => {
       expect(req.user).toBeDefined();
     });
 
+    it('should authenticate request with valid tp_access_token cookie', () => {
+      vi.spyOn(reflector, 'getAllAndOverride').mockImplementation((key) => key === 'isPublic' ? false : undefined);
+      const token = tokenService.signAccessToken({
+        sub: 'usr_mgr_01',
+        email: 'mgr@acme.com',
+        name: 'Manager',
+        role: 'BID_MANAGER' as UserRole,
+        permissions: [Permissions.BIDS_READ],
+        organizationId: 'org_acme_infra_001',
+        organizationName: 'Acme',
+      });
+
+      const { context, req } = createMockContext({
+        headers: { cookie: `tp_access_token=${token}; path=/` },
+      });
+
+      const canActivate = authGuard.canActivate(context);
+      expect(canActivate).toBe(true);
+      expect(req.user).toBeDefined();
+      expect((req.user as Record<string, unknown>).sub).toBe('usr_mgr_01');
+    });
+
     it('should reject malformed or forged Bearer token', () => {
       vi.spyOn(reflector, 'getAllAndOverride').mockImplementation((key) => key === 'isPublic' ? false : undefined);
       const { context } = createMockContext({
@@ -372,6 +394,19 @@ describe('Security & RBAC Hardening Suite', () => {
 
       await expect(authService.refresh(fakeUserRefreshToken)).rejects.toThrow(
         'User account associated with this refresh token no longer exists.'
+      );
+    });
+
+    it('should revoke refresh token on logout and reject subsequent refresh requests', async () => {
+      const loginRes = await authService.login('bidmanager@acme.com', 'Password123!');
+      expect(loginRes.refreshToken).toBeDefined();
+
+      // Revoke via logout
+      await authService.logout(loginRes.refreshToken);
+
+      // Subsequent refresh must be rejected
+      await expect(authService.refresh(loginRes.refreshToken)).rejects.toThrow(
+        'Refresh token has been revoked.'
       );
     });
   });

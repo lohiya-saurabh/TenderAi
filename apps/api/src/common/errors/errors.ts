@@ -43,3 +43,10 @@ export class ForbiddenError extends HttpError {
     this.name = 'ForbiddenError';
   }
 }
+
+export class InternalServerError extends HttpError {
+  constructor(message: string) {
+    super(500, message);
+    this.name = 'InternalServerError';
+  }
+}

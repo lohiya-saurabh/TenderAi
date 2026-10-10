@@ -1,6 +1,153 @@
 # Project Status & Milestone Tracker
 
-## Current implementation milestone: S3 Direct Upload CORS Configuration & Polymorphic Storage PutObject Port Hardening
+## Current implementation milestone: Modular Security Perimeter, Stateless Token Revocation, and Persistence Hardening (P0/P1/P2 Remediation)
+
+1. **Problem Statement & Scope**:
+   - Addressed critical findings surfaced in `docs/END_TO_END_AUDIT.md`:
+     - Token storage in `localStorage` exposed long-lived credentials to XSS attacks, with no server-side revocation on logout.
+     - Real-time Server-Sent Events (SSE) connections leaked JWT credentials in URL query parameters (`?token=...`).
+     - Unauthenticated mock document upload vector (`POST /api/v1/documents/mock-upload`) lacked environment gating.
+     - Frontend `useApi` hook suffered from asynchronous race conditions where slow responses overwrote fresher UI state.
+     - Database schema drift: `schema.sql` was an obsolete 3-table snapshot out of sync with Drizzle ORM, orphaned `schema.prisma` caused confusion, and missing composite foreign key indexes degraded multi-tenant query performance.
+     - Onboarding wizard silently discarded user sector selections instead of saving to company profile versions.
+     - Cloud file explorer had a hardcoded `/dummy/` path instead of using dynamic folder IDs.
+
+2. **Key Deliverables & Architectural Implementation**:
+   - **Modular Dual-Transport Auth Perimeter (`apps/api/src/modules/auth/`, `apps/api/src/common/security/guards/`)**:
+     - Added `refresh_tokens` table in PostgreSQL DDL and Drizzle schema (`token_hash` SHA-256, `expires_at`, `revoked_at`, `replaced_by_token_id`).
+     - Enhanced `AuthService`: secure hashing, token rotation on `/refresh`, token-family invalidation on reuse detection, and explicit token revocation on `logout()`.
+     - Hardened `AuthController`: issues `httpOnly`, `Secure`, `SameSite=Strict` cookies (`tp_access_token` and `tp_refresh_token`). Added `POST /api/v1/auth/logout` endpoint that revokes the token and clears cookies.
+     - Updated `JwtAuthGuard`: extracts credentials from either `Authorization: Bearer <token>` header or `req.cookies.tp_access_token`.
+     - Frontend `client.ts` & `useSSE.ts`: configured with `credentials: 'include'` and `{ withCredentials: true }`, completely eliminating query-parameter token leakage for SSE.
+     - Gated `mockUpload` in `documents.controller.ts` behind `process.env.NODE_ENV !== 'production'`.
+   - **Canonical Persistence Layer & Composite Indexing (`apps/api/src/infrastructure/persistence/`, `database.provider.ts`)**:
+     - Rewrote `schema.sql` into full 17-table canonical PostgreSQL DDL with foreign key cascades matching Drizzle ORM.
+     - Deleted orphaned `schema.prisma`.
+     - Added composite multi-tenant indexes: `idx_bids_org`, `idx_tender_documents_bid_org`, `idx_compliance_items_bid_org`, `idx_comp_ev_status`, and `idx_bid_decisions_bid`.
+   - **Frontend Race Condition Guard & Domain Consistency (`apps/web/src/hooks/useApi.ts`, `companies.ts`, `OnboardingPage.tsx`)**:
+     - Implemented `activeRequestId` monotonic generation counter in `useApi.ts` to discard out-of-order promise responses.
+     - Fixed `listCloudFiles` in `companies.ts` to use real folder paths, and exported `createCompanyProfileVersion`.
+     - Updated `OnboardingPage.tsx` to commit user sector selections into company profile versions.
+   - **Architectural Decision Record**:
+     - Authored and committed ADR 0025: `docs/adr/0025-modular-security-perimeter-and-persistence-hardening.md`.
+
+3. **Automated Verification Record**:
+   - Monorepo Type Check (`npm run type-check`): 4 / 4 workspaces passed (0 errors).
+   - NestJS API Test Suite (`npm --prefix apps/api test`): 34 test files, 260 passed (including 2 new tests for cookie auth & logout revocation, 0 failures).
+   - React Frontend Test Suite (`npm --prefix apps/web test`): 22 test files, 163 passed (0 failures).
+   - Python AI Worker Suite (`pytest apps/ai`): 116 passed, 1 skipped (0 failures).
+   - Monorepo Production Build (`npm run build`): All 4 packages and workspaces compiled cleanly.
+   - Total Monorepo Test Baseline: **539 tests passed, 0 failures, 1 skipped**.
+
+## Previous implementation milestone: End-to-End System Audit & Cross-Tier Architecture Verification
+
+1. **Problem Statement & Scope**:
+   - Per the system review mandate, conducted a comprehensive, ground-truth end-to-end verification of the TenderPulse AI platform across all tiers: Frontend (React 18), API & Gateway (NestJS 10), Security & Tenancy (`TenantContextHolder` / RBAC), Database (PostgreSQL 16 / Drizzle ORM / PGlite), Storage (S3 / GCS / Mock), Queues (SQS / PubSub / Mock), AI Worker (FastAPI / LangGraph / Docling), Third-Party Verification (IRIS IRP, MCA, Udyam, DigiLocker, Cloud Drives), and Persistence.
+   - Traced actual runtime execution paths, evaluated anti-IDOR boundaries and the Single-Writer Principle, verified all 537 automated unit and integration tests across 4 workspaces, and identified critical flaws, reliability gaps, and security vulnerabilities without assuming code correctness merely because tests pass.
+
+2. **Key Deliverables & Documentation**:
+   - **Comprehensive Audit Report (`docs/END_TO_END_AUDIT.md`)**:
+     - Complete Mermaid system architecture diagram covering all 5 runtime tiers.
+     - Deep runtime execution traces for: (A) Asynchronous Document Ingestion (Design B), (B) LangGraph Bid/No-Bid Decision Engine, (C) Multi-Provider Identity & Evidence Verification.
+     - **P0 Security Findings**: LocalStorage refresh token exposure, missing server-side logout revocation, JWT passed in SSE query parameters, unauthenticated public mock upload endpoint.
+     - **P1 Reliability Findings**: Hardcoded PGlite WASM driver preventing production RDS/Aurora connectivity, lack of Drizzle Kit migration tooling, outbox polling lock contention without `SKIP LOCKED`, missing composite database indexes and non-cascading foreign keys.
+     - **P2 Architectural Mismatches**: Onboarding wizard silent data discard, hardcoded `/dummy/` path in `listCloudFiles`, competing duplicate company profile routes (`/company-profile` vs `/companies/:id/profile`), race conditions in frontend `useApi` hook.
+     - **P3 AI & RAG Hardening**: Naive token-set-intersection matching in `ScopedRetrievalTool`, prompt injection exposure in raw tender text, divergence between Python and TypeScript fallback evaluators.
+     - Invariant verification record and 4-phase prioritized remediation roadmap.
+
+3. **Automated Verification Record**:
+   - Monorepo Type Check (`npm run type-check`): 4 / 4 workspaces passed (0 errors).
+   - NestJS API Test Suite (`npm --prefix apps/api test`): 34 test files, 258 passed (0 failures).
+   - React Frontend Test Suite (`npm --prefix apps/web test`): 22 test files, 163 passed (0 failures).
+   - Python AI Worker Suite (`pytest apps/ai`): 116 passed, 1 skipped (0 failures).
+   - Production Build (`npm run build`): All 4 packages and workspaces compiled cleanly.
+   - Total Monorepo Test Baseline: **537 tests passed, 0 failures, 1 skipped**.
+
+## Previous implementation milestone: Stateful LangGraph Bid/No-Bid Decision Engine with Deterministic Eligibility Gatekeeper
+
+1. **Problem Statement & Architectural Invariants**:
+   - Evaluating whether an Indian MSME or infrastructure contractor should pursue a government tender (CPPP, GeM, NHAI, MES) cannot be outsourced to a probabilistic LLM prompt. Naive RAG prompts hallucinate mathematical thresholds (e.g. 40% 3-year average turnover rules), fail to compute multi-year lookbacks, and cannot be defended during CVC scrutiny. A false "GO" verdict risks forfeiture of Earnest Money Deposits (EMD) of ₹10 Lakhs to ₹1 Crore.
+   - Per ADR 0019 and ADR 0021, the eligibility verdict must be strictly computed by a deterministic engine from structured profile facts.
+   - However, the previous implementation was an imperative linear Python script lacking stateful checkpointing, evidence-grounded RAG matching against the Company Evidence Vault, explicit conditional routing on ambiguous tender clauses, and grounded executive memo generation.
+
+2. **Architectural Improvements & Deliverables**:
+   - **Compiled LangGraph Decision Workflow (`apps/ai/src/tenderpulse_ai/decision/workflow/`)**:
+     - `BidDecisionWorkflowState`: Central typed state machine capturing inputs, RAG evidence citations, deterministic evaluation outcomes, commercial risks, review triggers, and immutable audit events.
+     - **Node 1: `evidence_retrieval`**: Ingests tender requirement candidates and matches them against the pinned company capability facts and evidence vault citations.
+     - **Node 2: `deterministic_evaluation`**: Executes `DeterministicEligibilityEvaluator` (pure arithmetic, turnover thresholds, similar works counts, valid non-blacklisting status, active GSTIN/Udyam). The LLM never computes or alters this outcome.
+     - **Node 3: `commercial_risk`**: Executes `CommercialRiskAnalyzer` evaluating submission timeline, EMD liquidity lockup, liquidated damages caps, and execution penalties.
+     - **Node 4: `review_routing`**: Scans review triggers across 6 categories (ambiguous requirements, low extraction confidence $<0.75$, conflicting financial years, borderline readiness scores $0.50-0.70$, critical commercial risks, and expired deadlines).
+     - **Conditional Edge (`route_decision_state`)**: If `requires_human_review` is true, routes to `human_review_gate` before executive synthesis; otherwise routes directly to `executive_synthesis`.
+     - **Node 5: `human_review_gate`**: Sets state to `UNDER_REVIEW`, logs review triggers, and creates an inspectable checkpoint.
+     - **Node 6: `executive_synthesis`**: Calls the LLM (`model_fn`) to generate an actionable strategic memo grounded strictly in the already-determined facts and citations, preventing verdict drift.
+   - **Checkpointer & Thread Management**:
+     - Compiles with LangGraph `MemorySaver` checkpointer, enabling inspectability and replayability by `thread_id = decision_{tender_id}_{workflow_run_id}`.
+   - **Agent Refactoring (`tenderpulse_ai/decision/agent.py`)**:
+     - Refactored `BidDecisionAgent.evaluate()` to invoke the compiled LangGraph workflow while preserving 100% backwards compatibility with `BidDecisionRequest` and `BidDecisionResponse`.
+   - **Architectural Decision Record**:
+     - Formulated and committed ADR 0024: `docs/adr/0024-langgraph-bid-decision-engine.md`.
+   - **Resilient Test Harness**:
+     - Configured `hookTimeout: 30000, testTimeout: 30000` in `apps/api/vitest.config.ts` to prevent PGlite startup contention during parallel multi-file test runs.
+
+3. **Verification Record**:
+   - Python AI Test Suite (`./.venv/bin/pytest apps/ai`): 117 tests passed, 1 skipped (100% green, including new LangGraph tests in `test_bid_decision_workflow.py`).
+   - Monorepo Type Check (`npm run type-check`): 0 errors across all 4 workspaces (`shared-types`, `ui`, `api`, `web`).
+   - NestJS API Test Suite (`npm --prefix apps/api test`): 34 test files, 258 tests passed (100% green).
+   - Web Frontend Test Suite (`npm --prefix apps/web test`): 22 test files, 163 tests passed (100% green).
+   - Monorepo Production Build (`npm run build`): All workspaces compiled cleanly.
+
+## Previous implementation milestone: Company Evidence Onboarding & Multi-Provider Verification Architecture (IRIS IRP, MCA, Udyam, DigiLocker, Cloud Drives)
+
+1. **Problem Statement & Business Value**:
+   - For Indian MSME contractors bidding on government tenders (via GeM, CPPP, State e-Procurement Portals), technical disqualification frequently occurs due to expired, missing, or mismatched statutory certificates, unverifiable financial claims, or inaccurate eligibility tags.
+   - Traditional tender platforms rely on repetitive manual text entry and ad-hoc file attachments, forcing bidders to re-upload evidence for every tender without provenance or verification.
+   - To build a defensible, reusable company evidence layer, TenderPulse AI required an evidence onboarding and multi-provider verification pipeline capable of answering:
+     - *Is this business registered, active, and legally eligible?*
+     - *Which statutory certificates and licenses does it hold, and are they source-verified?*
+     - *Does it meet turnover, net worth, and past experience requirements with verifiable documents?*
+     - *Which evidence is missing, expired, or needs human review?*
+
+2. **Architectural Improvements & Deliverables**:
+   - **Cloud-Agnostic Domain Ports & Infrastructure Adapters (`apps/api/src/modules/company-verification/`)**:
+     - `BusinessVerificationProvider` / `IGstVerificationPort`: Domain contract for GSTIN verification.
+       - `IrisIrpGstAdapter`: Production REST client for IRIS IRP / GSP APIs with headers, timeouts, and error handling.
+       - `MockGstVerificationAdapter`: Deterministic mock adapter validating 15-char GSTINs and deriving PAN.
+     - `CompanyRegistryProvider`: Domain contract for MCA CIN/LLPIN master data verification.
+       - `McaRegistryAdapter`: Production REST client for Ministry of Corporate Affairs / API Setu.
+       - `MockMcaRegistryAdapter`: Deterministic mock adapter validating 21-char CIN formats.
+     - `IMsmeVerificationPort`: Domain contract for MSME Udyam enterprise classification.
+       - `UdyamVerificationAdapter`: Production REST client for Udyam Registration Portal / API Setu.
+       - `MockMsmeVerificationAdapter`: Deterministic mock adapter classifying Micro, Small, and Medium enterprises.
+     - `DigitalDocumentProvider` / `IDigitalLockerPort`: Domain contract for government digital depositories.
+       - `DigiLockerAdapter`: Production OAuth2 authorization code and issued document client.
+       - `MockDigitalLockerAdapter`: Deterministic mock issuing signed certificates (MCA, GSTN, MSME) with cryptographic SHA-256 digests.
+     - `DocumentSourceConnector`: Domain contract for external file repositories (`GoogleDriveConnector`, `OneDriveConnector`, `LocalUploadConnector`).
+   - **Deterministic 6-State Evidence Lifecycle**:
+     - Enforced across all evidence documents: `IMPORTED` ➔ `EXTRACTED` ➔ `SOURCE_VERIFIED` ➔ `NEEDS_REVIEW` ➔ `EXPIRED` ➔ `REJECTED`.
+     - Automatic expiry detection based on validity periods (`validTo`).
+   - **Discrepancy Detection & Human Review**:
+     - Flags mismatches between user-entered company profile data and statutory registries (e.g. trade name drift, status revocation).
+     - Transitions status to `NEEDS_REVIEW` with structured `discrepancyNotes`.
+     - Gated human review workflow (`POST /api/v1/companies/:companyId/verification/review-discrepancy`) allowing compliance reviewers to accept or override discrepancies.
+   - **Cryptographic Security & Zero-Trust Tenancy**:
+     - Automatic SHA-256 hashing of all uploaded and imported evidence documents.
+     - HMAC-SHA256 signed OAuth2 state tokens for DigiLocker handshakes with 15-minute expiration, eliminating CSRF and cross-tenant session injection attacks.
+     - Tenant scoping derived strictly from verified JWT claims (`TenantContextHolder`) with anti-IDOR checks on all endpoints and queries.
+     - Immutable append-only audit trail via `evidence_verification_history` table.
+   - **Web UI Integration & Interactive Hub**:
+     - `CompanyVerificationBar.tsx`: Status hub showing live verification badges for IRIS IRP GSTIN, MCA CIN, MSME Udyam, DigiLocker, and Cloud Drives with interactive verification modals.
+     - `CompanyProfilePage.tsx`: Integrated verification bar, live evidence vault list (`listCompanyEvidence`), status filtering, and document details.
+     - `OnboardingPage.tsx`: Integrated one-click GSTIN identity verification in Onboarding Step 1.
+   - **Architectural Decision Record**:
+     - Formulated and committed ADR 0023: `docs/adr/0023-company-evidence-and-third-party-verification-layer.md`.
+
+3. **Verification Record**:
+   - Monorepo Type Check (`npm run type-check`): 0 errors across `@tenderpulse/shared-types`, `@tenderpulse/ui`, `@tenderpulse/api`, and `@tenderpulse/web`.
+   - API Test Suite (`npm --prefix apps/api test`): 34 test files, 258 tests passed (100% green, including 13 new unit/integration tests in `company-verification.service.spec.ts`).
+   - Web Test Suite (`npm --prefix apps/web test`): 22 test files, 163 tests passed (100% green).
+   - Monorepo Build (`npm run build`): All 4 workspaces compiled cleanly.
+
+## Previous implementation milestone: S3 Direct Upload CORS Configuration & Polymorphic Storage PutObject Port Hardening
 
 1. **Problem Statement & Root Cause Analysis**:
    - When attempting document uploads via the web UI (`DocumentUploader.tsx`) with AWS S3 configured (`AWS_S3_BUCKET=tenderai-ap-south-1-1029`), upload confirmation failed with:
