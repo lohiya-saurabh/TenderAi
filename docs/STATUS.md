@@ -1,6 +1,133 @@
 # Project Status & Milestone Tracker
 
-## Current implementation milestone: Modular Security Perimeter, Stateless Token Revocation, and Persistence Hardening (P0/P1/P2 Remediation)
+## Current implementation milestone: Dark Mode Audit, Anti-FOUC Architecture & Swiss Monochrome Theme Harmonization
+
+1. **Problem Statement & Root Causes**:
+   - **Flash of Unstyled Content (FOUC) on Page Load / Reload**: In `apps/web/index.html`, there was no inline pre-hydration script in `<head>`. When users visited in dark mode, the browser painted an unstyled white canvas for 200–800ms while loading React and `ThemeContext`, creating a jarring white flash before switching to dark mode.
+   - **System Preference Neglect & Defaulting**: `ThemeContext.tsx` hardcoded a fallback to `'light'` if `tenderpulse_theme` was not set, ignoring `window.matchMedia('(prefers-color-scheme: dark)')` entirely.
+   - **Confusing Theme Switcher UX in Header**: When dark mode was active, the button showed a yellow `Sun` icon and read `"Light"`, misleading users into believing the app was stuck in light mode or that the toggle was inverted.
+   - **Missing Public Theme Switcher**: `PublicNav.tsx` had no theme switcher, leaving visitors on the landing and pricing pages unable to toggle themes.
+   - **Adjudication Button Inversion in Dark Mode**: In `ComplianceRow.tsx` / `ReviewActions.tsx`, "Mark Uncertain" had `variant: 'primary'`, rendering a solid glaring white button (`#ffffff`) in dark mode, and `Button.tsx`'s `variant="success"` also used solid white, causing low-contrast / blinding anomalies.
+   - **Unreadable Disabled Inputs in Dark Mode**: In `SettingsPage.tsx`, disabled inputs had `text-muted-foreground bg-muted/40` combined with `disabled:opacity-50`, causing text contrast to plummet below WCAG AA minimums (1.8:1).
+   - **Native `<select>` & Date Picker Dropdowns**: Native `<option>` elements on Chromium/macOS lacked explicit card backgrounds, risking dark-on-dark unstyled options, and date picker icons lacked proper color-scheme inversion.
+
+2. **Key Deliverables & Architectural Implementation**:
+   - **Synchronous Anti-FOUC Script in `index.html`**:
+     - Embedded a zero-dependency script directly in `<head>` that inspects `localStorage` and `prefers-color-scheme` synchronously before DOM paint, applying `dark` class and `colorScheme = 'dark'` instantly with zero flash of white.
+   - **OS System Preference Synchronization (`ThemeContext.tsx`)**:
+     - Initial state checks `localStorage`, falls back to `(prefers-color-scheme: dark)`, and defaults to high-contrast `'dark'`.
+     - Added an active `media.addEventListener('change', ...)` listener to seamlessly adapt to macOS / OS appearance changes when no manual override is active.
+   - **Clear, High-Contrast Header & Nav Theme Switchers (`Header.tsx`, `PublicNav.tsx`)**:
+     - Standardized theme button to display the *currently active* mode:
+       - Dark mode: `Moon` icon with orange accent + `"Dark"` label.
+       - Light mode: `Sun` icon with amber accent + `"Light"` label.
+     - Synchronized across authenticated `Header.tsx` and unauthenticated `PublicNav.tsx`.
+   - **Settings Page Appearance & Visual Theme System (`SettingsPage.tsx`)**:
+     - Header quick-toggle upgraded to the standardized icon + label button.
+     - Added a dedicated "Appearance & Visual Theme" card under the "General" tab featuring two large executive selection cards ("Executive Dark" and "Crisp Daylight Light") with radio indicators and clear descriptions.
+     - Fixed disabled inputs (`bg-muted/30 font-medium text-foreground border-border`) with `opacity-80` for crisp WCAG-compliant contrast.
+   - **Button & Adjudication Palette Polish (`Button.tsx`, `ReviewActions.tsx`, `index.css`)**:
+     - Added `warning` variant to `ButtonProps` (`rgba(234, 88, 12, 0.12)` background, `#fb923c` text, subtle border).
+     - Upgraded `success` variant to use `var(--status-pass-bg)` instead of blinding white background.
+     - Switched `Mark Uncertain` in `ReviewActions.tsx` from `primary` to `warning`.
+     - Added CSS rules for `select option` (`bg-card text-card-foreground`) and date picker calendar icon filters in dark mode.
+
+3. **Automated Verification Record**:
+   - Monorepo Type Check (`npm run type-check`): 4 / 4 workspaces passed (0 errors).
+   - React Frontend Test Suite (`npm --prefix apps/web test`): 22 test files, 163 passed (0 failures).
+   - Playwright Dark Mode Verification (`scripts/take-dark-screenshots.js`): Captured and visually verified all 12 key pages in dark mode (`01_landing_dark.png`, `02_pricing_dark.png`, `03_login_dark.png`, `04_dashboard_dark.png`, `05_create_bid_dark.png`, `06_bid_detail_dark.png`, `06_section3_rules_dark.png`, `06_section5_compliance_matrix_dark.png`, `07_compliance_review_dark.png`, `08_audit_history_dark.png`, `09_company_profile_dark.png`, `10_settings_dark.png`). All surfaces render with crisp contrast, zero FOUC, and strict Swiss Monochrome + terracotta orange adherence.
+
+## Previous implementation milestone: Section 5 Compliance Matrix, Statutory Execution Rules & Statutory Business Profile Padding Harmonization
+
+1. **Problem Statement & Root Causes**:
+   - Diagnosed padding, border hierarchy, and alignment defects across 3 key surfaces:
+     - **Section 5 ("5. Extracted Compliance Matrix") on Bid Detail**: Line 576 had `<div className="border border-border rounded-lg overflow-hidden bg-card shadow-xs">` with `p-0` wrapping `ComplianceTable`. Root elements had `gap: 1rem` and zero padding, causing the `StatusFilter` pills and search bar to touch the outer border edges directly ($x=0\text{px}$). Mismatched floating boxes and isolated rows created visual clutter.
+     - **Section 3 ("Statutory Execution Rules") in `ObligationsCard.tsx`**: Contained two stacked cards with `space-y-4`. Inside Card 2, the 4 statutory obligation items had cramped 12px padding (`var(--space-3)`), tiny 10px text (`var(--text-2xs)`), and sat above flagged requirements linked with messy inline styles. In `ExecutionRulesCard.tsx`, the card was nested inside another `<Card>`, causing triple-nested borders.
+     - **Statutory Business Profile on `/company-profile`**: In `CompanyProfileView.tsx`, the overview section wrapped a `<Card padding="lg">` around an inner bordered box with `padding: 1rem` (double border and nested card flaw). The universal search/filter toolbar sat above the business profile on the overview tab where it was non-functional clutter. The quick stats cards had orange numbers (`color: var(--color-primary-300)`) and cramped padding.
+
+2. **Key Deliverables & Architectural Implementation**:
+   - **Unified Executive Compliance Matrix (`ComplianceTable.tsx`, `ComplianceRow.tsx`, `BidDetailPage.tsx`)**:
+     - Upgraded outer perimeter to `<div className="border border-border rounded-xl overflow-hidden bg-card shadow-xs">`.
+     - Controls toolbar: generous padding (`p-4 sm:p-5 border-b border-border bg-card flex flex-col gap-3.5`) with primary row (status filter pills + search) and secondary row (attribute filter dropdowns).
+     - Sticky Header Band: integrated `grid grid-cols-[30%_11%_8%_18%_13%_10%_10%] gap-3 px-5 py-3 bg-muted/40 border-b border-border text-[11px] font-mono font-bold uppercase tracking-wider text-muted-foreground sticky top-0 z-10`.
+     - Rows Container: standardized to `<div className="divide-y divide-border/70">` with matching `px-5 py-3.5` columns, hover backgrounds, and seamless expansion panels (`px-5 py-5 border-t border-border/80 bg-background/60`).
+   - **Statutory Execution Rules Refactor (`ObligationsCard.tsx`, `ExecutionRulesCard.tsx`)**:
+     - `ObligationsCard.tsx`: upgraded both liability cards to `rounded-xl p-5 sm:p-6 bg-card shadow-xs`. Converted `ObligationGrid` to a clean 4-column responsive grid (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5`) with `p-4 rounded-lg border bg-muted/30 border-border` and clean text hierarchy. Flagged requirements cleanly separated with a subtle top border and Tailwind styling.
+     - `ExecutionRulesCard.tsx`: eliminated nested card wrappers; standardized to an embedded `border border-border/80 rounded-lg p-4 bg-muted/20` with 4 rule chips (`p-3 rounded-md border`).
+   - **Statutory Business Profile & Company Profile Refactor (`CompanyProfileView.tsx`, `CapabilityItemCard.tsx`, `CompanyVerificationBar.tsx`, `CapabilityNavTabs.tsx`)**:
+     - `CompanyProfileView.tsx`: eliminated double-card nesting. Standardized "Statutory Business Profile" to a single executive card (`rounded-xl p-6 sm:p-7 bg-card border border-border shadow-xs`) with a 3-column key-value grid, clean badge indicators, and zero green/neon colors.
+     - Quick Stats: upgraded to 4 independent cards (`rounded-xl p-5 bg-card border border-border shadow-xs`) with bold `text-2xl font-bold font-heading text-foreground` numbers and clean status footnotes.
+     - Gated universal search & filter toolbar to non-overview tabs (`activeSection !== 'overview'`), eliminating clutter on the business profile.
+     - `CapabilityItemCard.tsx`: replaced nested card boxes with unified `rounded-xl p-5 border border-border bg-card shadow-xs` cards and clean 4-column key-value grids.
+     - `CompanyVerificationBar.tsx`: upgraded to `rounded-xl p-5 sm:p-6 bg-card shadow-xs`.
+     - `CapabilityNavTabs.tsx`: enhanced scrollability with `scrollbar-thin w-full gap-1.5`.
+
+3. **Automated Verification Record**:
+   - Monorepo Type Check (`npm run type-check`): 4 / 4 workspaces passed (0 errors).
+   - React Frontend Test Suite (`npm --prefix apps/web test`): 22 test files, 163 passed (0 failures).
+   - Playwright Visual Verification: Verified Company Profile (`09_company_profile_full.png`), Bid Detail (`06_bid_detail_full.png`), and Expanded Compliance Matrix (`06_section5_compliance_matrix_expanded.png`).
+
+## Previous implementation milestone: Layout & Padding Harmonization, Container Grid Alignment & Strict Palette Enforcement
+
+1. **Problem Statement & Root Causes**:
+   - Diagnosed padding, border hierarchy, and alignment defects in Section 5 ("5. Extracted Compliance Matrix") on the Bid Detail page (`BidDetailPage.tsx`):
+     - **Outer Padding Void**: Line 576 had `<div className="border border-border rounded-lg overflow-hidden bg-card shadow-xs">` with `p-0` wrapping `ComplianceTable`. Inside `ComplianceTable`, root elements had `gap: 1rem` and zero padding, causing the `StatusFilter` pills and search bar to touch the outer border edges directly ($x=0\text{px}$).
+     - **Nested Double-Borders & Floating Boxes**: The secondary filters bar and the column headers each had separate borders and rounded corners, floating inside the card with mismatched internal paddings ($0.85\text{rem}$ vs $1\text{rem}$).
+     - **Floating Disconnected Mini-Cards**: In `ComplianceRow.tsx`, each row was an isolated rounded card (`border: 1px solid`, `borderRadius: var(--radius-md)`) inside a container with `gap: 0.5rem`, causing dozens of separate boxed elements with visual clutter and misaligned column baselines.
+     - **Rogue Heading Colors in Expanded Drawer**: "2. Do we have evidence?" and "3. Why did the system reach this result?" used inline `color: var(--color-success)` and `var(--color-warning)`, violating the strict Swiss monochrome/orange palette.
+
+2. **Key Deliverables & Architectural Implementation**:
+   - **Unified Executive Data Matrix Architecture**:
+     - `BidDetailPage.tsx`: Upgraded Section 5 card container to `<div className="border border-border rounded-xl overflow-hidden bg-card shadow-xs">`.
+     - `ComplianceTable.tsx`: Integrated controls toolbar with generous padding (`p-4 sm:p-5 border-b border-border bg-card flex flex-col gap-3.5`).
+       - Primary row: Status filter pills on the left + responsive search bar on the right.
+       - Secondary row: Attribute filter dropdowns (Category, Risk, Mandatory, and Reset button) aligned cleanly with `gap-2.5`.
+       - Sticky Table Header Band: Converted from floating box to a seamless integrated header (`grid grid-cols-[30%_11%_8%_18%_13%_10%_10%] gap-3 px-5 py-3 bg-muted/40 border-b border-border text-[11px] font-mono font-bold uppercase tracking-wider text-muted-foreground sticky top-0 z-10`).
+       - Rows Container: Standardized to `<div className="divide-y divide-border/70">`, eliminating disconnected floating boxes and double borders.
+     - `ComplianceRow.tsx`:
+       - Standardized row container to `grid grid-cols-[30%_11%_8%_18%_13%_10%_10%] gap-3 px-5 py-3.5 items-center cursor-pointer select-none` with hover state (`hover:bg-muted/30`) and active expand state (`bg-orange-50/40 dark:bg-orange-950/15`). Exactly matches header column layout and padding for pixel-perfect vertical alignment.
+       - Expanded Detail Panel: Standardized to `px-5 py-5 border-t border-border/80 bg-background/60 flex flex-col gap-4`. Replaced all rogue color styles with `text-[11px] font-bold text-foreground uppercase tracking-wider` and clean cards in a responsive 3-column grid (`grid-cols-1 md:grid-cols-3 gap-3.5`).
+   - **Visual Verification Suite via Real Headless Playwright**:
+     - Extended `scripts/take-screenshots.js` with focused element captures of Section 5 in both collapsed (`06_section5_compliance_matrix.png`) and expanded (`06_section5_compliance_matrix_expanded.png`) states.
+     - Inspected screenshots directly: verified zero edge-clipping, generous consistent padding, strict monochrome/orange-red adherence, and pixel-aligned columns.
+
+3. **Automated Verification Record**:
+   - Monorepo Type Check (`npm run type-check`): 4 / 4 workspaces passed (0 errors).
+   - React Frontend Test Suite (`npm --prefix apps/web test`): 22 test files, 163 passed (0 failures).
+   - Playwright Visual Verification: Verified collapsed matrix (`06_section5_compliance_matrix.png`), expanded 4-question panel (`06_section5_compliance_matrix_expanded.png`), and full page (`06_bid_detail_full.png`).
+
+## Previous implementation milestone: Layout & Padding Harmonization, Container Grid Alignment & Strict Palette Enforcement
+
+1. **Problem Statement & Root Causes**:
+   - Diagnosed layout, spacing, and visual padding defects across the application via Playwright headless browser captures (`scripts/take-screenshots.js`):
+     - **Header vs. Main Container Grid Disconnect**: `Header.tsx` had `px-4 md:px-6` with unconstrained width, while `<main>` in `AppShell.tsx` had `max-w-7xl mx-auto px-4 sm:px-6 lg:px-8`. On wide desktop viewports (>=1280px), the content centered inwards while the header stretched to the screen edges, creating noticeable alignment breaks between the header breadcrumb/user menu and the page content/action buttons.
+     - **Double / Stacked Padding Gaps**: Individual child pages (`ComplianceReviewPage`, `CreateBidPage`, `AuditHistoryPage`, `CompanyProfilePage`, `SettingsPage`) applied extraneous vertical paddings (`py-4`, `pb-12`, `pb-16`) on top of `AppShell`'s main container padding (`p-4 sm:p-6 lg:p-8`), producing irregular 48px top voids and 96px bottom gutters.
+     - **Bid Detail Layout Grid Abuse**: Wrapping the entire 2000px-long dossier page in a rigid 9-column / 3-column split squished the 7-column compliance matrix into an ~800px column while leaving 70% of the lower page right column empty.
+     - **Residual Legacy Color Classes**: Stray inline styles with emerald green, indigo blue, and dark blue backgrounds persisted in `CapabilityNavTabs`, `CapabilityStatusBadge`, `CompanyProfileView`, `RiskBadge`, `StatusFilter`, `SourceCitationDrawer`, `ProvenanceCard`, `EvidenceDrawer`, `AssessmentPanel`, `CompanyProfileSection`, `ExtractionProgress`, and `DocumentUploader`.
+
+2. **Key Deliverables & Architectural Implementation**:
+   - **Container Alignment & Max-Width Hierarchy**:
+     - `AppShell.tsx`: Standardized `<main>` container to `w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8`.
+     - `Header.tsx`: Wrapped header contents in a matching inner container: `<div className="w-full max-w-7xl mx-auto h-full flex items-center justify-between px-4 sm:px-6 lg:px-8 gap-4">`. Breadcrumbs and user account menus now align on the identical vertical grid line as page headers and primary action buttons.
+     - Normalized child pages (`ComplianceReviewPage`, `CreateBidPage`, `AuditHistoryPage`, `CompanyProfilePage`, `SettingsPage`) to standard `w-full flex flex-col gap-6`, delegating container padding exclusively to `AppShell`.
+   - **Full-Width Bid Detail Architecture (`BidDetailPage.tsx`)**:
+     - Decoupled the top executive section into a balanced 2-column split (Eligibility Verdict + Sign-off Status baseline-aligned).
+     - Expanded dossier modules (Ingested Documents 2x2 grid, High-Risk Liability Analysis, and 7-column Extracted Compliance Matrix) to full container width (`w-full`), eliminating horizontal scrolling and awkward empty side voids.
+   - **Precision Flexbox Audit Timeline (`AuditTimeline.tsx`)**:
+     - Converted brittle negative-margin absolute positioning into a robust self-stretching flex column with a mathematically centered connecting hairline track and bullseye target indicator (`border-2 border-orange-600` with inner dot).
+   - **Complete Eradication of Rogue Colors**:
+     - Systematically eliminated all remaining green, blue, purple, and indigo colors across all components.
+     - Standardized on the strict 3-tier palette: Swiss Monochrome (Ink-Black `#09090b`, Crisp White `#ffffff`, Neutral Zinc hairlines `#e4e4e7`) and graded Orange-Red accents (`#ea580c`, `#c2410c`, `#fff7ed`).
+   - **Full-Page Playwright Verification Suite (`scripts/take-screenshots.js`)**:
+     - Extended Playwright capture script to record both standard viewport and full-page captures for all 10 application views.
+
+3. **Automated Verification Record**:
+   - Monorepo Type Check (`npm run type-check`): 4 / 4 workspaces passed (0 errors).
+   - React Frontend Test Suite (`npm --prefix apps/web test`): 22 test files, 163 passed (0 failures).
+   - Monorepo Production Build (`npm run build`): All 4 packages and workspaces compiled cleanly in 1.18s.
+   - Playwright Visual Suite: Verified across all 10 views (`01_landing` through `10_settings`).
+
+## Previous implementation milestone: Modular Security Perimeter, Stateless Token Revocation, and Persistence Hardening (P0/P1/P2 Remediation)
 
 1. **Problem Statement & Scope**:
    - Addressed critical findings surfaced in `docs/END_TO_END_AUDIT.md`:

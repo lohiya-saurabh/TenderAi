@@ -130,9 +130,9 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
       case 'QUEUED_FOR_EXTRACTION':
       case 'EXTRACTING':
         return {
-          bg: 'rgba(59, 130, 246, 0.12)',
-          color: '#3b82f6',
-          border: 'rgba(59, 130, 246, 0.3)',
+          bg: 'rgba(234, 88, 12, 0.08)',
+          color: '#ea580c',
+          border: 'rgba(234, 88, 12, 0.25)',
           icon: SpinnerIcon,
           defaultLabel: normalized === 'QUEUED_FOR_EXTRACTION' ? 'Queued' : normalized.replace(/_/g, ' '),
         };

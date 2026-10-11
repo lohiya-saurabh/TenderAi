@@ -233,7 +233,7 @@ export const CompanyDocumentChecklist: React.FC<CompanyDocumentChecklistProps> =
                     {/* Evidence Status */}
                     <td className="py-3 px-4 whitespace-nowrap min-w-[160px]">
                       {row.statusLabel === 'Uploaded' ? (
-                        <span className="inline-flex items-center gap-1 text-emerald-500 font-semibold">
+                        <span className="inline-flex items-center gap-1 text-foreground font-semibold">
                           <CheckCircle2 size={14} />
                           {row.isValid ? 'Uploaded & Valid' : 'Uploaded (Self-Attested)'}
                         </span>

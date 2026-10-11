@@ -250,7 +250,7 @@ export const SettingsPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 pb-12">
+    <div className="w-full flex flex-col gap-6">
       {/* 1. Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/80 pb-5">
         <div>
@@ -264,21 +264,29 @@ export const SettingsPage: React.FC = () => {
             Tenant: {user?.organizationId || '—'}
           </Badge>
           <Button
-            variant="ghost"
-            size="icon"
+            type="button"
+            variant="outline"
+            size="sm"
             onClick={toggleTheme}
-            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-            className="h-8 w-8"
-            title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+            className="h-8 px-2.5 text-xs font-semibold gap-1.5 border-border hover:bg-accent cursor-pointer transition-colors shadow-2xs"
+            aria-label={`Current theme: ${theme === 'dark' ? 'Dark' : 'Light'}. Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            title={`Current theme: ${theme === 'dark' ? 'Dark' : 'Light'}. Click to switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
           >
-            {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            {theme === 'dark' ? (
+              <Moon className="h-3.5 w-3.5 text-orange-400" />
+            ) : (
+              <Sun className="h-3.5 w-3.5 text-amber-500" />
+            )}
+            <span className="hidden sm:inline text-xs font-mono font-medium text-foreground">
+              {theme === 'dark' ? 'Dark' : 'Light'}
+            </span>
           </Button>
         </div>
       </div>
 
       {/* Global Feedback Banner */}
       {settingsSuccess && (
-        <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 flex items-center gap-2 text-xs font-medium">
+        <div className="p-3 rounded-lg bg-primary/10 border border-primary/30 text-primary flex items-center gap-2 text-xs font-medium">
           <CheckCircle2 className="h-4 w-4 shrink-0" />
           <span>Workspace preferences saved and synchronized to PostgreSQL.</span>
         </div>
@@ -332,7 +340,7 @@ export const SettingsPage: React.FC = () => {
                     id="workspaceName"
                     value={workspaceSettings?.organizationName || user?.organizationName || 'Workspace'}
                     disabled
-                    className="bg-muted/40 text-muted-foreground cursor-not-allowed"
+                    className="bg-muted/30 font-medium text-foreground cursor-not-allowed border-border"
                   />
                   <span className="text-[10px] text-muted-foreground">
                     SaaS organization tenant boundary identifier
@@ -345,7 +353,7 @@ export const SettingsPage: React.FC = () => {
                     id="tenantId"
                     value={workspaceSettings?.organizationId || user?.organizationId || '—'}
                     disabled
-                    className="bg-muted/40 font-mono text-muted-foreground cursor-not-allowed"
+                    className="bg-muted/30 font-mono text-xs text-foreground cursor-not-allowed border-border"
                   />
                   <span className="text-[10px] text-muted-foreground">
                     Cryptographically bound to your JWT session token claims
@@ -418,6 +426,71 @@ export const SettingsPage: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Appearance & Color Theme */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base font-semibold">Appearance &amp; Visual Theme</CardTitle>
+              <CardDescription className="text-xs">
+                Select your preferred interface display mode. Saved persistently to tenant preferences.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Dark Theme Option Card */}
+                <button
+                  type="button"
+                  onClick={() => theme !== 'dark' && toggleTheme()}
+                  className={`p-4 rounded-xl border text-left transition-all flex items-start justify-between cursor-pointer ${
+                    theme === 'dark'
+                      ? 'bg-primary/10 border-primary text-foreground ring-1 ring-primary'
+                      : 'bg-card hover:bg-accent/60 border-border text-muted-foreground'
+                  }`}
+                >
+                  <div className="space-y-1.5 pr-2">
+                    <div className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <Moon className="h-4 w-4 text-orange-400" />
+                      <span>Executive Dark (Default)</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Deep zinc canvas with crisp high-contrast cards and surgical terracotta orange accents.
+                    </p>
+                  </div>
+                  {theme === 'dark' && (
+                    <div className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground shrink-0 mt-0.5">
+                      <Check className="h-3 w-3" strokeWidth={3} />
+                    </div>
+                  )}
+                </button>
+
+                {/* Light Theme Option Card */}
+                <button
+                  type="button"
+                  onClick={() => theme !== 'light' && toggleTheme()}
+                  className={`p-4 rounded-xl border text-left transition-all flex items-start justify-between cursor-pointer ${
+                    theme === 'light'
+                      ? 'bg-primary/10 border-primary text-foreground ring-1 ring-primary'
+                      : 'bg-card hover:bg-accent/60 border-border text-muted-foreground'
+                  }`}
+                >
+                  <div className="space-y-1.5 pr-2">
+                    <div className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <Sun className="h-4 w-4 text-amber-500" />
+                      <span>Crisp Daylight Light</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Pure white canvas with ink-black typography and hairline zinc dividers for daytime audits.
+                    </p>
+                  </div>
+                  {theme === 'light' && (
+                    <div className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground shrink-0 mt-0.5">
+                      <Check className="h-3 w-3" strokeWidth={3} />
+                    </div>
+                  )}
+                </button>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* ================================================================= */}
@@ -428,7 +501,7 @@ export const SettingsPage: React.FC = () => {
             <div
               className={`p-3 rounded-lg flex items-center gap-2 text-xs font-medium ${
                 billingFeedback.type === 'success'
-                  ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-500'
+                  ? 'bg-primary/10 border border-primary/30 text-primary'
                   : 'bg-destructive/10 border border-destructive/30 text-destructive'
               }`}
             >
@@ -503,7 +576,7 @@ export const SettingsPage: React.FC = () => {
                       ? new Date(subscription.currentPeriodEnd).toLocaleDateString()
                       : 'Renewal Active'}
                   </p>
-                  <p className="text-[10px] text-emerald-400">Auto-renewal enabled</p>
+                  <p className="text-[10px] text-muted-foreground font-medium">Auto-renewal enabled</p>
                 </div>
               </div>
 
@@ -779,7 +852,7 @@ export const SettingsPage: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                 <div className="p-3.5 rounded-lg bg-muted/30 border border-border space-y-2">
                   <div className="flex items-center gap-2 font-semibold text-foreground">
-                    <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                    <ShieldCheck className="h-4 w-4 text-foreground" />
                     <span>Cryptographic Token Session</span>
                   </div>
                   <p className="text-muted-foreground leading-relaxed">
@@ -865,7 +938,7 @@ export const SettingsPage: React.FC = () => {
             <CardContent className="space-y-6">
               {/* Invite Success Feedback */}
               {inviteSuccess && (
-                <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 flex items-center gap-2 text-xs font-medium">
+                <div className="p-3 rounded-lg bg-primary/10 border border-primary/30 text-primary flex items-center gap-2 text-xs font-medium">
                   <CheckCircle2 className="h-4 w-4 shrink-0" />
                   <span>Team member provisioned and saved to PostgreSQL successfully.</span>
                 </div>

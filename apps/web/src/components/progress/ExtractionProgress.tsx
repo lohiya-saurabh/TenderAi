@@ -151,7 +151,7 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
             {isFailed ? (
               <CircleAlert size={22} className="text-red-500" />
             ) : isComplete ? (
-              <CheckCircle2 size={22} className="text-emerald-500" />
+              <CheckCircle2 size={22} className="text-primary" />
             ) : (
               <Loader2 size={22} className="text-primary animate-spin" />
             )}
@@ -178,20 +178,16 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
               padding: '0.2rem 0.55rem',
               borderRadius: 'var(--radius-sm)',
               backgroundColor: isFailed
-                ? 'rgba(239, 68, 68, 0.15)'
+                ? 'var(--status-fail-bg)'
                 : isComplete
-                  ? 'rgba(16, 185, 129, 0.15)'
-                  : isConnected
-                    ? 'rgba(99, 102, 241, 0.15)'
-                    : 'rgba(245, 158, 11, 0.15)',
+                  ? 'var(--status-pass-bg)'
+                  : 'rgba(234, 88, 12, 0.08)',
               color: isFailed
-                ? 'var(--color-danger)'
+                ? 'var(--status-fail-text)'
                 : isComplete
-                  ? 'var(--color-success)'
-                  : isConnected
-                    ? 'var(--color-primary-300)'
-                    : 'var(--color-warning)',
-              border: `1px solid ${isFailed ? 'var(--color-danger)' : isComplete ? 'var(--color-success)' : 'var(--color-surface-border)'}`,
+                  ? 'var(--status-pass-text)'
+                  : '#ea580c',
+              border: `1px solid ${isFailed ? 'var(--status-fail-border)' : isComplete ? 'var(--status-pass-border)' : 'rgba(234, 88, 12, 0.25)'}`,
             }}
           >
             {isFailed
@@ -212,13 +208,13 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
             <span style={{ fontWeight: 600, color: 'var(--color-surface-text)' }}>
               {lastEvent?.message || activeStepMeta?.activeMessage || 'Processing document...'}
             </span>
-            <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--color-primary-300)' }}>
+            <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--color-primary-500)' }}>
               {progressPercent}%
             </span>
           </div>
           <ProgressBar
             progress={progressPercent}
-            color={isComplete ? 'var(--color-success)' : 'var(--color-primary-500)'}
+            color={isComplete ? 'var(--color-surface-text)' : 'var(--color-primary-500)'}
             height="8px"
           />
         </div>
@@ -242,15 +238,15 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
               key={step.key}
               style={{
                 backgroundColor: isCurrent
-                  ? 'rgba(99, 102, 241, 0.1)'
+                  ? 'rgba(234, 88, 12, 0.08)'
                   : isDone
-                    ? 'rgba(16, 185, 129, 0.05)'
+                    ? 'var(--status-pass-bg)'
                     : 'var(--color-surface-bg)',
                 border: `1px solid ${
                   isCurrent
                     ? 'var(--color-primary-500)'
                     : isDone
-                      ? 'rgba(16, 185, 129, 0.35)'
+                      ? 'var(--status-pass-border)'
                       : 'var(--color-surface-border)'
                 }`,
                 borderRadius: 'var(--radius-md)',
@@ -267,7 +263,7 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
                 </span>
                 <span style={{ display: 'flex', alignItems: 'center' }}>
                   {isDone ? (
-                    <Check size={14} className="text-emerald-400" />
+                    <Check size={14} className="text-primary" />
                   ) : isCurrent ? (
                     <Loader2 size={14} className="animate-spin text-primary" />
                   ) : (
@@ -352,8 +348,8 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
           style={{
             marginTop: '1rem',
             padding: '0.85rem 1rem',
-            backgroundColor: 'rgba(16, 185, 129, 0.08)',
-            border: '1px solid rgba(16, 185, 129, 0.3)',
+            backgroundColor: 'var(--status-pass-bg)',
+            border: '1px solid var(--status-pass-border)',
             borderRadius: 'var(--radius-md)',
             display: 'flex',
             justifyContent: 'space-between',
@@ -362,10 +358,10 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
             gap: '0.75rem',
           }}
         >
-          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-success)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--status-pass-text)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <CheckCircle2 size={16} /> Extraction pipeline successfully grounded requirements and citations into your workspace.
           </span>
-          <Button variant="success" size="sm" onClick={onComplete} icon={<ArrowRight size={14} />}>
+          <Button variant="primary" size="sm" onClick={onComplete} icon={<ArrowRight size={14} />}>
             Proceed to Requirement Matrix
           </Button>
         </div>

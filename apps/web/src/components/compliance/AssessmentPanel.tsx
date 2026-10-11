@@ -99,16 +99,16 @@ export const AssessmentPanel: React.FC<AssessmentPanelProps> = ({
               <div
                 style={{
                   padding: '1rem',
-                  backgroundColor: 'rgba(16, 185, 129, 0.06)',
-                  border: '1px solid rgba(16, 185, 129, 0.25)',
+                  backgroundColor: 'var(--status-pass-bg)',
+                  border: '1px solid var(--status-pass-border)',
                   borderRadius: 'var(--radius-md)',
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                  <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-success)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--status-pass-text)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     Company Capability / Evidence
                   </span>
-                  <Badge variant="success" size="sm">Company Match</Badge>
+                  <Badge variant="neutral" size="sm">Company Match</Badge>
                 </div>
                 <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-text)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
                   {rationale.companyCapability}
@@ -202,12 +202,12 @@ function mapComparisonToStatus(result: AssessmentRationale['comparisonResult']) 
 function getComparisonBackground(result: AssessmentRationale['comparisonResult']): string {
   switch (result) {
     case 'MET':
-      return 'rgba(16, 185, 129, 0.08)';
+      return 'var(--status-pass-bg)';
     case 'NOT_MET':
-      return 'rgba(239, 68, 68, 0.08)';
+      return 'var(--status-fail-bg)';
     case 'PARTIAL':
     case 'UNCLEAR':
-      return 'rgba(245, 158, 11, 0.08)';
+      return 'rgba(234, 88, 12, 0.08)';
     default:
       return 'var(--color-surface-bg)';
   }
@@ -216,12 +216,12 @@ function getComparisonBackground(result: AssessmentRationale['comparisonResult']
 function getComparisonBorder(result: AssessmentRationale['comparisonResult']): string {
   switch (result) {
     case 'MET':
-      return 'rgba(16, 185, 129, 0.25)';
+      return 'var(--status-pass-border)';
     case 'NOT_MET':
-      return 'rgba(239, 68, 68, 0.25)';
+      return 'var(--status-fail-border)';
     case 'PARTIAL':
     case 'UNCLEAR':
-      return 'rgba(245, 158, 11, 0.25)';
+      return 'rgba(234, 88, 12, 0.25)';
     default:
       return 'var(--color-surface-border)';
   }

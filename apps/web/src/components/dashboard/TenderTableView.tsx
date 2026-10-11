@@ -235,7 +235,7 @@ function DeadlineCell({ bid, nowMs }: { bid: BidSummary; nowMs: number }) {
 
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="text-xs font-medium whitespace-nowrap text-foreground">
+      <span className="font-mono text-xs font-medium whitespace-nowrap text-foreground">
         {formatDate(bid.submissionDeadline!)}
       </span>
       <span className={cn('text-[10px] font-bold uppercase tracking-wider whitespace-nowrap', colorClass)}>
@@ -258,15 +258,15 @@ function ReadinessCell({ bid }: { bid: BidSummary }) {
 
   const indicatorClass =
     pct !== null && pct >= 80
-      ? 'bg-emerald-500'
+      ? 'bg-primary'
       : pct !== null && pct >= 50
         ? 'bg-amber-500'
-        : 'bg-primary';
+        : 'bg-muted-foreground';
 
   return (
     <div className="flex flex-col gap-1 w-24">
       <div className="flex justify-between text-[10px] font-semibold">
-        <span className={pct !== null && pct >= 80 ? 'text-emerald-400' : 'text-foreground'}>
+        <span className="text-foreground">
           {pct}%
         </span>
         <span className="text-muted-foreground">
@@ -349,7 +349,7 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
         );
       case 'value':
         return (
-          <span className="text-xs font-semibold text-foreground whitespace-nowrap tabular-nums">
+          <span className="font-mono text-xs font-semibold text-foreground whitespace-nowrap tabular-nums">
             {bid.estimatedValueRupees ? formatCurrency(bid.estimatedValueRupees) : '—'}
           </span>
         );

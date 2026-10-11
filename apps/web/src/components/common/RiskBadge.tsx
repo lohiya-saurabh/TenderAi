@@ -11,27 +11,27 @@ export interface RiskBadgeProps {
 
 const riskConfigs: Record<RiskLevel, { bg: string; color: string; border: string; label: string }> = {
   LOW: {
-    bg: 'rgba(16, 185, 129, 0.12)',
-    color: 'var(--color-success)',
-    border: 'rgba(16, 185, 129, 0.3)',
+    bg: 'var(--status-pass-bg)',
+    color: 'var(--status-pass-text)',
+    border: 'var(--status-pass-border)',
     label: 'Low',
   },
   MEDIUM: {
-    bg: 'rgba(245, 158, 11, 0.12)',
-    color: 'var(--color-warning)',
-    border: 'rgba(245, 158, 11, 0.3)',
+    bg: 'rgba(234, 88, 12, 0.08)',
+    color: '#ea580c',
+    border: 'rgba(234, 88, 12, 0.25)',
     label: 'Medium',
   },
   HIGH: {
-    bg: 'rgba(249, 115, 22, 0.12)',
-    color: '#f97316',
-    border: 'rgba(249, 115, 22, 0.3)',
+    bg: 'rgba(234, 88, 12, 0.14)',
+    color: '#c2410c',
+    border: 'rgba(234, 88, 12, 0.35)',
     label: 'High',
   },
   CRITICAL: {
-    bg: 'rgba(239, 68, 68, 0.12)',
-    color: 'var(--color-danger)',
-    border: 'rgba(239, 68, 68, 0.3)',
+    bg: 'rgba(194, 65, 12, 0.18)',
+    color: '#9a3412',
+    border: 'rgba(194, 65, 12, 0.45)',
     label: 'Critical',
   },
 };

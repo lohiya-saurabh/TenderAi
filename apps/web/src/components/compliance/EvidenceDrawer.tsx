@@ -85,9 +85,9 @@ export const EvidenceDrawer: React.FC<EvidenceDrawerProps> = ({
                 fontWeight: 600,
                 padding: '0.15rem 0.45rem',
                 borderRadius: 'var(--radius-sm)',
-                backgroundColor: 'rgba(16, 185, 129, 0.12)',
-                color: 'var(--color-success)',
-                border: '1px solid rgba(16, 185, 129, 0.3)',
+                backgroundColor: 'var(--status-pass-bg)',
+                color: 'var(--status-pass-text)',
+                border: '1px solid var(--status-pass-border)',
               }}
             >
               {confidencePercent}% Substring Match

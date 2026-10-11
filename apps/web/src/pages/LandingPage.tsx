@@ -43,7 +43,7 @@ export const LandingPage: React.FC = () => {
 
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-foreground leading-[1.1]">
                 Know which tenders you can win —{' '}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-indigo-400 to-primary-400">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-neutral-900 via-orange-600 to-orange-500 dark:from-white dark:via-orange-400 dark:to-orange-500">
                   before wasting weeks preparing bids.
                 </span>
               </h1>
@@ -71,7 +71,7 @@ export const LandingPage: React.FC = () => {
               {/* Trust Indicators */}
               <div className="pt-4 flex flex-wrap items-center gap-y-2 gap-x-6 text-xs text-muted-foreground font-mono">
                 <div className="flex items-center gap-1.5">
-                  <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                  <ShieldCheck className="h-4 w-4 text-foreground" />
                   <span>Strict Tenant Data Isolation</span>
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -79,7 +79,7 @@ export const LandingPage: React.FC = () => {
                   <span>Zero LLM Hallucination Risk</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <Building2 className="h-4 w-4 text-amber-500" />
+                  <Building2 className="h-4 w-4 text-orange-600" />
                   <span>Multi-Company Entities</span>
                 </div>
               </div>
@@ -95,7 +95,7 @@ export const LandingPage: React.FC = () => {
                       <Badge variant="outline" className="text-[10px] font-mono">
                         NHAI-RO-DEL-2026-089
                       </Badge>
-                      <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px]">
+                      <Badge variant="outline" className="bg-foreground text-background text-[10px] font-bold">
                         BID RECOMMENDED
                       </Badge>
                     </div>
@@ -112,7 +112,7 @@ export const LandingPage: React.FC = () => {
                 <div className="grid grid-cols-3 gap-2.5 p-3 rounded-lg bg-muted/40 border border-border/60 text-center">
                   <div>
                     <span className="text-[10px] text-muted-foreground uppercase">Fit Score</span>
-                    <p className="text-lg font-bold text-emerald-400">88.5%</p>
+                    <p className="text-lg font-bold text-foreground">88.5%</p>
                   </div>
                   <div>
                     <span className="text-[10px] text-muted-foreground uppercase">Matched Clauses</span>
@@ -120,7 +120,7 @@ export const LandingPage: React.FC = () => {
                   </div>
                   <div>
                     <span className="text-[10px] text-muted-foreground uppercase">Risk Level</span>
-                    <p className="text-lg font-bold text-amber-400">Medium</p>
+                    <p className="text-lg font-bold text-orange-600 dark:text-orange-400">Medium</p>
                   </div>
                 </div>
 
@@ -130,37 +130,37 @@ export const LandingPage: React.FC = () => {
                     Automated Requirement Matching
                   </span>
 
-                  <div className="p-2.5 rounded border border-emerald-500/20 bg-emerald-500/5 flex items-start justify-between gap-2">
+                  <div className="p-2.5 rounded border border-border bg-muted/30 flex items-start justify-between gap-2">
                     <div className="flex items-start gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                      <CheckCircle2 className="h-4 w-4 text-foreground shrink-0 mt-0.5" />
                       <div>
                         <p className="font-medium text-foreground text-[11px]">3-Year Average Annual Turnover</p>
                         <p className="text-[10px] text-muted-foreground">Required: ₹120 Cr &bull; Verified: ₹164.2 Cr (CA UDIN Valid)</p>
                       </div>
                     </div>
-                    <Badge variant="outline" className="text-[9px] text-emerald-400 shrink-0">PASS</Badge>
+                    <Badge variant="outline" className="text-[9px] text-foreground bg-muted shrink-0">PASS</Badge>
                   </div>
 
-                  <div className="p-2.5 rounded border border-emerald-500/20 bg-emerald-500/5 flex items-start justify-between gap-2">
+                  <div className="p-2.5 rounded border border-border bg-muted/30 flex items-start justify-between gap-2">
                     <div className="flex items-start gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                      <CheckCircle2 className="h-4 w-4 text-foreground shrink-0 mt-0.5" />
                       <div>
                         <p className="font-medium text-foreground text-[11px]">Similar Highway Completion Proof</p>
                         <p className="text-[10px] text-muted-foreground">Required: 1 project &gt; ₹100 Cr &bull; Matched: PWD NH-44 Expressway</p>
                       </div>
                     </div>
-                    <Badge variant="outline" className="text-[9px] text-emerald-400 shrink-0">PASS</Badge>
+                    <Badge variant="outline" className="text-[9px] text-foreground bg-muted shrink-0">PASS</Badge>
                   </div>
 
-                  <div className="p-2.5 rounded border border-amber-500/20 bg-amber-500/5 flex items-start justify-between gap-2">
+                  <div className="p-2.5 rounded border border-orange-500/25 bg-orange-500/5 flex items-start justify-between gap-2">
                     <div className="flex items-start gap-2">
-                      <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+                      <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400 shrink-0 mt-0.5" />
                       <div>
                         <p className="font-medium text-foreground text-[11px]">Liquidated Damages Clause (Sec 14.2)</p>
                         <p className="text-[10px] text-muted-foreground">High Risk: Penalty capped at 15% (Exceeds standard 10% ceiling)</p>
                       </div>
                     </div>
-                    <Badge variant="outline" className="text-[9px] text-amber-400 shrink-0">REVIEW</Badge>
+                    <Badge variant="outline" className="text-[9px] text-orange-600 dark:text-orange-400 border-orange-500/30 bg-orange-500/10 shrink-0">REVIEW</Badge>
                   </div>
                 </div>
 
@@ -356,7 +356,7 @@ export const LandingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-6">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-xs font-medium">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-border bg-muted/60 text-foreground text-xs font-semibold">
                 <ShieldCheck className="h-3.5 w-3.5" />
                 <span>Zero Trust Tenant Security Architecture</span>
               </div>
@@ -371,7 +371,7 @@ export const LandingPage: React.FC = () => {
 
               <div className="space-y-3.5 text-xs">
                 <div className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="w-5 h-5 rounded-full bg-foreground text-background flex items-center justify-center shrink-0 mt-0.5">
                     <Check className="h-3.5 w-3.5" />
                   </div>
                   <div>
@@ -381,7 +381,7 @@ export const LandingPage: React.FC = () => {
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="w-5 h-5 rounded-full bg-foreground text-background flex items-center justify-center shrink-0 mt-0.5">
                     <Check className="h-3.5 w-3.5" />
                   </div>
                   <div>
@@ -391,7 +391,7 @@ export const LandingPage: React.FC = () => {
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="w-5 h-5 rounded-full bg-foreground text-background flex items-center justify-center shrink-0 mt-0.5">
                     <Check className="h-3.5 w-3.5" />
                   </div>
                   <div>
@@ -406,20 +406,20 @@ export const LandingPage: React.FC = () => {
             <div className="p-6 rounded-xl border border-border bg-card/80 space-y-4 font-mono text-xs">
               <div className="flex items-center justify-between border-b border-border pb-3">
                 <span className="text-muted-foreground text-[11px]">SECURITY_ISOLATION_SPEC.md</span>
-                <Badge variant="outline" className="text-[10px] text-emerald-400 border-emerald-500/30">
+                <Badge variant="outline" className="text-[10px] text-foreground border-border bg-muted">
                   ENFORCED
                 </Badge>
               </div>
 
               <div className="space-y-2 text-[11px] text-muted-foreground bg-muted/40 p-4 rounded-lg">
                 <p className="text-foreground font-semibold">{'// 1 Tenant -> N Users | 1 Tenant -> N Companies'}</p>
-                <p className="text-primary font-mono">{'TenantContextHolder.run({ organizationId }, async () => {'}</p>
-                <p className="pl-4 text-emerald-400">const bids = await db.query(</p>
+                <p className="text-orange-600 dark:text-orange-400 font-mono">{'TenantContextHolder.run({ organizationId }, async () => {'}</p>
+                <p className="pl-4 text-foreground">const bids = await db.query(</p>
                 <p className="pl-8 text-foreground">"SELECT * FROM bids WHERE organization_id = $1",</p>
                 <p className="pl-8 text-foreground">[context.organizationId]</p>
-                <p className="pl-4 text-emerald-400">);</p>
+                <p className="pl-4 text-foreground">);</p>
                 <p className="pl-4 text-muted-foreground">{'// Automatic anti-IDOR rejection on company mismatch'}</p>
-                <p className="text-primary font-mono">{'}'});</p>
+                <p className="text-orange-600 dark:text-orange-400 font-mono">{'}'});</p>
               </div>
 
               <div className="grid grid-cols-2 gap-3 pt-2 text-[11px]">

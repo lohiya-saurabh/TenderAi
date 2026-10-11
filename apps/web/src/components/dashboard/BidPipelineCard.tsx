@@ -81,7 +81,7 @@ export const BidPipelineCard: React.FC<BidPipelineCardProps> = ({
                     <span
                       className={cn(
                         'text-[11px] font-semibold',
-                        stage.readinessPct >= 80 ? 'text-emerald-400' : 'text-foreground'
+                        stage.readinessPct >= 80 ? 'text-primary' : 'text-foreground'
                       )}
                     >
                       {stage.readinessPct}% ready

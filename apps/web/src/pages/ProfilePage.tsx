@@ -229,7 +229,7 @@ export const ProfilePage: React.FC = () => {
 
       {/* 3. Feedback Messages */}
       {saveSuccess && (
-        <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 flex items-center gap-2 text-xs font-medium">
+        <div className="p-3 rounded-lg bg-primary/10 border border-primary/30 text-primary flex items-center gap-2 text-xs font-medium">
           <CheckCircle2 className="h-4 w-4 shrink-0" />
           <span>Profile changes saved and persisted to backend successfully.</span>
         </div>
@@ -240,7 +240,7 @@ export const ProfilePage: React.FC = () => {
         </div>
       )}
       {passwordSuccess && (
-        <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 flex items-center gap-2 text-xs font-medium">
+        <div className="p-3 rounded-lg bg-primary/10 border border-primary/30 text-primary flex items-center gap-2 text-xs font-medium">
           <CheckCircle2 className="h-4 w-4 shrink-0" />
           <span>Password changed and encrypted with bcrypt successfully.</span>
         </div>
@@ -479,7 +479,7 @@ export const ProfilePage: React.FC = () => {
           ) : (
             <div className="p-3.5 rounded-lg bg-muted/30 border border-border flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                <ShieldCheck className="h-4 w-4 text-foreground" />
                 <span>Password encrypted with bcrypt standard</span>
               </div>
               <Badge variant="outline" className="text-[10px]">Secure</Badge>
@@ -548,8 +548,8 @@ export const ProfilePage: React.FC = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-            <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20 space-y-1">
-              <div className="flex items-center gap-1.5 text-emerald-500 font-semibold">
+            <div className="p-3 rounded-lg bg-muted/40 border border-border space-y-1">
+              <div className="flex items-center gap-1.5 text-foreground font-semibold">
                 <ShieldCheck className="h-4 w-4" />
                 <span>HMAC-SHA256</span>
               </div>

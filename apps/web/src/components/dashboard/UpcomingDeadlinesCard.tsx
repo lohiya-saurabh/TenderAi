@@ -60,7 +60,7 @@ export const UpcomingDeadlinesCard: React.FC<UpcomingDeadlinesCardProps> = ({ bi
                   key={bid.id}
                   to={`/bids/${bid.id}`}
                   className={cn(
-                    'flex items-center justify-between p-2.5 rounded-lg bg-card/60 border transition-colors hover:bg-accent/50',
+                    'flex items-center justify-between p-4 rounded-lg bg-card/60 border transition-colors hover:bg-accent/50',
                     isUrgent ? 'border-destructive/40 hover:border-destructive/60' : 'border-border'
                   )}
                 >
@@ -71,7 +71,7 @@ export const UpcomingDeadlinesCard: React.FC<UpcomingDeadlinesCardProps> = ({ bi
                     <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 truncate">
                       <span>{bid.tenderingAuthority}</span>
                       <span>•</span>
-                      <span>{bid.estimatedValueRupees ? formatCurrency(bid.estimatedValueRupees) : 'Value TBD'}</span>
+                      <span className="font-mono font-medium text-foreground">{bid.estimatedValueRupees ? formatCurrency(bid.estimatedValueRupees) : 'Value TBD'}</span>
                     </div>
                   </div>
 
@@ -95,7 +95,7 @@ export const UpcomingDeadlinesCard: React.FC<UpcomingDeadlinesCardProps> = ({ bi
                             ? '1 day left'
                             : `${bid.daysLeft} days left`}
                       </div>
-                      <div className="text-[10px] text-muted-foreground">
+                      <div className="font-mono text-[10px] text-muted-foreground">
                         {formatDate(bid.submissionDeadline!)}
                       </div>
                     </div>

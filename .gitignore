@@ -51,4 +51,5 @@ graphify-out/
 /playwright/.cache/
 /playwright/.auth/
 /e2e/screenshots/
+playwright-screenshots/
 

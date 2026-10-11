@@ -60,8 +60,8 @@ export const SourceCitationDrawer: React.FC<SourceCitationDrawerProps> = ({
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: '0.75rem 1rem',
-            backgroundColor: confidencePercent >= 85 ? 'rgba(16, 185, 129, 0.08)' : 'rgba(245, 158, 11, 0.08)',
-            border: `1px solid ${confidencePercent >= 85 ? 'rgba(16, 185, 129, 0.25)' : 'rgba(245, 158, 11, 0.25)'}`,
+            backgroundColor: confidencePercent >= 85 ? 'var(--status-pass-bg)' : 'rgba(234, 88, 12, 0.08)',
+            border: `1px solid ${confidencePercent >= 85 ? 'var(--status-pass-border)' : 'rgba(234, 88, 12, 0.25)'}`,
             borderRadius: 'var(--radius-md)',
           }}
         >
@@ -71,7 +71,7 @@ export const SourceCitationDrawer: React.FC<SourceCitationDrawerProps> = ({
                 fontSize: 'var(--text-sm)',
                 fontWeight: 700,
                 fontFamily: 'var(--font-mono)',
-                color: confidencePercent >= 85 ? 'var(--color-success)' : 'var(--color-warning)',
+                color: confidencePercent >= 85 ? 'var(--status-pass-text)' : '#ea580c',
               }}
             >
               {confidencePercent}%

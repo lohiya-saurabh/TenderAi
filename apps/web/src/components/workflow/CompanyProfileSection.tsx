@@ -63,9 +63,9 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
                 fontWeight: 600,
                 padding: '0.2rem 0.6rem',
                 borderRadius: 'var(--radius-full)',
-                backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                color: 'var(--color-success)',
-                border: '1px solid rgba(16, 185, 129, 0.3)',
+                backgroundColor: 'var(--status-pass-bg)',
+                color: 'var(--status-pass-text)',
+                border: '1px solid var(--status-pass-border)',
               }}
             >
               {profile.profileVersion}
@@ -186,8 +186,8 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
                       fontWeight: 600,
                       padding: '0.15rem 0.5rem',
                       borderRadius: 'var(--radius-sm)',
-                      backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                      color: 'var(--color-success)',
+                      backgroundColor: 'var(--status-pass-bg)',
+                      color: 'var(--status-pass-text)',
                     }}
                   >
                     CA Audited
@@ -197,7 +197,7 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
                   {formatCurrency(t.turnoverRupees)}
                 </div>
                 {t.caUdin && (
-                  <div style={{ fontSize: '0.75rem', color: 'var(--color-primary-100)', fontFamily: 'var(--font-mono)' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-surface-muted)', fontFamily: 'var(--font-mono)' }}>
                     UDIN: {t.caUdin}
                   </div>
                 )}
@@ -213,8 +213,8 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
           <div
             style={{
               padding: '0.85rem 1rem',
-              backgroundColor: 'rgba(99, 102, 241, 0.08)',
-              border: '1px solid rgba(99, 102, 241, 0.25)',
+              backgroundColor: 'rgba(234, 88, 12, 0.08)',
+              border: '1px solid rgba(234, 88, 12, 0.25)',
               borderRadius: 'var(--radius-md)',
               fontSize: '0.85rem',
               color: 'var(--color-surface-text)',
@@ -281,7 +281,7 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
                   {formatCurrency(exp.contractValueRupees)}
                 </div>
                 {exp.completionCertificateDocName && (
-                  <span style={{ fontSize: '0.75rem', color: 'var(--color-success)', backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '0.2rem 0.5rem', borderRadius: 'var(--radius-sm)', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--status-pass-text)', backgroundColor: 'var(--status-pass-bg)', border: '1px solid var(--status-pass-border)', padding: '0.2rem 0.5rem', borderRadius: 'var(--radius-sm)', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
                     <Check size={12} /> Cert Verified: {exp.completionCertificateDocName}
                   </span>
                 )}

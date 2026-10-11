@@ -120,7 +120,7 @@ export const TableRow: React.FC<TableRowProps> = ({
       className={`table-row ${isSelected ? 'table-row-selected' : ''} ${className}`}
       style={{
         borderBottom: '1px solid var(--color-surface-border)',
-        backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.08)' : 'transparent',
+        backgroundColor: isSelected ? 'rgba(234, 88, 12, 0.06)' : 'transparent',
         transition: 'background-color var(--transition-fast)',
         ...style,
       }}

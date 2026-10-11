@@ -1,5 +1,4 @@
 import React from 'react';
-import { Card } from '../common/Card.js';
 import { Button } from '../common/Button.js';
 import { CapabilityStatusBadge } from './CapabilityStatusBadge.js';
 import {
@@ -37,37 +36,24 @@ export const CapabilityItemCard: React.FC<CapabilityItemCardProps> = ({
   const daysRemaining = getDaysUntilExpiry(expiryDate);
 
   return (
-    <Card padding="md" style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+    <div className="bg-card border border-border rounded-xl p-5 shadow-xs flex flex-col gap-4 transition-colors">
       {/* Top Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
-            {typeBadge && (
-              <span
-                style={{
-                  fontSize: 'var(--text-2xs)',
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                  padding: '0.15rem 0.45rem',
-                  borderRadius: 'var(--radius-sm)',
-                  backgroundColor: 'var(--color-surface-bg)',
-                  border: '1px solid var(--color-surface-border)',
-                  color: 'var(--color-surface-muted)',
-                }}
-              >
-                {typeBadge}
-              </span>
-            )}
-            <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-surface-text)', margin: 0 }}>
-              {item.title}
-            </h3>
-          </div>
+      <div className="flex justify-between items-start flex-wrap gap-2">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {typeBadge && (
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-muted text-muted-foreground border border-border">
+              {typeBadge}
+            </span>
+          )}
+          <h3 className="text-sm font-bold text-foreground m-0">
+            {item.title}
+          </h3>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div className="flex items-center gap-2">
           <CapabilityStatusBadge status={item.status} size="sm" />
           {onEdit && (
-            <Button variant="ghost" size="sm" onClick={onEdit} style={{ fontSize: 'var(--text-2xs)', padding: '0.2rem 0.4rem' }}>
+            <Button variant="ghost" size="sm" onClick={onEdit} className="text-xs h-7 px-2">
               Edit
             </Button>
           )}
@@ -75,30 +61,16 @@ export const CapabilityItemCard: React.FC<CapabilityItemCardProps> = ({
       </div>
 
       {/* Structured Key-Value Fields Grid */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-          gap: '0.65rem 1rem',
-          backgroundColor: 'var(--color-surface-bg)',
-          padding: '0.75rem 1rem',
-          borderRadius: 'var(--radius-md)',
-          border: '1px solid var(--color-surface-border)',
-        }}
-      >
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-3 border-t border-border/70">
         {fields.map((f, idx) => (
-          <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-            <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)', fontWeight: 500 }}>
+          <div key={idx} className="flex flex-col gap-1 min-w-0">
+            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
               {f.label}
             </span>
             <span
-              style={{
-                fontSize: 'var(--text-xs)',
-                fontWeight: f.highlight ? 700 : 500,
-                color: f.highlight ? 'var(--color-primary-300)' : 'var(--color-surface-text)',
-                fontFamily: f.isMono ? 'var(--font-mono)' : 'inherit',
-                wordBreak: 'break-word',
-              }}
+              className={`text-xs ${
+                f.highlight ? 'font-bold text-foreground' : 'font-medium text-foreground'
+              } ${f.isMono ? 'font-mono' : ''} truncate break-words`}
             >
               {f.value}
             </span>
@@ -106,21 +78,15 @@ export const CapabilityItemCard: React.FC<CapabilityItemCardProps> = ({
         ))}
 
         {expiryDate && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-            <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)', fontWeight: 500 }}>
+          <div className="flex flex-col gap-1 min-w-0">
+            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
               Validity / Expiry
             </span>
-            <span
-              style={{
-                fontSize: 'var(--text-xs)',
-                fontWeight: 600,
-                color: daysRemaining !== null && daysRemaining <= 60 ? 'var(--color-warning)' : 'var(--color-surface-text)',
-              }}
-            >
+            <span className="text-xs font-semibold text-foreground">
               {expiryDate}{' '}
               {daysRemaining !== null && (
-                <span style={{ fontSize: 'var(--text-2xs)', color: daysRemaining <= 30 ? 'var(--color-danger)' : 'var(--color-warning)' }}>
-                  ({daysRemaining > 0 ? `${daysRemaining} days left` : 'Expired'})
+                <span className={`text-[11px] ${daysRemaining <= 30 ? 'text-orange-600 font-bold' : 'text-muted-foreground'}`}>
+                  ({daysRemaining > 0 ? `${daysRemaining}d left` : 'Expired'})
                 </span>
               )}
             </span>
@@ -130,48 +96,27 @@ export const CapabilityItemCard: React.FC<CapabilityItemCardProps> = ({
 
       {/* Verification Notes / Alert */}
       {item.verificationNotes && (
-        <div
-          style={{
-            fontSize: 'var(--text-xs)',
-            color: 'var(--color-warning)',
-            backgroundColor: 'rgba(245, 158, 11, 0.08)',
-            border: '1px solid rgba(245, 158, 11, 0.25)',
-            borderRadius: 'var(--radius-sm)',
-            padding: '0.4rem 0.65rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.4rem',
-          }}
-        >
-          <AlertTriangle size={14} className="shrink-0" />
+        <div className="text-xs text-orange-700 dark:text-orange-400 bg-orange-50/60 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/50 rounded-lg p-2.5 flex items-center gap-2">
+          <AlertTriangle size={14} className="shrink-0 text-orange-600 dark:text-orange-400" />
           <span>{item.verificationNotes}</span>
         </div>
       )}
 
       {/* Linked Evidence Document Footprint */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '0.5rem',
-          paddingTop: '0.35rem',
-        }}
-      >
+      <div className="flex justify-between items-center flex-wrap gap-2 pt-2 border-t border-border/60">
         {item.evidenceDocName ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <FileText size={14} className="text-muted-foreground shrink-0" />
-            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)' }}>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <FileText size={13} className="shrink-0 text-muted-foreground" />
+            <span>
               Linked Evidence:{' '}
-              <strong style={{ color: 'var(--color-surface-text)', fontFamily: 'var(--font-mono)' }}>
+              <strong className="text-foreground font-mono font-medium">
                 {item.evidenceDocName}
               </strong>
               {item.evidenceDocSize && ` (${item.evidenceDocSize})`}
             </span>
           </div>
         ) : (
-          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)', fontStyle: 'italic' }}>
+          <span className="text-xs text-muted-foreground italic">
             No evidence document linked
           </span>
         )}
@@ -181,7 +126,7 @@ export const CapabilityItemCard: React.FC<CapabilityItemCardProps> = ({
             variant="ghost"
             size="sm"
             onClick={() => onViewEvidence(item.evidenceDocName!)}
-            style={{ fontSize: 'var(--text-xs)' }}
+            className="text-xs h-7 px-2"
           >
             Inspect Document ↗
           </Button>
@@ -189,6 +134,6 @@ export const CapabilityItemCard: React.FC<CapabilityItemCardProps> = ({
       </div>
 
       {children}
-    </Card>
+    </div>
   );
 };

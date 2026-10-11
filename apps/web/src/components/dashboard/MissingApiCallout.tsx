@@ -102,7 +102,7 @@ export const MissingApiCallout: React.FC = () => {
                     className={cn(
                       "px-1.5 py-0.5 text-[10px] font-bold rounded tracking-wider",
                       endpoint.status === 'LIVE'
-                        ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                        ? "bg-muted text-foreground border border-border"
                         : "bg-muted text-muted-foreground"
                     )}
                   >

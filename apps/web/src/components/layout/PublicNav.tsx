@@ -2,10 +2,12 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth.js';
 import { Button } from '../ui/button.js';
-import { ShieldCheck, ArrowRight, Layers, FileCheck2, Cpu } from 'lucide-react';
+import { ShieldCheck, ArrowRight, Layers, FileCheck2, Cpu, Sun, Moon } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext.js';
 
 export const PublicNav: React.FC = () => {
   const { isAuthenticated } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/80 backdrop-blur-md">
@@ -57,8 +59,26 @@ export const PublicNav: React.FC = () => {
           </Link>
         </nav>
 
-        {/* Right CTA / Auth Status */}
-        <div className="flex items-center gap-3">
+        {/* Right CTA / Auth Status & Theme Switcher */}
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={toggleTheme}
+            className="h-8 px-2.5 text-xs font-semibold gap-1.5 border-border hover:bg-accent cursor-pointer transition-colors shadow-2xs"
+            aria-label={`Current theme: ${theme === 'dark' ? 'Dark' : 'Light'}. Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            title={`Current theme: ${theme === 'dark' ? 'Dark' : 'Light'}. Click to toggle`}
+          >
+            {theme === 'dark' ? (
+              <Moon className="h-3.5 w-3.5 text-orange-400" />
+            ) : (
+              <Sun className="h-3.5 w-3.5 text-amber-500" />
+            )}
+            <span className="hidden sm:inline text-xs font-mono font-medium text-foreground">
+              {theme === 'dark' ? 'Dark' : 'Light'}
+            </span>
+          </Button>
           {isAuthenticated ? (
             <Link to="/bids">
               <Button size="sm" className="gap-2 text-xs font-semibold shadow-xs">

@@ -177,104 +177,96 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
   return (
     <>
       <div
-        style={{
-          backgroundColor: 'var(--color-surface-bg)',
-          border: '1px solid var(--color-surface-border)',
-          borderRadius: 'var(--radius-lg)',
-          padding: '1rem 1.25rem',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.85rem',
-        }}
+        className="border border-border rounded-xl p-5 sm:p-6 bg-card shadow-xs flex flex-col gap-4 transition-colors"
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <ShieldCheck size={18} className="text-primary" />
-            <span style={{ fontWeight: 700, fontSize: 'var(--text-sm)', color: 'var(--color-surface-text)' }}>
+        <div className="flex justify-between items-center flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <ShieldCheck size={18} className="text-foreground" />
+            <span className="font-bold text-sm text-foreground">
               Third-Party Registry &amp; Evidence Integration Hub
             </span>
           </div>
-          <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)' }}>
+          <span className="mono text-xs text-muted-foreground">
             Authoritative Cross-Verification: IRIS IRP · MCA · Udyam · DigiLocker · Cloud Drive
           </span>
         </div>
 
         {/* Integration Status Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '0.75rem' }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
           {/* 1. IRIS IRP GSTIN */}
-          <div style={{ padding: '0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-surface-border)', backgroundColor: 'var(--color-surface-card)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-surface-text)' }}>GSTIN (IRIS IRP)</span>
+          <div className="p-4 rounded-lg border border-border bg-card shadow-2xs flex flex-col justify-between gap-3 hover:border-border-strong transition-colors">
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold text-foreground">GSTIN (IRIS IRP)</span>
               <Badge variant={isGstVerified ? 'success' : 'neutral'} size="sm">
                 {isGstVerified ? 'Verified' : 'Unverified'}
               </Badge>
             </div>
-            <p style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)', margin: 0 }}>
+            <p className="text-[11px] mono text-muted-foreground m-0 truncate">
               {company.gstin ? `ID: ${company.gstin}` : 'Validate legal business name & tax standing'}
             </p>
-            <Button variant="outline" size="sm" onClick={handleOpenGstin} style={{ alignSelf: 'flex-start', marginTop: 'auto' }}>
+            <Button variant="outline" size="sm" onClick={handleOpenGstin} className="self-start mt-auto text-xs h-7 border-border">
               {isGstVerified ? 'Re-verify GST' : 'Verify via IRIS IRP'}
             </Button>
           </div>
 
           {/* 2. MCA CIN */}
-          <div style={{ padding: '0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-surface-border)', backgroundColor: 'var(--color-surface-card)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-surface-text)' }}>MCA Master Data</span>
+          <div className="p-4 rounded-lg border border-border bg-card shadow-2xs flex flex-col justify-between gap-3 hover:border-border-strong transition-colors">
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold text-foreground">MCA Master Data</span>
               <Badge variant={isMcaVerified ? 'success' : 'neutral'} size="sm">
                 {isMcaVerified ? 'Verified' : 'Unverified'}
               </Badge>
             </div>
-            <p style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)', margin: 0 }}>
+            <p className="text-[11px] mono text-muted-foreground m-0 truncate">
               {company.cin ? `CIN: ${company.cin}` : 'Cross-check RoC jurisdiction & incorporation'}
             </p>
-            <Button variant="outline" size="sm" onClick={handleOpenMca} style={{ alignSelf: 'flex-start', marginTop: 'auto' }}>
+            <Button variant="outline" size="sm" onClick={handleOpenMca} className="self-start mt-auto text-xs h-7 border-border">
               {isMcaVerified ? 'Re-check MCA' : 'Verify MCA CIN'}
             </Button>
           </div>
 
           {/* 3. MSME Udyam */}
-          <div style={{ padding: '0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-surface-border)', backgroundColor: 'var(--color-surface-card)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-surface-text)' }}>MSME Udyam</span>
+          <div className="p-4 rounded-lg border border-border bg-card shadow-2xs flex flex-col justify-between gap-3 hover:border-border-strong transition-colors">
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold text-foreground">MSME Udyam</span>
               <Badge variant={isUdyamVerified ? 'success' : 'neutral'} size="sm">
                 {isUdyamVerified ? 'Verified' : 'Unverified'}
               </Badge>
             </div>
-            <p style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)', margin: 0 }}>
+            <p className="text-[11px] mono text-muted-foreground m-0 truncate">
               {company.udyamId ? `Udyam: ${company.udyamId}` : 'Unlock statutory EMD exemption & fee waiver'}
             </p>
-            <Button variant="outline" size="sm" onClick={handleOpenUdyam} style={{ alignSelf: 'flex-start', marginTop: 'auto' }}>
+            <Button variant="outline" size="sm" onClick={handleOpenUdyam} className="self-start mt-auto text-xs h-7 border-border">
               {isUdyamVerified ? 'Re-check Udyam' : 'Verify MSME Udyam'}
             </Button>
           </div>
 
           {/* 4. DigiLocker */}
-          <div style={{ padding: '0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-surface-border)', backgroundColor: 'var(--color-surface-card)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-surface-text)' }}>DigiLocker Depository</span>
+          <div className="p-4 rounded-lg border border-border bg-card shadow-2xs flex flex-col justify-between gap-3 hover:border-border-strong transition-colors">
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold text-foreground">DigiLocker Depository</span>
               <Badge variant={isDigiLockerLinked ? 'success' : 'neutral'} size="sm">
                 {isDigiLockerLinked ? 'Connected' : 'Not Linked'}
               </Badge>
             </div>
-            <p style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)', margin: 0 }}>
+            <p className="text-[11px] mono text-muted-foreground m-0 truncate">
               {isDigiLockerLinked ? 'Pulling official signed certificates' : 'Import digitally signed government docs'}
             </p>
-            <Button variant="outline" size="sm" onClick={handleOpenDigiLocker} style={{ alignSelf: 'flex-start', marginTop: 'auto' }}>
+            <Button variant="outline" size="sm" onClick={handleOpenDigiLocker} className="self-start mt-auto text-xs h-7 border-border">
               {isDigiLockerLinked ? 'Sync DigiLocker' : 'Connect DigiLocker'}
             </Button>
           </div>
 
           {/* 5. Cloud Drive Import */}
-          <div style={{ padding: '0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-surface-border)', backgroundColor: 'var(--color-surface-card)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-surface-text)' }}>Cloud Storage Import</span>
+          <div className="p-4 rounded-lg border border-border bg-card shadow-2xs flex flex-col justify-between gap-3 hover:border-border-strong transition-colors">
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold text-foreground">Cloud Storage Import</span>
               <Badge variant="primary" size="sm">Drive / 365</Badge>
             </div>
-            <p style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)', margin: 0 }}>
+            <p className="text-[11px] text-muted-foreground m-0 truncate">
               Import folders from Google Drive or Microsoft OneDrive
             </p>
-            <Button variant="secondary" size="sm" onClick={handleOpenCloudImport} style={{ alignSelf: 'flex-start', marginTop: 'auto' }} icon={<CloudDownload size={14} />}>
+            <Button variant="secondary" size="sm" onClick={handleOpenCloudImport} className="self-start mt-auto text-xs h-7" icon={<CloudDownload size={13} />}>
               Import Evidence
             </Button>
           </div>
@@ -306,12 +298,12 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
             )}
 
             {successResult && (
-              <div style={{ backgroundColor: successResult.discrepancies.length > 0 ? 'rgba(245, 158, 11, 0.1)' : 'rgba(16, 185, 129, 0.1)', border: '1px solid', borderColor: successResult.discrepancies.length > 0 ? 'rgba(245, 158, 11, 0.3)' : 'rgba(16, 185, 129, 0.3)', padding: '0.75rem', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-xs)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: successResult.discrepancies.length > 0 ? 'var(--color-warning)' : 'var(--color-success)', marginBottom: '0.35rem' }}>
+              <div className="p-3 rounded-md border border-border bg-muted/40 text-xs">
+                <div className="flex items-center gap-2 font-bold text-foreground mb-1">
                   <CheckCircle2 size={16} /> {successResult.verificationStatus === 'SOURCE_VERIFIED' ? 'Verification Successful & Profile Synced!' : 'Discrepancy Detected — Flagged for Review'}
                 </div>
                 {successResult.discrepancies.map((d, i) => (
-                  <p key={i} style={{ color: 'var(--color-warning)', margin: '0.2rem 0' }}>• {d}</p>
+                  <p key={i} className="text-orange-600 dark:text-orange-400 my-0.5">• {d}</p>
                 ))}
               </div>
             )}

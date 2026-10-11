@@ -239,7 +239,7 @@ export const SignupPage: React.FC = () => {
               </Link>
             </p>
             <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground font-mono">
-              <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+              <ShieldCheck className="h-3.5 w-3.5 text-primary" />
               <span>Isolated Tenant DB &bull; DPDP Act 2023 Compliant</span>
             </div>
           </div>

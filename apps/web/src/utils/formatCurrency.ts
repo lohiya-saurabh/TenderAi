@@ -31,3 +31,22 @@ export const formatCurrency = formatINR;
 export function formatIndianNumber(n: number): string {
   return new Intl.NumberFormat('en-IN').format(n);
 }
+
+/**
+ * Format a number as compact Indian currency (e.g. "₹245.00 Cr", "₹50.00 L")
+ * Designed for executive dashboard KPI metric cards to avoid text clipping.
+ */
+export function formatCompactINR(amountRupees: number | string | null | undefined): string {
+  const num = Number(amountRupees);
+  if (!num || isNaN(num) || num <= 0) return '₹0.00 Cr';
+
+  if (num >= 10_000_000) {
+    const crores = num / 10_000_000;
+    return `₹${crores.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Cr`;
+  }
+  if (num >= 100_000) {
+    const lakhs = num / 100_000;
+    return `₹${lakhs.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} L`;
+  }
+  return formatINR(num);
+}

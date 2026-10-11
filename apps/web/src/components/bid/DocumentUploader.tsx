@@ -231,15 +231,15 @@ export const DocumentUploader: React.FC<DocumentUploaderProps> = ({
               onClick={() => setDocType(dt.value)}
               style={{
                 textAlign: 'left',
-                padding: '0.6rem 0.75rem',
+                padding: '0.65rem 0.85rem',
                 borderRadius: 'var(--radius-md)',
-                backgroundColor: docType === dt.value ? 'rgba(99, 102, 241, 0.12)' : 'var(--color-surface-bg)',
+                backgroundColor: docType === dt.value ? 'rgba(234, 88, 12, 0.08)' : 'var(--color-surface-bg)',
                 border: `1px solid ${docType === dt.value ? 'var(--color-primary-500)' : 'var(--color-surface-border)'}`,
                 cursor: isUploading ? 'default' : 'pointer',
                 transition: 'all var(--transition-fast)',
               }}
             >
-              <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: docType === dt.value ? 'var(--color-primary-300)' : 'var(--color-surface-text)' }}>
+              <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: docType === dt.value ? 'var(--color-primary-500)' : 'var(--color-surface-text)' }}>
                 {dt.label}
               </div>
               <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)', marginTop: '0.15rem' }}>
@@ -258,7 +258,7 @@ export const DocumentUploader: React.FC<DocumentUploaderProps> = ({
         onClick={() => !isUploading && fileInputRef.current?.click()}
         style={{
           border: `2px dashed ${isDragOver ? 'var(--color-primary-500)' : 'var(--color-surface-border)'}`,
-          backgroundColor: isDragOver ? 'rgba(99, 102, 241, 0.06)' : 'var(--color-surface-bg)',
+          backgroundColor: isDragOver ? 'rgba(234, 88, 12, 0.06)' : 'var(--color-surface-bg)',
           borderRadius: 'var(--radius-md)',
           padding: '2rem 1.5rem',
           textAlign: 'center',

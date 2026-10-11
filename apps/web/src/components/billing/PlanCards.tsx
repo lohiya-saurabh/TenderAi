@@ -187,7 +187,7 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
               }`}
             >
               <span>Annual Billing</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-mono">
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-600 dark:text-orange-400 font-mono border border-orange-500/25">
                 SAVE 20%
               </span>
             </button>
@@ -217,9 +217,7 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
               className={`flex flex-col justify-between relative transition-all duration-200 ${
                 isHighlighted
                   ? 'border-primary shadow-xl bg-card ring-1 ring-primary'
-                  : isBusiness
-                  ? 'border-indigo-500/40 bg-card hover:border-indigo-500/80 shadow-md'
-                  : 'border-border bg-card/70 hover:bg-card hover:border-border/90'
+                  : 'border-border bg-card hover:border-foreground/30 shadow-xs'
               }`}
             >
               {isHighlighted && (
@@ -233,7 +231,7 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
 
               {isBusiness && !isHighlighted && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 text-[10px] font-semibold uppercase tracking-wider">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-muted border border-border text-foreground text-[10px] font-semibold uppercase tracking-wider">
                     High Volume
                   </span>
                 </div>
@@ -243,9 +241,7 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
                 <div className="flex items-center justify-between">
                   <Badge
                     variant={isHighlighted ? 'default' : 'outline'}
-                    className={`text-[10px] font-mono ${
-                      isBusiness ? 'border-indigo-500/40 text-indigo-300' : ''
-                    }`}
+                    className="text-[10px] font-mono"
                   >
                     {plan.tier}
                   </Badge>
@@ -255,7 +251,7 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
                   {plan.name}
                 </CardTitle>
 
-                <CardDescription className="text-xs text-muted-foreground min-h-[36px] line-clamp-2 leading-relaxed">
+                <CardDescription className="text-xs text-muted-foreground min-h-[48px] line-clamp-3 leading-relaxed">
                   {plan.description}
                 </CardDescription>
 
@@ -274,7 +270,7 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
                           Billed annually (₹{(price * 12).toLocaleString('en-IN')} / yr)
                         </p>
                       ) : price === 0 ? (
-                        <p className="text-[10px] text-emerald-400 font-mono mt-0.5">
+                        <p className="text-[10px] text-muted-foreground font-mono mt-0.5">
                           Free forever &bull; No card required
                         </p>
                       ) : (
@@ -358,7 +354,7 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
                   <ul className="space-y-1.5 text-xs text-muted-foreground">
                     {plan.features.map((feat, idx) => (
                       <li key={idx} className="flex items-start gap-2">
-                        <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                        <Check className="h-3.5 w-3.5 text-foreground shrink-0 mt-0.5" />
                         <span className="text-[11px] leading-snug">{feat}</span>
                       </li>
                     ))}
@@ -378,12 +374,8 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
                       to={`/signup?plan=${plan.tier}&interval=${billingInterval}`}
                     >
                       <Button
-                        variant={isHighlighted ? 'default' : isBusiness ? 'secondary' : 'outline'}
-                        className={`w-full text-xs font-semibold gap-1.5 ${
-                          isBusiness
-                            ? 'bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
-                            : ''
-                        }`}
+                        variant={isHighlighted ? 'default' : 'outline'}
+                        className="w-full text-xs font-semibold gap-1.5"
                       >
                         <span>
                           {isHighlighted

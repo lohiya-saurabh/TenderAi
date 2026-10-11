@@ -26,7 +26,7 @@ export interface ReviewActionOption {
   value: ComplianceItem['status'];
   actionLabel: string;
   statusLabel: string;
-  variant: 'success' | 'danger' | 'secondary' | 'primary' | 'outline';
+  variant: 'success' | 'danger' | 'warning' | 'secondary' | 'primary' | 'outline';
   description: string;
   impact: string;
   requiresRationale: boolean;
@@ -68,7 +68,7 @@ export const REVIEW_ACTION_OPTIONS: readonly ReviewActionOption[] = [
     value: 'REVIEW_REQUIRED',
     actionLabel: 'Mark Uncertain',
     statusLabel: 'Needs Clarification',
-    variant: 'primary',
+    variant: 'warning',
     description: 'Ambiguous wording or requires legal / technical lead escalation.',
     impact: 'Keeps clause flagged for cross-functional review and pre-bid inquiry.',
     requiresRationale: true,

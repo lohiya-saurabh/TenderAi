@@ -2,7 +2,7 @@ import React from 'react';
 import { SpinnerIcon } from './Icons.js';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'success' | 'outline';
+  variant?: 'primary' | 'secondary' | 'danger' | 'warning' | 'ghost' | 'success' | 'outline';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
   icon?: React.ReactNode;
@@ -29,10 +29,10 @@ export const Button: React.FC<ButtonProps> = ({
     switch (variant) {
       case 'primary':
         return {
-          backgroundColor: 'var(--color-primary-600)',
-          color: '#ffffff',
-          border: '1px solid var(--color-primary-500)',
-          boxShadow: 'var(--shadow-xs)',
+          backgroundColor: 'var(--btn-primary-bg, var(--color-surface-text))',
+          color: 'var(--btn-primary-text, var(--color-surface-bg))',
+          border: '1px solid var(--btn-primary-bg, var(--color-surface-text))',
+          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.06)',
         };
       case 'secondary':
         return {
@@ -43,20 +43,26 @@ export const Button: React.FC<ButtonProps> = ({
       case 'outline':
         return {
           backgroundColor: 'transparent',
-          color: 'var(--color-primary-400)',
-          border: '1px solid var(--color-primary-500)',
+          color: 'var(--color-surface-text)',
+          border: '1px solid var(--color-surface-border)',
         };
       case 'danger':
         return {
           backgroundColor: 'var(--color-danger)',
           color: '#ffffff',
-          border: '1px solid var(--color-danger-hover)',
+          border: '1px solid var(--color-danger)',
+        };
+      case 'warning':
+        return {
+          backgroundColor: 'var(--status-amber-bg, rgba(234, 88, 12, 0.12))',
+          color: 'var(--status-amber-text, #fb923c)',
+          border: '1px solid var(--status-amber-border, rgba(251, 146, 60, 0.3))',
         };
       case 'success':
         return {
-          backgroundColor: 'var(--color-success)',
-          color: '#ffffff',
-          border: '1px solid var(--color-success-hover)',
+          backgroundColor: 'var(--status-pass-bg, var(--color-surface-card-subtle))',
+          color: 'var(--status-pass-text, var(--color-surface-text))',
+          border: '1px solid var(--status-pass-border, var(--color-surface-border))',
         };
       case 'ghost':
         return {

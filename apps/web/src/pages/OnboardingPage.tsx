@@ -169,7 +169,7 @@ export const OnboardingPage: React.FC = () => {
                         </div>
                         <div className="flex items-center gap-1.5">
                           {c.gstinVerifiedAt ? (
-                            <Badge variant="default" className="text-[10px] bg-emerald-600">IRIS Verified</Badge>
+                            <Badge variant="default" className="text-[10px] bg-foreground text-background">IRIS Verified</Badge>
                           ) : (
                             <Badge variant="outline" className="text-[10px]">Active Entity</Badge>
                           )}
@@ -217,7 +217,7 @@ export const OnboardingPage: React.FC = () => {
                   </div>
 
                   {gstinVerifySuccess && (
-                    <div className="text-[11px] text-emerald-600 flex items-center gap-1">
+                    <div className="text-[11px] text-primary flex items-center gap-1 font-medium">
                       <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
                       <span>{gstinVerifySuccess}</span>
                     </div>
@@ -314,7 +314,7 @@ export const OnboardingPage: React.FC = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-5">
-                <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 space-y-2 text-xs">
+                <div className="p-4 rounded-xl bg-primary/10 border border-primary/30 text-primary space-y-2 text-xs">
                   <div className="flex items-center gap-2 font-semibold">
                     <CheckCircle2 className="h-4 w-4 shrink-0" />
                     <span>Workspace &amp; Company Dossier Initialized</span>
@@ -331,13 +331,13 @@ export const OnboardingPage: React.FC = () => {
                       <span>Create New Bid</span>
                     </div>
                     <p className="text-muted-foreground text-[11px]">
-                      Upload your tender NIT or GeM bid document to start analysis.
+                       Upload your tender NIT or GeM bid document to start analysis.
                     </p>
                   </div>
 
                   <div className="p-3 rounded-lg border border-border bg-muted/20 space-y-1">
                     <div className="flex items-center gap-1.5 font-semibold text-foreground">
-                      <Briefcase className="h-4 w-4 text-emerald-500" />
+                      <Briefcase className="h-4 w-4 text-foreground" />
                       <span>Company Dossier</span>
                     </div>
                     <p className="text-muted-foreground text-[11px]">

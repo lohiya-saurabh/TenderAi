@@ -202,183 +202,105 @@ export const ComplianceTable: React.FC<ComplianceTableProps> = ({
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      {/* 1. Status Filter Tabs */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-        <StatusFilter value={statusFilter} onChange={setStatusFilter} counts={counts} />
+    <div className="flex flex-col w-full">
+      {/* 1 & 2. Unified Header Controls Toolbar */}
+      <div className="p-4 sm:p-5 border-b border-border bg-card flex flex-col gap-3.5">
+        {/* Primary Row: Status Filter Tabs & Search */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <StatusFilter value={statusFilter} onChange={setStatusFilter} counts={counts} />
 
-        {/* Search input with icons */}
-        <div style={{ position: 'relative', minWidth: '280px', flex: '1 1 auto', maxWidth: '400px' }}>
-          <div
-            style={{
-              position: 'absolute',
-              left: '0.75rem',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: 'var(--color-surface-muted)',
-              display: 'flex',
-              alignItems: 'center',
-              pointerEvents: 'none',
-            }}
-          >
-            <SearchIcon size={14} />
+          {/* Search Input */}
+          <div className="relative w-full lg:w-72 xl:w-80 shrink-0">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none flex items-center">
+              <SearchIcon size={14} />
+            </div>
+            <input
+              type="text"
+              placeholder="Search clauses, evidence, rules..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-background text-foreground border border-border rounded-lg pl-8 pr-8 py-1.5 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-foreground transition-colors"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
+                aria-label="Clear search"
+              >
+                <CloseIcon size={13} />
+              </button>
+            )}
           </div>
-          <input
-            type="text"
-            placeholder="Search requirements, clauses, evidence, rules..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{
-              width: '100%',
-              backgroundColor: 'var(--color-surface-card)',
-              color: 'var(--color-surface-text)',
-              border: '1px solid var(--color-surface-border)',
-              borderRadius: 'var(--radius-md)',
-              padding: '0.45rem 2rem 0.45rem 2.2rem',
-              fontSize: 'var(--text-xs)',
-              outline: 'none',
-              transition: 'border-color var(--transition-fast)',
-            }}
-          />
-          {searchQuery && (
+        </div>
+
+        {/* Secondary Row: Attribute Filters */}
+        <div className="flex items-center gap-2.5 flex-wrap pt-1 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1.5 font-medium text-foreground">
+            <FilterIcon size={13} />
+            <span className="text-[11px] uppercase tracking-wider font-semibold">Filter:</span>
+          </div>
+
+          {/* Category Select */}
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="bg-background text-foreground border border-border rounded-md px-2.5 py-1 text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-foreground"
+            aria-label="Filter by Category"
+          >
+            {CATEGORIES.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat === 'ALL' ? 'All Categories' : cat}
+              </option>
+            ))}
+          </select>
+
+          {/* Risk Select */}
+          <select
+            value={riskFilter}
+            onChange={(e) => setRiskFilter(e.target.value)}
+            className="bg-background text-foreground border border-border rounded-md px-2.5 py-1 text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-foreground"
+            aria-label="Filter by Risk"
+          >
+            {RISKS.map((r) => (
+              <option key={r} value={r}>
+                {r === 'ALL' ? 'All Risks' : `${r} Risk`}
+              </option>
+            ))}
+          </select>
+
+          {/* Mandatory Select */}
+          <select
+            value={mandatoryFilter}
+            onChange={(e) => setMandatoryFilter(e.target.value)}
+            className="bg-background text-foreground border border-border rounded-md px-2.5 py-1 text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-foreground"
+            aria-label="Filter by Mandatory Status"
+          >
+            {MANDATORY_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+
+          {/* Reset Filters */}
+          {hasActiveFilters && (
             <button
-              onClick={() => setSearchQuery('')}
-              style={{
-                position: 'absolute',
-                right: '0.6rem',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                color: 'var(--color-surface-muted)',
-                padding: '0.2rem',
-                display: 'flex',
-                alignItems: 'center',
-              }}
-              aria-label="Clear search"
+              type="button"
+              onClick={handleResetFilters}
+              className="text-xs text-orange-600 hover:text-orange-700 font-medium underline underline-offset-2 ml-1"
             >
-              <CloseIcon size={14} />
+              Reset filters ({filteredItems.length} of {dedupedItems.length})
             </button>
           )}
         </div>
       </div>
 
-      {/* 2. Secondary Filter Toolbar (Category, Risk, Mandatory, Reset) */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.75rem',
-          flexWrap: 'wrap',
-          padding: '0.6rem 0.85rem',
-          backgroundColor: 'var(--color-surface-card-subtle)',
-          borderRadius: 'var(--radius-md)',
-          border: '1px solid var(--color-surface-border)',
-          fontSize: 'var(--text-xs)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--color-surface-muted)', fontWeight: 600 }}>
-          <FilterIcon size={14} />
-          <span>Filters:</span>
-        </div>
-
-        {/* Category Select */}
-        <select
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
-          style={{
-            backgroundColor: 'var(--color-surface-card)',
-            color: 'var(--color-surface-text)',
-            border: '1px solid var(--color-surface-border)',
-            borderRadius: 'var(--radius-sm)',
-            padding: '0.25rem 0.5rem',
-            fontSize: 'var(--text-xs)',
-            cursor: 'pointer',
-          }}
-          aria-label="Filter by Category"
-        >
-          {CATEGORIES.map((cat) => (
-            <option key={cat} value={cat}>
-              {cat === 'ALL' ? 'All Categories' : cat}
-            </option>
-          ))}
-        </select>
-
-        {/* Risk Select */}
-        <select
-          value={riskFilter}
-          onChange={(e) => setRiskFilter(e.target.value)}
-          style={{
-            backgroundColor: 'var(--color-surface-card)',
-            color: 'var(--color-surface-text)',
-            border: '1px solid var(--color-surface-border)',
-            borderRadius: 'var(--radius-sm)',
-            padding: '0.25rem 0.5rem',
-            fontSize: 'var(--text-xs)',
-            cursor: 'pointer',
-          }}
-          aria-label="Filter by Risk"
-        >
-          {RISKS.map((r) => (
-            <option key={r} value={r}>
-              {r === 'ALL' ? 'All Risks' : `${r} Risk`}
-            </option>
-          ))}
-        </select>
-
-        {/* Mandatory Select */}
-        <select
-          value={mandatoryFilter}
-          onChange={(e) => setMandatoryFilter(e.target.value)}
-          style={{
-            backgroundColor: 'var(--color-surface-card)',
-            color: 'var(--color-surface-text)',
-            border: '1px solid var(--color-surface-border)',
-            borderRadius: 'var(--radius-sm)',
-            padding: '0.25rem 0.5rem',
-            fontSize: 'var(--text-xs)',
-            cursor: 'pointer',
-          }}
-          aria-label="Filter by Mandatory Status"
-        >
-          {MANDATORY_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-
-        {/* Reset Filters */}
-        {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={handleResetFilters}>
-            Reset Filters ({filteredItems.length} of {dedupedItems.length} items)
-          </Button>
-        )}
-      </div>
-
-      {/* 3. Table Column Headers & 4. Table Row List */}
-      <div style={{ overflowX: 'auto', width: '100%' }}>
-        <div style={{ minWidth: '1050px', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: COLUMNS.map((c) => c.width).join(' '),
-              gap: '0.75rem',
-              padding: '0.6rem 1rem',
-              backgroundColor: 'var(--color-surface-bg)',
-              border: '1px solid var(--color-surface-border)',
-              borderRadius: 'var(--radius-md)',
-              fontSize: '0.7rem',
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              color: 'var(--color-surface-muted)',
-              position: 'sticky',
-              top: 0,
-              zIndex: 10,
-            }}
-          >
+      {/* 3 & 4. Table Header and Rows */}
+      <div className="w-full overflow-x-auto scrollbar-thin">
+        <div className="min-w-[1050px]">
+          {/* Column Header Band */}
+          <div className="grid grid-cols-[30%_11%_8%_18%_13%_10%_10%] gap-3 px-5 py-3 bg-muted/40 border-b border-border text-[11px] font-mono font-bold uppercase tracking-wider text-muted-foreground sticky top-0 z-10">
             {COLUMNS.map((col) => (
               <ColumnSorter
                 key={col.key}
@@ -391,23 +313,19 @@ export const ComplianceTable: React.FC<ComplianceTableProps> = ({
           </div>
 
           {filteredItems.length === 0 ? (
-            <EmptyState
-              title="No compliance items match your filters"
-              description="Try broadening your search query or clearing the status/category filters."
-              action={
-                <Button variant="secondary" size="sm" onClick={handleResetFilters}>
-                  Clear All Filters
-                </Button>
-              }
-            />
+            <div className="py-12 px-6 flex flex-col items-center justify-center text-center">
+              <EmptyState
+                title="No compliance items match your filters"
+                description="Try broadening your search query or clearing the status/category filters."
+                action={
+                  <Button variant="secondary" size="sm" onClick={handleResetFilters}>
+                    Clear All Filters
+                  </Button>
+                }
+              />
+            </div>
           ) : (
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.5rem',
-              }}
-            >
+            <div className="divide-y divide-border/70">
               {filteredItems.map((item) => (
                 <ComplianceRow
                   key={item.id}

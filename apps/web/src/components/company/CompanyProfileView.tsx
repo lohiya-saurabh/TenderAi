@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Card } from '../common/Card.js';
 import { Button } from '../common/Button.js';
+import { Badge } from '../common/Badge.js';
 import { Modal } from '../common/Modal.js';
 import { Drawer } from '../common/Drawer.js';
 import { CapabilityStatusBadge } from './CapabilityStatusBadge.js';
@@ -44,135 +45,150 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-      {/* Search & Filter Toolbar */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '0.75rem',
-          backgroundColor: 'var(--color-surface-bg)',
-          padding: '0.65rem 1rem',
-          borderRadius: 'var(--radius-md)',
-          border: '1px solid var(--color-surface-border)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: '1 1 240px' }}>
-          <Search size={14} className="text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Search credentials, UDINs, standards, or work orders..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{
-              width: '100%',
-              backgroundColor: 'transparent',
-              border: 'none',
-              outline: 'none',
-              color: 'var(--color-surface-text)',
-              fontSize: 'var(--text-xs)',
-              fontFamily: 'inherit',
-            }}
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              style={{ background: 'none', border: 'none', color: 'var(--color-surface-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-              aria-label="Clear search"
-            >
-              <X size={14} />
-            </button>
-          )}
-        </div>
+    <div className="flex flex-col gap-6">
+      {/* Search & Filter Toolbar — only shown on credential item sections */}
+      {activeSection !== 'overview' && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1">
+          {/* Search */}
+          <div className="relative w-full sm:w-80">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search credentials, UDINs, standards..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-background text-foreground border border-border rounded-lg pl-8 pr-8 py-1.5 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-foreground transition-colors"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
+                aria-label="Clear search"
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)', fontWeight: 600 }}>
-            Filter:
-          </span>
-          {(['ALL', 'VERIFIED', 'EXPIRING_SOON', 'EXPIRED', 'NEEDS_REVIEW'] as const).map((st) => (
-            <button
-              key={st}
-              onClick={() => setFilterStatus(st)}
-              style={{
-                fontSize: 'var(--text-2xs)',
-                fontWeight: 600,
-                padding: '0.2rem 0.5rem',
-                borderRadius: 'var(--radius-sm)',
-                border: `1px solid ${filterStatus === st ? 'var(--color-primary-500)' : 'var(--color-surface-border)'}`,
-                backgroundColor: filterStatus === st ? 'rgba(99, 102, 241, 0.15)' : 'var(--color-surface-card)',
-                color: filterStatus === st ? 'var(--color-primary-300)' : 'var(--color-surface-muted)',
-                cursor: 'pointer',
-              }}
-            >
-              {st === 'ALL' ? 'All' : st.replace('_', ' ')}
-            </button>
-          ))}
+          {/* Filter Pills */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mr-1">
+              Filter:
+            </span>
+            {(['ALL', 'VERIFIED', 'EXPIRING_SOON', 'EXPIRED', 'NEEDS_REVIEW'] as const).map((st) => (
+              <button
+                key={st}
+                type="button"
+                onClick={() => setFilterStatus(st)}
+                className={`px-2.5 py-1 text-xs rounded-full border transition-colors cursor-pointer ${
+                  filterStatus === st
+                    ? 'bg-foreground text-background border-foreground font-semibold shadow-xs'
+                    : 'bg-background text-muted-foreground border-border hover:text-foreground hover:bg-muted/50 font-medium'
+                }`}
+              >
+                {st === 'ALL' ? 'All' : st.replace('_', ' ')}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ======================================================================= */}
       {/* 1. OVERVIEW SECTION */}
       {/* ======================================================================= */}
       {activeSection === 'overview' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <Card padding="lg">
-            <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--color-surface-text)', margin: '0 0 0.85rem' }}>
-              Statutory Business Profile
-            </h2>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                gap: '1rem',
-                backgroundColor: 'var(--color-surface-bg)',
-                padding: '1rem',
-                borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--color-surface-border)',
-              }}
-            >
+        <div className="flex flex-col gap-6">
+          {/* Statutory Business Profile Card */}
+          <div className="bg-card border border-border rounded-xl p-6 sm:p-7 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-5 border-b border-border/80 mb-6">
               <div>
-                <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)' }}>Legal Name</span>
-                <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-surface-text)' }}>
+                <h2 className="text-base font-bold text-foreground font-heading">
+                  Statutory Business Profile
+                </h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Authoritative enterprise credentials verified against MCA, GSTN, MSME, and public procurement registers.
+                </p>
+              </div>
+              <Badge variant="neutral" size="sm" className="font-mono self-start sm:self-auto">
+                Verified Dossier
+              </Badge>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Item 1: Legal Entity Name */}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+                  Legal Entity Name
+                </span>
+                <span className="text-sm font-semibold text-foreground leading-snug">
                   {profile.legalEntityName}
-                </div>
+                </span>
               </div>
-              <div>
-                <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)' }}>CIN Number</span>
-                <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, fontFamily: 'var(--font-mono)', color: 'var(--color-surface-text)' }}>
+
+              {/* Item 2: CIN */}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+                  CIN / Registration Number
+                </span>
+                <span className="text-sm font-mono font-semibold text-foreground">
                   {profile.cinNumber}
-                </div>
+                </span>
               </div>
-              <div>
-                <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)' }}>Incorporation Date</span>
-                <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-surface-text)' }}>
+
+              {/* Item 3: Incorporation Date */}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+                  Incorporation Date
+                </span>
+                <span className="text-sm font-semibold text-foreground">
                   {profile.incorporationDate}
+                </span>
+              </div>
+
+              {/* Item 4: MSME */}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+                  MSME Category
+                </span>
+                <div className="flex items-center gap-2">
+                  <Badge variant="neutral" size="sm" className="font-mono">
+                    {profile.msmeCategory}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    {profile.msmeType.replace('_', ' ')}
+                  </span>
                 </div>
               </div>
-              <div>
-                <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)' }}>MSME Category</span>
-                <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-success)' }}>
-                  {profile.msmeCategory} Enterprise ({profile.msmeType.replace('_', ' ')})
+
+              {/* Item 5: Debarment */}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+                  Statutory Debarment Status
+                </span>
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                  <Check size={14} className="text-foreground shrink-0" />
+                  <span>Clean / Not Debarred</span>
                 </div>
               </div>
-              <div>
-                <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)' }}>Statutory Debarment Status</span>
-                <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-success)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                  <Check size={14} /> Clean / Not Debarred by any Govt Ministry
-                </div>
-              </div>
-              <div>
-                <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)' }}>External Credit Rating</span>
-                <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-primary-300)' }}>
-                  {profile.creditRating.rating} ({profile.creditRating.agency})
-                </div>
+
+              {/* Item 6: Credit Rating */}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+                  External Credit Rating
+                </span>
+                <span className="text-sm font-semibold text-foreground">
+                  {profile.creditRating.rating}{' '}
+                  <span className="text-xs text-muted-foreground font-normal">
+                    ({profile.creditRating.agency})
+                  </span>
+                </span>
               </div>
             </div>
-          </Card>
+          </div>
 
           {/* Quick Stats Grid - Computed from Profile Data */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {(() => {
               const auditedTurnovers = profile.turnoverRecords.filter(t => t.audited && t.isUdinValidated);
               const avgTurnover = auditedTurnovers.length > 0
@@ -188,45 +204,63 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
 
               return (
                 <>
-                  <Card padding="md">
-                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)' }}>3-Year Average Turnover</span>
-                    <div style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--color-primary-300)', marginTop: '0.25rem' }}>
-                      ₹{avgTurnover} Crores
+                  <div className="bg-card border border-border rounded-xl p-5 shadow-xs flex flex-col justify-between gap-3">
+                    <div>
+                      <span className="text-xs font-medium text-muted-foreground">
+                        3-Year Average Turnover
+                      </span>
+                      <div className="text-2xl font-bold font-heading text-foreground mt-1">
+                        ₹{avgTurnover} Cr
+                      </div>
                     </div>
-                    <span style={{ fontSize: 'var(--text-2xs)', color: allVerified ? 'var(--color-success)' : 'var(--color-warning)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                      {allVerified ? <Check size={12} /> : <FileText size={12} />} {allVerified ? 'All audited with ICAI UDIN' : 'Some records pending validation'}
+                    <span className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                      {allVerified ? <Check size={13} className="text-foreground shrink-0" /> : <FileText size={13} className="shrink-0" />}
+                      <span>{allVerified ? 'All audited with ICAI UDIN' : 'Some records pending validation'}</span>
                     </span>
-                  </Card>
+                  </div>
 
-                  <Card padding="md">
-                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)' }}>Highest Single Contract Executed</span>
-                    <div style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--color-primary-300)', marginTop: '0.25rem' }}>
-                      {highestContract ? `₹${highestContract.contractValueInrCrores.toFixed(2)} Crores` : '—'}
+                  <div className="bg-card border border-border rounded-xl p-5 shadow-xs flex flex-col justify-between gap-3">
+                    <div>
+                      <span className="text-xs font-medium text-muted-foreground">
+                        Highest Single Contract
+                      </span>
+                      <div className="text-2xl font-bold font-heading text-foreground mt-1">
+                        {highestContract ? `₹${highestContract.contractValueInrCrores.toFixed(2)} Cr` : '—'}
+                      </div>
                     </div>
-                    <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)' }}>
+                    <span className="text-[11px] text-muted-foreground truncate">
                       {highestContract ? highestContract.clientName : 'No verified contracts'}
                     </span>
-                  </Card>
+                  </div>
 
-                  <Card padding="md">
-                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)' }}>Active Bank Solvency</span>
-                    <div style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--color-primary-300)', marginTop: '0.25rem' }}>
-                      {activeSolvency ? `₹${activeSolvency.solvencyLimitInrCrores.toFixed(2)} Crores` : '—'}
+                  <div className="bg-card border border-border rounded-xl p-5 shadow-xs flex flex-col justify-between gap-3">
+                    <div>
+                      <span className="text-xs font-medium text-muted-foreground">
+                        Active Bank Solvency
+                      </span>
+                      <div className="text-2xl font-bold font-heading text-foreground mt-1">
+                        {activeSolvency ? `₹${activeSolvency.solvencyLimitInrCrores.toFixed(2)} Cr` : '—'}
+                      </div>
                     </div>
-                    <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)' }}>
+                    <span className="text-[11px] text-muted-foreground truncate">
                       {activeSolvency ? activeSolvency.bankName : 'No active solvency certificate'}
                     </span>
-                  </Card>
+                  </div>
 
-                  <Card padding="md">
-                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)' }}>Evidence Documents Linked</span>
-                    <div style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--color-primary-300)', marginTop: '0.25rem' }}>
-                      {profile.evidenceVault.length} Documents
+                  <div className="bg-card border border-border rounded-xl p-5 shadow-xs flex flex-col justify-between gap-3">
+                    <div>
+                      <span className="text-xs font-medium text-muted-foreground">
+                        Evidence Documents Linked
+                      </span>
+                      <div className="text-2xl font-bold font-heading text-foreground mt-1">
+                        {profile.evidenceVault.length} Docs
+                      </div>
                     </div>
-                    <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-success)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                      <Check size={12} /> Tamper-proof hash checked
+                    <span className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                      <Check size={13} className="text-foreground shrink-0" />
+                      <span>Tamper-proof hash checked</span>
                     </span>
-                  </Card>
+                  </div>
                 </>
               );
             })()}
@@ -489,8 +523,8 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div
             style={{
-              backgroundColor: 'rgba(99, 102, 241, 0.08)',
-              border: '1px solid rgba(99, 102, 241, 0.3)',
+              backgroundColor: 'rgba(234, 88, 12, 0.08)',
+              border: '1px solid rgba(234, 88, 12, 0.25)',
               borderRadius: 'var(--radius-md)',
               padding: '0.85rem 1rem',
               fontSize: 'var(--text-xs)',
@@ -522,7 +556,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                       <span>Type: <strong>{doc.docType}</strong></span>
                       <span>Size: <strong>{(doc.fileSizeBytes / (1024 * 1024)).toFixed(2)} MB</strong></span>
                       <span>Uploaded: <strong>{new Date(doc.uploadedAt).toLocaleDateString()}</strong></span>
-                      <span>Reused across: <strong style={{ color: 'var(--color-primary-300)' }}>{doc.linkedCapabilitiesCount} Capabilities</strong></span>
+                      <span>Reused across: <strong style={{ color: 'var(--color-surface-text)' }}>{doc.linkedCapabilitiesCount} Capabilities</strong></span>
                     </div>
                     <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)', fontFamily: 'var(--font-mono)', marginTop: '0.35rem' }}>
                       SHA-256: {doc.sha256Hash}
@@ -571,14 +605,14 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
               }}
             >
               <div><strong>File Name:</strong> <span style={{ fontFamily: 'var(--font-mono)' }}>{selectedDocPreview}</span></div>
-              <div><strong>Verification Tier:</strong> <span style={{ color: 'var(--color-success)', fontWeight: 700 }}>VERIFIED (Original Scanned PDF)</span></div>
+              <div><strong>Verification Tier:</strong> <span style={{ color: 'var(--status-pass-text)', fontWeight: 700 }}>VERIFIED (Original Scanned PDF)</span></div>
               <div><strong>Cryptographic Hash:</strong> <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-2xs)' }}>e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</span></div>
             </div>
 
             {/* Document Viewer Mock Canvas */}
             <div
               style={{
-                backgroundColor: '#1a1d2e',
+                backgroundColor: 'var(--color-surface-card-subtle)',
                 border: '1px solid var(--color-surface-border)',
                 borderRadius: 'var(--radius-md)',
                 height: '350px',

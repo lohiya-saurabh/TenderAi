@@ -96,11 +96,11 @@ export const CompanyReadinessCard: React.FC = () => {
           </div>
           {activeVersion && (
             <Link to="/company-profile" className="flex items-center gap-2 group hover:opacity-80 transition-opacity">
-              <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[11px] font-medium flex items-center gap-1 cursor-pointer">
+              <Badge variant="outline" className="bg-muted text-foreground border-border text-[11px] font-medium flex items-center gap-1 cursor-pointer">
                 <CheckCircle2 className="h-3 w-3" />
                 v{activeVersion.version} Active
               </Badge>
-              <span className="text-[11px] text-muted-foreground group-hover:text-primary transition-colors hidden sm:inline font-mono">
+              <span className="text-[11px] text-muted-foreground group-hover:text-foreground transition-colors hidden sm:inline font-mono">
                 {activePayload?.company_name}
               </span>
             </Link>
@@ -138,7 +138,7 @@ export const CompanyReadinessCard: React.FC = () => {
                   <div className="text-lg font-bold text-foreground font-mono">
                     {regCount} <span className="text-xs font-normal text-muted-foreground font-sans">Active</span>
                   </div>
-                  <div className="text-[11px] text-emerald-400/90 font-medium mt-0.5 flex items-center gap-1">
+                  <div className="text-[11px] text-foreground/80 font-medium mt-0.5 flex items-center gap-1">
                     <CheckCircle2 className="h-3 w-3" />
                     GSTIN, PAN, Udyam, GeM
                   </div>

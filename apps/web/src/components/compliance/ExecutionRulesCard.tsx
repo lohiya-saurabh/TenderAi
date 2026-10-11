@@ -52,50 +52,37 @@ export const ExecutionRulesCard: React.FC<ExecutionRulesCardProps> = ({ executio
   ];
 
   return (
-    <div
-      style={{
-        backgroundColor: 'var(--color-surface-card)',
-        border: '1px solid var(--color-surface-border)',
-        borderRadius: 'var(--radius-lg)',
-        padding: '1.25rem',
-      }}
-    >
-      <h4 style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-surface-text)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-        <Landmark size={16} className="text-primary" /> Indian Tender Execution & Statutory Rules
+    <div className="border border-border/80 rounded-lg p-4 bg-muted/20">
+      <h4 className="text-xs font-bold text-foreground mb-3 flex items-center gap-1.5 uppercase tracking-wider">
+        <Landmark size={14} className="text-orange-600 dark:text-orange-400" /> Indian Tender Execution &amp; Statutory Rules
       </h4>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '0.75rem',
-        }}
-      >
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
         {items.map((item, idx) => {
           const IconComponent = item.icon;
           return (
             <div
               key={idx}
-              style={{
-                padding: '0.75rem',
-                borderRadius: 'var(--radius-md)',
-                backgroundColor: item.active ? 'rgba(99, 102, 241, 0.08)' : 'var(--color-surface-bg)',
-                border: `1px solid ${item.active ? 'rgba(99, 102, 241, 0.25)' : 'var(--color-surface-border)'}`,
-              }}
+              className={`p-3 rounded-md border transition-colors ${
+                item.active
+                  ? 'bg-card border-border shadow-2xs'
+                  : 'bg-muted/40 border-border/60'
+              }`}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.25rem' }}>
-                <IconComponent size={14} className={item.active ? 'text-primary' : 'text-muted-foreground'} />
+              <div className="flex items-center gap-1.5 mb-1">
+                <IconComponent
+                  size={14}
+                  className={item.active ? 'text-orange-600 dark:text-orange-400' : 'text-muted-foreground'}
+                />
                 <span
-                  style={{
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    color: item.active ? 'var(--color-primary-100)' : 'var(--color-surface-muted)',
-                  }}
+                  className={`text-xs font-semibold ${
+                    item.active ? 'text-foreground' : 'text-muted-foreground'
+                  }`}
                 >
                   {item.label}
                 </span>
               </div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--color-surface-muted)' }}>
+              <div className="text-[11px] text-muted-foreground leading-relaxed">
                 {item.detail}
               </div>
             </div>

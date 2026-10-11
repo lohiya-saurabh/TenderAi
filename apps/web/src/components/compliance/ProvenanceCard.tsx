@@ -27,8 +27,9 @@ export const ProvenanceCard: React.FC<ProvenanceCardProps> = ({ provenance }) =>
             fontSize: '0.75rem',
             padding: '0.2rem 0.5rem',
             borderRadius: 'var(--radius-sm)',
-            backgroundColor: confidencePercent > 80 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-            color: confidencePercent > 80 ? 'var(--color-success)' : 'var(--color-warning)',
+            backgroundColor: confidencePercent > 80 ? 'var(--status-pass-bg)' : 'rgba(234, 88, 12, 0.08)',
+            color: confidencePercent > 80 ? 'var(--status-pass-text)' : '#ea580c',
+            border: `1px solid ${confidencePercent > 80 ? 'var(--status-pass-border)' : 'rgba(234, 88, 12, 0.25)'}`,
             fontWeight: 600,
           }}
         >

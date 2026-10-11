@@ -21,7 +21,7 @@ export const PublicFooter: React.FC = () => {
               Tender Intelligence &amp; Bid Readiness SaaS purpose-built for Indian contractors, MSMEs, and public sector vendors.
             </p>
             <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-mono">
-              <Shield className="h-3.5 w-3.5 text-emerald-500" />
+              <Shield className="h-3.5 w-3.5 text-primary" />
               <span>DPDP Act 2023 &bull; GeM / CPPP Ready</span>
             </div>
           </div>
@@ -102,7 +102,7 @@ export const PublicFooter: React.FC = () => {
                 </span>
               </div>
               <div className="flex items-start gap-2">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                <CheckCircle2 className="h-3.5 w-3.5 text-foreground shrink-0 mt-0.5" />
                 <span className="text-[11px] leading-snug">
                   Deterministic audit trail for all human compliance overrides.
                 </span>

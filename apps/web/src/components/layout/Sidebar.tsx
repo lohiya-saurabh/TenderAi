@@ -10,8 +10,6 @@ import {
   ShieldLockIcon,
 } from '../common/Icons.js';
 import { cn } from '../../lib/utils.js';
-
-import { useCompany } from '../../context/CompanyContext.js';
 import { Settings as SettingsIcon } from 'lucide-react';
 
 export interface SidebarProps {
@@ -26,7 +24,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onCloseMobile,
 }) => {
   const { hasPermission } = useAuth();
-  const { selectedCompany } = useCompany();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -86,17 +83,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
       >
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-7 h-7 rounded-md bg-primary text-primary-foreground font-bold text-xs flex items-center justify-center tracking-wider shrink-0 shadow-sm">
+          <div className="w-6 h-6 rounded bg-foreground text-background font-bold text-xs flex items-center justify-center tracking-wider shrink-0 shadow-2xs">
             TP
           </div>
 
           {!isCollapsed && (
-            <div className="flex flex-col min-w-0">
-              <span className="text-xs font-bold tracking-wider text-foreground uppercase leading-tight truncate">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-sm font-bold tracking-tight text-foreground leading-tight truncate">
                 TenderPulse
               </span>
-              <span className="text-[10px] text-muted-foreground font-medium leading-tight truncate">
-                Intelligence &amp; Readiness
+              <span className="mono text-[10px] px-1.5 py-0.5 border border-border text-muted-foreground rounded bg-muted/40 font-semibold">
+                v2.4
               </span>
             </div>
           )}
@@ -116,23 +113,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Navigation items list */}
       <nav aria-label="Main Navigation" className="p-3 flex flex-col gap-1 flex-1 overflow-y-auto overflow-x-hidden no-scrollbar">
-        {/* Active Company indicator in Sidebar */}
-        {!isCollapsed && selectedCompany && (
-          <div className="mb-2 p-2 rounded-lg bg-accent/40 border border-border/80">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-6 h-6 rounded bg-primary/15 text-primary flex items-center justify-center shrink-0">
-                <BuildingOfficeIcon size={13} />
-              </div>
-              <div className="flex flex-col min-w-0">
-                <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">Active Company</span>
-                <span className="text-xs font-semibold text-foreground truncate" title={selectedCompany.legalName}>
-                  {selectedCompany.legalName}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-
         {!isCollapsed && (
           <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
             Platform
@@ -184,7 +164,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {!isCollapsed ? (
           <>
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
+              <span className="w-2 h-2 rounded-full bg-foreground inline-block" />
               <span className="text-[11px] font-semibold text-foreground tracking-wide">
                 Production v2.0
               </span>
@@ -196,7 +176,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </>
         ) : (
           <div className="flex justify-center">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" title="System Online: v2.0" />
+            <span className="w-2.5 h-2.5 rounded-full bg-foreground inline-block" title="System Online: v2.0" />
           </div>
         )}
       </div>

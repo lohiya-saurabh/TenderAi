@@ -149,7 +149,7 @@ export const CompanyProfilePage: React.FC = () => {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', paddingBottom: '3rem' }}>
+    <div className="w-full flex flex-col gap-6">
       {/* Profile Header & Health Summary */}
       <CompanyProfileHeader
         profile={profile}
