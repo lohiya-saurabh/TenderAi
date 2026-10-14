@@ -130,7 +130,7 @@ export async function coordinatedRefresh(): Promise<boolean> {
 }
 
 // In-flight GET request coalescing map to eliminate duplicate concurrent requests (e.g. StrictMode mounts)
-const inFlightGetRequests = new Map<string, Promise<ApiResult<any>>>();
+const inFlightGetRequests = new Map<string, Promise<ApiResult<unknown>>>();
 
 /**
  * Core fetch wrapper with JWT injection, 401 retry, and in-flight GET coalescing.
@@ -222,7 +222,7 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
   });
 
   if (isGet) {
-    inFlightGetRequests.set(path, execution as Promise<ApiResult<any>>);
+    inFlightGetRequests.set(path, execution as Promise<ApiResult<unknown>>);
   }
 
   return execution;

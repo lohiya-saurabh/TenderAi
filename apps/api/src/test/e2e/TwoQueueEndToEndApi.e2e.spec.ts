@@ -7,6 +7,7 @@ import { DRIZZLE_TOKEN, type DrizzleDb } from '../../common/database/database.mo
 import * as schema from '../../common/database/schema.js';
 import { eq } from 'drizzle-orm';
 import type { DocumentExtractionCompletedEvent } from '@tenderpulse/shared-types';
+import type { IngestionJobMessage } from '../../modules/bids/application/IJobQueue.js';
 
 describe('E2E Live HTTP API Verification: Two-Queue Option B Pipeline', () => {
   let app: INestApplication;
@@ -171,7 +172,7 @@ startxref
     };
     expect(uploadUrlData.documentId).toBeDefined();
     expect(uploadUrlData.storagePath).toContain(bidId);
-    const { documentId, storagePath } = uploadUrlData;
+    const { documentId } = uploadUrlData;
 
     // =========================================================================
     // STEP 4: Upload raw PDF bytes via real HTTP PUT to storage/mock upload endpoint
@@ -294,7 +295,9 @@ startxref
     };
 
     // Python worker publishes to Completion Queue
-    await runtime.completionQueue.enqueue(extractionCompletedEvent as any);
+    await runtime.completionQueue.enqueue(
+      extractionCompletedEvent as unknown as IngestionJobMessage,
+    );
 
     // Python worker acknowledges (deletes) from Ingestion Queue ONLY after verified publication
     await runtime.ingestionQueue.deleteMessage(ingestionMsg.receiptHandle);
