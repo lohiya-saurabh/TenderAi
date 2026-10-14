@@ -149,6 +149,11 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
 
+      - name: Build shared packages
+        run: |
+          npm run build -w @tenderpulse/shared-types
+          npm run build -w @tenderpulse/ui
+
       - name: TypeScript type-check across monorepo (4 workspaces)
         run: npm run type-check
 
