@@ -1,4 +1,5 @@
 import pytest
+
 from tenderpulse_ai.infrastructure.queue.consumer import (
     IngestionJobMessage,
     MockQueueConsumer,
@@ -112,6 +113,7 @@ def test_queue_consumer_factory():
 @pytest.mark.asyncio
 async def test_gcp_pubsub_queue_consumer_client_and_methods(monkeypatch):
     from unittest.mock import MagicMock
+
     from tenderpulse_ai.infrastructure.queue.consumer import GcpPubSubQueueConsumer
 
     mock_subscriber = MagicMock()
@@ -145,4 +147,3 @@ async def test_gcp_pubsub_queue_consumer_client_and_methods(monkeypatch):
         subscription="projects/test-project/subscriptions/test-sub",
         ack_ids=["receipt-123"],
     )
-

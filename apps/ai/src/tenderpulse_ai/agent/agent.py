@@ -28,7 +28,9 @@ from tenderpulse_ai.tools.retrieval import DocumentChunk, ScopedRetrievalTool
 
 logger = logging.getLogger("tenderpulse_ai.agent")
 
-RequirementsModelFn = Callable[[str, str], "list[RequirementCandidate] | Awaitable[list[RequirementCandidate]]"]
+RequirementsModelFn = Callable[
+    [str, str], "list[RequirementCandidate] | Awaitable[list[RequirementCandidate]]"
+]
 PersistenceSinkFn = Callable[[AgentOutput], "Awaitable[None] | None"]
 
 RETRIEVAL_QUERY = "eligibility EMD turnover experience stamp paper notarization validity"
@@ -49,9 +51,7 @@ class AgentModelUnavailableException(Exception):
     """Model invocation failed after all transient retry attempts."""
 
 
-def default_requirement_model(
-    system_prompt: str, user_prompt: str
-) -> list[RequirementCandidate]:
+def default_requirement_model(system_prompt: str, user_prompt: str) -> list[RequirementCandidate]:
     """Deterministic fallback model: adapts the existing regex extractor.
 
     Lets the agent run end-to-end without a live LLM (local dev, tests, CI).
@@ -65,7 +65,10 @@ def default_requirement_model(
         title_lower = item.title.lower()
         if any(k in title_lower for k in ("turnover", "experience", "personnel", "equipment")):
             kind, criticality = "ELIGIBILITY_THRESHOLD", "HARD_ELIGIBILITY"
-        elif any(k in title_lower for k in ("integrity", "conflict of interest", "make in india", "gstin")):
+        elif any(
+            k in title_lower
+            for k in ("integrity", "conflict of interest", "make in india", "gstin")
+        ):
             kind, criticality = "STATUTORY", "HARD_ELIGIBILITY"
         else:
             kind, criticality = "DOCUMENT_SUBMISSION", "SUBMISSION_MANDATORY"
@@ -141,7 +144,9 @@ class TenderRequirementAgent:
 
         # 1. Security context validation — the agent RECEIVES permissions; it never decides them.
         self._validate_security_context(sec_ctx, request.document_id)
-        record("AGENT_INVOCATION_STARTED", {"bid_id": request.bid_id, "page_count": len(request.pages)})
+        record(
+            "AGENT_INVOCATION_STARTED", {"bid_id": request.bid_id, "page_count": len(request.pages)}
+        )
 
         stats = AgentStats(pages_analyzed=len(request.pages))
 
@@ -273,7 +278,9 @@ class TenderRequirementAgent:
                 f"{sec_ctx.allowed_document_ids}"
             )
 
-    def _seed_and_retrieve(self, sec_ctx: SecurityContext, request: AgentInput) -> list[DocumentChunk]:
+    def _seed_and_retrieve(
+        self, sec_ctx: SecurityContext, request: AgentInput
+    ) -> list[DocumentChunk]:
         # Grounding substrate: seed physical page text and chunks from the request.
         # In production ScopedRetrievalTool is backed by the tenant-scoped vector store;
         # this seeding mirrors ProductionExtractionPipeline's local execution path.

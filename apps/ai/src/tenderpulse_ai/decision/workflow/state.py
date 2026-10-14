@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import operator
-from typing import Annotated, Any, Literal, TypedDict
+from typing import Annotated, Any, TypedDict
 
 from tenderpulse_ai.agent.schemas import RequirementCandidate
 from tenderpulse_ai.decision.schemas import (
@@ -22,12 +22,13 @@ from tenderpulse_ai.security.context import SecurityContext
 class BidDecisionWorkflowState(TypedDict, total=False):
     """
     Central typed state for the LangGraph Bid/No-Bid Decision Intelligence Graph.
-    
+
     Architectural Invariant:
     The verdict and eligibility criteria are computed strictly by deterministic
     evaluators; the LLM nodes only provide evidence synthesis, strategic rationale,
     and explanation grounded in structured facts.
     """
+
     # 1. Inputs & Security Context
     security_context: SecurityContext
     tender_id: str

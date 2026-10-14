@@ -1,4 +1,3 @@
-import pytest
 from tenderpulse_ai.corrigendum.diff_engine import CorrigendumDiffEngine
 from tenderpulse_ai.corrigendum.impact_analyzer import DriftImpactAnalyzer
 from tenderpulse_ai.corrigendum.models import ChangeType, DriftSeverity

@@ -1,4 +1,5 @@
 import pytest
+
 from tenderpulse_ai.security.context import SecurityContext
 from tenderpulse_ai.tools.retrieval import (
     DocumentChunk,

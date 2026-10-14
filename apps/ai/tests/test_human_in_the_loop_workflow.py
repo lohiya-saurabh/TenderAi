@@ -41,7 +41,9 @@ from tenderpulse_ai.security.context import SecurityContext
 FUTURE_DEADLINE = datetime.date(2026, 11, 20)
 
 
-def make_security_context(tenant_id: str = "org_lnt_infra", user_id: str = "usr_bid_mgr_01") -> SecurityContext:
+def make_security_context(
+    tenant_id: str = "org_lnt_infra", user_id: str = "usr_bid_mgr_01"
+) -> SecurityContext:
     return SecurityContext(
         tenant_id=tenant_id,
         user_id=user_id,
@@ -628,7 +630,9 @@ async def test_end_to_end_hitl_workflow_continuation():
         notes="Technical verification passed.",
     )
 
-    final_response = await workflow.resolve_bid_decision_async(task.task_id, payload, initial_decision)
+    final_response = await workflow.resolve_bid_decision_async(
+        task.task_id, payload, initial_decision
+    )
 
     # 6. Verify final state and audit trail
     assert final_response.verdict == BidDecisionVerdict.GO
@@ -637,7 +641,9 @@ async def test_end_to_end_hitl_workflow_continuation():
 
     audit_actions = [e["action"] for e in final_response.audit_events]
     assert "HUMAN_DECISION_APPLIED" in audit_actions
-    decision_event = next(e for e in final_response.audit_events if e["action"] == "HUMAN_DECISION_APPLIED")
+    decision_event = next(
+        e for e in final_response.audit_events if e["action"] == "HUMAN_DECISION_APPLIED"
+    )
     assert decision_event["reviewer_id"] == "usr_tech_lead"
     assert decision_event["original_ai_verdict"] == "REVIEW_REQUIRED"
     assert decision_event["final_verdict"] == "GO"

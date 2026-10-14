@@ -325,7 +325,7 @@ describe('Company Evidence & Third-Party Verification Layer', () => {
     });
 
     it('should reject forged or tampered DigiLocker state tokens', async () => {
-      const auth = await verificationService.generateDigiLockerAuth(
+      await verificationService.generateDigiLockerAuth(
         TEST_COMPANY_ID,
         'http://localhost:5173/auth/callback',
       );

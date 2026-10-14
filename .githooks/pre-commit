@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# TenderPulse AI - Git Pre-Commit Quality Gate
+# Enforces TypeScript ESLint, Type Checking, and Python Ruff before every commit.
+# ==============================================================================
+set -euo pipefail
+
+# ANSI Color Codes
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+BOLD='\033[1m'
+NC='\033[0m' # No Color
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+echo -e "${BLUE}${BOLD}================================================================${NC}"
+echo -e "${BLUE}${BOLD}🛡️  TenderPulse AI Pre-Commit Quality Enforcement Gate${NC}"
+echo -e "${BLUE}${BOLD}================================================================${NC}"
+
+# Check for staged changes
+if git diff --cached --quiet; then
+  echo -e "${YELLOW}ℹ️  No staged changes detected. Skipping checks.${NC}"
+  exit 0
+fi
+
+# 1. ESLint across all workspaces
+echo -e "\n${BOLD}[1/3] 🔍 Running ESLint across all workspaces (--max-warnings=0)...${NC}"
+if ! npm run lint; then
+  echo -e "\n${RED}❌ FAILED: ESLint reported errors or warnings!${NC}"
+  echo -e "${RED}Fix all ESLint errors/warnings above before committing.${NC}"
+  exit 1
+fi
+echo -e "${GREEN}✅ ESLint passed cleanly (0 errors, 0 warnings).${NC}"
+
+# 2. TypeScript type-check across monorepo
+echo -e "\n${BOLD}[2/3] 📐 Running TypeScript type-checking (tsc --noEmit)...${NC}"
+if ! npm run type-check; then
+  echo -e "\n${RED}❌ FAILED: TypeScript compilation errors found!${NC}"
+  echo -e "${RED}Fix all TypeScript type errors above before committing.${NC}"
+  exit 1
+fi
+echo -e "${GREEN}✅ TypeScript type-checking passed cleanly.${NC}"
+
+# 3. Python AI Engine Lint & Format check (Ruff)
+echo -e "\n${BOLD}[3/3] 🐍 Checking Python AI Engine (Ruff lint & format)...${NC}"
+RUFF_CMD=""
+if [ -x "$REPO_ROOT/.venv/bin/ruff" ]; then
+  RUFF_CMD="$REPO_ROOT/.venv/bin/ruff"
+elif command -v ruff &>/dev/null; then
+  RUFF_CMD="ruff"
+elif command -v uv &>/dev/null; then
+  RUFF_CMD="uv run --directory apps/ai ruff"
+elif [ -x "$REPO_ROOT/apps/ai/.venv/bin/ruff" ]; then
+  RUFF_CMD="$REPO_ROOT/apps/ai/.venv/bin/ruff"
+fi
+
+if [ -n "$RUFF_CMD" ]; then
+  if ! (cd "$REPO_ROOT/apps/ai" && $RUFF_CMD check . && $RUFF_CMD format --check .); then
+    echo -e "\n${RED}❌ FAILED: Python Ruff linting or formatting check failed!${NC}"
+    echo -e "${YELLOW}Run: cd apps/ai && ruff check --fix . && ruff format .${NC}"
+    exit 1
+  fi
+  echo -e "${GREEN}✅ Python Ruff checks passed cleanly.${NC}"
+else
+  # Check if Python files are staged
+  if git diff --cached --name-only | grep -E '^apps/ai/.*\.py$' >/dev/null 2>&1; then
+    echo -e "\n${RED}❌ FAILED: Python files are staged, but 'ruff' executable was not found.${NC}"
+    echo -e "${YELLOW}Please activate your virtualenv or install ruff via 'pip install ruff'.${NC}"
+    exit 1
+  else
+    echo -e "${YELLOW}⚠️  Ruff not found in environment, but no Python files staged. Skipping.${NC}"
+  fi
+fi
+
+echo -e "\n${GREEN}${BOLD}================================================================${NC}"
+echo -e "${GREEN}${BOLD}✅ All pre-commit quality checks passed! Proceeding with commit.${NC}"
+echo -e "${GREEN}${BOLD}================================================================${NC}\n"
+exit 0

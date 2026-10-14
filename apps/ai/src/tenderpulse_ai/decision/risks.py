@@ -72,7 +72,9 @@ class CommercialRiskAnalyzer:
         # 3. Liquidated Damages & Penalty Clauses
         for r in requirements:
             text_lower = f"{r.title} {r.description}".lower()
-            if any(k in text_lower for k in ("liquidated damages", "penalty", "delay compensation")):
+            if any(
+                k in text_lower for k in ("liquidated damages", "penalty", "delay compensation")
+            ):
                 risks.append(
                     RiskItem(
                         title="Onerous Liquidated Damages Terms",

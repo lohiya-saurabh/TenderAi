@@ -76,12 +76,16 @@ class StructuredLLMClient:
         self.secrets_detected = secret_found
 
         if secret_found:
-            logger.warning("[AI Security] Sensitive secret or token detected in prompt! Redacting before model dispatch.")
+            logger.warning(
+                "[AI Security] Sensitive secret or token detected in prompt! Redacting before model dispatch."
+            )
 
         # 2. Transient Failure Simulation / Retry Handling
         if self._current_attempts < self.fail_count_before_success:
             self._current_attempts += 1
-            raise RuntimeError(f"Transient model provider failure (Attempt {self._current_attempts})")
+            raise RuntimeError(
+                f"Transient model provider failure (Attempt {self._current_attempts})"
+            )
 
         # 3. Live LLM Gateway Extraction (when configured and circuit is intact)
         if self.live_client is not None and not self._live_circuit_broken:

@@ -19,7 +19,11 @@ class JSONLogFormatter(logging.Formatter):
     def __init__(self, service_name: str = "fastapi", environment: str | None = None) -> None:
         super().__init__()
         self.service_name = service_name
-        self.environment = environment or os.environ.get("ENVIRONMENT") or os.environ.get("NODE_ENV", "development")
+        self.environment = (
+            environment
+            or os.environ.get("ENVIRONMENT")
+            or os.environ.get("NODE_ENV", "development")
+        )
 
     def _map_level(self, levelname: str) -> str:
         upper = levelname.upper()
@@ -30,9 +34,7 @@ class JSONLogFormatter(logging.Formatter):
         return upper
 
     def format(self, record: logging.LogRecord) -> str:
-        timestamp = datetime.datetime.fromtimestamp(
-            record.created, tz=datetime.UTC
-        ).isoformat()
+        timestamp = datetime.datetime.fromtimestamp(record.created, tz=datetime.UTC).isoformat()
 
         context = get_logging_context()
 

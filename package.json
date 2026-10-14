@@ -12,7 +12,8 @@
     "dev:api": "npm run dev -w @tenderpulse/api",
     "dev:web": "npm run dev -w @tenderpulse/web",
     "build": "npm run build --workspaces --if-present",
-    "type-check": "npm run type-check --workspaces --if-present",
+    "build:shared": "npm run build -w @tenderpulse/shared-types && npm run build -w @tenderpulse/ui",
+    "type-check": "npm run build:shared && npm run type-check --workspaces --if-present",
     "test": "vitest run tests/ && npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "format": "prettier --write .",
@@ -20,7 +21,9 @@
     "db:wipe": "node --env-file=.env scripts/wipe-data.js",
     "db:seed": "node --env-file=.env scripts/seed-data.js",
     "db:status": "node scripts/db-status.js",
-    "db:query": "node scripts/db-query.js"
+    "db:query": "node scripts/db-query.js",
+    "prepare": "bash scripts/install-git-hooks.sh || true",
+    "precommit": "bash .githooks/pre-commit"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

@@ -1,4 +1,5 @@
 import datetime
+
 from tenderpulse_ai.corrigendum.models import (
     ChangeType,
     ClauseChange,
@@ -45,30 +46,44 @@ class DriftImpactAnalyzer:
                     )
                 else:
                     adverse_signals += 1
-                    action_items.append(f"Submission deadline updated: {change.clause_reference}. Accelerate Packet 1 preparation.")
+                    action_items.append(
+                        f"Submission deadline updated: {change.clause_reference}. Accelerate Packet 1 preparation."
+                    )
 
             # Analyze Financial Criteria Changes
             elif change.category == "FINANCIAL":
                 if "reduced" in text_lower or "relaxed" in text_lower:
                     favorable_signals += 1
-                    action_items.append("Financial criteria relaxed: Re-evaluate qualification margin against company turnover records.")
+                    action_items.append(
+                        "Financial criteria relaxed: Re-evaluate qualification margin against company turnover records."
+                    )
                 elif "increased" in text_lower or "raised" in text_lower:
                     adverse_signals += 1
-                    action_items.append("CRITICAL: Financial criteria increased. Verify whether company still satisfies minimum threshold.")
+                    action_items.append(
+                        "CRITICAL: Financial criteria increased. Verify whether company still satisfies minimum threshold."
+                    )
                 else:
-                    action_items.append("Financial clause amended: Confirm compliance with statutory auditor.")
+                    action_items.append(
+                        "Financial clause amended: Confirm compliance with statutory auditor."
+                    )
 
             # Analyze Securities / EMD Changes
             elif change.category == "SECURITIES":
                 if "exempted" in text_lower or "waived" in text_lower:
                     favorable_signals += 1
-                    action_items.append("EMD waiver detected: Attach valid Udyam / NSIC certificate in lieu of EMD deposit.")
+                    action_items.append(
+                        "EMD waiver detected: Attach valid Udyam / NSIC certificate in lieu of EMD deposit."
+                    )
                 else:
-                    action_items.append("EMD/PBG terms amended: Review revised format and bank guarantee tenure.")
+                    action_items.append(
+                        "EMD/PBG terms amended: Review revised format and bank guarantee tenure."
+                    )
 
             # Statutory Execution
             elif change.category == "STATUTORY_EXECUTION":
-                action_items.append(f"Execution rule amended ({change.clause_reference}): Procure updated stamp paper/notarization as specified.")
+                action_items.append(
+                    f"Execution rule amended ({change.clause_reference}): Procure updated stamp paper/notarization as specified."
+                )
 
         # Determine Overall Impact
         if adverse_signals > favorable_signals:

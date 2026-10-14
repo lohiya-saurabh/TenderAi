@@ -1,4 +1,3 @@
-
 from tenderpulse_ai.security.context import SecurityContext
 from tenderpulse_ai.security.exceptions import UnauthorizedDocumentAccessException
 
@@ -8,6 +7,7 @@ class PageTextTool:
     Retrieves physical page text from verified document storage for deterministic
     verbatim substring verification.
     """
+
     def __init__(self):
         # Key: "{tenant_id}:{document_id}:{page_number}" -> raw page text
         self._pages: dict[str, str] = {}

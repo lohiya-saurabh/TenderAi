@@ -94,7 +94,9 @@ class OemAuthEntry(BaseModel):
 class StaffEntry(BaseModel):
     entry_id: str = Field(..., min_length=1)
     name: str = Field(..., min_length=1)
-    role: str = Field(..., min_length=1)  # e.g. "Project Manager", "Safety Officer", "Civil Engineer"
+    role: str = Field(
+        ..., min_length=1
+    )  # e.g. "Project Manager", "Safety Officer", "Civil Engineer"
     qualification: str = Field(..., min_length=1)
     experience_years: int = Field(..., ge=0)
     evidence_document_id: str = Field(..., min_length=1)

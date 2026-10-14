@@ -24,45 +24,47 @@ async def test_openai_compatible_client_parses_valid_json_response():
             {
                 "message": {
                     "role": "assistant",
-                    "content": json.dumps({
-                        "candidates": [
-                            {
-                                "category": "FINANCIAL",
-                                "title": "Earnest Money Deposit (EMD)",
-                                "description": "INR 10,00,000 required on non-judicial stamp paper.",
-                                "execution_rules": {
-                                    "stamp_paper_required": True,
-                                    "stamp_paper_denomination_inr": 100,
-                                    "notarization_required": False,
-                                    "udin_required": False,
-                                    "signing_authority_rank": "Authorized Signatory",
+                    "content": json.dumps(
+                        {
+                            "candidates": [
+                                {
+                                    "category": "FINANCIAL",
+                                    "title": "Earnest Money Deposit (EMD)",
+                                    "description": "INR 10,00,000 required on non-judicial stamp paper.",
+                                    "execution_rules": {
+                                        "stamp_paper_required": True,
+                                        "stamp_paper_denomination_inr": 100,
+                                        "notarization_required": False,
+                                        "udin_required": False,
+                                        "signing_authority_rank": "Authorized Signatory",
+                                    },
+                                    "provenance": {
+                                        "page_number": 1,
+                                        "clause_reference": "Section 1.1",
+                                        "verbatim_quote": "The bidder must submit Bid Security / Earnest Money Deposit (EMD) of INR 10,00,000 on a non-judicial stamp paper.",
+                                        "confidence_score": 0.98,
+                                    },
                                 },
-                                "provenance": {
-                                    "page_number": 1,
-                                    "clause_reference": "Section 1.1",
-                                    "verbatim_quote": "The bidder must submit Bid Security / Earnest Money Deposit (EMD) of INR 10,00,000 on a non-judicial stamp paper.",
-                                    "confidence_score": 0.98,
+                                {
+                                    "category": "LEGAL",
+                                    "title": "Power of Attorney",
+                                    "description": "PoA in favor of lead member.",
+                                    "execution_rules": {
+                                        "stamp_paper_required": True,
+                                        "stamp_paper_denomination_inr": 500,
+                                        "notarization_required": True,
+                                        "udin_required": False,
+                                    },
+                                    "provenance": {
+                                        "page_number": 1,
+                                        "clause_reference": "Section 1.2",
+                                        "verbatim_quote": "Power of Attorney executed on non-judicial stamp paper in favor of lead member of consortium.",
+                                        "confidence_score": 0.95,
+                                    },
                                 },
-                            },
-                            {
-                                "category": "LEGAL",
-                                "title": "Power of Attorney",
-                                "description": "PoA in favor of lead member.",
-                                "execution_rules": {
-                                    "stamp_paper_required": True,
-                                    "stamp_paper_denomination_inr": 500,
-                                    "notarization_required": True,
-                                    "udin_required": False,
-                                },
-                                "provenance": {
-                                    "page_number": 1,
-                                    "clause_reference": "Section 1.2",
-                                    "verbatim_quote": "Power of Attorney executed on non-judicial stamp paper in favor of lead member of consortium.",
-                                    "confidence_score": 0.95,
-                                },
-                            },
-                        ]
-                    }),
+                            ]
+                        }
+                    ),
                 }
             }
         ]
@@ -163,17 +165,28 @@ async def test_openai_compatible_client_retries_transient_error():
                 "choices": [
                     {
                         "message": {
-                            "content": json.dumps({
-                                "candidates": [
-                                    {
-                                        "category": "STATUTORY",
-                                        "title": "Integrity Pact",
-                                        "description": "Signed Integrity Pact required.",
-                                        "execution_rules": {"stamp_paper_required": False, "notarization_required": False, "udin_required": False},
-                                        "provenance": {"page_number": 3, "clause_reference": "Section 3", "verbatim_quote": "Integrity Pact duly signed", "confidence_score": 0.95},
-                                    }
-                                ]
-                            })
+                            "content": json.dumps(
+                                {
+                                    "candidates": [
+                                        {
+                                            "category": "STATUTORY",
+                                            "title": "Integrity Pact",
+                                            "description": "Signed Integrity Pact required.",
+                                            "execution_rules": {
+                                                "stamp_paper_required": False,
+                                                "notarization_required": False,
+                                                "udin_required": False,
+                                            },
+                                            "provenance": {
+                                                "page_number": 3,
+                                                "clause_reference": "Section 3",
+                                                "verbatim_quote": "Integrity Pact duly signed",
+                                                "confidence_score": 0.95,
+                                            },
+                                        }
+                                    ]
+                                }
+                            )
                         }
                     }
                 ]
@@ -205,7 +218,9 @@ async def test_structured_llm_client_falls_back_to_deterministic_extractor_on_li
                     category="FINANCIAL",
                     title="Fallback EMD",
                     description="Extracted via fallback deterministic rules",
-                    execution_rules=ExecutionRulesProps(stamp_paper_required=True, stamp_paper_denomination_inr=100),
+                    execution_rules=ExecutionRulesProps(
+                        stamp_paper_required=True, stamp_paper_denomination_inr=100
+                    ),
                     provenance=ProvenanceProps(
                         source_document_id="doc-test",
                         source_file_name="test.pdf",
@@ -229,14 +244,18 @@ async def test_structured_llm_client_falls_back_to_deterministic_extractor_on_li
 
 @pytest.mark.asyncio
 async def test_deterministic_validator_rejects_hallucinated_llm_quote():
-    raw_page_text = "The Bidder must submit an Earnest Money Deposit of INR 10,00,000 on a stamp paper."
+    raw_page_text = (
+        "The Bidder must submit an Earnest Money Deposit of INR 10,00,000 on a stamp paper."
+    )
 
     # Model hallucinates a quote not present in the document
     hallucinated_candidate = CandidateComplianceItem(
         category="FINANCIAL",
         title="Hallucinated Performance Guarantee",
         description="PBG of INR 50,00,000 required.",
-        execution_rules=ExecutionRulesProps(stamp_paper_required=True, stamp_paper_denomination_inr=100),
+        execution_rules=ExecutionRulesProps(
+            stamp_paper_required=True, stamp_paper_denomination_inr=100
+        ),
         provenance=ProvenanceProps(
             source_document_id="doc-test",
             source_file_name="test.pdf",

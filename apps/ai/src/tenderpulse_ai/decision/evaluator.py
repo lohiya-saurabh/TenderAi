@@ -117,7 +117,10 @@ class DeterministicEligibilityEvaluator:
                 )
 
             # Factor 3: Past Project Experience
-            elif any(k in title_lower or k in desc_lower for k in ("experience", "similar work", "past project")):
+            elif any(
+                k in title_lower or k in desc_lower
+                for k in ("experience", "similar work", "past project")
+            ):
                 cls._evaluate_experience(
                     company=company,
                     req=req,
@@ -130,7 +133,9 @@ class DeterministicEligibilityEvaluator:
                 )
 
             # Factor 5: Certifications
-            elif any(k in title_lower or k in desc_lower for k in ("iso", "cmmi", "certification", "bis")):
+            elif any(
+                k in title_lower or k in desc_lower for k in ("iso", "cmmi", "certification", "bis")
+            ):
                 cls._evaluate_certifications(
                     company=company,
                     req=req,
@@ -143,7 +148,10 @@ class DeterministicEligibilityEvaluator:
                 )
 
             # Factor 6: OEM Authorization
-            elif any(k in title_lower or k in desc_lower for k in ("oem", "maf", "manufacturer authorization")):
+            elif any(
+                k in title_lower or k in desc_lower
+                for k in ("oem", "maf", "manufacturer authorization")
+            ):
                 cls._evaluate_oem(
                     company=company,
                     req=req,
@@ -156,7 +164,10 @@ class DeterministicEligibilityEvaluator:
                 )
 
             # Factor 7: Staffing / Key Personnel
-            elif any(k in title_lower or k in desc_lower for k in ("personnel", "staff", "engineer", "project manager")):
+            elif any(
+                k in title_lower or k in desc_lower
+                for k in ("personnel", "staff", "engineer", "project manager")
+            ):
                 cls._evaluate_staffing(
                     company=company,
                     req=req,
@@ -168,7 +179,10 @@ class DeterministicEligibilityEvaluator:
                 )
 
             # Factor 8: Equipment & Machinery
-            elif any(k in title_lower or k in desc_lower for k in ("equipment", "machinery", "plant", "tools")):
+            elif any(
+                k in title_lower or k in desc_lower
+                for k in ("equipment", "machinery", "plant", "tools")
+            ):
                 cls._evaluate_equipment(
                     company=company,
                     req=req,
@@ -180,7 +194,10 @@ class DeterministicEligibilityEvaluator:
                 )
 
             # Factor 9: Mandatory Execution & Security Rules (EMD, Stamp Paper, Notarization)
-            elif any(k in title_lower or k in desc_lower for k in ("earnest money", "emd", "bid security", "stamp paper")):
+            elif any(
+                k in title_lower or k in desc_lower
+                for k in ("earnest money", "emd", "bid security", "stamp paper")
+            ):
                 cls._evaluate_mandatory_submission(
                     req=req,
                     reasons_to_pursue=reasons_to_pursue,
@@ -394,7 +411,9 @@ class DeterministicEligibilityEvaluator:
             tender_page_number=req.provenance.page_number,
             tender_verbatim_quote=req.provenance.verbatim_quote,
             company_entry_id=qualifying_projects[0].entry_id if qualifying_projects else None,
-            company_evidence_ref=qualifying_projects[0].evidence_document_id if qualifying_projects else None,
+            company_evidence_ref=qualifying_projects[0].evidence_document_id
+            if qualifying_projects
+            else None,
         )
         evidence_citations.append(citation)
 
@@ -447,7 +466,9 @@ class DeterministicEligibilityEvaluator:
         title_lower = req.title.lower()
         desc_lower = req.description.lower()
         active_certs = [
-            c for c in company.certifications if c.valid_to is None or c.valid_to >= submission_deadline
+            c
+            for c in company.certifications
+            if c.valid_to is None or c.valid_to >= submission_deadline
         ]
 
         def matches_cert(cert_std: str, title: str, desc: str) -> bool:
@@ -516,9 +537,7 @@ class DeterministicEligibilityEvaluator:
         reasons_not_to_pursue: list[DecisionReason],
         evidence_citations: list[EvidenceCitation],
     ) -> None:
-        active_oems = [
-            o for o in company.oem_authorizations if o.valid_to >= submission_deadline
-        ]
+        active_oems = [o for o in company.oem_authorizations if o.valid_to >= submission_deadline]
 
         citation = EvidenceCitation(
             tender_requirement_title=req.title,
@@ -620,7 +639,9 @@ class DeterministicEligibilityEvaluator:
             tender_page_number=req.provenance.page_number,
             tender_verbatim_quote=req.provenance.verbatim_quote,
             company_entry_id=company.equipment[0].entry_id if company.equipment else None,
-            company_evidence_ref=company.equipment[0].evidence_document_id if company.equipment else None,
+            company_evidence_ref=company.equipment[0].evidence_document_id
+            if company.equipment
+            else None,
         )
         evidence_citations.append(citation)
 

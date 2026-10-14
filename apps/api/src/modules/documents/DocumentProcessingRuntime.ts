@@ -246,7 +246,7 @@ export class DocumentProcessingRuntime implements OnModuleInit, OnModuleDestroy 
               `Malformed completion message missing required identifiers (documentId, bidId, or organizationId): ${JSON.stringify(event)}`,
             );
             await this.completionQueue.moveToDeadLetter(
-              event as any,
+              event as unknown as IngestionJobMessage,
               'Malformed completion message missing documentId, bidId, or organizationId.',
               receiveCount,
             );
@@ -277,7 +277,7 @@ export class DocumentProcessingRuntime implements OnModuleInit, OnModuleDestroy 
 
           if (receiveCount >= MAX_PROCESSING_ATTEMPTS) {
             await this.completionQueue.moveToDeadLetter(
-              event as any,
+              event as unknown as IngestionJobMessage,
               `Exceeded max attempts (${MAX_PROCESSING_ATTEMPTS}): ${errorMessage}`,
               receiveCount,
             );

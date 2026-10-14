@@ -244,4 +244,3 @@ class TestDualSinkLoggingAndTruncation:
             assert (tmp_path / "test_ai.log.1").exists()
         finally:
             test_logger.removeHandler(handler)
-

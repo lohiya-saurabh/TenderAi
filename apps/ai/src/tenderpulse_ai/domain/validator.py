@@ -49,11 +49,24 @@ class DeterministicValidator:
         referenced_clause_exists = True
         tree_clause_numbers = {n.number for n in tree.nodes}
         for ref in context.referenced_clauses:
-            ref_num = re.sub(r"^(Clause|Sub-Clause|Section|Article|Part|Schedule|Annexure|Appendix)\s*[-–—]?\s*", "", ref, flags=re.IGNORECASE)
-            ref_in_text = ref.lower() in clause_text.lower() or ref_num.lower() in clause_text.lower()
-            if not ref_in_text and ref_num not in tree_clause_numbers and ref not in tree_clause_numbers:
+            ref_num = re.sub(
+                r"^(Clause|Sub-Clause|Section|Article|Part|Schedule|Annexure|Appendix)\s*[-–—]?\s*",
+                "",
+                ref,
+                flags=re.IGNORECASE,
+            )
+            ref_in_text = (
+                ref.lower() in clause_text.lower() or ref_num.lower() in clause_text.lower()
+            )
+            if (
+                not ref_in_text
+                and ref_num not in tree_clause_numbers
+                and ref not in tree_clause_numbers
+            ):
                 referenced_clause_exists = False
-                discrepancies.append(f"Referenced clause '{ref}' does not exist in document structure.")
+                discrepancies.append(
+                    f"Referenced clause '{ref}' does not exist in document structure."
+                )
                 score_penalty += 0.15
 
         # 3. Number Preservation Check
@@ -65,27 +78,37 @@ class DeterministicValidator:
         for num in quote_numbers:
             if num not in clause_numbers:
                 numbers_preserved = False
-                discrepancies.append(f"Number/amount '{num}' in verbatim quote not found in clause text.")
+                discrepancies.append(
+                    f"Number/amount '{num}' in verbatim quote not found in clause text."
+                )
                 score_penalty += 0.20
 
         # 4. SHALL/MUST Interpretation Check
         shall_must_correct = True
         if ("shall not" in clause_text.lower() or "must not" in clause_text.lower()) and (
-            "prohibited" not in item.description.lower() and "not allowed" not in item.description.lower()
+            "prohibited" not in item.description.lower()
+            and "not allowed" not in item.description.lower()
         ):
             shall_must_correct = False
-            discrepancies.append("Clause contains prohibition ('shall not'/'must not') but item description sounds affirmative.")
+            discrepancies.append(
+                "Clause contains prohibition ('shall not'/'must not') but item description sounds affirmative."
+            )
             score_penalty += 0.30
 
         # 5. Exception Preservation Check
         exceptions_retained = True
         if (
-            any(kw in clause_text.lower() for kw in ["except", "unless", "provided that", "subject to"])
+            any(
+                kw in clause_text.lower()
+                for kw in ["except", "unless", "provided that", "subject to"]
+            )
             and "except" not in item.description.lower()
             and "unless" not in item.description.lower()
         ):
             exceptions_retained = False
-            discrepancies.append("Clause contains conditional exception ('except'/'unless') that may be missing from description.")
+            discrepancies.append(
+                "Clause contains conditional exception ('except'/'unless') that may be missing from description."
+            )
             score_penalty += 0.10
 
         final_score = max(0.0, min(1.0, 1.0 - score_penalty))

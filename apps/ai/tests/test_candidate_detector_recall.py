@@ -10,7 +10,9 @@ from tenderpulse_ai.domain.models import (
 )
 
 
-def _build_test_document(blocks_data: list[tuple[str, int, str]]) -> tuple[DoclingParsedDocument, DocumentStructureTree]:
+def _build_test_document(
+    blocks_data: list[tuple[str, int, str]],
+) -> tuple[DoclingParsedDocument, DocumentStructureTree]:
     """Helper to construct a DoclingParsedDocument and DocumentStructureTree.
     blocks_data: [(block_id, page_no, text), ...]
     """
@@ -57,7 +59,9 @@ class TestCandidateDetectorRecall:
         candidate_texts = [c.text for c in candidates]
         assert "Submit EMD." in candidate_texts, "Short 'Submit EMD.' was silently discarded!"
         assert "Must sign." in candidate_texts, "Short 'Must sign.' was silently discarded!"
-        assert "₹5,00,000" in candidate_texts, "Short numerical currency '₹5,00,000' in requirement section was silently discarded!"
+        assert "₹5,00,000" in candidate_texts, (
+            "Short numerical currency '₹5,00,000' in requirement section was silently discarded!"
+        )
 
         # Random text without candidate signals is retained in unselected for the Rescue Pass
         unselected_texts = [u.text for u in unselected]
@@ -103,11 +107,7 @@ class TestCandidateDetectorRecall:
             in candidate_texts
         )
 
-        debarred_cand = next(
-            c
-            for c in candidates
-            if "debarred list" in c.text
-        )
+        debarred_cand = next(c for c in candidates if "debarred list" in c.text)
         assert "ELIGIBILITY_RESTRICTION" in debarred_cand.matched_rules
         assert debarred_cand.priority_score >= 0.85
 
@@ -170,7 +170,9 @@ class TestCandidateDetectorRecall:
 
         # Operative clauses on each page must be retained
         assert "The bidder shall submit an EMD of INR 10,00,000." in candidate_texts
-        assert "Liquidated damages of 0.1% per day shall apply for milestone delay." in candidate_texts
+        assert (
+            "Liquidated damages of 0.1% per day shall apply for milestone delay." in candidate_texts
+        )
         assert "Contractor must maintain All-Risk Project Insurance." in candidate_texts
 
     def test_candidate_recall_benchmark_exceeds_98_percent(self):
@@ -188,10 +190,7 @@ class TestCandidateDetectorRecall:
             "Rectification of potholes within 24 hours under Schedule-K level of service.",
         ]
 
-        blocks_data = [
-            (f"b_{i+1}", 1, clause)
-            for i, clause in enumerate(ground_truth_clauses)
-        ]
+        blocks_data = [(f"b_{i + 1}", 1, clause) for i, clause in enumerate(ground_truth_clauses)]
         doc, tree = _build_test_document(blocks_data)
         detector = CandidateDetector()
         candidates = detector.detect_candidates(doc, tree)
@@ -200,13 +199,19 @@ class TestCandidateDetectorRecall:
         detected_count = sum(1 for clause in ground_truth_clauses if clause in candidate_texts)
         candidate_recall = detected_count / len(ground_truth_clauses)
 
-        assert candidate_recall >= 0.98, f"Candidate Recall was {candidate_recall:.2%}, expected >= 98.00%!"
+        assert candidate_recall >= 0.98, (
+            f"Candidate Recall was {candidate_recall:.2%}, expected >= 98.00%!"
+        )
         assert detected_count == len(ground_truth_clauses)
 
     @pytest.mark.asyncio
     async def test_two_tier_rescue_pass_sweeps_unselected_passages(self):
         """P0: Verifies that make_rescue_pass_node analyzes unselected passages and rescues missed obligations."""
-        from tenderpulse_ai.domain.models import CandidateComplianceItem, ExecutionRulesProps, ProvenanceProps
+        from tenderpulse_ai.domain.models import (
+            CandidateComplianceItem,
+            ExecutionRulesProps,
+            ProvenanceProps,
+        )
         from tenderpulse_ai.models.llm_client import StructuredLLMClient
         from tenderpulse_ai.tools.page_text import PageTextTool
         from tenderpulse_ai.tools.retrieval import ScopedRetrievalTool
@@ -264,5 +269,7 @@ class TestCandidateDetectorRecall:
         extracted = result.get("extracted_candidates", [])
         assert len(extracted) == 1
         assert extracted[0].title == "Debarment & Disqualification Restriction"
-        assert extracted[0].provenance.verbatim_quote == "Bids submitted by firms appearing on the debarred list will be rejected."
-
+        assert (
+            extracted[0].provenance.verbatim_quote
+            == "Bids submitted by firms appearing on the debarred list will be rejected."
+        )

@@ -70,6 +70,7 @@ class ReviewEvidencePackage(BaseModel):
 
 class HumanReviewActionPayload(BaseModel):
     """Payload submitted by an authorized human reviewer to decide a review task."""
+
     action: HumanReviewDecision
     reviewer_id: str = Field(..., min_length=1)
     tenant_id: str = Field(..., min_length=1)
@@ -88,6 +89,7 @@ class HumanReviewActionPayload(BaseModel):
 
 class HumanReviewTask(BaseModel):
     """Represents a review task awaiting human decision (supports LangGraph and standalone workflows)."""
+
     task_id: str
     version: int = 1  # Optimistic Concurrency Control (OCC)
     thread_id: str = ""

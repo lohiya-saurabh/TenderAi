@@ -1,6 +1,7 @@
 import math
 import re
 from typing import Any
+
 from pydantic import BaseModel, Field
 
 from tenderpulse_ai.security.context import SecurityContext
@@ -32,23 +33,44 @@ class JevRerankScore(BaseModel):
 class JevCalibratedReranker:
     """
     TypeSafe System One Calibrated Decision Reranker.
-    
+
     Provides sub-10ms deterministic, typed scoring evaluating:
     1. Exact statutory & tender identifier presence (Tender #, UDIN, GSTIN, Act sections)
     2. Procurement domain keyword density (EMD, PBG, turnover, ISO, liquidated damages)
     3. Query coverage and semantic term density
     4. Calibrated probabilistic relevance ranking in [0.0, 1.0]
     """
+
     STATUTORY_KEYWORDS: set[str] = {
-        "emd", "earnest", "pbg", "turnover", "solvency", "udin", "gstin", "pan",
-        "stamp", "notary", "notarized", "debarment", "blacklisting", "iso",
-        "liquidated", "damages", "dlp", "defect", "corrigendum", "affidavit",
-        "undertaking", "annexure", "consortium", "subcontracting"
+        "emd",
+        "earnest",
+        "pbg",
+        "turnover",
+        "solvency",
+        "udin",
+        "gstin",
+        "pan",
+        "stamp",
+        "notary",
+        "notarized",
+        "debarment",
+        "blacklisting",
+        "iso",
+        "liquidated",
+        "damages",
+        "dlp",
+        "defect",
+        "corrigendum",
+        "affidavit",
+        "undertaking",
+        "annexure",
+        "consortium",
+        "subcontracting",
     }
 
     IDENTIFIER_REGEX: re.Pattern = re.compile(
         r"(?:gem/\d{4}/[a-z]/\d+|nhai/[a-z0-9/-]+|clause\s+\d+(?:\.\d+)*|section\s+\d+|inr\s*[\d,]+|rs\.?\s*[\d,]+)",
-        re.IGNORECASE
+        re.IGNORECASE,
     )
 
     def score_chunk(self, query: str, chunk: DocumentChunk) -> JevRerankScore:
@@ -142,6 +164,7 @@ class ScopedRetrievalTool:
     Deterministic scoped retrieval tool with Hybrid Dense+Sparse RAG and JEV Reranking.
     Enforces hard tenant isolation and document whitelist checking before any data access.
     """
+
     def __init__(
         self,
         max_calls_per_run: int = 15,
@@ -201,7 +224,8 @@ class ScopedRetrievalTool:
         tenant_chunks = self._store.get(key, [])
 
         scoped_chunks = [
-            c for c in tenant_chunks
+            c
+            for c in tenant_chunks
             if c.tenant_id == security_context.tenant_id and c.document_id == target_document_id
         ]
 
@@ -237,9 +261,9 @@ class ScopedRetrievalTool:
         fused_scores = reciprocal_rank_fusion(dense_ranks, sparse_ranks, k=60)
         chunk_map = {c.chunk_id: c for c in scoped_chunks}
         fused_sorted = sorted(fused_scores.items(), key=lambda x: x[1], reverse=True)
-        
+
         # Take candidate pool for reranking
-        candidate_pool = [chunk_map[cid] for cid, _ in fused_sorted[:self.rerank_top_n]]
+        candidate_pool = [chunk_map[cid] for cid, _ in fused_sorted[: self.rerank_top_n]]
 
         # 7. JEV Calibrated System One Reranking
         if self.enable_jev_rerank and self.reranker:

@@ -1,9 +1,12 @@
 import asyncio
 import logging
-from typing import Any
 
 from tenderpulse_ai.config import settings
-from tenderpulse_ai.infrastructure.queue.consumer import IQueueConsumer, QueueMessage, get_queue_consumer
+from tenderpulse_ai.infrastructure.queue.consumer import (
+    IQueueConsumer,
+    QueueMessage,
+    get_queue_consumer,
+)
 from tenderpulse_ai.infrastructure.queue.publisher import (
     CompletionPublisher,
     DocumentExtractionCompletedEvent,
@@ -23,7 +26,7 @@ logger = logging.getLogger("tenderpulse_ai.infrastructure.queue.worker")
 class DocumentQueueConsumerWorker:
     """
     Asynchronous Document Processing Queue Worker (Option B).
-    
+
     Directly consumes IngestionJobMessage items from the Ingestion Queue,
     manages visibility timeout heartbeats during multi-minute extractions,
     executes the Docling AST & LangGraph extraction pipeline, publishes the
@@ -44,8 +47,12 @@ class DocumentQueueConsumerWorker:
         self.publisher = publisher or get_completion_publisher()
         self.pipeline = pipeline or ProductionExtractionPipeline()
         self.poll_interval_seconds = poll_interval_seconds or settings.queue_poll_interval_seconds
-        self.visibility_timeout_seconds = visibility_timeout_seconds or settings.queue_visibility_timeout_seconds
-        self.heartbeat_interval_seconds = heartbeat_interval_seconds or settings.queue_heartbeat_interval_seconds
+        self.visibility_timeout_seconds = (
+            visibility_timeout_seconds or settings.queue_visibility_timeout_seconds
+        )
+        self.heartbeat_interval_seconds = (
+            heartbeat_interval_seconds or settings.queue_heartbeat_interval_seconds
+        )
         self._running = False
         self._loop_task: asyncio.Task[None] | None = None
 
@@ -107,7 +114,10 @@ class DocumentQueueConsumerWorker:
                 await asyncio.wait_for(stop_event.wait(), timeout=self.heartbeat_interval_seconds)
                 break
             except TimeoutError:
-                logger.debug("Renewing queue visibility lease (%ds) for active job...", self.visibility_timeout_seconds)
+                logger.debug(
+                    "Renewing queue visibility lease (%ds) for active job...",
+                    self.visibility_timeout_seconds,
+                )
                 await self.consumer.change_message_visibility(
                     receipt_handle=receipt_handle,
                     visibility_timeout_seconds=self.visibility_timeout_seconds,
@@ -159,13 +169,22 @@ class DocumentQueueConsumerWorker:
                 if not download_url and body.storage_reference and settings.aws_s3_bucket:
                     try:
                         import boto3
-                        s3_client = boto3.client("s3", region_name=settings.aws_region or "ap-south-1")
+
+                        s3_client = boto3.client(
+                            "s3", region_name=settings.aws_region or "ap-south-1"
+                        )
                         download_url = s3_client.generate_presigned_url(
                             "get_object",
-                            Params={"Bucket": settings.aws_s3_bucket, "Key": body.storage_reference},
+                            Params={
+                                "Bucket": settings.aws_s3_bucket,
+                                "Key": body.storage_reference,
+                            },
                             ExpiresIn=3600,
                         )
-                        logger.info("Generated presigned S3 download URL for storage reference: %s", body.storage_reference)
+                        logger.info(
+                            "Generated presigned S3 download URL for storage reference: %s",
+                            body.storage_reference,
+                        )
                     except Exception as s3_err:
                         logger.warning("Could not generate presigned S3 download URL: %s", s3_err)
 
@@ -212,7 +231,9 @@ class DocumentQueueConsumerWorker:
                 )
                 published = await self.publisher.publish_completion(completion_event)
                 if not published:
-                    logger.warning("Completion publisher reported failure; message will not be acknowledged.")
+                    logger.warning(
+                        "Completion publisher reported failure; message will not be acknowledged."
+                    )
                     return False
 
                 # 4. Acknowledge and Delete Ingestion Message

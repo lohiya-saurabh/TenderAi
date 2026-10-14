@@ -51,16 +51,18 @@ def review_setup():
     )
 
     retrieval_tool = ScopedRetrievalTool()
-    retrieval_tool.seed_chunks([
-        DocumentChunk(
-            chunk_id="chunk_01",
-            tenant_id=tenant_id,
-            document_id=doc_id,
-            page_number=10,
-            text="Clause 4.1: Bidder shall submit EMD on a 100 Rupee stamp paper.",
-            clause_reference="Clause 4.1",
-        )
-    ])
+    retrieval_tool.seed_chunks(
+        [
+            DocumentChunk(
+                chunk_id="chunk_01",
+                tenant_id=tenant_id,
+                document_id=doc_id,
+                page_number=10,
+                text="Clause 4.1: Bidder shall submit EMD on a 100 Rupee stamp paper.",
+                clause_reference="Clause 4.1",
+            )
+        ]
+    )
 
     # Candidate item where quote verification initially fails (e.g. slight mismatch)
     ambiguous_item = CandidateComplianceItem(
@@ -100,9 +102,7 @@ async def test_human_review_interrupt_and_approve(review_setup):
     setup = review_setup
     manager = HumanReviewManager()
 
-    llm_client = StructuredLLMClient(
-        extractor_fn=lambda sys, user: [setup["ambiguous_item"]]
-    )
+    llm_client = StructuredLLMClient(extractor_fn=lambda sys, user: [setup["ambiguous_item"]])
     ctx = WorkflowNodeContext(setup["retrieval_tool"], setup["page_text_tool"], llm_client)
     graph = build_compliance_workflow_graph(ctx)
 
@@ -182,9 +182,7 @@ async def test_human_review_interrupt_and_reject(review_setup):
     setup = review_setup
     manager = HumanReviewManager()
 
-    llm_client = StructuredLLMClient(
-        extractor_fn=lambda sys, user: [setup["ambiguous_item"]]
-    )
+    llm_client = StructuredLLMClient(extractor_fn=lambda sys, user: [setup["ambiguous_item"]])
     ctx = WorkflowNodeContext(setup["retrieval_tool"], setup["page_text_tool"], llm_client)
     graph = build_compliance_workflow_graph(ctx)
 
@@ -250,9 +248,7 @@ async def test_human_review_interrupt_and_edit(review_setup):
     setup = review_setup
     manager = HumanReviewManager()
 
-    llm_client = StructuredLLMClient(
-        extractor_fn=lambda sys, user: [setup["ambiguous_item"]]
-    )
+    llm_client = StructuredLLMClient(extractor_fn=lambda sys, user: [setup["ambiguous_item"]])
     ctx = WorkflowNodeContext(setup["retrieval_tool"], setup["page_text_tool"], llm_client)
     graph = build_compliance_workflow_graph(ctx)
 

@@ -17,16 +17,24 @@ class DocumentExtractionCompletedEvent(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     job_id: str = Field(..., validation_alias=AliasChoices("job_id", "jobId"))
-    organization_id: str = Field(..., validation_alias=AliasChoices("organization_id", "organizationId"))
-    company_id: str | None = Field(default=None, validation_alias=AliasChoices("company_id", "companyId"))
+    organization_id: str = Field(
+        ..., validation_alias=AliasChoices("organization_id", "organizationId")
+    )
+    company_id: str | None = Field(
+        default=None, validation_alias=AliasChoices("company_id", "companyId")
+    )
     bid_id: str = Field(..., validation_alias=AliasChoices("bid_id", "bidId"))
     document_id: str = Field(..., validation_alias=AliasChoices("document_id", "documentId"))
     status: str = "COMPLETED"
     items: list[dict[str, Any]] = Field(default_factory=list)
     error: str | None = None
-    workflow_run_id: str | None = Field(default=None, validation_alias=AliasChoices("workflow_run_id", "workflowRunId"))
+    workflow_run_id: str | None = Field(
+        default=None, validation_alias=AliasChoices("workflow_run_id", "workflowRunId")
+    )
     trace_id: str | None = Field(default=None, validation_alias=AliasChoices("trace_id", "traceId"))
-    correlation_id: str | None = Field(default=None, validation_alias=AliasChoices("correlation_id", "correlationId"))
+    correlation_id: str | None = Field(
+        default=None, validation_alias=AliasChoices("correlation_id", "correlationId")
+    )
     timestamp: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
 
     def to_camel_case_dict(self) -> dict[str, Any]:
@@ -151,7 +159,9 @@ class AwsSqsCompletionPublisher(CompletionPublisher):
 
     async def publish_completion(self, event: DocumentExtractionCompletedEvent) -> bool:
         if not self.queue_url:
-            raise ValueError("AWS completion queue URL is not configured (settings.aws_completion_queue_url).")
+            raise ValueError(
+                "AWS completion queue URL is not configured (settings.aws_completion_queue_url)."
+            )
         try:
             import boto3  # type: ignore
 
@@ -188,11 +198,15 @@ def get_completion_publisher(provider: str | None = None) -> CompletionPublisher
         return MockCompletionPublisher()
     if resolved_provider in ("pubsub", "gcp"):
         if not settings.gcp_completion_topic:
-            raise ValueError("GCP completion topic is not configured (settings.gcp_completion_topic).")
+            raise ValueError(
+                "GCP completion topic is not configured (settings.gcp_completion_topic)."
+            )
         return GcpPubSubCompletionPublisher()
     if resolved_provider in ("sqs", "aws"):
         if not settings.aws_completion_queue_url:
-            raise ValueError("AWS completion queue URL is not configured (settings.aws_completion_queue_url).")
+            raise ValueError(
+                "AWS completion queue URL is not configured (settings.aws_completion_queue_url)."
+            )
         return AwsSqsCompletionPublisher()
     if resolved_provider == "http":
         return HttpCallbackCompletionPublisher()

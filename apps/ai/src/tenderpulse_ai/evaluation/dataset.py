@@ -159,7 +159,11 @@ def get_synthetic_evaluation_suite() -> list[SyntheticEvaluationCase]:
                 ExpectedItem(
                     category="PBG",
                     title="Performance Bank Guarantee (PBG)",
-                    description_keywords=["5% of the contract price", "21 days", "Letter of Acceptance"],
+                    description_keywords=[
+                        "5% of the contract price",
+                        "21 days",
+                        "Letter of Acceptance",
+                    ],
                     stamp_paper_required=True,
                     stamp_paper_denomination_inr=500,
                     udin_required=False,

@@ -7,25 +7,59 @@ class SecretSanitizer:
     Scrubs credentials, tokens, and private keys from prompts and model-visible tool outputs
     before dispatch. Enforces Zero-Secrets-in-Context rule.
     """
+
     SECRET_PATTERNS: ClassVar[list[tuple[re.Pattern, str]]] = [
         # AWS Access Key ID
         (re.compile(r"AKIA[0-9A-Z]{16}"), "[REDACTED_AWS_KEY]"),
         # AWS Secret Key (approximate 40 char base64)
-        (re.compile(r"(?i)aws_secret_access_key\s*=\s*['\"]?[A-Za-z0-9/+=]{40}['\"]?"), "aws_secret_access_key=[REDACTED]"),
+        (
+            re.compile(r"(?i)aws_secret_access_key\s*=\s*['\"]?[A-Za-z0-9/+=]{40}['\"]?"),
+            "aws_secret_access_key=[REDACTED]",
+        ),
         # Bearer Tokens / JWTs
-        (re.compile(r"Bearer\s+eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+"), "Bearer [REDACTED_JWT]"),
+        (
+            re.compile(r"Bearer\s+eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+"),
+            "Bearer [REDACTED_JWT]",
+        ),
         # Standalone JWT
-        (re.compile(r"eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}"), "[REDACTED_JWT]"),
+        (
+            re.compile(r"eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}"),
+            "[REDACTED_JWT]",
+        ),
         # Database connection strings (PostgreSQL / MySQL)
-        (re.compile(r"postgres(ql)?://[a-zA-Z0-9_\-]+:[^@]+@[a-zA-Z0-9_.\-]+:[0-9]+/[a-zA-Z0-9_\-]+"), "postgres://[REDACTED_DB_CREDENTIALS]"),
+        (
+            re.compile(
+                r"postgres(ql)?://[a-zA-Z0-9_\-]+:[^@]+@[a-zA-Z0-9_.\-]+:[0-9]+/[a-zA-Z0-9_\-]+"
+            ),
+            "postgres://[REDACTED_DB_CREDENTIALS]",
+        ),
         # Private Keys
-        (re.compile(r"-----BEGIN (RSA|EC|OPENSSH) PRIVATE KEY-----[\s\S]+?-----END \1 PRIVATE KEY-----"), "[REDACTED_PRIVATE_KEY]"),
+        (
+            re.compile(
+                r"-----BEGIN (RSA|EC|OPENSSH) PRIVATE KEY-----[\s\S]+?-----END \1 PRIVATE KEY-----"
+            ),
+            "[REDACTED_PRIVATE_KEY]",
+        ),
         # Generic API Keys / Passwords in JSON / query params
-        (re.compile(r"(?i)(api[_-]?key|password|secret|internal[_-]?service[_-]?key)\s*[:=]\s*['\"][^'\"]{8,}['\"]"), r"\1='[REDACTED]'"),
+        (
+            re.compile(
+                r"(?i)(api[_-]?key|password|secret|internal[_-]?service[_-]?key)\s*[:=]\s*['\"][^'\"]{8,}['\"]"
+            ),
+            r"\1='[REDACTED]'",
+        ),
         # Presigned S3/GCS URL query parameters containing signatures/tokens
-        (re.compile(r"([?&](X-Amz-Signature|X-Goog-Signature|Signature|sig|signature|token|access_token|apiKey)=)[^&\"'\s]+", re.IGNORECASE), r"\1[REDACTED]"),
+        (
+            re.compile(
+                r"([?&](X-Amz-Signature|X-Goog-Signature|Signature|sig|signature|token|access_token|apiKey)=)[^&\"'\s]+",
+                re.IGNORECASE,
+            ),
+            r"\1[REDACTED]",
+        ),
         # Indian GSTIN (15 characters)
-        (re.compile(r"\b[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}\b"), "[REDACTED_GSTIN]"),
+        (
+            re.compile(r"\b[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}\b"),
+            "[REDACTED_GSTIN]",
+        ),
         # Indian PAN (10 characters)
         (re.compile(r"\b[A-Z]{5}[0-9]{4}[A-Z]{1}\b"), "[REDACTED_PAN]"),
         # Indian Aadhaar (12 digits)
@@ -58,6 +92,7 @@ class SecretSanitizer:
                 scrubbed = pattern.sub(replacement, scrubbed)
 
         for pattern, max_len in cls.CONTENT_PATTERNS_TO_TRUNCATE:
+
             def _truncate_match(m: re.Match) -> str:
                 nonlocal found_any
                 prefix = m.group(1)

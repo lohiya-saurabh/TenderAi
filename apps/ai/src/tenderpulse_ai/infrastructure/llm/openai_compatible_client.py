@@ -147,7 +147,13 @@ class OpenAICompatibleLlmClient:
                     },
                 )
                 # Never retry client/auth/payment errors (400, 401, 402, 403, 404)
-                if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code in (400, 401, 402, 403, 404):
+                if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code in (
+                    400,
+                    401,
+                    402,
+                    403,
+                    404,
+                ):
                     break
                 if attempt < max_retries:
                     await asyncio.sleep(1.0 * (2**attempt))
@@ -189,7 +195,11 @@ class OpenAICompatibleLlmClient:
         try:
             parsed = json.loads(cleaned_content)
         except json.JSONDecodeError as err:
-            logger.error("[OpenAICompatibleClient] Failed to decode JSON response from model: %s. Content: %s", err, cleaned_content[:300])
+            logger.error(
+                "[OpenAICompatibleClient] Failed to decode JSON response from model: %s. Content: %s",
+                err,
+                cleaned_content[:300],
+            )
             return []
 
         raw_items: list[dict[str, Any]] = []
@@ -210,7 +220,9 @@ class OpenAICompatibleLlmClient:
                 if candidate:
                     candidates.append(candidate)
             except (KeyError, ValueError, TypeError, AttributeError) as build_err:
-                logger.debug("[OpenAICompatibleClient] Skipping unparseable candidate item: %s", build_err)
+                logger.debug(
+                    "[OpenAICompatibleClient] Skipping unparseable candidate item: %s", build_err
+                )
 
         return candidates
 
@@ -221,7 +233,9 @@ class OpenAICompatibleLlmClient:
 
         # Execution Rules mapping
         raw_rules = raw.get("execution_rules") or raw.get("executionRules") or {}
-        raw_denom = raw_rules.get("stamp_paper_denomination_inr") or raw_rules.get("stampPaperDenominationInr")
+        raw_denom = raw_rules.get("stamp_paper_denomination_inr") or raw_rules.get(
+            "stampPaperDenominationInr"
+        )
         denom: int | None = None
         if raw_denom is not None:
             try:
@@ -236,9 +250,13 @@ class OpenAICompatibleLlmClient:
         )
 
         execution_rules = ExecutionRulesProps(
-            stamp_paper_required=bool(raw_rules.get("stamp_paper_required") or raw_rules.get("stampPaperRequired")),
+            stamp_paper_required=bool(
+                raw_rules.get("stamp_paper_required") or raw_rules.get("stampPaperRequired")
+            ),
             stamp_paper_denomination_inr=denom,
-            notarization_required=bool(raw_rules.get("notarization_required") or raw_rules.get("notarizationRequired")),
+            notarization_required=bool(
+                raw_rules.get("notarization_required") or raw_rules.get("notarizationRequired")
+            ),
             udin_required=bool(raw_rules.get("udin_required") or raw_rules.get("udinRequired")),
             signing_authority_rank=str(signing_rank),
         )
@@ -258,7 +276,11 @@ class OpenAICompatibleLlmClient:
             or "uploaded_document.pdf"
         )
         page_num = raw_prov.get("page_number") or raw_prov.get("pageNumber") or 1
-        clause_ref = raw_prov.get("clause_reference") or raw_prov.get("clauseReference") or f"Page {page_num}"
+        clause_ref = (
+            raw_prov.get("clause_reference")
+            or raw_prov.get("clauseReference")
+            or f"Page {page_num}"
+        )
         quote = raw_prov.get("verbatim_quote") or raw_prov.get("verbatimQuote") or ""
         conf = float(raw_prov.get("confidence_score") or raw_prov.get("confidenceScore") or 0.95)
 

@@ -165,7 +165,10 @@ class HumanReviewManager:
 
         # 4. RBAC Check: Reviewer must possess required role or BID_DIRECTOR
         required_role_name = task.required_role.value
-        if required_role_name not in user_roles and ReviewerRole.BID_DIRECTOR.value not in user_roles:
+        if (
+            required_role_name not in user_roles
+            and ReviewerRole.BID_DIRECTOR.value not in user_roles
+        ):
             raise UnauthorizedReviewerException(
                 f"User '{user_id}' with roles {user_roles} lacks required role '{required_role_name}'."
             )

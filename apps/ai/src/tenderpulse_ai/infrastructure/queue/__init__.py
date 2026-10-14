@@ -1,8 +1,8 @@
 from .consumer import (
     AwsSqsQueueConsumer,
     GcpPubSubQueueConsumer,
-    IQueueConsumer,
     IngestionJobMessage,
+    IQueueConsumer,
     MockQueueConsumer,
     QueueMessage,
     get_queue_consumer,

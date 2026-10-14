@@ -1,4 +1,3 @@
-
 from typing import ClassVar
 
 from tenderpulse_ai.security.exceptions import UnrestrictedAccessBlockedException
@@ -10,6 +9,7 @@ class NetworkEgressGuard:
     Only explicit internal endpoints (VPC PrivateLink to Bedrock, S3, internal API Gateway)
     are permitted. Arbitrary web URLs are blocked unconditionally.
     """
+
     WHITELISTED_HOSTS: ClassVar[set[str]] = {
         "bedrock-runtime.ap-south-1.amazonaws.com",
         "s3.ap-south-1.amazonaws.com",
@@ -21,7 +21,9 @@ class NetworkEgressGuard:
     @classmethod
     def validate_destination(cls, host_or_url: str):
         # Extract hostname
-        clean_host = host_or_url.replace("http://", "").replace("https://", "").split("/")[0].split(":")[0]
+        clean_host = (
+            host_or_url.replace("http://", "").replace("https://", "").split("/")[0].split(":")[0]
+        )
         if clean_host not in cls.WHITELISTED_HOSTS:
             raise UnrestrictedAccessBlockedException(
                 f"Egress blocked by security policy: Destination '{clean_host}' is not whitelisted. "

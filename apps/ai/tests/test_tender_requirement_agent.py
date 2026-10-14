@@ -131,9 +131,7 @@ async def test_agent_detects_vague_quantifier_and_missing_threshold():
 
 async def test_agent_detects_numeric_conflict():
     agent = make_agent()
-    page_text = (
-        "The annual turnover requirement is Rs 10 crore for FY24 and Rs 5 crore for FY24."
-    )
+    page_text = "The annual turnover requirement is Rs 10 crore for FY24 and Rs 5 crore for FY24."
     request = make_request([AgentPageInput(page_number=30, text=page_text)])
 
     output = await agent.analyze(request)
@@ -438,4 +436,3 @@ def test_agent_endpoint_authorized():
     assert data["document_id"] == "doc_nit_101"
     assert data["status"] == "COMPLETED"
     assert len(data["requirements"]) >= 1
-
