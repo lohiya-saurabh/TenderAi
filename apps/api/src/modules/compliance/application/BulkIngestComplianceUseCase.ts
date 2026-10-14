@@ -44,7 +44,7 @@ export class BulkIngestComplianceUseCase {
     private readonly bidRepository: IBidRepository,
     private readonly complianceRepository: IComplianceItemRepository,
     private readonly auditRepository: IAuditRepository,
-    private readonly unitOfWork: IUnitOfWork
+    private readonly unitOfWork: IUnitOfWork,
   ) {}
 
   public async execute(command: BulkIngestComplianceCommand): Promise<BulkIngestComplianceResult> {
@@ -108,7 +108,7 @@ export class BulkIngestComplianceUseCase {
             itemsCount: complianceItems.length,
             newStatus: bid.status.value,
           },
-        })
+        }),
       );
     });
 

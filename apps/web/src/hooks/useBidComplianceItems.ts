@@ -52,9 +52,7 @@ export function useBidComplianceItems(bids: BidSummary[] | null): BidComplianceS
     // listComplianceItems never rejects (api client normalizes errors into
     // ApiResult), so Promise.all is safe and preserves per-bid failure info.
     void Promise.all(
-      bidIds.map((bidId) =>
-        listComplianceItems(bidId).then((result) => ({ bidId, result })),
-      ),
+      bidIds.map((bidId) => listComplianceItems(bidId).then((result) => ({ bidId, result }))),
     ).then((entries) => {
       // Drop stale responses if the bid set changed mid-flight
       if (cancelled || seq !== requestSeq.current) return;

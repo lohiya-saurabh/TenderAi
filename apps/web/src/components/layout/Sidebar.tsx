@@ -72,14 +72,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <aside
       className={cn(
         'flex flex-col h-screen max-h-screen bg-card border-r border-border transition-[width] duration-200 shrink-0 box-border select-none overflow-x-hidden',
-        isCollapsed ? 'w-[68px]' : 'w-[260px]'
+        isCollapsed ? 'w-[68px]' : 'w-[260px]',
       )}
     >
       {/* Brand header */}
       <div
         className={cn(
           'h-16 flex items-center border-b border-border gap-3 box-border',
-          isCollapsed ? 'justify-center px-0' : 'justify-between px-5'
+          isCollapsed ? 'justify-center px-0' : 'justify-between px-5',
         )}
       >
         <div className="flex items-center gap-2.5 min-w-0">
@@ -112,7 +112,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Navigation items list */}
-      <nav aria-label="Main Navigation" className="p-3 flex flex-col gap-1 flex-1 overflow-y-auto overflow-x-hidden no-scrollbar">
+      <nav
+        aria-label="Main Navigation"
+        className="p-3 flex flex-col gap-1 flex-1 overflow-y-auto overflow-x-hidden no-scrollbar"
+      >
         {!isCollapsed && (
           <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
             Platform
@@ -137,7 +140,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     isCollapsed ? 'justify-center px-0' : 'justify-start',
                     isActive
                       ? 'bg-accent text-accent-foreground font-semibold border border-border shadow-xs'
-                      : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
+                      : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
                   )
                 }
               >
@@ -146,7 +149,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <span
                       className={cn(
                         'shrink-0 flex items-center justify-center',
-                        isActive ? 'text-primary' : 'text-muted-foreground'
+                        isActive ? 'text-primary' : 'text-muted-foreground',
                       )}
                     >
                       <Icon size={16} />
@@ -176,7 +179,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </>
         ) : (
           <div className="flex justify-center">
-            <span className="w-2.5 h-2.5 rounded-full bg-foreground inline-block" title="System Online: v2.0" />
+            <span
+              className="w-2.5 h-2.5 rounded-full bg-foreground inline-block"
+              title="System Online: v2.0"
+            />
           </div>
         )}
       </div>
@@ -192,10 +198,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex md:hidden"
         onClick={onCloseMobile}
       >
-        <div
-          className="w-[280px] h-full bg-card"
-          onClick={(e) => e.stopPropagation()}
-        >
+        <div className="w-[280px] h-full bg-card" onClick={(e) => e.stopPropagation()}>
           {sidebarContent}
         </div>
       </div>

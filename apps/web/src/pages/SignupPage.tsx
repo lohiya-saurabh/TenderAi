@@ -6,15 +6,7 @@ import { Button } from '../components/ui/button.js';
 import { Input } from '../components/ui/input.js';
 import { Label } from '../components/ui/label.js';
 import { ErrorBanner } from '../components/common/ErrorBanner.js';
-import {
-  Building2,
-  Lock,
-  Mail,
-  User,
-  ShieldCheck,
-  ArrowRight,
-  Sparkles,
-} from 'lucide-react';
+import { Building2, Lock, Mail, User, ShieldCheck, ArrowRight, Sparkles } from 'lucide-react';
 
 export const SignupPage: React.FC = () => {
   const [searchParams] = useSearchParams();

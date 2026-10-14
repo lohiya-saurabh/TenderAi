@@ -8,15 +8,7 @@
  * COMPANY_PROFILE_MANAGE (ADMIN) because the profile is
  * the factual basis of every bid/no-bid verdict.
  */
-import {
-  Controller,
-  Get,
-  Post,
-  Param,
-  Query,
-  Body,
-  HttpCode,
-} from '@nestjs/common';
+import { Controller, Get, Post, Param, Query, Body, HttpCode } from '@nestjs/common';
 import { BadRequestError } from '../../../common/errors/errors.js';
 import { CompanyProfileService } from '../company-profile.service.js';
 import { RequirePermission } from '../../../common/security/decorators/permissions.decorator.js';
@@ -50,15 +42,10 @@ export class CompanyProfileController {
   @Post()
   @HttpCode(201)
   @RequirePermission(Permissions.COMPANY_PROFILE_MANAGE)
-  async createVersion(
-    @Body() body: { name?: string; payload?: CompanyProfilePayload },
-  ) {
+  async createVersion(@Body() body: { name?: string; payload?: CompanyProfilePayload }) {
     if (!body.payload) {
       throw new BadRequestError('Request body must include a "payload" object.');
     }
-    return this.companyProfileService.createProfileVersion(
-      body.name ?? '',
-      body.payload,
-    );
+    return this.companyProfileService.createProfileVersion(body.name ?? '', body.payload);
   }
 }

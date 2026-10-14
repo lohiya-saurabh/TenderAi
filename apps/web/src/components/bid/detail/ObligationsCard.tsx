@@ -2,11 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import type { ComplianceItem } from '../../../api/compliance.js';
 import { StatusBadge } from '../../common/StatusBadge.js';
-import {
-  AlertCircleIcon,
-  CheckIcon,
-  ChevronRightIcon,
-} from '../../common/Icons.js';
+import { AlertCircleIcon, CheckIcon, ChevronRightIcon } from '../../common/Icons.js';
 import { formatCurrency } from '../../../utils/formatCurrency.js';
 import {
   getObligationsSummary,
@@ -59,11 +55,16 @@ export const ObligationsCard: React.FC<ObligationsCardProps> = ({ items }) => {
 
         {/* Verbatim Quote Box */}
         <p className="text-xs leading-relaxed mono p-4 rounded-lg border border-border bg-muted/40 text-foreground">
-          &quot;If the Concessionaire fails to achieve any Project Milestone within the period set forth in Schedule-G, it shall pay Damages at the rate of 0.1% per day... provided Damages shall not exceed 10% of total Contract Price.&quot;
+          &quot;If the Concessionaire fails to achieve any Project Milestone within the period set
+          forth in Schedule-G, it shall pay Damages at the rate of 0.1% per day... provided Damages
+          shall not exceed 10% of total Contract Price.&quot;
         </p>
 
         <p className="text-xs leading-relaxed text-muted-foreground">
-          <strong className="text-foreground">Executive Note:</strong> Standard NHAI EPC models cap liquidated damages at 5%. This BOT toll concession enforces a 10% cap (₹125 Cr exposure). Recommend submitting a formal pre-bid query to align with standard model concession agreements.
+          <strong className="text-foreground">Executive Note:</strong> Standard NHAI EPC models cap
+          liquidated damages at 5%. This BOT toll concession enforces a 10% cap (₹125 Cr exposure).
+          Recommend submitting a formal pre-bid query to align with standard model concession
+          agreements.
         </p>
       </div>
 
@@ -132,8 +133,16 @@ export const ObligationsCard: React.FC<ObligationsCardProps> = ({ items }) => {
   );
 };
 
+interface ObligationDisplayItem {
+  label: string;
+  active: boolean;
+  detail: React.ReactNode;
+}
+
 function ObligationGrid({ summary }: { summary: ObligationsSummary }) {
-  const obligations = [
+  const ranks = summary.signingAuthorityRanks || [];
+
+  const obligations: ObligationDisplayItem[] = [
     {
       label: 'Stamp Paper',
       active: summary.stampPaperCount > 0,
@@ -163,29 +172,67 @@ function ObligationGrid({ summary }: { summary: ObligationsSummary }) {
     },
     {
       label: 'Signing Authority',
-      active: summary.signingAuthorityRanks.length > 0,
+      active: ranks.length > 0,
       detail:
-        summary.signingAuthorityRanks.length === 0
-          ? 'Authorized Representative'
-          : summary.signingAuthorityRanks.join(', '),
+        ranks.length === 0 ? (
+          'Authorized Representative'
+        ) : ranks.length <= 2 ? (
+          ranks.join(', ')
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[11px] text-muted-foreground font-medium">
+              {ranks.length} designated roles across clauses:
+            </span>
+            <div className="flex flex-wrap gap-1">
+              {ranks.slice(0, 3).map((rank) => (
+                <span
+                  key={rank}
+                  className="inline-block px-1.5 py-0.5 rounded bg-muted/70 text-[10px] font-medium text-foreground truncate max-w-[200px]"
+                  title={rank}
+                >
+                  {rank}
+                </span>
+              ))}
+              {ranks.length > 3 && (
+                <span
+                  className="inline-block px-1.5 py-0.5 rounded bg-muted/40 text-[10px] text-muted-foreground font-medium"
+                  title={ranks.slice(3).join(', ')}
+                >
+                  +{ranks.length - 3} more
+                </span>
+              )}
+            </div>
+          </div>
+        ),
     },
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 items-stretch">
       {obligations.map((obligation) => (
         <div
           key={obligation.label}
-          className={`p-4 rounded-lg border flex flex-col justify-between gap-1.5 transition-colors ${
-            obligation.active
-              ? 'bg-card border-border shadow-2xs'
-              : 'bg-muted/40 border-border/70'
+          className={`p-3.5 sm:p-4 rounded-lg border flex flex-col justify-between h-full gap-2 transition-colors ${
+            obligation.active ? 'bg-card border-border shadow-2xs' : 'bg-muted/40 border-border/70'
           }`}
         >
-          <div className={`text-xs font-semibold ${obligation.active ? 'text-foreground' : 'text-muted-foreground'}`}>
-            {obligation.label}
+          <div className="flex items-center justify-between gap-1.5">
+            <span
+              className={`text-xs font-semibold ${obligation.active ? 'text-foreground' : 'text-muted-foreground'}`}
+            >
+              {obligation.label}
+            </span>
+            {obligation.active ? (
+              <span className="mono text-[10px] font-bold text-orange-600 dark:text-orange-400 bg-orange-500/10 px-1.5 py-0.5 rounded shrink-0">
+                REQUIRED
+              </span>
+            ) : (
+              <span className="mono text-[10px] text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded shrink-0">
+                OPTIONAL
+              </span>
+            )}
           </div>
-          <div className="text-xs text-muted-foreground leading-relaxed">
+          <div className="text-xs text-muted-foreground leading-relaxed mt-auto pt-1">
             {obligation.detail}
           </div>
         </div>

@@ -2,7 +2,11 @@
  * UsersController — Endpoints for user profile and credentials.
  */
 import { Controller, Get, Patch, Post, Body, HttpCode } from '@nestjs/common';
-import { UsersService, type UpdateUserProfileDto, type ChangePasswordDto } from './users.service.js';
+import {
+  UsersService,
+  type UpdateUserProfileDto,
+  type ChangePasswordDto,
+} from './users.service.js';
 import { RequirePermission } from '../../common/security/decorators/permissions.decorator.js';
 import { Permissions } from '../../common/security/permissions.js';
 

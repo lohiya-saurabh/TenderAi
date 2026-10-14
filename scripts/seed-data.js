@@ -16,7 +16,9 @@ const dbPath = path.join(rootDir, 'data/postgres');
 
 async function seed() {
   console.log('🌱 Seeding demo procurement data into PostgreSQL (PGlite)...');
-  const { initDatabase } = await import(path.join(rootDir, 'apps/api/dist/common/database/database.provider.js'));
+  const { initDatabase } = await import(
+    path.join(rootDir, 'apps/api/dist/common/database/database.provider.js')
+  );
   const pg = new PGlite(dbPath);
   await pg.waitReady;
 

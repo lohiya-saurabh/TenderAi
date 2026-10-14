@@ -5,7 +5,10 @@
  * Validates 15-character GSTIN regex, derives PAN, and returns realistic enterprise data.
  */
 import { Injectable } from '@nestjs/common';
-import type { IGstVerificationPort, GstTaxpayerDetails } from '../domain/ports/IGstVerificationPort.js';
+import type {
+  IGstVerificationPort,
+  GstTaxpayerDetails,
+} from '../domain/ports/IGstVerificationPort.js';
 import { BadRequestError, NotFoundError } from '../../../common/errors/errors.js';
 
 const STATE_CODE_MAP: Record<string, string> = {
@@ -73,7 +76,9 @@ export class MockGstVerificationAdapter implements IGstVerificationPort {
 
     // Explicit simulation of cancelled GSTIN for testing error resilience
     if (normalized.endsWith('999') || normalized.startsWith('99')) {
-      throw new NotFoundError(`GSTIN '${gstin}' not found or has been cancelled on the GST Network.`);
+      throw new NotFoundError(
+        `GSTIN '${gstin}' not found or has been cancelled on the GST Network.`,
+      );
     }
 
     // Check predefined known mock entities

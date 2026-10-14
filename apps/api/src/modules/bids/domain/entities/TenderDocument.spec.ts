@@ -33,35 +33,35 @@ describe('TenderDocument Domain Entity & DocumentStatus Value Object', () => {
 
     it('should throw ValidationException if file size is 0 or negative', () => {
       expect(() => new TenderDocument({ ...validProps, sizeBytes: 0 })).toThrow(
-        ValidationException
+        ValidationException,
       );
       expect(() => new TenderDocument({ ...validProps, sizeBytes: -500 })).toThrow(
-        ValidationException
+        ValidationException,
       );
     });
 
     it('should throw ValidationException if file size exceeds 100MB', () => {
       expect(() => new TenderDocument({ ...validProps, sizeBytes: 101 * 1024 * 1024 })).toThrow(
-        ValidationException
+        ValidationException,
       );
     });
 
     it('should throw ValidationException if MIME type is unsupported', () => {
       expect(
-        () => new TenderDocument({ ...validProps, mimeType: 'application/x-executable' })
+        () => new TenderDocument({ ...validProps, mimeType: 'application/x-executable' }),
       ).toThrow(ValidationException);
     });
 
     it('should throw ValidationException if SHA-256 checksum is not 64 hex characters', () => {
       expect(() => new TenderDocument({ ...validProps, checksumSha256: 'invalid-hex' })).toThrow(
-        ValidationException
+        ValidationException,
       );
       expect(
         () =>
           new TenderDocument({
             ...validProps,
             checksumSha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b85', // 63 chars
-          })
+          }),
       ).toThrow(ValidationException);
     });
   });
@@ -88,7 +88,7 @@ describe('TenderDocument Domain Entity & DocumentStatus Value Object', () => {
       const doc = new TenderDocument(validProps);
       doc.markVerified();
       expect(() => doc.status.transitionTo(DocumentStatus.PENDING_UPLOAD)).toThrow(
-        InvalidStateTransitionException
+        InvalidStateTransitionException,
       );
     });
   });

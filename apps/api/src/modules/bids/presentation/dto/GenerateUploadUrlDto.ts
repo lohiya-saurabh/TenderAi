@@ -32,7 +32,7 @@ export class GenerateUploadUrlDto {
     }
     if (payload.sizeBytes > MAX_DOCUMENT_SIZE_BYTES) {
       throw new ValidationException(
-        `File size exceeds maximum allowed limit of ${MAX_DOCUMENT_SIZE_BYTES / (1024 * 1024)}MB.`
+        `File size exceeds maximum allowed limit of ${MAX_DOCUMENT_SIZE_BYTES / (1024 * 1024)}MB.`,
       );
     }
     if (!payload.mimeType || !ALLOWED_MIME_TYPES.has(payload.mimeType)) {

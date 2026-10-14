@@ -36,9 +36,7 @@ export const DashboardPage: React.FC = () => {
 
   const handleSelectStage = (status: string) => {
     setSelectedStatus(status);
-    document
-      .getElementById('tender-list')
-      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.getElementById('tender-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   return (
@@ -47,12 +45,11 @@ export const DashboardPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              Bid Dashboard
-            </h1>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Bid Dashboard</h1>
           </div>
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-            What is happening with my bids — blockers, pipeline stage, deadlines, and tender readiness at a glance
+            What is happening with my bids — blockers, pipeline stage, deadlines, and tender
+            readiness at a glance
           </p>
         </div>
 

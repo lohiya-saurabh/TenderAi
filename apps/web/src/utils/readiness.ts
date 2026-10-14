@@ -21,7 +21,9 @@ export interface ReadinessSummary {
  * Returns pct = null (not 0%) when nothing has been extracted — an empty
  * matrix is "pending intake", not "0% ready".
  */
-export function computeReadiness(bid: Pick<BidSummary, 'totalRequirements' | 'approvedRequirements' | 'flaggedRequirements'>): ReadinessSummary {
+export function computeReadiness(
+  bid: Pick<BidSummary, 'totalRequirements' | 'approvedRequirements' | 'flaggedRequirements'>,
+): ReadinessSummary {
   const total = Math.max(0, bid.totalRequirements || 0);
   const rawApproved = Math.max(0, bid.approvedRequirements || 0);
   // An approved count can NEVER mathematically exceed the total requirements extracted
@@ -42,9 +44,7 @@ export type DashboardRiskLevel = 'LOW' | 'HIGH' | 'CRITICAL';
  * across the dashboard and detail page so they never disagree:
  * 0 flagged → LOW, 1–2 → HIGH, ≥3 → CRITICAL.
  */
-export function computeRiskLevel(
-  bid: Pick<BidSummary, 'flaggedRequirements'>,
-): DashboardRiskLevel {
+export function computeRiskLevel(bid: Pick<BidSummary, 'flaggedRequirements'>): DashboardRiskLevel {
   const flagged = bid.flaggedRequirements || 0;
   if (flagged >= 3) return 'CRITICAL';
   if (flagged > 0) return 'HIGH';

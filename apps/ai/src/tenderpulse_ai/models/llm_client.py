@@ -31,11 +31,18 @@ class StructuredLLMClient:
         fail_count_before_success: int = 0,
         enable_live_client: bool | None = None,
     ):
-        self.extractor_fn = extractor_fn
+        if extractor_fn is not None:
+            self.extractor_fn = extractor_fn
+        else:
+            from tenderpulse_ai.pipeline import default_tender_extractor
+
+            self.extractor_fn = default_tender_extractor
+
         self.fail_count_before_success = fail_count_before_success
         self._current_attempts = 0
         self.last_sanitized_prompt: str | None = None
         self.secrets_detected: bool = False
+        self._live_circuit_broken: bool = False
 
         from tenderpulse_ai.config import settings
 
@@ -76,8 +83,8 @@ class StructuredLLMClient:
             self._current_attempts += 1
             raise RuntimeError(f"Transient model provider failure (Attempt {self._current_attempts})")
 
-        # 3. Live LLM Gateway Extraction (when configured)
-        if self.live_client is not None:
+        # 3. Live LLM Gateway Extraction (when configured and circuit is intact)
+        if self.live_client is not None and not self._live_circuit_broken:
             try:
                 items = await self.live_client.extract_compliance(
                     system_prompt=system_prompt,
@@ -86,15 +93,25 @@ class StructuredLLMClient:
                 )
                 return items
             except Exception as err:
-                logger.warning(
-                    "[StructuredLLMClient] Live LLM gateway invocation failed (%s). Triggering deterministic fallback.",
-                    err,
-                )
+                status_code = getattr(getattr(err, "response", None), "status_code", None)
+                if status_code in (401, 402, 403, 404):
+                    self._live_circuit_broken = True
+                    logger.warning(
+                        "[StructuredLLMClient] Gateway returned permanent client/billing error %d (%s). "
+                        "Circuit breaker tripped: disabling live LLM calls for this runtime session and using offline deterministic extraction.",
+                        status_code,
+                        err,
+                    )
+                else:
+                    logger.warning(
+                        "[StructuredLLMClient] Live LLM gateway invocation failed (%s). Triggering deterministic fallback.",
+                        err,
+                    )
                 if self.extractor_fn:
                     if inspect.iscoroutinefunction(self.extractor_fn):
                         return await self.extractor_fn(system_prompt, sanitized_prompt)
                     return self.extractor_fn(system_prompt, sanitized_prompt)
-                raise
+                return []
 
         # 4. Custom / Deterministic Extractor Function (or default extraction)
         if self.extractor_fn:

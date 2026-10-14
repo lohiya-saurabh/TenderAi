@@ -48,7 +48,8 @@ const PIPELINE_STEPS: readonly PipelineStepDef[] = [
     key: 'UPLOADED',
     stepNumber: 1,
     label: 'Upload & Storage',
-    contextualDescription: 'Direct byte transfer to encrypted tenant storage with SHA-256 integrity check.',
+    contextualDescription:
+      'Direct byte transfer to encrypted tenant storage with SHA-256 integrity check.',
     activeMessage: 'Storing document in encrypted tenant storage...',
     icon: Download,
   },
@@ -64,16 +65,20 @@ const PIPELINE_STEPS: readonly PipelineStepDef[] = [
     key: 'EXTRACTING_COMPLIANCE',
     stepNumber: 3,
     label: 'Requirement Extraction',
-    contextualDescription: 'Identifying mandatory criteria, eligibility rules, and statutory clauses.',
-    activeMessage: 'Extracting eligibility requirements, statutory clauses, and verbatim citations...',
+    contextualDescription:
+      'Identifying mandatory criteria, eligibility rules, and statutory clauses.',
+    activeMessage:
+      'Extracting eligibility requirements, statutory clauses, and verbatim citations...',
     icon: Search,
   },
   {
     key: 'VERIFYING_CITATIONS',
     stepNumber: 4,
     label: 'Evidence & Risk Analysis',
-    contextualDescription: 'Grounding citations against source text and evaluating against Company Profile.',
-    activeMessage: 'Analyzing company evidence against CA UDIN records and evaluating commercial risk...',
+    contextualDescription:
+      'Grounding citations against source text and evaluating against Company Profile.',
+    activeMessage:
+      'Analyzing company evidence against CA UDIN records and evaluating commercial risk...',
     icon: Bot,
   },
   {
@@ -92,9 +97,15 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
   onComplete,
   onRetry,
 }) => {
-  const { lastEvent, isConnected, error: sseError, close } = useSSE(`/api/v1/bids/${bidId}/extraction-progress`);
+  const {
+    lastEvent,
+    isConnected,
+    error: sseError,
+    close,
+  } = useSSE(`/api/v1/bids/${bidId}/extraction-progress`);
 
-  const currentStepKey = (lastEvent?.step || (lastEvent?.status === 'REVIEW_READY' ? 'COMPLETED' : 'PARSING_PAGES')) as PipelineStageKey;
+  const currentStepKey = (lastEvent?.step ||
+    (lastEvent?.status === 'REVIEW_READY' ? 'COMPLETED' : 'PARSING_PAGES')) as PipelineStageKey;
   const progressPercent = lastEvent?.progress ?? (currentStepKey === 'COMPLETED' ? 100 : 35);
   const isComplete = currentStepKey === 'COMPLETED' || progressPercent === 100;
   const isFailed = !isComplete && (currentStepKey === 'FAILED' || !!sseError);
@@ -134,7 +145,13 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
   const activeStepMeta = PIPELINE_STEPS[activeIndex];
 
   return (
-    <Card padding="lg" style={{ border: '1px solid var(--color-primary-500)', backgroundColor: 'var(--color-surface-card)' }}>
+    <Card
+      padding="lg"
+      style={{
+        border: '1px solid var(--color-primary-500)',
+        backgroundColor: 'var(--color-surface-card)',
+      }}
+    >
       {/* Header */}
       <div
         style={{
@@ -157,7 +174,14 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
             )}
           </div>
           <div>
-            <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--color-surface-text)', margin: 0 }}>
+            <h3
+              style={{
+                fontSize: 'var(--text-base)',
+                fontWeight: 700,
+                color: 'var(--color-surface-text)',
+                margin: 0,
+              }}
+            >
               {isFailed
                 ? 'Document Extraction Failed'
                 : isComplete
@@ -204,11 +228,24 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
       {/* Progress Bar & Live Contextual Message */}
       {!isFailed && (
         <div style={{ marginBottom: '1.25rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-xs)', marginBottom: '0.4rem' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              fontSize: 'var(--text-xs)',
+              marginBottom: '0.4rem',
+            }}
+          >
             <span style={{ fontWeight: 600, color: 'var(--color-surface-text)' }}>
               {lastEvent?.message || activeStepMeta?.activeMessage || 'Processing document...'}
             </span>
-            <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--color-primary-500)' }}>
+            <span
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontWeight: 700,
+                color: 'var(--color-primary-500)',
+              }}
+            >
               {progressPercent}%
             </span>
           </div>
@@ -257,8 +294,16 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
                 transition: 'all var(--transition-fast)',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-surface-text)' }}>
+              <div
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+              >
+                <span
+                  style={{
+                    fontSize: 'var(--text-xs)',
+                    fontWeight: 700,
+                    color: 'var(--color-surface-text)',
+                  }}
+                >
                   {step.stepNumber}. {step.label}
                 </span>
                 <span style={{ display: 'flex', alignItems: 'center' }}>
@@ -305,11 +350,26 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
           }}
         >
           <div>
-            <h4 style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-danger)', margin: '0 0 0.35rem' }}>
+            <h4
+              style={{
+                fontSize: 'var(--text-sm)',
+                fontWeight: 700,
+                color: 'var(--color-danger)',
+                margin: '0 0 0.35rem',
+              }}
+            >
               What went wrong?
             </h4>
-            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-text)', margin: 0, lineHeight: 1.5 }}>
-              {sseError || 'The extraction pipeline encountered a timeout while processing multi-column tables and complex formatting.'}
+            <p
+              style={{
+                fontSize: 'var(--text-xs)',
+                color: 'var(--color-surface-text)',
+                margin: 0,
+                lineHeight: 1.5,
+              }}
+            >
+              {sseError ||
+                'The extraction pipeline encountered a timeout while processing multi-column tables and complex formatting.'}
             </p>
           </div>
 
@@ -323,11 +383,20 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
               color: 'var(--color-surface-text)',
             }}
           >
-            <strong>Data Safety Guarantee:</strong> Your uploaded PDF is securely preserved in encrypted tenant storage. Existing bid details and previously verified documents are unaffected.
+            <strong>Data Safety Guarantee:</strong> Your uploaded PDF is securely preserved in
+            encrypted tenant storage. Existing bid details and previously verified documents are
+            unaffected.
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-            <span style={{ fontSize: 'var(--text-2xs)', fontWeight: 600, color: 'var(--color-surface-muted)', textTransform: 'uppercase' }}>
+            <span
+              style={{
+                fontSize: 'var(--text-2xs)',
+                fontWeight: 600,
+                color: 'var(--color-surface-muted)',
+                textTransform: 'uppercase',
+              }}
+            >
               Recommended Next Steps:
             </span>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -358,8 +427,18 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
             gap: '0.75rem',
           }}
         >
-          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--status-pass-text)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <CheckCircle2 size={16} /> Extraction pipeline successfully grounded requirements and citations into your workspace.
+          <span
+            style={{
+              fontSize: 'var(--text-xs)',
+              color: 'var(--status-pass-text)',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+            }}
+          >
+            <CheckCircle2 size={16} /> Extraction pipeline successfully grounded requirements and
+            citations into your workspace.
           </span>
           <Button variant="primary" size="sm" onClick={onComplete} icon={<ArrowRight size={14} />}>
             Proceed to Requirement Matrix

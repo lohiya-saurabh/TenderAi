@@ -80,7 +80,7 @@ All architectural decisions are documented in the [`adr/`](adr/) directory:
 ## 6. Learning & Reference Materials
 
 Found in [`learning/`](learning/) and [`INTERVIEW_PREP.md`](INTERVIEW_PREP.md):
+
 - [INTERVIEW_PREP.md](INTERVIEW_PREP.md) — Master technical interview preparation guide across AWS/GCP, LangGraph, LLM, RAG, React, NestJS, and FastAPI.
 - [`learning/agents.md`](learning/agents.md) — Core principles of autonomous AI agents.
 - [`learning/langgraph.md`](learning/langgraph.md) — Guide to LangGraph stateful cyclic graphs.
-

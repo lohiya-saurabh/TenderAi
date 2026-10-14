@@ -6,7 +6,7 @@ Accepted (2026-10-06)
 
 ## Context
 
-The product's operational question is *"For this tender requirement, what evidence does the company have?"* The answer must be evidence-carrying: tender-side provenance (document, page, section, clause, verbatim quote), company-side evidence references, criterion results, and a final assessment of PASS / FAIL / MISSING_EVIDENCE / REVIEW_REQUIRED. A bare compliance percentage is forbidden — it is untraceable, indefensible in CVC scrutiny, and hides the exact requirements that disqualify bids.
+The product's operational question is _"For this tender requirement, what evidence does the company have?"_ The answer must be evidence-carrying: tender-side provenance (document, page, section, clause, verbatim quote), company-side evidence references, criterion results, and a final assessment of PASS / FAIL / MISSING_EVIDENCE / REVIEW_REQUIRED. A bare compliance percentage is forbidden — it is untraceable, indefensible in CVC scrutiny, and hides the exact requirements that disqualify bids.
 
 ADR 0019 established that verdicts are computed deterministically. This ADR establishes **how evidence flows to and through that computation**, and who owns each stage.
 

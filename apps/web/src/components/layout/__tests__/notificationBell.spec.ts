@@ -5,11 +5,7 @@ import { NotificationBell } from '../NotificationBell.js';
 
 describe('NotificationBell Component Suite', () => {
   it('should instantiate NotificationBell component within Router context', () => {
-    const element = React.createElement(
-      MemoryRouter,
-      null,
-      React.createElement(NotificationBell),
-    );
+    const element = React.createElement(MemoryRouter, null, React.createElement(NotificationBell));
     expect(element).toBeDefined();
   });
 });

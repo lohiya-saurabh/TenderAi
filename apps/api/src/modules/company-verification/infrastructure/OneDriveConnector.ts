@@ -56,7 +56,9 @@ export class OneDriveConnector implements DocumentSourceConnector {
         }));
       } catch (err: unknown) {
         if (err instanceof BadRequestError) throw err;
-        this.logger.error(`Error connecting to Microsoft Graph: ${err instanceof Error ? err.message : String(err)}`);
+        this.logger.error(
+          `Error connecting to Microsoft Graph: ${err instanceof Error ? err.message : String(err)}`,
+        );
         throw new InternalServerError('Unable to connect to Microsoft Graph service.');
       }
     }

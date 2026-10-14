@@ -4,11 +4,7 @@
 import { apiGet, apiPatch, apiPost, type ApiResult } from './client.js';
 
 export type NotificationCategory =
-  | 'DEADLINE'
-  | 'EVIDENCE_EXPIRY'
-  | 'REVIEW_REQUEST'
-  | 'HIGH_RISK_FLAG'
-  | 'SYSTEM';
+  'DEADLINE' | 'EVIDENCE_EXPIRY' | 'REVIEW_REQUEST' | 'HIGH_RISK_FLAG' | 'SYSTEM';
 
 export type NotificationPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 
@@ -48,10 +44,17 @@ export function markNotificationAsRead(id: string): Promise<ApiResult<Notificati
   return apiPatch<NotificationItem>(`/api/v1/notifications/${id}/read`, {});
 }
 
-export function markAllNotificationsAsRead(): Promise<ApiResult<{ success: boolean; count: number }>> {
+export function markAllNotificationsAsRead(): Promise<
+  ApiResult<{ success: boolean; count: number }>
+> {
   return apiPost<{ success: boolean; count: number }>('/api/v1/notifications/mark-all-read', {});
 }
 
-export function triggerNotificationScan(): Promise<ApiResult<{ scannedBids: number; notificationsCreated: number }>> {
-  return apiPost<{ scannedBids: number; notificationsCreated: number }>('/api/v1/notifications/trigger-scan', {});
+export function triggerNotificationScan(): Promise<
+  ApiResult<{ scannedBids: number; notificationsCreated: number }>
+> {
+  return apiPost<{ scannedBids: number; notificationsCreated: number }>(
+    '/api/v1/notifications/trigger-scan',
+    {},
+  );
 }

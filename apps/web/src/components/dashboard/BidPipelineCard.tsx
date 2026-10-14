@@ -54,14 +54,14 @@ export const BidPipelineCard: React.FC<BidPipelineCardProps> = ({
                   isSelected
                     ? 'bg-accent text-accent-foreground border-primary shadow-xs ring-1 ring-primary/20'
                     : 'bg-card/60 border-border hover:bg-accent/40',
-                  isEmpty && 'opacity-50'
+                  isEmpty && 'opacity-50',
                 )}
               >
                 <div className="flex items-center justify-between">
                   <span
                     className={cn(
                       'text-[10px] font-semibold uppercase tracking-wider',
-                      isSelected ? 'text-primary' : 'text-muted-foreground'
+                      isSelected ? 'text-primary' : 'text-muted-foreground',
                     )}
                   >
                     {stage.label}
@@ -81,15 +81,13 @@ export const BidPipelineCard: React.FC<BidPipelineCardProps> = ({
                     <span
                       className={cn(
                         'text-[11px] font-semibold',
-                        stage.readinessPct >= 80 ? 'text-primary' : 'text-foreground'
+                        stage.readinessPct >= 80 ? 'text-primary' : 'text-foreground',
                       )}
                     >
                       {stage.readinessPct}% ready
                     </span>
                   ) : (
-                    <span className="text-[10px] text-muted-foreground">
-                      No requirements yet
-                    </span>
+                    <span className="text-[10px] text-muted-foreground">No requirements yet</span>
                   )}
                   {stage.flaggedRequirements > 0 && (
                     <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-destructive">
@@ -105,7 +103,8 @@ export const BidPipelineCard: React.FC<BidPipelineCardProps> = ({
 
         {archivedCount > 0 && (
           <div className="mt-3 text-[11px] text-muted-foreground">
-            {archivedCount} archived tender{archivedCount === 1 ? '' : 's'} excluded from the pipeline
+            {archivedCount} archived tender{archivedCount === 1 ? '' : 's'} excluded from the
+            pipeline
           </div>
         )}
       </CardContent>

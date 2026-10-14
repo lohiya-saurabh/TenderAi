@@ -21,7 +21,8 @@ export interface DigiLockerTokenResponse {
 }
 
 export interface DigiLockerIssuedDocument {
-  docType: 'INCORPORATION_CERTIFICATE' | 'GST_CERTIFICATE' | 'UDYAM_CERTIFICATE' | 'PAN_CARD' | 'OTHER';
+  docType:
+    'INCORPORATION_CERTIFICATE' | 'GST_CERTIFICATE' | 'UDYAM_CERTIFICATE' | 'PAN_CARD' | 'OTHER';
   docName: string;
   uri: string;
   mimeType: string;
@@ -38,12 +39,20 @@ export interface IDigitalLockerPort {
   /**
    * Generates the OAuth2 authorization URL and signed state token for user consent.
    */
-  generateAuthUrl(tenantId: string, companyId: string, redirectUri: string): Promise<DigiLockerAuthRequest>;
+  generateAuthUrl(
+    tenantId: string,
+    companyId: string,
+    redirectUri: string,
+  ): Promise<DigiLockerAuthRequest>;
 
   /**
    * Exchanges authorization code for an access token.
    */
-  exchangeCodeForToken(code: string, state: string, redirectUri: string): Promise<DigiLockerTokenResponse>;
+  exchangeCodeForToken(
+    code: string,
+    state: string,
+    redirectUri: string,
+  ): Promise<DigiLockerTokenResponse>;
 
   /**
    * Fetches official issued documents for the authenticated DigiLocker account.

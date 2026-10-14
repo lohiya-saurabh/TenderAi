@@ -6,11 +6,19 @@ import { PGlite } from '@electric-sql/pglite';
 import bcrypt from 'bcrypt';
 import crypto from 'node:crypto';
 import { sql } from 'drizzle-orm';
-import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '../../common/database/database.module.js';
+import {
+  DRIZZLE_TOKEN,
+  type DrizzleDb,
+  createDrizzle,
+} from '../../common/database/database.module.js';
 import * as schema from '../../common/database/schema.js';
 import { UnauthorizedError, ConflictError, BadRequestError } from '../../common/errors/errors.js';
 import { TokenService } from '../../common/security/TokenService.js';
-import { ROLE_PERMISSIONS, type UserRole, type Permission } from '../../common/security/permissions.js';
+import {
+  ROLE_PERMISSIONS,
+  type UserRole,
+  type Permission,
+} from '../../common/security/permissions.js';
 
 // Precomputed cost-10 bcrypt hash used to normalize timing and defend against user enumeration
 const DUMMY_BCRYPT_HASH = '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
@@ -84,8 +92,12 @@ export class AuthService {
     }
 
     const permissions: Permission[] =
-      typeof matched.permissions === 'string' ? JSON.parse(matched.permissions) : matched.permissions;
-    const normalizedRole = String(matched.role ?? 'BID_MANAGER').toUpperCase().replace(/\s+/g, '_');
+      typeof matched.permissions === 'string'
+        ? JSON.parse(matched.permissions)
+        : matched.permissions;
+    const normalizedRole = String(matched.role ?? 'BID_MANAGER')
+      .toUpperCase()
+      .replace(/\s+/g, '_');
 
     const userProfile = {
       id: matched.id,
@@ -117,7 +129,9 @@ export class AuthService {
     };
   }
 
-  public async refresh(incomingRefreshToken?: string): Promise<{ accessToken: string; refreshToken: string }> {
+  public async refresh(
+    incomingRefreshToken?: string,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
     if (!incomingRefreshToken) {
       throw new UnauthorizedError('Missing or empty refresh token.');
     }
@@ -155,14 +169,16 @@ export class AuthService {
       .limit(1);
 
     if (!user) {
-      throw new UnauthorizedError('User account associated with this refresh token no longer exists.');
+      throw new UnauthorizedError(
+        'User account associated with this refresh token no longer exists.',
+      );
     }
 
     const permissions: Permission[] =
-      typeof user.permissions === 'string'
-        ? JSON.parse(user.permissions)
-        : user.permissions;
-    const normalizedRole = String(user.role ?? 'BID_MANAGER').toUpperCase().replace(/\s+/g, '_');
+      typeof user.permissions === 'string' ? JSON.parse(user.permissions) : user.permissions;
+    const normalizedRole = String(user.role ?? 'BID_MANAGER')
+      .toUpperCase()
+      .replace(/\s+/g, '_');
 
     const userProfile = {
       id: user.id,
@@ -231,7 +247,9 @@ export class AuthService {
    * initial Free Plan subscription, and first Company entity.
    */
   public async register(dto: RegisterDto): Promise<RegisterResult> {
-    const candidateEmail = String(dto.email || '').trim().toLowerCase();
+    const candidateEmail = String(dto.email || '')
+      .trim()
+      .toLowerCase();
     const candidatePassword = String(dto.password || '');
     const candidateName = String(dto.name || '').trim();
 
@@ -311,7 +329,10 @@ export class AuthService {
         id: companyId,
         organizationId: orgId,
         legalName: companyName,
-        slug: companyName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+        slug: companyName
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/(^-|-$)/g, ''),
         gstin: dto.gstin?.trim() || null,
         pan: dto.pan?.trim() || null,
         udyamId: dto.udyamId?.trim() || null,

@@ -80,9 +80,7 @@ export interface CompanyProfilePayload {
  * are rejected at the API boundary — not deep inside the AI
  * evaluation pipeline. Returns a list of human-readable violations.
  */
-export function validateCompanyProfilePayload(
-  payload: unknown,
-): string[] {
+export function validateCompanyProfilePayload(payload: unknown): string[] {
   const violations: string[] = [];
   if (payload === null || typeof payload !== 'object') {
     return ['Payload must be a JSON object.'];
@@ -101,10 +99,7 @@ export function validateCompanyProfilePayload(
   ) {
     violations.push('registrations must be an object map.');
   }
-  if (
-    p.operating_regions !== undefined &&
-    !Array.isArray(p.operating_regions)
-  ) {
+  if (p.operating_regions !== undefined && !Array.isArray(p.operating_regions)) {
     violations.push('operating_regions must be an array of strings.');
   }
 

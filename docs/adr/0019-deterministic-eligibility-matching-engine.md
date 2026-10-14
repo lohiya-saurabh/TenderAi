@@ -6,7 +6,7 @@ Accepted (2026-10-05)
 
 ## Context
 
-The product's core question — *should we pursue this tender?* — is answered by evaluating structured eligibility criteria (turnover thresholds, similar-work counts, certification validity, geographic presence, OEM coverage) against the Company Capability Profile. In government compliance, a wrong "eligible" verdict costs the bidder an EMD (1–3% of tender value), weeks of work, and potentially a blacklisting-adjacent reputation event.
+The product's core question — _should we pursue this tender?_ — is answered by evaluating structured eligibility criteria (turnover thresholds, similar-work counts, certification validity, geographic presence, OEM coverage) against the Company Capability Profile. In government compliance, a wrong "eligible" verdict costs the bidder an EMD (1–3% of tender value), weeks of work, and potentially a blacklisting-adjacent reputation event.
 
 ### The Problem
 
@@ -17,7 +17,7 @@ The product's core question — *should we pursue this tender?* — is answered 
 ## Decision
 
 1. **The EligibilityEngine and MatchingEngine are pure, deterministic functions in the NestJS domain/application layer** — no framework dependencies, exhaustively unit-testable, executed inside the worker after extraction completes.
-2. **The AI service output schema cannot express a verdict or a monetary computation.** AI extracts *criteria* (type, operator, threshold, unit, lookback window) and *requirements*; the engine evaluates them. This is enforced at the contract boundary (Pydantic schema has no verdict/amount fields).
+2. **The AI service output schema cannot express a verdict or a monetary computation.** AI extracts _criteria_ (type, operator, threshold, unit, lookback window) and _requirements_; the engine evaluates them. This is enforced at the contract boundary (Pydantic schema has no verdict/amount fields).
 3. **Hard-fail determinism**: any hard eligibility failure (turnover shortfall, insufficient similar works, expired mandatory registration) yields INELIGIBLE/NO-GO. Uncertainty surfaces as CONDITIONALLY_ELIGIBLE, never as GO. The worst error is a false GO.
 4. **Structured shortfalls are first-class output**: verdicts carry machine-readable shortfall detail (required vs. actual vs. delta), which drives the missing-evidence list and the MatchScorecard.
 5. **MatchState resolution is deterministic**: MATCHED / PARTIAL / EXPIRED / MISSING / NOT_APPLICABLE per requirement, computed from evidence validity windows and attribute predicates — never from LLM inference.

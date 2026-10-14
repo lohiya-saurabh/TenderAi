@@ -89,7 +89,8 @@ export const CreateBidPage: React.FC = () => {
           Initialize Tender Dossier
         </h1>
         <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-          Create an authoritative procurement workspace. After initialization, you will upload RFP/NIT documents for automated Docling extraction and deterministic eligibility scoring.
+          Create an authoritative procurement workspace. After initialization, you will upload
+          RFP/NIT documents for automated Docling extraction and deterministic eligibility scoring.
         </p>
       </div>
 
@@ -120,7 +121,8 @@ export const CreateBidPage: React.FC = () => {
             </select>
           </div>
           <span className="text-[11px] text-muted-foreground">
-            This tender will be evaluated strictly against this company's pinned capability profile and evidence vault.
+            This tender will be evaluated strictly against this company's pinned capability profile
+            and evidence vault.
           </span>
         </div>
 
@@ -220,7 +222,13 @@ export const CreateBidPage: React.FC = () => {
               Cancel
             </Button>
           </Link>
-          <Button variant="primary" type="submit" size="md" isLoading={isSubmitting} className="shadow-sm">
+          <Button
+            variant="primary"
+            type="submit"
+            size="md"
+            isLoading={isSubmitting}
+            className="shadow-sm"
+          >
             Initialize Dossier Workspace →
           </Button>
         </div>

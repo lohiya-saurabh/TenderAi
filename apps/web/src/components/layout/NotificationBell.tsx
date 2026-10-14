@@ -17,11 +17,7 @@ import {
   triggerNotificationScan,
   type NotificationItem,
 } from '../../api/notifications.js';
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-} from '../ui/dropdown-menu.js';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent } from '../ui/dropdown-menu.js';
 import { Button } from '../ui/button.js';
 import { Badge } from '../ui/badge.js';
 import { Spinner } from '../common/Spinner.js';
@@ -59,7 +55,9 @@ export const NotificationBell: React.FC = () => {
     try {
       await markNotificationAsRead(id);
       setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, isRead: true, readAt: new Date().toISOString() } : n)),
+        prev.map((n) =>
+          n.id === id ? { ...n, isRead: true, readAt: new Date().toISOString() } : n,
+        ),
       );
       setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch {
@@ -96,7 +94,9 @@ export const NotificationBell: React.FC = () => {
     if (!notif.isRead) {
       void markNotificationAsRead(notif.id);
       setNotifications((prev) =>
-        prev.map((n) => (n.id === notif.id ? { ...n, isRead: true, readAt: new Date().toISOString() } : n)),
+        prev.map((n) =>
+          n.id === notif.id ? { ...n, isRead: true, readAt: new Date().toISOString() } : n,
+        ),
       );
       setUnreadCount((prev) => Math.max(0, prev - 1));
     }
@@ -180,7 +180,11 @@ export const NotificationBell: React.FC = () => {
               disabled={scanning}
               title="Scan for imminent deadlines"
             >
-              {scanning ? <Spinner size="sm" className="h-3 w-3" /> : <RefreshCw className="h-3 w-3" />}
+              {scanning ? (
+                <Spinner size="sm" className="h-3 w-3" />
+              ) : (
+                <RefreshCw className="h-3 w-3" />
+              )}
             </Button>
 
             {unreadCount > 0 && (
@@ -214,14 +218,18 @@ export const NotificationBell: React.FC = () => {
                 key={notif.id}
                 onClick={() => handleNotificationClick(notif)}
                 className={`flex items-start gap-3 p-3.5 text-xs transition-colors cursor-pointer hover:bg-accent/60 ${
-                  !notif.isRead ? 'bg-accent/25 hover:bg-accent/50' : 'opacity-80 hover:bg-accent/40'
+                  !notif.isRead
+                    ? 'bg-accent/25 hover:bg-accent/50'
+                    : 'opacity-80 hover:bg-accent/40'
                 }`}
               >
                 {renderCategoryIcon(notif.category)}
 
                 <div className="flex-1 min-w-0 space-y-1">
                   <div className="flex items-center justify-between gap-1">
-                    <p className={`truncate ${!notif.isRead ? 'text-foreground font-semibold' : 'text-muted-foreground font-medium'}`}>
+                    <p
+                      className={`truncate ${!notif.isRead ? 'text-foreground font-semibold' : 'text-muted-foreground font-medium'}`}
+                    >
                       {notif.title}
                     </p>
                     <span className="text-[10px] text-muted-foreground shrink-0">

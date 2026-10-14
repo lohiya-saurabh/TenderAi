@@ -12,7 +12,7 @@ import type {
 import { BadRequestError, NotFoundError } from '../../../common/errors/errors.js';
 
 const KNOWN_MCA_DATABASE: Record<string, Partial<McaCompanyMasterDetails>> = {
-  'U72900MH2018PTC123456': {
+  U72900MH2018PTC123456: {
     companyName: 'ACME INFRASTRUCTURE INDIA PRIVATE LIMITED',
     rocOffice: 'RoC-Mumbai',
     registrationNumber: '123456',
@@ -29,7 +29,7 @@ const KNOWN_MCA_DATABASE: Record<string, Partial<McaCompanyMasterDetails>> = {
       { din: '07654321', name: 'Ananya Verma' },
     ],
   },
-  'L45200MH1946PLC004768': {
+  L45200MH1946PLC004768: {
     companyName: 'LARSEN & TOUBRO LIMITED',
     rocOffice: 'RoC-Mumbai',
     registrationNumber: '004768',
@@ -59,7 +59,9 @@ export class MockMcaRegistryAdapter implements CompanyRegistryProvider {
     }
 
     if (normalized.endsWith('999999')) {
-      throw new NotFoundError(`Company with CIN '${cinOrLlpin}' not found in Ministry of Corporate Affairs registry.`);
+      throw new NotFoundError(
+        `Company with CIN '${cinOrLlpin}' not found in Ministry of Corporate Affairs registry.`,
+      );
     }
 
     const known = KNOWN_MCA_DATABASE[normalized];

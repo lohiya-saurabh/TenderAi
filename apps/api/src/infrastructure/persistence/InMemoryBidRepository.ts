@@ -14,9 +14,7 @@ export class InMemoryBidRepository implements IBidRepository {
   }
 
   public async findAllByOrganization(organizationId: string): Promise<BidProject[]> {
-    return Array.from(this.bids.values()).filter(
-      (bid) => bid.organizationId === organizationId,
-    );
+    return Array.from(this.bids.values()).filter((bid) => bid.organizationId === organizationId);
   }
 
   public async save(bid: BidProject): Promise<void> {

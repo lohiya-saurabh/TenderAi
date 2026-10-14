@@ -57,9 +57,23 @@ export const AssessmentPanel: React.FC<AssessmentPanelProps> = ({
                   size="md"
                 />
               </div>
-              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <div
+                style={{
+                  fontSize: 'var(--text-xs)',
+                  color: 'var(--color-surface-muted)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                }}
+              >
                 <span>Confidence:</span>
-                <span style={{ fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--color-surface-text)' }}>
+                <span
+                  style={{
+                    fontWeight: 700,
+                    fontFamily: 'var(--font-mono)',
+                    color: 'var(--color-surface-text)',
+                  }}
+                >
                   {Math.round((rationale.confidenceScore || 0) * 100)}%
                 </span>
               </div>
@@ -67,10 +81,26 @@ export const AssessmentPanel: React.FC<AssessmentPanelProps> = ({
 
             {/* Rule Applied */}
             <Card padding="md">
-              <h5 style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--font-semibold)' as unknown as number, color: 'var(--color-surface-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.5rem' }}>
+              <h5
+                style={{
+                  fontSize: 'var(--text-xs)',
+                  fontWeight: 'var(--font-semibold)' as unknown as number,
+                  color: 'var(--color-surface-muted)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  margin: '0 0 0.5rem',
+                }}
+              >
                 Evaluation Rule Applied
               </h5>
-              <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-surface-text)', lineHeight: 1.6, fontWeight: 500 }}>
+              <div
+                style={{
+                  fontSize: 'var(--text-sm)',
+                  color: 'var(--color-surface-text)',
+                  lineHeight: 1.6,
+                  fontWeight: 500,
+                }}
+              >
                 {rationale.ruleApplied}
               </div>
             </Card>
@@ -85,13 +115,37 @@ export const AssessmentPanel: React.FC<AssessmentPanelProps> = ({
                   borderRadius: 'var(--radius-md)',
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                  <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-warning)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '0.5rem',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 'var(--text-xs)',
+                      fontWeight: 700,
+                      color: 'var(--color-warning)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.04em',
+                    }}
+                  >
                     Tender Requirement Criteria
                   </span>
-                  <Badge variant="warning" size="sm">Tender Scope</Badge>
+                  <Badge variant="warning" size="sm">
+                    Tender Scope
+                  </Badge>
                 </div>
-                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-text)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                <div
+                  style={{
+                    fontSize: 'var(--text-xs)',
+                    color: 'var(--color-surface-text)',
+                    lineHeight: 1.6,
+                    whiteSpace: 'pre-wrap',
+                  }}
+                >
                   {rationale.tenderRequirement}
                 </div>
               </div>
@@ -104,13 +158,37 @@ export const AssessmentPanel: React.FC<AssessmentPanelProps> = ({
                   borderRadius: 'var(--radius-md)',
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                  <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--status-pass-text)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '0.5rem',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 'var(--text-xs)',
+                      fontWeight: 700,
+                      color: 'var(--status-pass-text)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.04em',
+                    }}
+                  >
                     Company Capability / Evidence
                   </span>
-                  <Badge variant="neutral" size="sm">Company Match</Badge>
+                  <Badge variant="neutral" size="sm">
+                    Company Match
+                  </Badge>
                 </div>
-                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-text)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                <div
+                  style={{
+                    fontSize: 'var(--text-xs)',
+                    color: 'var(--color-surface-text)',
+                    lineHeight: 1.6,
+                    whiteSpace: 'pre-wrap',
+                  }}
+                >
                   {rationale.companyCapability}
                 </div>
               </div>
@@ -119,10 +197,27 @@ export const AssessmentPanel: React.FC<AssessmentPanelProps> = ({
             {/* Detailed Evaluation Points */}
             {rationale.details && rationale.details.length > 0 && (
               <Card padding="md">
-                <h5 style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--font-semibold)' as unknown as number, color: 'var(--color-surface-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.75rem' }}>
+                <h5
+                  style={{
+                    fontSize: 'var(--text-xs)',
+                    fontWeight: 'var(--font-semibold)' as unknown as number,
+                    color: 'var(--color-surface-muted)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    margin: '0 0 0.75rem',
+                  }}
+                >
                   Step-by-Step Logic Breakdown
                 </h5>
-                <ul style={{ paddingLeft: '1.25rem', margin: 0, fontSize: 'var(--text-xs)', color: 'var(--color-surface-text)', lineHeight: 1.7 }}>
+                <ul
+                  style={{
+                    paddingLeft: '1.25rem',
+                    margin: 0,
+                    fontSize: 'var(--text-xs)',
+                    color: 'var(--color-surface-text)',
+                    lineHeight: 1.7,
+                  }}
+                >
                   {rationale.details.map((detail, idx) => (
                     <li key={idx} style={{ marginBottom: '0.35rem' }}>
                       {detail}
@@ -134,11 +229,27 @@ export const AssessmentPanel: React.FC<AssessmentPanelProps> = ({
 
             {/* Trust & Transparency Note */}
             <Card padding="md" variant="subtle">
-              <h5 style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--font-semibold)' as unknown as number, color: 'var(--color-surface-text)', margin: '0 0 0.5rem' }}>
+              <h5
+                style={{
+                  fontSize: 'var(--text-xs)',
+                  fontWeight: 'var(--font-semibold)' as unknown as number,
+                  color: 'var(--color-surface-text)',
+                  margin: '0 0 0.5rem',
+                }}
+              >
                 AI Assessment Trust Model
               </h5>
-              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)', lineHeight: 1.6, margin: 0 }}>
-                Assessments are calculated via multi-criteria matching against company past performance, financial turnovers, and credentials. Human reviewers can override the status at any time with review notes.
+              <p
+                style={{
+                  fontSize: 'var(--text-xs)',
+                  color: 'var(--color-surface-muted)',
+                  lineHeight: 1.6,
+                  margin: 0,
+                }}
+              >
+                Assessments are calculated via multi-criteria matching against company past
+                performance, financial turnovers, and credentials. Human reviewers can override the
+                status at any time with review notes.
               </p>
             </Card>
           </>
@@ -155,11 +266,26 @@ export const AssessmentPanel: React.FC<AssessmentPanelProps> = ({
               }}
             >
               <Bot size={36} className="text-muted-foreground" />
-              <div style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--font-semibold)' as unknown as number, color: 'var(--color-surface-text)' }}>
+              <div
+                style={{
+                  fontSize: 'var(--text-base)',
+                  fontWeight: 'var(--font-semibold)' as unknown as number,
+                  color: 'var(--color-surface-text)',
+                }}
+              >
                 Assessment Rationale Not Generated
               </div>
-              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)', maxWidth: '340px', lineHeight: 1.6, margin: 0 }}>
-                This requirement has not undergone automated capability evaluation yet. Run bid analysis to generate the compliance rationale.
+              <p
+                style={{
+                  fontSize: 'var(--text-xs)',
+                  color: 'var(--color-surface-muted)',
+                  maxWidth: '340px',
+                  lineHeight: 1.6,
+                  margin: 0,
+                }}
+              >
+                This requirement has not undergone automated capability evaluation yet. Run bid
+                analysis to generate the compliance rationale.
               </p>
             </div>
           </Card>

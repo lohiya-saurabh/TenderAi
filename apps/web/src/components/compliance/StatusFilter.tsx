@@ -1,12 +1,7 @@
 import React from 'react';
 
 export type ComplianceStatusFilterValue =
-  | 'ALL'
-  | 'PASS'
-  | 'FAIL'
-  | 'MISSING'
-  | 'REVIEW_REQUIRED'
-  | 'NOT_APPLICABLE';
+  'ALL' | 'PASS' | 'FAIL' | 'MISSING' | 'REVIEW_REQUIRED' | 'NOT_APPLICABLE';
 
 export interface StatusFilterProps {
   value: ComplianceStatusFilterValue;
@@ -22,11 +17,7 @@ const statusColors: Record<Exclude<ComplianceStatusFilterValue, 'ALL'>, string> 
   NOT_APPLICABLE: 'var(--status-na-text)',
 };
 
-export const StatusFilter: React.FC<StatusFilterProps> = ({
-  value,
-  onChange,
-  counts,
-}) => {
+export const StatusFilter: React.FC<StatusFilterProps> = ({ value, onChange, counts }) => {
   const options: { value: ComplianceStatusFilterValue; label: string; color?: string }[] = [
     { label: 'All Items', value: 'ALL' },
     { label: 'Pass', value: 'PASS', color: statusColors.PASS },
@@ -57,9 +48,7 @@ export const StatusFilter: React.FC<StatusFilterProps> = ({
             {count != null && (
               <span
                 className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-full ${
-                  isActive
-                    ? 'bg-background/20 text-background'
-                    : 'bg-muted text-muted-foreground'
+                  isActive ? 'bg-background/20 text-background' : 'bg-muted text-muted-foreground'
                 }`}
               >
                 {count}

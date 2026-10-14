@@ -303,16 +303,16 @@ flowchart TD
 
 ### Detailed Mapping & Relationship Matrix
 
-| Domain Concept | Physical Implementation in Schema | Enclosing Entity / Column | Relationship & Cardinality | Implementation Reality & Architectural Rationale |
-| :--- | :--- | :--- | :--- | :--- |
-| **Tenders** | Dedicated Table | `bids` | **1 : N** with `tender_documents`<br>**1 : N** with `compliance_items`<br>**N : 1** with `companies` | Represents the central tender workspace. Contains tender title, tender number, tendering authority, EMD/estimated value in rupees, and status rollup (`DRAFT`, `UPLOADED`, `PROCESSING`, `REVIEW_READY`, `SUBMITTED`). |
-| **Documents** | Dedicated Table | `tender_documents` | **N : 1** with `bids` (`ON DELETE CASCADE`) | Physical files stored in S3/GCS. Tracks upload state, storage key, MIME type, file size, processing attempt counters, and failure logs. Has hard engine-level foreign key to `bids.id`. |
-| **Clauses** | Embedded JSONB Value Object | `compliance_items.provenance` | **1 : 1** inside each requirement (or multiple supporting pages) | **Not a separate relational table.** In legal procurement, isolated clauses are meaningless without requirement context. Stored inside `compliance_items.provenance` containing `clauseReference`, `pageNumber`, `verbatimQuote`, `sourceDocumentId`, and `confidenceScore`. Cross-page clauses are merged into combined references. |
-| **Requirements** | Dedicated Table | `compliance_items` | **N : 1** with `bids` (`ON DELETE CASCADE`) | Core unit of compliance. Represents mandatory tender criteria across categories (`TECHNICAL_EXPERIENCE`, `FINANCIAL_CRITERIA`, `ANNEXURE_DECLARATION`, `STATUTORY_REGISTRATION`, `COMMERCIAL_RISK`). Carries procedural execution rules in `execution_rules` JSONB. |
-| **Evidence** | Dual-Sided JSONB Documents | `compliance_items.company_evidence`<br>& `company_profile_versions.payload` | **M : N** (Logical relationship between requirements and company facts) | **Not a separate relational table.** Company capabilities are stored as immutable versioned snapshots (`CompanyProfileSnapshot`) in `company_profile_versions.payload`. Matched evidence citations (e.g. past project references, audited turnover figures) are linked into `compliance_items.company_evidence`. This avoids complex join tables while preserving immutable point-in-time bid evaluations. |
-| **Compliance** | Dedicated Table | `compliance_items` | **N : 1** with `bids`<br>**N : 1** with `companies` (logical) | Unifies requirement definition, company evidence match, risk assessment, and review lifecycle (`PENDING`, `READY`, `FLAGGED`, `WAIVED`). Enforces Optimistic Concurrency Control via `version INT NOT NULL`. |
-| **Review Tasks** | Dynamic Query Projection | Queried dynamically via `ComplianceService.listReviewTasks(bidId)` | **Virtual Projection** over `compliance_items` | **Not a separate relational table.** Avoids state synchronization bugs between a "tasks" table and "compliance" table. A review task is defined as any `compliance_items` record where `status IN ('PENDING', 'REVIEW_REQUIRED') OR human_review_required = TRUE`. Evaluated dynamically on request. |
-| **Jobs** | Dedicated Outbox Table & Status Fields | `document_processing_outbox`<br>& `tender_documents.status` | **1 : 1** logical dispatch per document upload | Asynchronous ingestion jobs are tracked via `document_processing_outbox` (`PENDING`, `PUBLISHING`, `PUBLISHED`) implementing the Transactional Outbox Pattern, alongside state fields (`processing_attempts`, `processing_started_at`, `last_processing_error`) directly on `tender_documents`. |
+| Domain Concept   | Physical Implementation in Schema      | Enclosing Entity / Column                                                   | Relationship & Cardinality                                                                           | Implementation Reality & Architectural Rationale                                                                                                                                                                                                                                                                                                                                                           |
+| :--------------- | :------------------------------------- | :-------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Tenders**      | Dedicated Table                        | `bids`                                                                      | **1 : N** with `tender_documents`<br>**1 : N** with `compliance_items`<br>**N : 1** with `companies` | Represents the central tender workspace. Contains tender title, tender number, tendering authority, EMD/estimated value in rupees, and status rollup (`DRAFT`, `UPLOADED`, `PROCESSING`, `REVIEW_READY`, `SUBMITTED`).                                                                                                                                                                                     |
+| **Documents**    | Dedicated Table                        | `tender_documents`                                                          | **N : 1** with `bids` (`ON DELETE CASCADE`)                                                          | Physical files stored in S3/GCS. Tracks upload state, storage key, MIME type, file size, processing attempt counters, and failure logs. Has hard engine-level foreign key to `bids.id`.                                                                                                                                                                                                                    |
+| **Clauses**      | Embedded JSONB Value Object            | `compliance_items.provenance`                                               | **1 : 1** inside each requirement (or multiple supporting pages)                                     | **Not a separate relational table.** In legal procurement, isolated clauses are meaningless without requirement context. Stored inside `compliance_items.provenance` containing `clauseReference`, `pageNumber`, `verbatimQuote`, `sourceDocumentId`, and `confidenceScore`. Cross-page clauses are merged into combined references.                                                                       |
+| **Requirements** | Dedicated Table                        | `compliance_items`                                                          | **N : 1** with `bids` (`ON DELETE CASCADE`)                                                          | Core unit of compliance. Represents mandatory tender criteria across categories (`TECHNICAL_EXPERIENCE`, `FINANCIAL_CRITERIA`, `ANNEXURE_DECLARATION`, `STATUTORY_REGISTRATION`, `COMMERCIAL_RISK`). Carries procedural execution rules in `execution_rules` JSONB.                                                                                                                                        |
+| **Evidence**     | Dual-Sided JSONB Documents             | `compliance_items.company_evidence`<br>& `company_profile_versions.payload` | **M : N** (Logical relationship between requirements and company facts)                              | **Not a separate relational table.** Company capabilities are stored as immutable versioned snapshots (`CompanyProfileSnapshot`) in `company_profile_versions.payload`. Matched evidence citations (e.g. past project references, audited turnover figures) are linked into `compliance_items.company_evidence`. This avoids complex join tables while preserving immutable point-in-time bid evaluations. |
+| **Compliance**   | Dedicated Table                        | `compliance_items`                                                          | **N : 1** with `bids`<br>**N : 1** with `companies` (logical)                                        | Unifies requirement definition, company evidence match, risk assessment, and review lifecycle (`PENDING`, `READY`, `FLAGGED`, `WAIVED`). Enforces Optimistic Concurrency Control via `version INT NOT NULL`.                                                                                                                                                                                               |
+| **Review Tasks** | Dynamic Query Projection               | Queried dynamically via `ComplianceService.listReviewTasks(bidId)`          | **Virtual Projection** over `compliance_items`                                                       | **Not a separate relational table.** Avoids state synchronization bugs between a "tasks" table and "compliance" table. A review task is defined as any `compliance_items` record where `status IN ('PENDING', 'REVIEW_REQUIRED') OR human_review_required = TRUE`. Evaluated dynamically on request.                                                                                                       |
+| **Jobs**         | Dedicated Outbox Table & Status Fields | `document_processing_outbox`<br>& `tender_documents.status`                 | **1 : 1** logical dispatch per document upload                                                       | Asynchronous ingestion jobs are tracked via `document_processing_outbox` (`PENDING`, `PUBLISHING`, `PUBLISHED`) implementing the Transactional Outbox Pattern, alongside state fields (`processing_attempts`, `processing_started_at`, `last_processing_error`) directly on `tender_documents`.                                                                                                            |
 
 ---
 
@@ -369,8 +369,8 @@ The schema accommodates all relationship cardinalities required for public procu
    - `BIDS` $\to$ `AUDIT_LOGS`: Append-only event sequence documenting the complete lifecycle of a bid.
 3. **Many-to-Many (M:N)**:
    - **Tender Requirements $\leftrightarrow$ Company Evidence**:
-     - *The Problem*: A single ISO certificate (Evidence) satisfies both "Quality Certification" and "Environmental Management" (Requirements). Conversely, a major highway requirement requires combining multiple past project completion certificates and audited financial sheets.
-     - *How It Is Solved*: Implemented through **dual-sided embedded JSONB references** rather than a separate relational join table:
+     - _The Problem_: A single ISO certificate (Evidence) satisfies both "Quality Certification" and "Environmental Management" (Requirements). Conversely, a major highway requirement requires combining multiple past project completion certificates and audited financial sheets.
+     - _How It Is Solved_: Implemented through **dual-sided embedded JSONB references** rather than a separate relational join table:
        - `company_profile_versions.payload` stores the universe of verified company capability facts (`completed_projects`, `certifications`, `machinery`, `financials`).
        - `compliance_items.company_evidence` stores an array of matched evidence references with match rationale and confidence.
        - This preserves point-in-time evaluation snapshots without risk of mutable join table drift.
@@ -383,248 +383,248 @@ The schema accommodates all relationship cardinalities required for public procu
 
 Represents authenticated employees of an organization with role-based access control.
 
-| Column | Type | Constraints | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | `TEXT` | `PRIMARY KEY` | Unique user identifier (e.g., `usr_admin_01`) |
-| `email` | `TEXT` | `UNIQUE NOT NULL` | Login email address |
-| `password` | `TEXT` | `NOT NULL` | Bcrypt hashed password (10 salt rounds) |
-| `name` | `TEXT` | `NOT NULL` | User full name |
-| `phone` | `TEXT` | `NULL` | Optional contact phone number |
-| `role` | `TEXT` | `NOT NULL` | RBAC role: `ADMIN`, `BID_MANAGER`, `REVIEWER`, `VIEWER` |
-| `permissions` | `JSONB` | `NOT NULL` | String array of atomic permissions (`bids:read`, `bids:create`, etc.) |
-| `organization_id` | `TEXT` | `NOT NULL` | Denormalized tenant isolation key (e.g., `org_acme_infra_001`) |
-| `organization_name`| `TEXT` | `NOT NULL` | Cached legal entity name of the organization |
+| Column              | Type    | Constraints       | Description                                                           |
+| :------------------ | :------ | :---------------- | :-------------------------------------------------------------------- |
+| `id`                | `TEXT`  | `PRIMARY KEY`     | Unique user identifier (e.g., `usr_admin_01`)                         |
+| `email`             | `TEXT`  | `UNIQUE NOT NULL` | Login email address                                                   |
+| `password`          | `TEXT`  | `NOT NULL`        | Bcrypt hashed password (10 salt rounds)                               |
+| `name`              | `TEXT`  | `NOT NULL`        | User full name                                                        |
+| `phone`             | `TEXT`  | `NULL`            | Optional contact phone number                                         |
+| `role`              | `TEXT`  | `NOT NULL`        | RBAC role: `ADMIN`, `BID_MANAGER`, `REVIEWER`, `VIEWER`               |
+| `permissions`       | `JSONB` | `NOT NULL`        | String array of atomic permissions (`bids:read`, `bids:create`, etc.) |
+| `organization_id`   | `TEXT`  | `NOT NULL`        | Denormalized tenant isolation key (e.g., `org_acme_infra_001`)        |
+| `organization_name` | `TEXT`  | `NOT NULL`        | Cached legal entity name of the organization                          |
 
 ### 3.2 `tenant_settings` (Tenant Configuration)
 
 Singleton configuration per tenant governing default operational behavior and notification toggles.
 
-| Column | Type | Constraints | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | `TEXT` | `PRIMARY KEY` | Record ID |
-| `organization_id` | `TEXT` | `UNIQUE NOT NULL` | One configuration record per tenant |
-| `default_company_id` | `TEXT` | `NULL` | Default company selected for bid creation |
-| `notification_preferences` | `JSONB` | `NOT NULL` | `{ notifyDeadlines, notifyEvidenceExpiry, notifyReviewRequests, notifyHighRiskFlags }` |
-| `updated_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Last modification timestamp |
+| Column                     | Type          | Constraints              | Description                                                                            |
+| :------------------------- | :------------ | :----------------------- | :------------------------------------------------------------------------------------- |
+| `id`                       | `TEXT`        | `PRIMARY KEY`            | Record ID                                                                              |
+| `organization_id`          | `TEXT`        | `UNIQUE NOT NULL`        | One configuration record per tenant                                                    |
+| `default_company_id`       | `TEXT`        | `NULL`                   | Default company selected for bid creation                                              |
+| `notification_preferences` | `JSONB`       | `NOT NULL`               | `{ notifyDeadlines, notifyEvidenceExpiry, notifyReviewRequests, notifyHighRiskFlags }` |
+| `updated_at`               | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Last modification timestamp                                                            |
 
 ### 3.3 `companies` (Legal Entity Registry)
 
 Represents a contractor company, subsidiary, or joint-venture partner owned by the tenant.
 
-| Column | Type | Constraints | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | `TEXT` | `PRIMARY KEY` | Company identifier (e.g., `comp_acme_infra`) |
-| `organization_id` | `TEXT` | `NOT NULL` | Owning tenant key |
-| `legal_name` | `TEXT` | `NOT NULL` | Registered business name (e.g., "Acme Infra Projects Pvt Ltd") |
-| `slug` | `TEXT` | `NULL` | URL slug |
-| `gstin` | `TEXT` | `NULL` | 15-character Indian Goods & Services Tax Identification Number |
-| `pan` | `TEXT` | `NULL` | 10-character Permanent Account Number |
-| `udyam_id` | `TEXT` | `NULL` | MSME Udyam Registration Number |
-| `constitution` | `TEXT` | `NULL` | `PRIVATE_LIMITED`, `PUBLIC_LIMITED`, `PARTNERSHIP`, `PROPRIETORSHIP` |
-| `created_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Registration timestamp |
-| `updated_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Last update timestamp |
+| Column            | Type          | Constraints              | Description                                                          |
+| :---------------- | :------------ | :----------------------- | :------------------------------------------------------------------- |
+| `id`              | `TEXT`        | `PRIMARY KEY`            | Company identifier (e.g., `comp_acme_infra`)                         |
+| `organization_id` | `TEXT`        | `NOT NULL`               | Owning tenant key                                                    |
+| `legal_name`      | `TEXT`        | `NOT NULL`               | Registered business name (e.g., "Acme Infra Projects Pvt Ltd")       |
+| `slug`            | `TEXT`        | `NULL`                   | URL slug                                                             |
+| `gstin`           | `TEXT`        | `NULL`                   | 15-character Indian Goods & Services Tax Identification Number       |
+| `pan`             | `TEXT`        | `NULL`                   | 10-character Permanent Account Number                                |
+| `udyam_id`        | `TEXT`        | `NULL`                   | MSME Udyam Registration Number                                       |
+| `constitution`    | `TEXT`        | `NULL`                   | `PRIVATE_LIMITED`, `PUBLIC_LIMITED`, `PARTNERSHIP`, `PROPRIETORSHIP` |
+| `created_at`      | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Registration timestamp                                               |
+| `updated_at`      | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Last update timestamp                                                |
 
 ### 3.4 `bids` (Tender Pursuit Aggregate Root)
 
 The central aggregate representing an active government tender pursuit.
 
-| Column | Type | Constraints | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | `TEXT` | `PRIMARY KEY` | Bid project ID (e.g., `bid_delhi_highway_001`) |
-| `organization_id` | `TEXT` | `NOT NULL` | Denormalized tenant scoping key |
-| `company_id` | `TEXT` | `NOT NULL` | Operating company submitting the bid |
-| `title` | `TEXT` | `NOT NULL` | Tender title (e.g., "Construction of 4-Lane Highway") |
-| `tender_number` | `TEXT` | `NOT NULL DEFAULT ''` | Official tender reference number |
-| `tendering_authority` | `TEXT` | `NOT NULL DEFAULT ''` | Issuing authority (e.g., "NHAI", "CPWD", "Indian Railways") |
-| `estimated_value_rupees`| `BIGINT` | `NOT NULL DEFAULT 0` | Estimated contract value in Indian Rupees |
-| `submission_deadline` | `TEXT` | `NULL` | Submission deadline string or ISO date |
-| `location_state` | `TEXT` | `NULL` | Indian state / union territory of work execution |
-| `status` | `TEXT` | `NOT NULL DEFAULT 'DRAFT'` | State machine: `DRAFT`, `QUEUED`, `PROCESSING`, `REVIEW_READY`, `FINALIZED`, `FAILED` |
-| `total_requirements` | `INT` | `NOT NULL DEFAULT 0` | Total extracted compliance requirements |
-| `flagged_requirements`| `INT` | `NOT NULL DEFAULT 0` | Requirements flagged with high risk or missing criteria |
-| `approved_requirements`| `INT`| `NOT NULL DEFAULT 0` | Requirements reviewed and accepted by Bid Manager |
-| `version` | `INT` | `NOT NULL DEFAULT 1` | Optimistic concurrency control counter |
-| `created_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Creation timestamp |
-| `updated_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Last mutation timestamp |
+| Column                   | Type          | Constraints                | Description                                                                           |
+| :----------------------- | :------------ | :------------------------- | :------------------------------------------------------------------------------------ |
+| `id`                     | `TEXT`        | `PRIMARY KEY`              | Bid project ID (e.g., `bid_delhi_highway_001`)                                        |
+| `organization_id`        | `TEXT`        | `NOT NULL`                 | Denormalized tenant scoping key                                                       |
+| `company_id`             | `TEXT`        | `NOT NULL`                 | Operating company submitting the bid                                                  |
+| `title`                  | `TEXT`        | `NOT NULL`                 | Tender title (e.g., "Construction of 4-Lane Highway")                                 |
+| `tender_number`          | `TEXT`        | `NOT NULL DEFAULT ''`      | Official tender reference number                                                      |
+| `tendering_authority`    | `TEXT`        | `NOT NULL DEFAULT ''`      | Issuing authority (e.g., "NHAI", "CPWD", "Indian Railways")                           |
+| `estimated_value_rupees` | `BIGINT`      | `NOT NULL DEFAULT 0`       | Estimated contract value in Indian Rupees                                             |
+| `submission_deadline`    | `TEXT`        | `NULL`                     | Submission deadline string or ISO date                                                |
+| `location_state`         | `TEXT`        | `NULL`                     | Indian state / union territory of work execution                                      |
+| `status`                 | `TEXT`        | `NOT NULL DEFAULT 'DRAFT'` | State machine: `DRAFT`, `QUEUED`, `PROCESSING`, `REVIEW_READY`, `FINALIZED`, `FAILED` |
+| `total_requirements`     | `INT`         | `NOT NULL DEFAULT 0`       | Total extracted compliance requirements                                               |
+| `flagged_requirements`   | `INT`         | `NOT NULL DEFAULT 0`       | Requirements flagged with high risk or missing criteria                               |
+| `approved_requirements`  | `INT`         | `NOT NULL DEFAULT 0`       | Requirements reviewed and accepted by Bid Manager                                     |
+| `version`                | `INT`         | `NOT NULL DEFAULT 1`       | Optimistic concurrency control counter                                                |
+| `created_at`             | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()`   | Creation timestamp                                                                    |
+| `updated_at`             | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()`   | Last mutation timestamp                                                               |
 
 ### 3.5 `tender_documents` (Uploaded Tender Files)
 
 Child entity tracking tender packages (NIT, Technical Specifications, BoQ, Corrigenda) stored in S3 or GCS.
 
-| Column | Type | Constraints | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | `TEXT` | `PRIMARY KEY` | Document ID |
-| `bid_id` | `TEXT` | `NOT NULL REFERENCES bids(id) ON DELETE CASCADE` | Parent bid reference |
-| `organization_id` | `TEXT` | `NOT NULL` | Denormalized tenant isolation key |
-| `file_name` | `TEXT` | `NOT NULL` | Original client file name (e.g., `NIT_Document.pdf`) |
-| `storage_path` | `TEXT` | `NOT NULL` | Object storage key (`tenants/:orgId/bids/:bidId/raw/:docId.pdf`) |
-| `file_size_bytes` | `BIGINT` | `NOT NULL` | File byte size |
-| `mime_type` | `TEXT` | `NOT NULL` | MIME type (`application/pdf`) |
-| `document_type` | `TEXT` | `NOT NULL` | Classification: `NIT`, `TECHNICAL_SPECS`, `GCC`, `SCC`, `BOQ`, `CORRIGENDUM` |
-| `status` | `TEXT` | `NOT NULL DEFAULT 'UPLOADED'` | Status: `UPLOADED`, `QUEUED`, `PROCESSING`, `COMPLETED`, `FAILED` |
-| `processing_attempts` | `INT` | `NOT NULL DEFAULT 0` | Retry counter for background extraction |
-| `processing_started_at`| `TIMESTAMPTZ` | `NULL` | Timestamp when AI worker claimed the job |
-| `processing_completed_at`| `TIMESTAMPTZ`| `NULL` | Timestamp when extraction was persisted |
-| `last_processing_error`| `TEXT` | `NULL` | Error message if extraction failed |
-| `uploaded_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Upload confirmation timestamp |
+| Column                    | Type          | Constraints                                      | Description                                                                  |
+| :------------------------ | :------------ | :----------------------------------------------- | :--------------------------------------------------------------------------- |
+| `id`                      | `TEXT`        | `PRIMARY KEY`                                    | Document ID                                                                  |
+| `bid_id`                  | `TEXT`        | `NOT NULL REFERENCES bids(id) ON DELETE CASCADE` | Parent bid reference                                                         |
+| `organization_id`         | `TEXT`        | `NOT NULL`                                       | Denormalized tenant isolation key                                            |
+| `file_name`               | `TEXT`        | `NOT NULL`                                       | Original client file name (e.g., `NIT_Document.pdf`)                         |
+| `storage_path`            | `TEXT`        | `NOT NULL`                                       | Object storage key (`tenants/:orgId/bids/:bidId/raw/:docId.pdf`)             |
+| `file_size_bytes`         | `BIGINT`      | `NOT NULL`                                       | File byte size                                                               |
+| `mime_type`               | `TEXT`        | `NOT NULL`                                       | MIME type (`application/pdf`)                                                |
+| `document_type`           | `TEXT`        | `NOT NULL`                                       | Classification: `NIT`, `TECHNICAL_SPECS`, `GCC`, `SCC`, `BOQ`, `CORRIGENDUM` |
+| `status`                  | `TEXT`        | `NOT NULL DEFAULT 'UPLOADED'`                    | Status: `UPLOADED`, `QUEUED`, `PROCESSING`, `COMPLETED`, `FAILED`            |
+| `processing_attempts`     | `INT`         | `NOT NULL DEFAULT 0`                             | Retry counter for background extraction                                      |
+| `processing_started_at`   | `TIMESTAMPTZ` | `NULL`                                           | Timestamp when AI worker claimed the job                                     |
+| `processing_completed_at` | `TIMESTAMPTZ` | `NULL`                                           | Timestamp when extraction was persisted                                      |
+| `last_processing_error`   | `TEXT`        | `NULL`                                           | Error message if extraction failed                                           |
+| `uploaded_at`             | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()`                         | Upload confirmation timestamp                                                |
 
 ### 3.6 `compliance_items` (Extracted Checklist Requirements)
 
 Actionable compliance clauses extracted from tender documents and evaluated against company evidence.
 
-| Column | Type | Constraints | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | `TEXT` | `PRIMARY KEY` | Deterministic ID generated via SHA-256 hash |
-| `bid_id` | `TEXT` | `NOT NULL REFERENCES bids(id) ON DELETE CASCADE` | Parent bid reference |
-| `organization_id` | `TEXT` | `NOT NULL` | Denormalized tenant isolation key |
-| `company_id` | `TEXT` | `NULL` | Operating company ID |
-| `category` | `TEXT` | `NOT NULL` | `TECHNICAL`, `FINANCIAL`, `LEGAL`, `EMD_PBG`, `EXPERIENCE`, `STATUTORY` |
-| `title` | `TEXT` | `NOT NULL` | Concise requirement headline |
-| `description` | `TEXT` | `NOT NULL` | Full description of the clause |
-| `status` | `TEXT` | `NOT NULL DEFAULT 'PENDING'` | Review state: `PENDING`, `READY`, `FLAGGED`, `WAIVED` |
-| `human_review_required`| `BOOLEAN` | `NOT NULL DEFAULT TRUE` | Flag raised when confidence < 0.80 or ambiguity exists |
-| `review_notes` | `TEXT` | `NULL` | Comments added by human reviewer |
-| `reviewed_by` | `TEXT` | `NULL` | User ID of reviewer |
-| `reviewed_at` | `TIMESTAMPTZ` | `NULL` | Review timestamp |
-| `version` | `INT` | `NOT NULL DEFAULT 1` | Optimistic concurrency control counter |
-| `execution_rules` | `JSONB` | `NOT NULL` | Structured execution constraints (stamp paper, notary, UDIN, signing rank) |
-| `provenance` | `JSONB` | `NOT NULL` | Verbatim quote, source page, clause reference, confidence score |
-| `company_evidence` | `JSONB` | `NULL` | Pointers to matching company capability credentials |
-| `risk` | `JSONB` | `NULL` | Risk severity, financial impact, mitigation advice |
-| `rationale` | `JSONB` | `NULL` | Structured AI reasoning notes explaining the requirement |
-| `workflow_run_id` | `TEXT` | `NULL` | ID of the LangGraph execution run |
-| `correlation_id` | `TEXT` | `NULL` | Trace/correlation ID for distributed logging |
-| `created_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Extraction timestamp |
-| `updated_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Last update timestamp |
+| Column                  | Type          | Constraints                                      | Description                                                                |
+| :---------------------- | :------------ | :----------------------------------------------- | :------------------------------------------------------------------------- |
+| `id`                    | `TEXT`        | `PRIMARY KEY`                                    | Deterministic ID generated via SHA-256 hash                                |
+| `bid_id`                | `TEXT`        | `NOT NULL REFERENCES bids(id) ON DELETE CASCADE` | Parent bid reference                                                       |
+| `organization_id`       | `TEXT`        | `NOT NULL`                                       | Denormalized tenant isolation key                                          |
+| `company_id`            | `TEXT`        | `NULL`                                           | Operating company ID                                                       |
+| `category`              | `TEXT`        | `NOT NULL`                                       | `TECHNICAL`, `FINANCIAL`, `LEGAL`, `EMD_PBG`, `EXPERIENCE`, `STATUTORY`    |
+| `title`                 | `TEXT`        | `NOT NULL`                                       | Concise requirement headline                                               |
+| `description`           | `TEXT`        | `NOT NULL`                                       | Full description of the clause                                             |
+| `status`                | `TEXT`        | `NOT NULL DEFAULT 'PENDING'`                     | Review state: `PENDING`, `READY`, `FLAGGED`, `WAIVED`                      |
+| `human_review_required` | `BOOLEAN`     | `NOT NULL DEFAULT TRUE`                          | Flag raised when confidence < 0.80 or ambiguity exists                     |
+| `review_notes`          | `TEXT`        | `NULL`                                           | Comments added by human reviewer                                           |
+| `reviewed_by`           | `TEXT`        | `NULL`                                           | User ID of reviewer                                                        |
+| `reviewed_at`           | `TIMESTAMPTZ` | `NULL`                                           | Review timestamp                                                           |
+| `version`               | `INT`         | `NOT NULL DEFAULT 1`                             | Optimistic concurrency control counter                                     |
+| `execution_rules`       | `JSONB`       | `NOT NULL`                                       | Structured execution constraints (stamp paper, notary, UDIN, signing rank) |
+| `provenance`            | `JSONB`       | `NOT NULL`                                       | Verbatim quote, source page, clause reference, confidence score            |
+| `company_evidence`      | `JSONB`       | `NULL`                                           | Pointers to matching company capability credentials                        |
+| `risk`                  | `JSONB`       | `NULL`                                           | Risk severity, financial impact, mitigation advice                         |
+| `rationale`             | `JSONB`       | `NULL`                                           | Structured AI reasoning notes explaining the requirement                   |
+| `workflow_run_id`       | `TEXT`        | `NULL`                                           | ID of the LangGraph execution run                                          |
+| `correlation_id`        | `TEXT`        | `NULL`                                           | Trace/correlation ID for distributed logging                               |
+| `created_at`            | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()`                         | Extraction timestamp                                                       |
+| `updated_at`            | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()`                         | Last update timestamp                                                      |
 
 ### 3.7 `document_processing_outbox` (Transactional Outbox)
 
 Guarantees reliable asynchronous queue dispatch following the Transactional Outbox pattern.
 
-| Column | Type | Constraints | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | `TEXT` | `PRIMARY KEY` | Outbox message ID |
-| `organization_id` | `TEXT` | `NOT NULL` | Tenant key |
-| `document_id` | `TEXT` | `NOT NULL` | Target document ID |
-| `payload` | `JSONB` | `NOT NULL` | Serialized `DocumentIngestionCommand` payload |
-| `status` | `TEXT` | `NOT NULL DEFAULT 'PENDING'` | `PENDING`, `LOCKED`, `PUBLISHED`, `FAILED` |
-| `attempts` | `INT` | `NOT NULL DEFAULT 0` | Publishing attempt counter |
-| `next_attempt_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Timestamp for next retry with backoff |
-| `locked_at` | `TIMESTAMPTZ` | `NULL` | Timestamp when worker leased the outbox row |
-| `last_error` | `TEXT` | `NULL` | Publishing failure error detail |
-| `created_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Transaction commit timestamp |
-| `published_at` | `TIMESTAMPTZ` | `NULL` | Timestamp when published to SQS / PubSub |
+| Column            | Type          | Constraints                  | Description                                   |
+| :---------------- | :------------ | :--------------------------- | :-------------------------------------------- |
+| `id`              | `TEXT`        | `PRIMARY KEY`                | Outbox message ID                             |
+| `organization_id` | `TEXT`        | `NOT NULL`                   | Tenant key                                    |
+| `document_id`     | `TEXT`        | `NOT NULL`                   | Target document ID                            |
+| `payload`         | `JSONB`       | `NOT NULL`                   | Serialized `DocumentIngestionCommand` payload |
+| `status`          | `TEXT`        | `NOT NULL DEFAULT 'PENDING'` | `PENDING`, `LOCKED`, `PUBLISHED`, `FAILED`    |
+| `attempts`        | `INT`         | `NOT NULL DEFAULT 0`         | Publishing attempt counter                    |
+| `next_attempt_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()`     | Timestamp for next retry with backoff         |
+| `locked_at`       | `TIMESTAMPTZ` | `NULL`                       | Timestamp when worker leased the outbox row   |
+| `last_error`      | `TEXT`        | `NULL`                       | Publishing failure error detail               |
+| `created_at`      | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()`     | Transaction commit timestamp                  |
+| `published_at`    | `TIMESTAMPTZ` | `NULL`                       | Timestamp when published to SQS / PubSub      |
 
 ### 3.8 `audit_logs` (Append-Only Audit Ledger)
 
 Immutable compliance event record documenting every user action, AI persistence, and state transition.
 
-| Column | Type | Constraints | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | `TEXT` | `PRIMARY KEY` | Unique audit event ID |
-| `bid_id` | `TEXT` | `NOT NULL` | Target bid reference |
-| `organization_id` | `TEXT` | `NOT NULL` | Tenant key |
-| `user_id` | `TEXT` | `NOT NULL` | Actor identifier (`usr_...` or system worker) |
-| `user_name` | `TEXT` | `NOT NULL` | Human-readable actor name |
-| `event_type` | `TEXT` | `NOT NULL` | Action code (e.g., `BID_CREATED`, `COMPLIANCE_REVIEWED`) |
-| `aggregate_type` | `TEXT` | `NOT NULL` | Target aggregate (`BidProject`, `ComplianceItem`, `TenderDocument`) |
-| `aggregate_id` | `TEXT` | `NOT NULL` | Target aggregate ID |
-| `payload` | `JSONB` | `NOT NULL` | Contextual diff / event metadata |
-| `timestamp` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Event generation timestamp |
+| Column            | Type          | Constraints              | Description                                                         |
+| :---------------- | :------------ | :----------------------- | :------------------------------------------------------------------ |
+| `id`              | `TEXT`        | `PRIMARY KEY`            | Unique audit event ID                                               |
+| `bid_id`          | `TEXT`        | `NOT NULL`               | Target bid reference                                                |
+| `organization_id` | `TEXT`        | `NOT NULL`               | Tenant key                                                          |
+| `user_id`         | `TEXT`        | `NOT NULL`               | Actor identifier (`usr_...` or system worker)                       |
+| `user_name`       | `TEXT`        | `NOT NULL`               | Human-readable actor name                                           |
+| `event_type`      | `TEXT`        | `NOT NULL`               | Action code (e.g., `BID_CREATED`, `COMPLIANCE_REVIEWED`)            |
+| `aggregate_type`  | `TEXT`        | `NOT NULL`               | Target aggregate (`BidProject`, `ComplianceItem`, `TenderDocument`) |
+| `aggregate_id`    | `TEXT`        | `NOT NULL`               | Target aggregate ID                                                 |
+| `payload`         | `JSONB`       | `NOT NULL`               | Contextual diff / event metadata                                    |
+| `timestamp`       | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Event generation timestamp                                          |
 
 ### 3.9 `company_profile_versions` (Immutable Capability Snapshots)
 
 Versioned snapshots of company capabilities (turnover, completed projects, certifications, machinery, staffing).
 
-| Column | Type | Constraints | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | `TEXT` | `PRIMARY KEY` | Version snapshot ID (e.g., `cpv_acme_v1`) |
-| `company_id` | `TEXT` | `NOT NULL` | Owning company |
-| `organization_id` | `TEXT` | `NOT NULL` | Tenant key |
-| `version` | `INT` | `NOT NULL` | Monotonically increasing version number (1, 2, 3...) |
-| `name` | `TEXT` | `NOT NULL` | Version label (e.g., "FY 2025-26 Audited Profile") |
-| `payload` | `JSONB` | `NOT NULL` | Full structured `CompanyProfileSnapshot` payload |
-| `created_by` | `TEXT` | `NOT NULL` | User ID who published the version |
-| `created_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Publication timestamp |
+| Column            | Type          | Constraints              | Description                                          |
+| :---------------- | :------------ | :----------------------- | :--------------------------------------------------- |
+| `id`              | `TEXT`        | `PRIMARY KEY`            | Version snapshot ID (e.g., `cpv_acme_v1`)            |
+| `company_id`      | `TEXT`        | `NOT NULL`               | Owning company                                       |
+| `organization_id` | `TEXT`        | `NOT NULL`               | Tenant key                                           |
+| `version`         | `INT`         | `NOT NULL`               | Monotonically increasing version number (1, 2, 3...) |
+| `name`            | `TEXT`        | `NOT NULL`               | Version label (e.g., "FY 2025-26 Audited Profile")   |
+| `payload`         | `JSONB`       | `NOT NULL`               | Full structured `CompanyProfileSnapshot` payload     |
+| `created_by`      | `TEXT`        | `NOT NULL`               | User ID who published the version                    |
+| `created_at`      | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Publication timestamp                                |
 
 ### 3.10 `company_profiles` (Active Profile Pointer)
 
 Pointer table indicating which capability version is currently active for a company.
 
-| Column | Type | Constraints | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | `TEXT` | `PRIMARY KEY` | Record ID |
-| `company_id` | `TEXT` | `NOT NULL` | Company identifier |
-| `organization_id` | `TEXT` | `NOT NULL` | Tenant key |
-| `active_version_id` | `TEXT` | `NOT NULL` | Points to active `company_profile_versions.id` |
-| `updated_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Last update timestamp |
+| Column              | Type          | Constraints              | Description                                    |
+| :------------------ | :------------ | :----------------------- | :--------------------------------------------- |
+| `id`                | `TEXT`        | `PRIMARY KEY`            | Record ID                                      |
+| `company_id`        | `TEXT`        | `NOT NULL`               | Company identifier                             |
+| `organization_id`   | `TEXT`        | `NOT NULL`               | Tenant key                                     |
+| `active_version_id` | `TEXT`        | `NOT NULL`               | Points to active `company_profile_versions.id` |
+| `updated_at`        | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Last update timestamp                          |
 
 ### 3.11 `bid_decisions` (Deterministic Eligibility Outcomes)
 
 Persisted bid/no-bid decisions produced by the deterministic eligibility evaluation engine.
 
-| Column | Type | Constraints | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | `TEXT` | `PRIMARY KEY` | Decision ID |
-| `bid_id` | `TEXT` | `NOT NULL` | Evaluated bid ID |
-| `company_id` | `TEXT` | `NULL` | Evaluated company ID |
-| `organization_id` | `TEXT` | `NOT NULL` | Tenant key |
-| `profile_version_id`| `TEXT` | `NOT NULL` | Pinned capability version used for evaluation |
-| `verdict` | `TEXT` | `NOT NULL` | `GO`, `CONDITIONAL_GO`, `NO_GO`, `REVIEW_REQUIRED` |
-| `state` | `TEXT` | `NOT NULL` | `AI_PROPOSED`, `UNDER_REVIEW`, `CONFIRMED`, `OVERRIDDEN` |
-| `readiness_score` | `REAL` | `NOT NULL` | Normalized readiness score (0.00 to 1.00) |
-| `response` | `JSONB` | `NOT NULL` | Full structured `BidDecisionResponse` (disqualifiers, gaps, reasons) |
-| `created_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Evaluation timestamp |
+| Column               | Type          | Constraints              | Description                                                          |
+| :------------------- | :------------ | :----------------------- | :------------------------------------------------------------------- |
+| `id`                 | `TEXT`        | `PRIMARY KEY`            | Decision ID                                                          |
+| `bid_id`             | `TEXT`        | `NOT NULL`               | Evaluated bid ID                                                     |
+| `company_id`         | `TEXT`        | `NULL`                   | Evaluated company ID                                                 |
+| `organization_id`    | `TEXT`        | `NOT NULL`               | Tenant key                                                           |
+| `profile_version_id` | `TEXT`        | `NOT NULL`               | Pinned capability version used for evaluation                        |
+| `verdict`            | `TEXT`        | `NOT NULL`               | `GO`, `CONDITIONAL_GO`, `NO_GO`, `REVIEW_REQUIRED`                   |
+| `state`              | `TEXT`        | `NOT NULL`               | `AI_PROPOSED`, `UNDER_REVIEW`, `CONFIRMED`, `OVERRIDDEN`             |
+| `readiness_score`    | `REAL`        | `NOT NULL`               | Normalized readiness score (0.00 to 1.00)                            |
+| `response`           | `JSONB`       | `NOT NULL`               | Full structured `BidDecisionResponse` (disqualifiers, gaps, reasons) |
+| `created_at`         | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Evaluation timestamp                                                 |
 
 ### 3.12 `notifications` (In-App & System Alerts)
 
 User and tenant notification records for upcoming deadlines, evidence expiration, and review requests.
 
-| Column | Type | Constraints | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | `TEXT` | `PRIMARY KEY` | Notification ID |
-| `organization_id` | `TEXT` | `NOT NULL` | Tenant key |
-| `recipient_user_id`| `TEXT` | `NULL` | Targeted user ID (null if tenant-wide) |
-| `recipient_email` | `TEXT` | `NULL` | Email destination |
-| `category` | `TEXT` | `NOT NULL` | `DEADLINE`, `EVIDENCE_EXPIRY`, `REVIEW_REQUEST`, `HIGH_RISK_FLAG`, `SYSTEM` |
-| `channel` | `TEXT` | `NOT NULL DEFAULT 'IN_APP'` | `IN_APP`, `EMAIL`, `SMS` |
-| `priority` | `TEXT` | `NOT NULL DEFAULT 'MEDIUM'`| `LOW`, `MEDIUM`, `HIGH`, `URGENT` |
-| `title` | `TEXT` | `NOT NULL` | Short notification title |
-| `message` | `TEXT` | `NOT NULL` | Notification body |
-| `metadata` | `JSONB` | `NULL` | Action URLs, bid IDs, document references |
-| `is_read` | `BOOLEAN` | `NOT NULL DEFAULT FALSE` | Read receipt flag |
-| `created_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Alert timestamp |
-| `read_at` | `TIMESTAMPTZ` | `NULL` | Timestamp when marked read |
+| Column              | Type          | Constraints                 | Description                                                                 |
+| :------------------ | :------------ | :-------------------------- | :-------------------------------------------------------------------------- |
+| `id`                | `TEXT`        | `PRIMARY KEY`               | Notification ID                                                             |
+| `organization_id`   | `TEXT`        | `NOT NULL`                  | Tenant key                                                                  |
+| `recipient_user_id` | `TEXT`        | `NULL`                      | Targeted user ID (null if tenant-wide)                                      |
+| `recipient_email`   | `TEXT`        | `NULL`                      | Email destination                                                           |
+| `category`          | `TEXT`        | `NOT NULL`                  | `DEADLINE`, `EVIDENCE_EXPIRY`, `REVIEW_REQUEST`, `HIGH_RISK_FLAG`, `SYSTEM` |
+| `channel`           | `TEXT`        | `NOT NULL DEFAULT 'IN_APP'` | `IN_APP`, `EMAIL`, `SMS`                                                    |
+| `priority`          | `TEXT`        | `NOT NULL DEFAULT 'MEDIUM'` | `LOW`, `MEDIUM`, `HIGH`, `URGENT`                                           |
+| `title`             | `TEXT`        | `NOT NULL`                  | Short notification title                                                    |
+| `message`           | `TEXT`        | `NOT NULL`                  | Notification body                                                           |
+| `metadata`          | `JSONB`       | `NULL`                      | Action URLs, bid IDs, document references                                   |
+| `is_read`           | `BOOLEAN`     | `NOT NULL DEFAULT FALSE`    | Read receipt flag                                                           |
+| `created_at`        | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()`    | Alert timestamp                                                             |
+| `read_at`           | `TIMESTAMPTZ` | `NULL`                      | Timestamp when marked read                                                  |
 
 ### 3.13 `subscriptions` (Tenant Subscription & Plan Tier)
 
 Tracks customer billing plan and subscription status for feature gating.
 
-| Column | Type | Constraints | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | `TEXT` | `PRIMARY KEY` | Subscription ID |
-| `organization_id` | `TEXT` | `UNIQUE NOT NULL` | One subscription per tenant |
-| `plan_tier` | `TEXT` | `NOT NULL DEFAULT 'FREE'` | `FREE`, `STARTER`, `GROWTH`, `BUSINESS`, `ENTERPRISE` |
-| `billing_interval` | `TEXT` | `NOT NULL DEFAULT 'MONTHLY'`| `MONTHLY`, `ANNUAL` |
-| `status` | `TEXT` | `NOT NULL DEFAULT 'ACTIVE'` | `TRIAL`, `ACTIVE`, `PAST_DUE`, `CANCELED` |
-| `current_period_start`| `TIMESTAMPTZ`| `NOT NULL DEFAULT NOW()` | Current billing cycle start |
-| `current_period_end` | `TIMESTAMPTZ`| `NOT NULL` | Current billing cycle expiration |
-| `cancel_at_period_end`| `BOOLEAN` | `NOT NULL DEFAULT FALSE` | Flag for scheduled cancellation |
-| `created_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Record creation timestamp |
-| `updated_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Last modification timestamp |
+| Column                 | Type          | Constraints                  | Description                                           |
+| :--------------------- | :------------ | :--------------------------- | :---------------------------------------------------- |
+| `id`                   | `TEXT`        | `PRIMARY KEY`                | Subscription ID                                       |
+| `organization_id`      | `TEXT`        | `UNIQUE NOT NULL`            | One subscription per tenant                           |
+| `plan_tier`            | `TEXT`        | `NOT NULL DEFAULT 'FREE'`    | `FREE`, `STARTER`, `GROWTH`, `BUSINESS`, `ENTERPRISE` |
+| `billing_interval`     | `TEXT`        | `NOT NULL DEFAULT 'MONTHLY'` | `MONTHLY`, `ANNUAL`                                   |
+| `status`               | `TEXT`        | `NOT NULL DEFAULT 'ACTIVE'`  | `TRIAL`, `ACTIVE`, `PAST_DUE`, `CANCELED`             |
+| `current_period_start` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()`     | Current billing cycle start                           |
+| `current_period_end`   | `TIMESTAMPTZ` | `NOT NULL`                   | Current billing cycle expiration                      |
+| `cancel_at_period_end` | `BOOLEAN`     | `NOT NULL DEFAULT FALSE`     | Flag for scheduled cancellation                       |
+| `created_at`           | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()`     | Record creation timestamp                             |
+| `updated_at`           | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()`     | Last modification timestamp                           |
 
 ### 3.14 `usage_records` (Tenant Metering)
 
 Metered consumption records for billing enforcement and subscription quotas.
 
-| Column | Type | Constraints | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | `TEXT` | `PRIMARY KEY` | Record ID |
-| `organization_id` | `TEXT` | `NOT NULL` | Tenant key |
-| `metric` | `TEXT` | `NOT NULL` | `TENDER_ANALYSIS`, `EVIDENCE_STORAGE_MB`, `AI_RUN` |
-| `quantity` | `INT` | `NOT NULL DEFAULT 1` | Consumed quantity |
-| `period_key` | `TEXT` | `NOT NULL` | Billing period string (`YYYY-MM`) |
-| `created_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Metering timestamp |
+| Column            | Type          | Constraints              | Description                                        |
+| :---------------- | :------------ | :----------------------- | :------------------------------------------------- |
+| `id`              | `TEXT`        | `PRIMARY KEY`            | Record ID                                          |
+| `organization_id` | `TEXT`        | `NOT NULL`               | Tenant key                                         |
+| `metric`          | `TEXT`        | `NOT NULL`               | `TENDER_ANALYSIS`, `EVIDENCE_STORAGE_MB`, `AI_RUN` |
+| `quantity`        | `INT`         | `NOT NULL DEFAULT 1`     | Consumed quantity                                  |
+| `period_key`      | `TEXT`        | `NOT NULL`               | Billing period string (`YYYY-MM`)                  |
+| `created_at`      | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Metering timestamp                                 |
 
 ---
 
@@ -690,16 +690,16 @@ Structured capability facts evaluated by the deterministic eligibility engine:
 
 ## 5. Performance Indexing & Query Patterns
 
-| Index Name | Table | Columns | Type | Business Access Pattern |
-| :--- | :--- | :--- | :--- | :--- |
-| `idx_companies_org` | `companies` | `(organization_id)` | B-Tree | Tenant company picker & multi-entity management |
-| `idx_bids_org` | `bids` | `(organization_id)` | B-Tree | Tenant dashboard bid list |
-| `idx_docs_bid_org` | `tender_documents` | `(organization_id, bid_id)` | B-Tree | Document retrieval for a bid workspace |
-| `idx_compliance_bid_org` | `compliance_items` | `(organization_id, bid_id)` | B-Tree | Primary compliance checklist rendering |
-| `idx_outbox_pending` | `document_processing_outbox`| `(status, next_attempt_at)` | B-Tree | Outbox poller dispatching pending queue messages |
-| `idx_cpv_org` | `company_profile_versions` | `(organization_id, version DESC)` | B-Tree | Profile version history query |
-| `idx_notifications_tenant` | `notifications` | `(organization_id, recipient_user_id, is_read, created_at DESC)` | B-Tree | Unread notification bell count & dropdown |
-| `idx_usage_records_tenant_period` | `usage_records` | `(organization_id, metric, period_key)` | B-Tree | Monthly quota calculation and invoice metering |
+| Index Name                        | Table                        | Columns                                                          | Type   | Business Access Pattern                          |
+| :-------------------------------- | :--------------------------- | :--------------------------------------------------------------- | :----- | :----------------------------------------------- |
+| `idx_companies_org`               | `companies`                  | `(organization_id)`                                              | B-Tree | Tenant company picker & multi-entity management  |
+| `idx_bids_org`                    | `bids`                       | `(organization_id)`                                              | B-Tree | Tenant dashboard bid list                        |
+| `idx_docs_bid_org`                | `tender_documents`           | `(organization_id, bid_id)`                                      | B-Tree | Document retrieval for a bid workspace           |
+| `idx_compliance_bid_org`          | `compliance_items`           | `(organization_id, bid_id)`                                      | B-Tree | Primary compliance checklist rendering           |
+| `idx_outbox_pending`              | `document_processing_outbox` | `(status, next_attempt_at)`                                      | B-Tree | Outbox poller dispatching pending queue messages |
+| `idx_cpv_org`                     | `company_profile_versions`   | `(organization_id, version DESC)`                                | B-Tree | Profile version history query                    |
+| `idx_notifications_tenant`        | `notifications`              | `(organization_id, recipient_user_id, is_read, created_at DESC)` | B-Tree | Unread notification bell count & dropdown        |
+| `idx_usage_records_tenant_period` | `usage_records`              | `(organization_id, metric, period_key)`                          | B-Tree | Monthly quota calculation and invoice metering   |
 
 ---
 

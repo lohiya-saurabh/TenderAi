@@ -25,7 +25,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
       // NestJS built-in exceptions
       status = exception.getStatus();
       const exResponse = exception.getResponse();
-      message = typeof exResponse === 'string' ? exResponse : (exResponse as { message: string }).message;
+      message =
+        typeof exResponse === 'string' ? exResponse : (exResponse as { message: string }).message;
     } else if (exception instanceof Error) {
       status = HttpStatus.INTERNAL_SERVER_ERROR;
       message = exception.message;

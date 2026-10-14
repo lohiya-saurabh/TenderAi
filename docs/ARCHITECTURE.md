@@ -40,7 +40,7 @@ flowchart TD
         ROLES_GUARD["RolesGuard / PermissionsGuard\n(Atomic RBAC Matrix)"]
         CTX_INTERCEPTOR["TenantContextInterceptor\n(AsyncLocalStorage Scoping)"]
         LOG_INTERCEPTOR["HttpLoggingInterceptor\n(Trace & Request Timing)"]
-        
+
         BIDS_SVC["BidsService & Use Cases\n- CreateBidUseCase\n- GenerateUploadUrlUseCase\n- ConfirmDocumentUploadUseCase"]
         COMPLETION_SVC["DocumentCompletionService\n(Single-Writer to PostgreSQL)"]
         COMPLIANCE_SVC["ComplianceService\n(OCC Review & Auditing)"]
@@ -65,13 +65,17 @@ flowchart TD
     subgraph AIEngineTier ["6. AI Orchestration Tier (FastAPI Worker on Private Subnets)"]
         WORKER_EP["/api/v1/worker/process-message\n(InternalServiceGuard: X-Internal-Service-Key)"]
         DISPATCH_ACK["FastAPI Async Dispatcher\n(Spawns Background Task & ACKs < 20ms)"]
-        
+
         subgraph Pipeline ["Production Extraction Pipeline"]
-            DOCLING["Docling Parser Engine\n(Layout Analysis & OCR)"]
-            GRAPH["LangGraph 8-Node State Machine\n(Cyclic Validation & Confidence Routing)"]
+            DOCLING["Docling Parser Engine\n(Layout AST & Multimodal Tables)"]
+            AST_BUILDER["DocumentStructureBuilder\n(PART > SECTION > CLAUSE Tree)"]
+            CANDIDATE["CandidateDetector\n(20+ Categories & Context Fusion)"]
+            GRAPH["LangGraph 11-Node State Machine\n(Tier 1 Primary + Tier 2 Rescue Pass)"]
+            VALIDATOR["DeterministicValidator\n(Pure Python Exact-Substring Grounding)"]
             EGRESS_GUARD["Network Egress Guard\n(Deny-by-default outbound traffic)"]
+            DOCLING --> AST_BUILDER --> CANDIDATE --> GRAPH --> VALIDATOR
         end
-        
+
         PUB["CompletionPublisher\n(HttpCallback / SQS / PubSub)"]
     end
 
@@ -202,12 +206,16 @@ The document extraction and compliance generation workflow is engineered as an *
    - The queue consumer acknowledges and deletes the queue message immediately (<100ms), avoiding long-running visibility timeout contention.
 4. **Background AI Extraction & Verification**:
    - The background worker executes the `ProductionExtractionPipeline`:
-     - Parses pages and layout structure using Docling.
-     - Runs the LangGraph 8-node state machine.
-     - Performs deterministic citation verification and confidence routing.
+     - **Hoisted Document Precomputation**: Parses the complete document AST once (`DoclingParserEngine`), builds `DocumentStructureTree` (`DocumentStructureBuilder`), and runs `CandidateDetector` and `ContextAssembler` at the document level. This eliminates redundant $O(N^2)$ PDF re-parsing during parallel page processing.
+     - **High-Recall Candidate Scoring & Context Fusion (ADR 0028)**: Fuses physical `DoclingBlock` text with semantic `SectionNode` lineage paths across 20+ procurement categories. Normalized priority scoring ($0.0 - 1.0$) separates passages into Tier-1 `PRIMARY` candidates and Tier-2 `unselected` passages while stripping cross-page repeating boilerplate ($\ge 3$ pages).
+     - **LangGraph 11-Node Extraction Graph**:
+       - Extracts structured items from Tier-1 candidates.
+       - Runs Node 5B (`rescue_pass`) to sweep Tier-2 unselected passages in compact batches to catch un-keyworded or split clauses.
+       - Executes pure Python exact-substring grounding against raw page text (`DeterministicValidator`).
+       - Refined confidence routing: loops to `targeted_refine` strictly when `len(unverified) > 0 and retry < 2`; routes directly to human review when verification is complete without wasting LLM calls.
 5. **Event Publication & Single-Writer Persistence**:
    - Upon pipeline completion, the worker publishes a `DocumentExtractionCompletedEvent` via `CompletionPublisher`:
-     - Calls `POST /api/v1/internal/extraction-completed` on NestJS with `X-Internal-Service-Key`.
+     - Dispatches to the dedicated Completion Queue (`COMPLETION_QUEUE_TOKEN` via SQS or Pub/Sub) or HTTP internal webhook.
    - NestJS `DocumentCompletionService` executes the **Single-Writer Principle**:
      - Begins an atomic PostgreSQL transaction.
      - Acquires pessimistic row locks (`.for('update')`) on the bid and document records.
@@ -218,6 +226,23 @@ The document extraction and compliance generation workflow is engineered as an *
      - Updates `bids` requirement counts and transitions bid status to `REVIEW_READY`.
      - Records an immutable `audit_logs` entry.
      - Commits the transaction.
+
+### 5.2 Dedicated Two-Queue Architecture (`IJobQueue`)
+
+To eliminate message multiplexing, prevent premature visibility expiration, and ensure clean decoupled flow, the system provisions two independent queues:
+
+1. **Ingestion Queue (`INGESTION_QUEUE_TOKEN`)**:
+   - **Producer**: NestJS Outbox Poller (`DocumentProcessingRuntime`).
+   - **Consumer**: Python AI Worker (`DocumentQueueConsumerWorker`).
+   - **Payload**: `IngestionJobMessage` (metadata, tenant context, storage path).
+   - **Adapters**: `AwsSqsJobQueue` (`AWS_INGESTION_QUEUE_URL`) or `GcpPubSubJobQueue` (`GCP_INGESTION_SUBSCRIPTION`).
+2. **Completion Queue (`COMPLETION_QUEUE_TOKEN`)**:
+   - **Producer**: Python AI Worker (`CompletionPublisher`).
+   - **Consumer**: NestJS Completion Poller (`DocumentProcessingRuntime`).
+   - **Payload**: `DocumentExtractionCompletedEvent` (extracted items, provenance, confidence).
+   - **Adapters**: `AwsSqsJobQueue` (`COMPLETION_QUEUE_URL`) or `GcpPubSubJobQueue` (`COMPLETION_PUBSUB_TOPIC`).
+
+Both AWS and GCP adapters provide feature parity: heartbeat visibility extension (SQS `ChangeMessageVisibility` and Pub/Sub `modifyAckDeadline`), dead-letter queue routing, and KMS/CMEK encryption.
 
 ---
 
@@ -266,33 +291,33 @@ Binary document storage is decoupled from application servers via the `IStorageS
 
 ### 8.1 NestJS REST & SSE Endpoints
 
-| Method | Route | Auth / Guard | Responsibility |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/api/v1/auth/login` | `@Public()` | Authenticate user, return access token and refresh token |
-| `POST` | `/api/v1/auth/refresh` | `@Public()` | Exchange refresh token for a new access token |
-| `POST` | `/api/v1/auth/logout` | `JwtAuthGuard` | Clear active session tokens |
-| `GET` | `/api/v1/bids` | `JwtAuthGuard`, `bids:read` | List paginated bids for the authenticated tenant |
-| `POST` | `/api/v1/bids` | `JwtAuthGuard`, `bids:create`| Register a new tender bid project |
-| `GET` | `/api/v1/bids/:id` | `JwtAuthGuard`, `bids:read` | Get detailed bid metadata, counts, and status |
-| `DELETE`| `/api/v1/bids/:id` | `JwtAuthGuard`, `bids:delete`| Two-phase cascade delete of bid and documents |
-| `POST` | `/api/v1/bids/:id/upload-url` | `JwtAuthGuard`, `bids:create`| Generate direct-to-storage presigned upload URL |
-| `POST` | `/api/v1/bids/:id/documents/confirm` | `JwtAuthGuard`, `bids:create`| Confirm file upload, record document, enqueue extraction |
-| `GET` | `/api/v1/bids/:id/compliance-items` | `JwtAuthGuard`, `bids:read` | Fetch extracted compliance requirements |
-| `PATCH`| `/api/v1/bids/:id/compliance-items/:itemId` | `JwtAuthGuard`, `compliance:review`| Review compliance item (OCC update with notes) |
-| `GET` | `/api/v1/bids/:id/decision` | `JwtAuthGuard`, `bids:read` | Fetch deterministic eligibility decision |
-| `POST` | `/api/v1/bids/:id/decision/evaluate` | `JwtAuthGuard`, `bids:create`| Trigger deterministic bid/no-bid evaluation |
-| `GET` | `/api/v1/bids/:id/stream` | `JwtAuthGuard` (`?token=`) | Server-Sent Events (SSE) stream for job status updates |
-| `POST` | `/api/v1/internal/extraction-completed`| `InternalServiceGuard` | Webhook endpoint receiving worker completion events |
+| Method   | Route                                       | Auth / Guard                        | Responsibility                                           |
+| :------- | :------------------------------------------ | :---------------------------------- | :------------------------------------------------------- |
+| `POST`   | `/api/v1/auth/login`                        | `@Public()`                         | Authenticate user, return access token and refresh token |
+| `POST`   | `/api/v1/auth/refresh`                      | `@Public()`                         | Exchange refresh token for a new access token            |
+| `POST`   | `/api/v1/auth/logout`                       | `JwtAuthGuard`                      | Clear active session tokens                              |
+| `GET`    | `/api/v1/bids`                              | `JwtAuthGuard`, `bids:read`         | List paginated bids for the authenticated tenant         |
+| `POST`   | `/api/v1/bids`                              | `JwtAuthGuard`, `bids:create`       | Register a new tender bid project                        |
+| `GET`    | `/api/v1/bids/:id`                          | `JwtAuthGuard`, `bids:read`         | Get detailed bid metadata, counts, and status            |
+| `DELETE` | `/api/v1/bids/:id`                          | `JwtAuthGuard`, `bids:delete`       | Two-phase cascade delete of bid and documents            |
+| `POST`   | `/api/v1/bids/:id/upload-url`               | `JwtAuthGuard`, `bids:create`       | Generate direct-to-storage presigned upload URL          |
+| `POST`   | `/api/v1/bids/:id/documents/confirm`        | `JwtAuthGuard`, `bids:create`       | Confirm file upload, record document, enqueue extraction |
+| `GET`    | `/api/v1/bids/:id/compliance-items`         | `JwtAuthGuard`, `bids:read`         | Fetch extracted compliance requirements                  |
+| `PATCH`  | `/api/v1/bids/:id/compliance-items/:itemId` | `JwtAuthGuard`, `compliance:review` | Review compliance item (OCC update with notes)           |
+| `GET`    | `/api/v1/bids/:id/decision`                 | `JwtAuthGuard`, `bids:read`         | Fetch deterministic eligibility decision                 |
+| `POST`   | `/api/v1/bids/:id/decision/evaluate`        | `JwtAuthGuard`, `bids:create`       | Trigger deterministic bid/no-bid evaluation              |
+| `GET`    | `/api/v1/bids/:id/stream`                   | `JwtAuthGuard` (`?token=`)          | Server-Sent Events (SSE) stream for job status updates   |
+| `POST`   | `/api/v1/internal/extraction-completed`     | `InternalServiceGuard`              | Webhook endpoint receiving worker completion events      |
 
 ### 8.2 FastAPI Internal AI Worker Endpoints
 
-| Method | Route | Auth / Guard | Responsibility |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/health` | Open | Health check and worker version verification |
-| `POST` | `/api/v1/worker/process-message` | `verify_internal_key` | Queue-consumer entrypoint for async extraction jobs |
-| `POST` | `/api/v1/extract` | `verify_internal_key` | Synchronous document extraction pipeline |
-| `POST` | `/api/v1/agent/analyze-requirements` | `verify_internal_key` | Scoped requirement intelligence agent |
-| `POST` | `/api/v1/agent/bid-decision` | `verify_internal_key` | Pure deterministic bid/no-bid eligibility evaluation |
+| Method | Route                                | Auth / Guard          | Responsibility                                       |
+| :----- | :----------------------------------- | :-------------------- | :--------------------------------------------------- |
+| `GET`  | `/health`                            | Open                  | Health check and worker version verification         |
+| `POST` | `/api/v1/worker/process-message`     | `verify_internal_key` | Queue-consumer entrypoint for async extraction jobs  |
+| `POST` | `/api/v1/extract`                    | `verify_internal_key` | Synchronous document extraction pipeline             |
+| `POST` | `/api/v1/agent/analyze-requirements` | `verify_internal_key` | Scoped requirement intelligence agent                |
+| `POST` | `/api/v1/agent/bid-decision`         | `verify_internal_key` | Pure deterministic bid/no-bid eligibility evaluation |
 
 ---
 
@@ -349,3 +374,15 @@ Both NestJS and FastAPI services implement a **Unified Canonical JSON Logging Sc
 - **Trace ID Propagation**: `X-Trace-Id` and `X-Correlation-Id` headers propagate across HTTP requests, message queue payloads, FastAPI background tasks, and completion webhooks.
 - **Context Holders**: Managed via Node.js `AsyncLocalStorage` (`LoggingContextHolder`) and Python `contextvars` (`scoped_logging_context`).
 - **Zero Secrets / Zero PII Leakage**: Precompiled sanitizers (`LogSanitizer.ts` and `sanitizer.py`) redact AWS access keys, JWTs, database passwords, presigned URL signatures, and Indian PII (PAN, GSTIN, Aadhaar) prior to output formatting.
+
+### 10.1 Dual-Sink Rotated Structured Logging (ADR 0027)
+
+To eliminate unmonitored disk filling and log duplication during high-frequency ingestion:
+- **Dual-Sink Architecture**: Implemented in [`RotatingLogStream.ts`](file:///Users/belikesaurabh/main/TenderAi/apps/api/src/common/logging/RotatingLogStream.ts). Emits newline-delimited canonical JSON synchronously to `stdout` for container log shippers (FluentBit / CloudWatch Agent) while simultaneously managing an on-disk stream sink with automatic rotation (10MB max file size, 5 archive retention) for local audit capture.
+- **Zero Double-Encoding**: Interceptors format canonical payloads once, preventing nested double-serialization of log metadata.
+
+### 10.2 Frontend Request Coalescing & Polling Backoff
+
+In high-concurrency client interfaces:
+- **In-Flight GET Coalescing**: React 18 concurrent renders and sibling component mounting (`client.ts`) utilize an in-memory active promise map (`inFlightGetRequests`) to coalesce duplicate GET requests (`/notifications`, `/bids/:id`, `/compliance-items`) arriving within 2–15ms into a single network round-trip.
+- **Decoupled Polling Intervals**: Fallback polling backed off to 10s intervals, relying primarily on real-time Server-Sent Events (`ExtractionProgress.onComplete`) for instant completion state transitions.

@@ -1,13 +1,7 @@
 import React from 'react';
 
 export type BadgeVariant =
-  | 'primary'
-  | 'secondary'
-  | 'success'
-  | 'warning'
-  | 'danger'
-  | 'info'
-  | 'neutral';
+  'primary' | 'secondary' | 'success' | 'warning' | 'danger' | 'info' | 'neutral';
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   variant?: BadgeVariant;

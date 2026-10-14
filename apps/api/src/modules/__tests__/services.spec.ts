@@ -31,7 +31,8 @@ describe('NestJS Feature Modules: Services Unit Tests', () => {
     {
       category: 'FINANCIAL',
       title: 'Tender & Bid Security (EMD) Guarantee',
-      description: 'Submission of Earnest Money Deposit / Bid Security as required by tender conditions.',
+      description:
+        'Submission of Earnest Money Deposit / Bid Security as required by tender conditions.',
       executionRules: {
         stampPaperRequired: true,
         stampPaperDenominationInr: 100,
@@ -42,14 +43,16 @@ describe('NestJS Feature Modules: Services Unit Tests', () => {
       provenance: {
         pageNumber: 1,
         clauseReference: 'Clause on Page 1',
-        verbatimQuote: 'The bidder must submit Bid Security / Earnest Money Deposit (EMD) of INR 10,00,000 on a non-judicial stamp paper.',
+        verbatimQuote:
+          'The bidder must submit Bid Security / Earnest Money Deposit (EMD) of INR 10,00,000 on a non-judicial stamp paper.',
         confidenceScore: 0.98,
       },
     },
     {
       category: 'LEGAL',
       title: 'Power of Attorney for Lead Member',
-      description: 'Power of Attorney executed on non-judicial stamp paper in favor of lead member.',
+      description:
+        'Power of Attorney executed on non-judicial stamp paper in favor of lead member.',
       executionRules: {
         stampPaperRequired: true,
         stampPaperDenominationInr: 100,
@@ -60,7 +63,8 @@ describe('NestJS Feature Modules: Services Unit Tests', () => {
       provenance: {
         pageNumber: 1,
         clauseReference: 'Clause on Page 1',
-        verbatimQuote: 'Power of Attorney executed on non-judicial stamp paper in favor of lead member of consortium.',
+        verbatimQuote:
+          'Power of Attorney executed on non-judicial stamp paper in favor of lead member of consortium.',
         confidenceScore: 0.95,
       },
     },
@@ -77,14 +81,16 @@ describe('NestJS Feature Modules: Services Unit Tests', () => {
       provenance: {
         pageNumber: 2,
         clauseReference: 'Clause on Page 2',
-        verbatimQuote: 'The Bidder shall have minimum annual turnover of INR 50 Crores with CA certificate bearing valid UDIN.',
+        verbatimQuote:
+          'The Bidder shall have minimum annual turnover of INR 50 Crores with CA certificate bearing valid UDIN.',
         confidenceScore: 0.96,
       },
     },
     {
       category: 'TECHNICAL',
       title: 'Similar Work Experience in EPC',
-      description: 'Prior completion of similar work in EPC infrastructure works within last 7 years.',
+      description:
+        'Prior completion of similar work in EPC infrastructure works within last 7 years.',
       executionRules: {
         stampPaperRequired: false,
         notarizationRequired: false,
@@ -94,7 +100,8 @@ describe('NestJS Feature Modules: Services Unit Tests', () => {
       provenance: {
         pageNumber: 2,
         clauseReference: 'Clause on Page 2',
-        verbatimQuote: 'The Bidder must demonstrate prior completion of similar work in EPC infrastructure works within last 7 years.',
+        verbatimQuote:
+          'The Bidder must demonstrate prior completion of similar work in EPC infrastructure works within last 7 years.',
         confidenceScore: 0.95,
       },
     },
@@ -111,14 +118,16 @@ describe('NestJS Feature Modules: Services Unit Tests', () => {
       provenance: {
         pageNumber: 3,
         clauseReference: 'Clause on Page 3',
-        verbatimQuote: 'The Bidder shall submit the Integrity Pact duly signed and sealed along with declaration of no active blacklisting or debarment.',
+        verbatimQuote:
+          'The Bidder shall submit the Integrity Pact duly signed and sealed along with declaration of no active blacklisting or debarment.',
         confidenceScore: 0.97,
       },
     },
     {
       category: 'STATUTORY',
       title: 'Make in India (PPP-MII) Local Content Declaration',
-      description: 'Declaration of Class-I local supplier under Public Procurement Preference to Make in India.',
+      description:
+        'Declaration of Class-I local supplier under Public Procurement Preference to Make in India.',
       executionRules: {
         stampPaperRequired: true,
         stampPaperDenominationInr: 100,
@@ -129,7 +138,8 @@ describe('NestJS Feature Modules: Services Unit Tests', () => {
       provenance: {
         pageNumber: 3,
         clauseReference: 'Clause on Page 3',
-        verbatimQuote: 'Declaration of Class-I local supplier under Public Procurement Preference to Make in India (PPP-MII) with 50% local content.',
+        verbatimQuote:
+          'Declaration of Class-I local supplier under Public Procurement Preference to Make in India (PPP-MII) with 50% local content.',
         confidenceScore: 0.98,
       },
     },
@@ -152,7 +162,11 @@ describe('NestJS Feature Modules: Services Unit Tests', () => {
     },
   ];
 
-  async function simulateExtractionCompleted(bidId: string, documentId: string, items = sampleExtractedItems) {
+  async function simulateExtractionCompleted(
+    bidId: string,
+    documentId: string,
+    items = sampleExtractedItems,
+  ) {
     const orgId = TenantContextHolder.get()?.organizationId || 'org_acme_infra_001';
     return documentCompletionService.processExtractionCompleted({
       jobId: `job-${documentId}`,
@@ -224,13 +238,13 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
 
     it('should throw UnauthorizedError when credentials do not match', async () => {
       await expect(authService.login('bidmanager@acme.com', 'WrongPassword')).rejects.toThrow(
-        UnauthorizedError
+        UnauthorizedError,
       );
     });
 
     it('should throw UnauthorizedError when user does not exist (timing attack defense path)', async () => {
       await expect(authService.login('nonexistent@acme.com', 'AnyPassword123!')).rejects.toThrow(
-        UnauthorizedError
+        UnauthorizedError,
       );
     });
 
@@ -241,7 +255,9 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
       expect(result.refreshToken).toBeDefined();
 
       await expect(authService.refresh()).rejects.toThrow(UnauthorizedError);
-      await expect(authService.refresh('tampered.invalid.token')).rejects.toThrow(UnauthorizedError);
+      await expect(authService.refresh('tampered.invalid.token')).rejects.toThrow(
+        UnauthorizedError,
+      );
     });
   });
 
@@ -291,7 +307,7 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
         `tenants/org_acme_infra_001/bids/${bid.id}/doc-to-delete-01/Uploaded_Tender_Document.pdf`,
         1024,
         'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-        sampleTenderContent
+        sampleTenderContent,
       );
       await documentsService.confirmUpload(bid.id, 'doc-to-delete-01');
 
@@ -330,8 +346,10 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
   describe('DocumentsService', () => {
     it('should generate presigned upload URL when cloud storage service is configured', async () => {
       const cloudStorage: IStorageService = {
-        generatePresignedUploadUrl: async () => 'https://vault.s3.ap-south-1.amazonaws.com/doc.pdf?X-Amz-Signature=test',
-        generatePresignedDownloadUrl: async () => 'https://vault.s3.ap-south-1.amazonaws.com/doc.pdf?sig=test',
+        generatePresignedUploadUrl: async () =>
+          'https://vault.s3.ap-south-1.amazonaws.com/doc.pdf?X-Amz-Signature=test',
+        generatePresignedDownloadUrl: async () =>
+          'https://vault.s3.ap-south-1.amazonaws.com/doc.pdf?sig=test',
         headObject: async () => ({ exists: true, sizeBytes: 100 }),
         getObject: async () => Buffer.from('test'),
         findFilesByPrefix: async () => [],
@@ -342,7 +360,7 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
       const res = await cloudDocService.generateUploadUrl(
         'bid-cpwd-gov-002',
         'tender_doc.pdf',
-        'application/pdf'
+        'application/pdf',
       );
       expect(res.documentId).toMatch(/^doc-/);
       expect(res.uploadUrl).toContain('vault.s3.ap-south-1.amazonaws.com');
@@ -353,7 +371,7 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
       const res = await documentsService.generateUploadUrl(
         'bid-cpwd-gov-002',
         'tender_doc.pdf',
-        'application/pdf'
+        'application/pdf',
       );
       expect(res.documentId).toMatch(/^doc-/);
       expect(res.uploadUrl).toContain('/api/v1/mock-upload/');
@@ -365,7 +383,7 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
       const res = await nullDocService.generateUploadUrl(
         'bid-cpwd-gov-002',
         'tender_doc.pdf',
-        'application/pdf'
+        'application/pdf',
       );
       expect(res.documentId).toMatch(/^doc-/);
       expect(res.uploadUrl).toContain('/api/v1/mock-upload/');
@@ -374,16 +392,16 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
 
     it('should throw NotFoundError when generating upload URL for non-existent or cross-tenant bid (Anti-IDOR)', async () => {
       await expect(
-        documentsService.generateUploadUrl('bid-non-existent-999', 'doc.pdf')
+        documentsService.generateUploadUrl('bid-non-existent-999', 'doc.pdf'),
       ).rejects.toThrow(NotFoundError);
 
       await TenantContextHolder.run(
         { organizationId: 'org_competitor_foreign', userId: 'usr_foreign', role: 'ADMIN' },
         async () => {
           await expect(
-            documentsService.generateUploadUrl('bid-cpwd-gov-002', 'doc.pdf')
+            documentsService.generateUploadUrl('bid-cpwd-gov-002', 'doc.pdf'),
           ).rejects.toThrow(NotFoundError);
-        }
+        },
       );
     });
 
@@ -392,16 +410,21 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
         { organizationId: 'org_competitor_foreign', userId: 'usr_foreign', role: 'ADMIN' },
         async () => {
           await expect(
-            documentsService.confirmUpload('bid-cpwd-gov-002', 'doc-test-123')
+            documentsService.confirmUpload('bid-cpwd-gov-002', 'doc-test-123'),
           ).rejects.toThrow(NotFoundError);
-        }
+        },
       );
     });
 
     it('should confirm document upload, persist to database, and update status', async () => {
       const testBid = await bidsService.createBid({ title: 'Test Bid For Documents' });
       const storagePath = `tenants/org_acme_infra_001/bids/${testBid.id}/doc-test-123/Uploaded_Tender_Document.pdf`;
-      mockStorage.simulateUploadedObject(storagePath, 1024, undefined, Buffer.from(sampleTenderContent));
+      mockStorage.simulateUploadedObject(
+        storagePath,
+        1024,
+        undefined,
+        Buffer.from(sampleTenderContent),
+      );
 
       const res = await documentsService.confirmUpload(testBid.id, 'doc-test-123');
       expect(res.documentId).toBe('doc-test-123');
@@ -429,9 +452,9 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
 
     it('should not persist or queue upload confirmation when the object is absent', async () => {
       const testBid = await bidsService.createBid({ title: 'Bid With Missing Upload' });
-      await expect(documentsService.confirmUpload(testBid.id, 'doc-missing-object')).rejects.toThrow(
-        'Uploaded document is missing or empty in object storage',
-      );
+      await expect(
+        documentsService.confirmUpload(testBid.id, 'doc-missing-object'),
+      ).rejects.toThrow('Uploaded document is missing or empty in object storage');
 
       const documents = await createDrizzle(db)
         .select()
@@ -449,7 +472,12 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
       const testBid = await bidsService.createBid({ title: 'Bid For Citation Refresh' });
       const docId = 'doc-citation-refresh';
       const storagePath = `tenants/org_acme_infra_001/bids/${testBid.id}/${docId}/Uploaded_Tender_Document.pdf`;
-      mockStorage.simulateUploadedObject(storagePath, 2048, undefined, Buffer.from(sampleTenderContent));
+      mockStorage.simulateUploadedObject(
+        storagePath,
+        2048,
+        undefined,
+        Buffer.from(sampleTenderContent),
+      );
       await documentsService.confirmUpload(testBid.id, docId);
       await createDrizzle(db)
         .update(schema.tenderDocuments)
@@ -483,7 +511,7 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
         `tenants/org_acme_infra_001/bids/${testBid.id}/doc-extract-test/Uploaded_Tender_Document.pdf`,
         1024,
         'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-        sampleTenderContent
+        sampleTenderContent,
       );
       await documentsService.confirmUpload(testBid.id, 'doc-extract-test');
 
@@ -533,7 +561,8 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
         {
           category: 'FINANCIAL',
           title: 'Tender & Bid Security (EMD) Guarantee',
-          description: 'Submission of Earnest Money Deposit / Bid Security as required by tender conditions.',
+          description:
+            'Submission of Earnest Money Deposit / Bid Security as required by tender conditions.',
           executionRules: {
             stampPaperRequired: true,
             stampPaperDenominationInr: 100,
@@ -561,7 +590,7 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
         `tenants/org_acme_infra_001/bids/${testBid.id}/doc-empty-test/Uploaded_Tender_Document.pdf`,
         500,
         'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-        `Tender: Test Bid For Empty Document\nTendering Authority: Government Authority\nNotice Inviting Tender\nThis is a simple general notice without any procurement clauses or tender requirements.`
+        `Tender: Test Bid For Empty Document\nTendering Authority: Government Authority\nNotice Inviting Tender\nThis is a simple general notice without any procurement clauses or tender requirements.`,
       );
       await documentsService.confirmUpload(testBid.id, 'doc-empty-test');
 
@@ -580,7 +609,7 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
       const res = await documentsService.getDownloadUrl(
         'bid-cpwd-gov-002',
         'doc-test-123',
-        'localhost:3000'
+        'localhost:3000',
       );
       expect(res.downloadUrl).toBeDefined();
       expect(res.expiresInSeconds).toBe(3600);
@@ -595,7 +624,7 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
         `tenants/org_acme_infra_001/bids/${testBid.id}/doc-to-remove-123/Uploaded_Tender_Document.pdf`,
         1024,
         'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-        sampleTenderContent
+        sampleTenderContent,
       );
       await documentsService.confirmUpload(testBid.id, 'doc-to-remove-123');
 
@@ -609,7 +638,7 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
       const delResult = await documentsService.deleteDocument(
         testBid.id,
         'doc-to-remove-123',
-        'org_acme_infra_001'
+        'org_acme_infra_001',
       );
       expect(delResult.success).toBe(true);
       expect(delResult.deletedDocumentId).toBe('doc-to-remove-123');
@@ -634,11 +663,11 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
 
     it('should throw NotFoundError when deleting non-existent document or document from wrong tenant', async () => {
       await expect(
-        documentsService.deleteDocument('bid-cpwd-gov-002', 'non-existent-doc-id')
+        documentsService.deleteDocument('bid-cpwd-gov-002', 'non-existent-doc-id'),
       ).rejects.toThrow(NotFoundError);
 
       await expect(
-        documentsService.deleteDocument('bid-cpwd-gov-002', 'doc-test-123', 'unauthorized_org')
+        documentsService.deleteDocument('bid-cpwd-gov-002', 'doc-test-123', 'unauthorized_org'),
       ).rejects.toThrow(NotFoundError);
     });
   });
@@ -651,7 +680,7 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
         `tenants/org_acme_infra_001/bids/bid-cpwd-gov-002/${cpwdDocId}/Uploaded_Tender_Document.pdf`,
         2048,
         'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-        sampleTenderContent
+        sampleTenderContent,
       );
       await documentsService.confirmUpload('bid-cpwd-gov-002', cpwdDocId);
       await simulateExtractionCompleted('bid-cpwd-gov-002', cpwdDocId);
@@ -669,7 +698,7 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
         async () => {
           const items = await complianceService.listItems('bid-cpwd-gov-002');
           expect(items).toEqual([]);
-        }
+        },
       );
     });
 
@@ -684,7 +713,7 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
 
     it('should throw NotFoundError when compliance item does not exist', async () => {
       await expect(
-        complianceService.getItemById('bid-cpwd-gov-002', 'invalid-comp-id')
+        complianceService.getItemById('bid-cpwd-gov-002', 'invalid-comp-id'),
       ).rejects.toThrow(NotFoundError);
     });
 
@@ -698,7 +727,7 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
         complianceService.reviewItem('bid-cpwd-gov-002', item.id, {
           status: 'READY',
           expectedVersion: item.version + 999,
-        })
+        }),
       ).rejects.toThrow(ConflictError);
 
       // Correct version should succeed
@@ -763,7 +792,12 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
     });
 
     it('should support server-side pagination, status filtering, and search in listBids', async () => {
-      const paginated = await bidsService.listBids({ page: 1, limit: 2, sort: 'createdAt', order: 'desc' });
+      const paginated = await bidsService.listBids({
+        page: 1,
+        limit: 2,
+        sort: 'createdAt',
+        order: 'desc',
+      });
       expect('items' in paginated).toBe(true);
       if ('items' in paginated) {
         expect(paginated.page).toBe(1);
@@ -783,7 +817,10 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
       const searched = await bidsService.listBids({ search: 'NHAI' });
       if ('items' in searched) {
         expect(searched.items.length).toBeGreaterThan(0);
-        expect(searched.items[0]!.title.toLowerCase().includes('nh') || searched.items[0]!.tenderingAuthority.includes('NHAI')).toBe(true);
+        expect(
+          searched.items[0]!.title.toLowerCase().includes('nh') ||
+            searched.items[0]!.tenderingAuthority.includes('NHAI'),
+        ).toBe(true);
       }
     });
 

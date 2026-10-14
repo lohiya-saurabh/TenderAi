@@ -4,10 +4,12 @@ const { chromium } = require('playwright');
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
 
-  page.on('console', msg => console.log('BROWSER CONSOLE:', msg.type(), msg.text()));
-  page.on('pageerror', err => console.log('BROWSER PAGE ERROR:', err.message));
-  page.on('requestfailed', req => console.log('REQUEST FAILED:', req.url(), req.failure()?.errorText));
-  page.on('response', res => {
+  page.on('console', (msg) => console.log('BROWSER CONSOLE:', msg.type(), msg.text()));
+  page.on('pageerror', (err) => console.log('BROWSER PAGE ERROR:', err.message));
+  page.on('requestfailed', (req) =>
+    console.log('REQUEST FAILED:', req.url(), req.failure()?.errorText),
+  );
+  page.on('response', (res) => {
     if (res.status() >= 400) {
       console.log('RESPONSE ERROR:', res.status(), res.url());
     }

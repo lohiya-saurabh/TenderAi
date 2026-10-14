@@ -10,15 +10,7 @@
  * - GET  /api/v1/companies/:companyId/verification/history (Audit trail)
  * - POST /api/v1/companies/:companyId/verification/review-discrepancy (Human review action)
  */
-import {
-  Controller,
-  Get,
-  Post,
-  Param,
-  Body,
-  Query,
-  HttpCode,
-} from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Query, HttpCode } from '@nestjs/common';
 import { EvidenceVerificationService } from '../application/EvidenceVerificationService.js';
 import { RequirePermission } from '../../../common/security/decorators/permissions.decorator.js';
 import { Permissions } from '../../../common/security/permissions.js';
@@ -31,10 +23,7 @@ export class CompanyVerificationController {
   @Post('gstin')
   @HttpCode(200)
   @RequirePermission(Permissions.COMPANY_PROFILE_MANAGE)
-  async verifyGstin(
-    @Param('companyId') companyId: string,
-    @Body() body: { gstin?: string },
-  ) {
+  async verifyGstin(@Param('companyId') companyId: string, @Body() body: { gstin?: string }) {
     if (!body.gstin || !body.gstin.trim()) {
       throw new BadRequestError('gstin parameter is required.');
     }
@@ -44,10 +33,7 @@ export class CompanyVerificationController {
   @Post('mca')
   @HttpCode(200)
   @RequirePermission(Permissions.COMPANY_PROFILE_MANAGE)
-  async verifyMca(
-    @Param('companyId') companyId: string,
-    @Body() body: { cin?: string },
-  ) {
+  async verifyMca(@Param('companyId') companyId: string, @Body() body: { cin?: string }) {
     if (!body.cin || !body.cin.trim()) {
       throw new BadRequestError('cin parameter is required.');
     }
@@ -57,10 +43,7 @@ export class CompanyVerificationController {
   @Post('udyam')
   @HttpCode(200)
   @RequirePermission(Permissions.COMPANY_PROFILE_MANAGE)
-  async verifyUdyam(
-    @Param('companyId') companyId: string,
-    @Body() body: { udyamNumber?: string },
-  ) {
+  async verifyUdyam(@Param('companyId') companyId: string, @Body() body: { udyamNumber?: string }) {
     if (!body.udyamNumber || !body.udyamNumber.trim()) {
       throw new BadRequestError('udyamNumber parameter is required.');
     }
@@ -74,7 +57,10 @@ export class CompanyVerificationController {
     @Query('redirectUri') redirectUri?: string,
   ) {
     const defaultRedirect = `${process.env.APP_BASE_URL || 'http://localhost:5173'}/company-profile?tab=evidence&digilocker=callback`;
-    return this.verificationService.generateDigiLockerAuth(companyId, redirectUri || defaultRedirect);
+    return this.verificationService.generateDigiLockerAuth(
+      companyId,
+      redirectUri || defaultRedirect,
+    );
   }
 
   @Post('digilocker/callback')

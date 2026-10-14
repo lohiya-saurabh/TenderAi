@@ -27,7 +27,7 @@ export class ComplianceStatus {
       throw new InvalidStateTransitionException(
         'UNKNOWN',
         upper,
-        `Invalid compliance status '${value}'. Allowed: [${ComplianceStatus.VALID_VALUES.join(', ')}]`
+        `Invalid compliance status '${value}'. Allowed: [${ComplianceStatus.VALID_VALUES.join(', ')}]`,
       );
     }
     return new ComplianceStatus(upper);

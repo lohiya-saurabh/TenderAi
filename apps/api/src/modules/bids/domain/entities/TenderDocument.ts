@@ -64,7 +64,7 @@ export class TenderDocument extends AggregateRoot {
     }
     if (props.sizeBytes > MAX_DOCUMENT_SIZE_BYTES) {
       throw new ValidationException(
-        `File size exceeds maximum allowed limit of ${MAX_DOCUMENT_SIZE_BYTES / (1024 * 1024)}MB.`
+        `File size exceeds maximum allowed limit of ${MAX_DOCUMENT_SIZE_BYTES / (1024 * 1024)}MB.`,
       );
     }
     if (!ALLOWED_MIME_TYPES.has(props.mimeType)) {
@@ -146,8 +146,8 @@ export class TenderDocument extends AggregateRoot {
           checksumSha256: this._checksumSha256,
           status: this._status.value,
         },
-        this.version
-      )
+        this.version,
+      ),
     );
   }
 

@@ -12,7 +12,12 @@ import { SearchIcon, CloseIcon, FilterIcon } from '../common/Icons.js';
 
 export interface ComplianceTableProps {
   items: ComplianceItem[];
-  onReviewItem: (itemId: string, status: ComplianceItem['status'], notes?: string, expectedVersion?: number) => Promise<void>;
+  onReviewItem: (
+    itemId: string,
+    status: ComplianceItem['status'],
+    notes?: string,
+    expectedVersion?: number,
+  ) => Promise<void>;
   onInspectEvidence?: (item: ComplianceItem) => void;
   onInspectCitation?: (item: ComplianceItem) => void;
   onInspectAssessment?: (item: ComplianceItem) => void;
@@ -28,7 +33,15 @@ const COLUMNS = [
   { key: 'source', label: 'Source', width: '10%' },
 ] as const;
 
-const CATEGORIES = ['ALL', 'LEGAL', 'TECHNICAL', 'FINANCIAL', 'STATUTORY', 'EXECUTION', 'COMMERCIAL'] as const;
+const CATEGORIES = [
+  'ALL',
+  'LEGAL',
+  'TECHNICAL',
+  'FINANCIAL',
+  'STATUTORY',
+  'EXECUTION',
+  'COMMERCIAL',
+] as const;
 const RISKS = ['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const;
 const MANDATORY_OPTIONS = [
   { value: 'ALL', label: 'All Requirements' },
@@ -51,7 +64,10 @@ export const ComplianceTable: React.FC<ComplianceTableProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Sort & Expand states
-  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'requirement', direction: 'asc' });
+  const [sortConfig, setSortConfig] = useState<SortConfig>({
+    key: 'requirement',
+    direction: 'asc',
+  });
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
 
   // Drawer states
@@ -78,8 +94,18 @@ export const ComplianceTable: React.FC<ComplianceTableProps> = ({
 
   // Status counts for filter tabs
   const counts = useMemo(() => {
-    const allStatuses: ComplianceStatusFilterValue[] = ['ALL', 'PASS', 'FAIL', 'MISSING', 'REVIEW_REQUIRED', 'NOT_APPLICABLE'];
-    const result: Record<ComplianceStatusFilterValue, number> = {} as Record<ComplianceStatusFilterValue, number>;
+    const allStatuses: ComplianceStatusFilterValue[] = [
+      'ALL',
+      'PASS',
+      'FAIL',
+      'MISSING',
+      'REVIEW_REQUIRED',
+      'NOT_APPLICABLE',
+    ];
+    const result: Record<ComplianceStatusFilterValue, number> = {} as Record<
+      ComplianceStatusFilterValue,
+      number
+    >;
     result.ALL = dedupedItems.length;
     allStatuses.slice(1).forEach((status) => {
       result[status] = dedupedItems.filter((i) => i.status === status).length;
@@ -141,7 +167,16 @@ export const ComplianceTable: React.FC<ComplianceTableProps> = ({
         const matchQuote = item.provenance?.verbatimQuote?.toLowerCase().includes(query);
         const matchRule = item.rationale?.ruleApplied?.toLowerCase().includes(query);
 
-        if (!matchReq && !matchCat && !matchSub && !matchClause && !matchEvidence && !matchDoc && !matchQuote && !matchRule) {
+        if (
+          !matchReq &&
+          !matchCat &&
+          !matchSub &&
+          !matchClause &&
+          !matchEvidence &&
+          !matchDoc &&
+          !matchQuote &&
+          !matchRule
+        ) {
           return false;
         }
       }
@@ -163,7 +198,15 @@ export const ComplianceTable: React.FC<ComplianceTableProps> = ({
     });
 
     return result;
-  }, [dedupedItems, statusFilter, categoryFilter, riskFilter, mandatoryFilter, searchQuery, sortConfig]);
+  }, [
+    dedupedItems,
+    statusFilter,
+    categoryFilter,
+    riskFilter,
+    mandatoryFilter,
+    searchQuery,
+    sortConfig,
+  ]);
 
   const handleSort = useCallback((key: string) => {
     setSortConfig((prev) => ({
@@ -177,20 +220,29 @@ export const ComplianceTable: React.FC<ComplianceTableProps> = ({
   }, []);
 
   // Handlers for drawers
-  const handleInspectEvidence = useCallback((item: ComplianceItem) => {
-    setActiveEvidenceItem(item);
-    onInspectEvidence?.(item);
-  }, [onInspectEvidence]);
+  const handleInspectEvidence = useCallback(
+    (item: ComplianceItem) => {
+      setActiveEvidenceItem(item);
+      onInspectEvidence?.(item);
+    },
+    [onInspectEvidence],
+  );
 
-  const handleInspectCitation = useCallback((item: ComplianceItem) => {
-    setActiveCitationItem(item);
-    onInspectCitation?.(item);
-  }, [onInspectCitation]);
+  const handleInspectCitation = useCallback(
+    (item: ComplianceItem) => {
+      setActiveCitationItem(item);
+      onInspectCitation?.(item);
+    },
+    [onInspectCitation],
+  );
 
-  const handleInspectAssessment = useCallback((item: ComplianceItem) => {
-    setActiveAssessmentItem(item);
-    onInspectAssessment?.(item);
-  }, [onInspectAssessment]);
+  const handleInspectAssessment = useCallback(
+    (item: ComplianceItem) => {
+      setActiveAssessmentItem(item);
+      onInspectAssessment?.(item);
+    },
+    [onInspectAssessment],
+  );
 
   if (dedupedItems.length === 0) {
     return (

@@ -4,14 +4,13 @@
 import { Module } from '@nestjs/common';
 import { DocumentsController } from './documents.controller.js';
 import { DocumentsService } from './documents.service.js';
+import { DocumentProcessingRuntime } from './DocumentProcessingRuntime.js';
 import {
-  DOCUMENT_EXTRACTOR_TOKEN,
-  DocumentProcessingRuntime,
-} from './DocumentProcessingRuntime.js';
-import { AiDocumentExtractor } from '../bids/application/AiDocumentExtractor.js';
-import { DocumentContentNormalizer } from '../bids/application/DocumentContentNormalizer.js';
-import { STORAGE_TOKEN } from '../../infrastructure/storage/storage.module.js';
-import type { IStorageService } from '../bids/application/IStorageService.js';
+  INGESTION_QUEUE_TOKEN,
+  COMPLETION_QUEUE_TOKEN,
+} from '../../infrastructure/queue/queue.module.js';
+import type { IJobQueue } from '../bids/application/IJobQueue.js';
+import { DRIZZLE_TOKEN, type DrizzleDb } from '../../common/database/database.module.js';
 
 import { CompletionWebhookController } from './CompletionWebhookController.js';
 import { DocumentCompletionService } from './DocumentCompletionService.js';
@@ -22,21 +21,23 @@ import { DocumentCompletionService } from './DocumentCompletionService.js';
     DocumentsService,
     DocumentCompletionService,
     {
-      provide: DOCUMENT_EXTRACTOR_TOKEN,
-      useFactory: (storage: IStorageService) => {
-        const aiBaseUrl = process.env.AI_ENGINE_URL
-        if (process.env.NODE_ENV === 'production' && !aiBaseUrl) {
-          throw new Error('AI_ENGINE_URL must be configured in production.');
-        }
-        return new AiDocumentExtractor(storage, new DocumentContentNormalizer(), {
-          aiBaseUrl: aiBaseUrl ?? 'http://localhost:8000',
-          internalServiceKey: process.env.INTERNAL_SERVICE_KEY,
-        });
+      provide: DocumentProcessingRuntime,
+      useFactory: (
+        db: DrizzleDb,
+        ingestionQueue: IJobQueue,
+        completionQueue: IJobQueue,
+        completionService: DocumentCompletionService,
+      ) => {
+        return new DocumentProcessingRuntime(db, ingestionQueue, completionQueue, completionService);
       },
-      inject: [STORAGE_TOKEN],
+      inject: [
+        DRIZZLE_TOKEN,
+        INGESTION_QUEUE_TOKEN,
+        COMPLETION_QUEUE_TOKEN,
+        DocumentCompletionService,
+      ],
     },
-    DocumentProcessingRuntime,
   ],
-  exports: [DocumentsService, DocumentCompletionService],
+  exports: [DocumentsService, DocumentCompletionService, DocumentProcessingRuntime],
 })
-export class DocumentsModule { }
+export class DocumentsModule {}

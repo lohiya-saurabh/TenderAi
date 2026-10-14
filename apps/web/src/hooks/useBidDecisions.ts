@@ -1,9 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  getBidDecision,
-  type BidDecisionSummary,
-  type BidSummary,
-} from '../api/bids.js';
+import { getBidDecision, type BidDecisionSummary, type BidSummary } from '../api/bids.js';
 
 export interface BidDecisionsState {
   /** Latest bid decision keyed by bid ID (omits unevaluated bids) */
@@ -57,9 +53,7 @@ export function useBidDecisions(bids: BidSummary[] | null): BidDecisionsState {
     // getBidDecision never rejects (api client normalizes errors into
     // ApiResult), so Promise.all is safe and preserves per-bid failure info.
     void Promise.all(
-      bidList.map((bid) =>
-        getBidDecision(bid.id).then((result) => ({ bidId: bid.id, result })),
-      ),
+      bidList.map((bid) => getBidDecision(bid.id).then((result) => ({ bidId: bid.id, result }))),
     ).then((entries) => {
       // Drop stale responses if the bid set changed mid-flight
       if (cancelled || seq !== requestSeq.current) return;

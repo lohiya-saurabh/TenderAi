@@ -14,7 +14,11 @@ import { Injectable, Inject } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
 import { eq, and, desc } from 'drizzle-orm';
 import crypto from 'node:crypto';
-import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '../../../common/database/database.module.js';
+import {
+  DRIZZLE_TOKEN,
+  type DrizzleDb,
+  createDrizzle,
+} from '../../../common/database/database.module.js';
 import * as schema from '../../../common/database/schema.js';
 import { NotFoundError, BadRequestError } from '../../../common/errors/errors.js';
 import { TenantContextHolder } from '../../../common/security/TenantContext.js';
@@ -52,7 +56,9 @@ export class EvidenceVerificationService {
 
   constructor(
     @Inject(DRIZZLE_TOKEN) db: DrizzleDb | PGlite,
+    @Inject(CompanyProfileService)
     private readonly companyProfileService: CompanyProfileService,
+    @Inject(CompanyEvidenceService)
     private readonly companyEvidenceService: CompanyEvidenceService,
     @Inject(BUSINESS_VERIFICATION_PROVIDER)
     private readonly businessVerificationProvider: BusinessVerificationProvider,
@@ -81,7 +87,12 @@ export class EvidenceVerificationService {
     const normalizedProfileName = this.normalizeName(company.legalName);
     const normalizedGstName = this.normalizeName(taxpayer.legalName);
 
-    if (normalizedProfileName && normalizedGstName && !normalizedProfileName.includes(normalizedGstName) && !normalizedGstName.includes(normalizedProfileName)) {
+    if (
+      normalizedProfileName &&
+      normalizedGstName &&
+      !normalizedProfileName.includes(normalizedGstName) &&
+      !normalizedGstName.includes(normalizedProfileName)
+    ) {
       discrepancies.push(
         `Legal name discrepancy: Profile shows '${company.legalName}', but GSTIN record shows '${taxpayer.legalName}'.`,
       );
@@ -124,14 +135,20 @@ export class EvidenceVerificationService {
     });
 
     // 5. Pin updated CompanyProfileVersion
-    await this.syncToProfile(companyId, {
-      company_name: discrepancies.length === 0 ? taxpayer.legalName : company.legalName,
-      registrations: {
-        GSTIN: taxpayer.gstin,
-        PAN: taxpayer.pan,
+    await this.syncToProfile(
+      companyId,
+      {
+        company_name: discrepancies.length === 0 ? taxpayer.legalName : company.legalName,
+        registrations: {
+          GSTIN: taxpayer.gstin,
+          PAN: taxpayer.pan,
+        },
+        operating_regions: taxpayer.principalAddress?.state
+          ? [taxpayer.principalAddress.state]
+          : undefined,
       },
-      operating_regions: taxpayer.principalAddress?.state ? [taxpayer.principalAddress.state] : undefined,
-    }, `Verified via IRIS IRP GSTIN (${taxpayer.gstin})`);
+      `Verified via IRIS IRP GSTIN (${taxpayer.gstin})`,
+    );
 
     return {
       companyId,
@@ -156,7 +173,12 @@ export class EvidenceVerificationService {
     const normalizedProfileName = this.normalizeName(company.legalName);
     const normalizedMcaName = this.normalizeName(mca.companyName);
 
-    if (normalizedProfileName && normalizedMcaName && !normalizedProfileName.includes(normalizedMcaName) && !normalizedMcaName.includes(normalizedProfileName)) {
+    if (
+      normalizedProfileName &&
+      normalizedMcaName &&
+      !normalizedProfileName.includes(normalizedMcaName) &&
+      !normalizedMcaName.includes(normalizedProfileName)
+    ) {
       discrepancies.push(
         `Company name discrepancy: Profile shows '${company.legalName}', but MCA registry shows '${mca.companyName}'.`,
       );
@@ -194,12 +216,16 @@ export class EvidenceVerificationService {
       rawPayload: mca as unknown as Record<string, unknown>,
     });
 
-    await this.syncToProfile(companyId, {
-      company_name: discrepancies.length === 0 ? mca.companyName : company.legalName,
-      registrations: {
-        CIN: mca.cinOrLlpin,
+    await this.syncToProfile(
+      companyId,
+      {
+        company_name: discrepancies.length === 0 ? mca.companyName : company.legalName,
+        registrations: {
+          CIN: mca.cinOrLlpin,
+        },
       },
-    }, `Verified via MCA Registry (${mca.cinOrLlpin})`);
+      `Verified via MCA Registry (${mca.cinOrLlpin})`,
+    );
 
     return {
       companyId,
@@ -214,7 +240,10 @@ export class EvidenceVerificationService {
   /**
    * Verify MSME Udyam registration, update classification & statutory tender benefits.
    */
-  public async verifyUdyam(companyId: string, udyamNumber: string): Promise<VerificationResultView> {
+  public async verifyUdyam(
+    companyId: string,
+    udyamNumber: string,
+  ): Promise<VerificationResultView> {
     const orgId = this.requireOrg();
     const company = await this.getCompany(companyId, orgId);
 
@@ -224,7 +253,12 @@ export class EvidenceVerificationService {
     const normalizedProfileName = this.normalizeName(company.legalName);
     const normalizedMsmeName = this.normalizeName(msme.enterpriseName);
 
-    if (normalizedProfileName && normalizedMsmeName && !normalizedProfileName.includes(normalizedMsmeName) && !normalizedMsmeName.includes(normalizedProfileName)) {
+    if (
+      normalizedProfileName &&
+      normalizedMsmeName &&
+      !normalizedProfileName.includes(normalizedMsmeName) &&
+      !normalizedMsmeName.includes(normalizedProfileName)
+    ) {
       discrepancies.push(
         `Enterprise name discrepancy: Profile shows '${company.legalName}', but Udyam shows '${msme.enterpriseName}'.`,
       );
@@ -257,13 +291,17 @@ export class EvidenceVerificationService {
       rawPayload: msme as unknown as Record<string, unknown>,
     });
 
-    await this.syncToProfile(companyId, {
-      registrations: {
-        UDYAM: msme.udyamRegistrationNumber,
-        MSME_CLASSIFICATION: msme.enterpriseClassification,
-        MSME_ACTIVITY: msme.majorActivity,
+    await this.syncToProfile(
+      companyId,
+      {
+        registrations: {
+          UDYAM: msme.udyamRegistrationNumber,
+          MSME_CLASSIFICATION: msme.enterpriseClassification,
+          MSME_ACTIVITY: msme.majorActivity,
+        },
       },
-    }, `Verified via MSME Udyam (${msme.udyamRegistrationNumber})`);
+      `Verified via MSME Udyam (${msme.udyamRegistrationNumber})`,
+    );
 
     return {
       companyId,
@@ -296,8 +334,14 @@ export class EvidenceVerificationService {
     const orgId = this.requireOrg();
     await this.getCompany(companyId, orgId);
 
-    const tokenRes = await this.digitalDocumentProvider.exchangeCodeForToken(code, state, redirectUri);
-    const issuedDocs = await this.digitalDocumentProvider.fetchIssuedDocuments(tokenRes.accessToken);
+    const tokenRes = await this.digitalDocumentProvider.exchangeCodeForToken(
+      code,
+      state,
+      redirectUri,
+    );
+    const issuedDocs = await this.digitalDocumentProvider.fetchIssuedDocuments(
+      tokenRes.accessToken,
+    );
 
     const importedRecords: schema.CompanyEvidenceDocument[] = [];
     const now = new Date();
@@ -309,7 +353,10 @@ export class EvidenceVerificationService {
         mimeType: doc.mimeType,
         evidenceType: doc.docType,
         issuer: doc.issuer,
-        referenceNumber: (doc.metadata?.cin || doc.metadata?.gstin || doc.metadata?.udyamNumber || doc.uri) as string,
+        referenceNumber: (doc.metadata?.cin ||
+          doc.metadata?.gstin ||
+          doc.metadata?.udyamNumber ||
+          doc.uri) as string,
         validFrom: doc.issueDate,
       });
 
@@ -370,7 +417,10 @@ export class EvidenceVerificationService {
   ): Promise<schema.CompanyEvidenceDocument> {
     const orgId = this.requireOrg();
     const userId = TenantContextHolder.get()?.userId || 'usr_reviewer';
-    const evidence = await this.companyEvidenceService.getEvidenceById(companyId, evidenceDocumentId);
+    const evidence = await this.companyEvidenceService.getEvidenceById(
+      companyId,
+      evidenceDocumentId,
+    );
 
     const previousStatus = evidence.verificationStatus;
     const newStatus: schema.EvidenceVerificationStatus =
@@ -408,7 +458,9 @@ export class EvidenceVerificationService {
   /**
    * Get immutable verification audit history for a company.
    */
-  public async getVerificationHistory(companyId: string): Promise<schema.EvidenceVerificationHistoryRecord[]> {
+  public async getVerificationHistory(
+    companyId: string,
+  ): Promise<schema.EvidenceVerificationHistoryRecord[]> {
     const orgId = this.requireOrg();
     await this.getCompany(companyId, orgId);
 
@@ -491,7 +543,9 @@ export class EvidenceVerificationService {
     versionName: string,
   ) {
     const profile = await this.companyProfileService.getProfile(companyId);
-    const existingPayload = profile.active?.payload || { company_name: patch.company_name || 'Enterprise' };
+    const existingPayload = profile.active?.payload || {
+      company_name: patch.company_name || 'Enterprise',
+    };
 
     const mergedPayload = {
       ...existingPayload,
@@ -501,7 +555,9 @@ export class EvidenceVerificationService {
         ...(patch.registrations || {}),
       },
       operating_regions: patch.operating_regions
-        ? Array.from(new Set([...(existingPayload.operating_regions || []), ...patch.operating_regions]))
+        ? Array.from(
+            new Set([...(existingPayload.operating_regions || []), ...patch.operating_regions]),
+          )
         : existingPayload.operating_regions,
     };
 
@@ -551,12 +607,7 @@ export class EvidenceVerificationService {
     const [comp] = await this.db
       .select()
       .from(schema.companies)
-      .where(
-        and(
-          eq(schema.companies.id, companyId),
-          eq(schema.companies.organizationId, orgId),
-        ),
-      )
+      .where(and(eq(schema.companies.id, companyId), eq(schema.companies.organizationId, orgId)))
       .limit(1);
 
     if (!comp) {

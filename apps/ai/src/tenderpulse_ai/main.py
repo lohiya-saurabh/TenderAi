@@ -2,6 +2,7 @@ import asyncio
 import logging
 import secrets
 import sys
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import ClassVar
 
@@ -22,9 +23,14 @@ from tenderpulse_ai.decision import (
 )
 from tenderpulse_ai.infrastructure.queue import (
     DocumentExtractionCompletedEvent,
+    DocumentQueueConsumerWorker,
     get_completion_publisher,
 )
+from logging.handlers import RotatingFileHandler
+import os
+
 from tenderpulse_ai.logging import (
+    ConsoleLogFormatter,
     JSONLogFormatter,
     TraceLoggingMiddleware,
     scoped_logging_context,
@@ -39,21 +45,67 @@ from tenderpulse_ai.security.context import SecurityContext
 from tenderpulse_ai.tools.page_text import PageTextTool
 from tenderpulse_ai.tools.retrieval import ScopedRetrievalTool
 
-# Initialize structured JSON root logging
-numeric_level = getattr(logging, settings.log_level.upper(), logging.INFO)
+# Initialize dual-sink logging: Rotated File (full structured JSON) + Console (clean one-liner)
 root_logger = logging.getLogger()
-root_logger.setLevel(numeric_level)
 for handler in list(root_logger.handlers):
     root_logger.removeHandler(handler)
+
+console_level = getattr(logging, settings.log_level_console.upper(), logging.INFO)
+file_level = getattr(logging, settings.log_level_file.upper(), logging.DEBUG)
+root_logger.setLevel(min(console_level, file_level))
+
+# 1. Console Stream Handler (minimal, high-signal)
 stream_handler = logging.StreamHandler(sys.stdout)
-stream_handler.setFormatter(JSONLogFormatter(service_name="fastapi"))
+stream_handler.setLevel(console_level)
+if os.getenv("LOG_FORMAT") == "json":
+    stream_handler.setFormatter(JSONLogFormatter(service_name="fastapi"))
+else:
+    stream_handler.setFormatter(ConsoleLogFormatter(service_name="fastapi"))
 root_logger.addHandler(stream_handler)
+
+# 2. Rotated File Handler (high-fidelity machine logs with retention caps)
+if os.getenv("LOG_TO_FILE", "true").lower() != "false":
+    log_dir_path = Path.cwd() / settings.log_dir
+    log_dir_path.mkdir(parents=True, exist_ok=True)
+    file_handler = RotatingFileHandler(
+        str(log_dir_path / "ai.log"),
+        maxBytes=settings.log_max_bytes,
+        backupCount=settings.log_backup_count,
+        encoding="utf-8",
+    )
+    file_handler.setLevel(file_level)
+    file_handler.setFormatter(JSONLogFormatter(service_name="fastapi"))
+    root_logger.addHandler(file_handler)
+
+# Silence third-party network and polling spam on console
+if console_level >= logging.INFO:
+    for noisy in ("httpx", "httpcore", "urllib3", "boto3", "botocore"):
+        logging.getLogger(noisy).setLevel(logging.WARNING)
+
 logger = logging.getLogger("tenderpulse_ai.main")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    worker: DocumentQueueConsumerWorker | None = None
+    if settings.ingestion_queue_provider.lower() not in ("none", "disabled"):
+        logger.info(
+            "Initializing background DocumentQueueConsumerWorker (provider: %s)...",
+            settings.ingestion_queue_provider,
+        )
+        worker = DocumentQueueConsumerWorker()
+        await worker.start()
+        app.state.queue_worker = worker
+    yield
+    if worker:
+        await worker.stop()
+
 
 app = FastAPI(
     title="TenderPulse AI Engine",
     description="Internal AI extraction and document intelligence worker service",
     version="0.1.0",
+    lifespan=lifespan,
 )
 app.add_middleware(TraceLoggingMiddleware)
 
@@ -406,5 +458,16 @@ async def analyze_bid_decision(request: BidDecisionRequest):
     """Bid/No-Bid Decision Intelligence Agent: evaluates company profile against tender."""
     agent = BidDecisionAgent()
     return await agent.evaluate(request)
+
+
+@app.get("/api/v1/worker/queue-status", dependencies=[Depends(verify_internal_key)])
+async def get_queue_status():
+    """Returns runtime state of the ingestion queue consumer and completion publisher."""
+    worker = getattr(app.state, "queue_worker", None)
+    return {
+        "ingestion_queue_provider": settings.ingestion_queue_provider,
+        "completion_queue_provider": settings.completion_queue_provider,
+        "worker_running": bool(worker and worker.is_running),
+    }
 
 

@@ -49,20 +49,28 @@ export const LandingPage: React.FC = () => {
               </h1>
 
               <p className="text-base sm:text-lg text-muted-foreground leading-relaxed max-w-2xl">
-                Deterministic tender clause extraction, multi-company evidence matching,
-                instant Bid/No-Bid scoring, and audit-ready compliance dossiers for Indian contractors and MSMEs.
+                Deterministic tender clause extraction, multi-company evidence matching, instant
+                Bid/No-Bid scoring, and audit-ready compliance dossiers for Indian contractors and
+                MSMEs.
               </p>
 
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
                 <Link to="/signup">
-                  <Button size="lg" className="w-full sm:w-auto gap-2 text-sm font-semibold shadow-md">
+                  <Button
+                    size="lg"
+                    className="w-full sm:w-auto gap-2 text-sm font-semibold shadow-md"
+                  >
                     <span>Start Free Workspace</span>
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 </Link>
                 <Link to="/pricing">
-                  <Button variant="outline" size="lg" className="w-full sm:w-auto gap-2 text-sm font-medium">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="w-full sm:w-auto gap-2 text-sm font-medium"
+                  >
                     <span>View Pricing Plans</span>
                   </Button>
                 </Link>
@@ -95,7 +103,10 @@ export const LandingPage: React.FC = () => {
                       <Badge variant="outline" className="text-[10px] font-mono">
                         NHAI-RO-DEL-2026-089
                       </Badge>
-                      <Badge variant="outline" className="bg-foreground text-background text-[10px] font-bold">
+                      <Badge
+                        variant="outline"
+                        className="bg-foreground text-background text-[10px] font-bold"
+                      >
                         BID RECOMMENDED
                       </Badge>
                     </div>
@@ -115,7 +126,9 @@ export const LandingPage: React.FC = () => {
                     <p className="text-lg font-bold text-foreground">88.5%</p>
                   </div>
                   <div>
-                    <span className="text-[10px] text-muted-foreground uppercase">Matched Clauses</span>
+                    <span className="text-[10px] text-muted-foreground uppercase">
+                      Matched Clauses
+                    </span>
                     <p className="text-lg font-bold text-foreground">17 / 18</p>
                   </div>
                   <div>
@@ -134,33 +147,60 @@ export const LandingPage: React.FC = () => {
                     <div className="flex items-start gap-2">
                       <CheckCircle2 className="h-4 w-4 text-foreground shrink-0 mt-0.5" />
                       <div>
-                        <p className="font-medium text-foreground text-[11px]">3-Year Average Annual Turnover</p>
-                        <p className="text-[10px] text-muted-foreground">Required: ₹120 Cr &bull; Verified: ₹164.2 Cr (CA UDIN Valid)</p>
+                        <p className="font-medium text-foreground text-[11px]">
+                          3-Year Average Annual Turnover
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">
+                          Required: ₹120 Cr &bull; Verified: ₹164.2 Cr (CA UDIN Valid)
+                        </p>
                       </div>
                     </div>
-                    <Badge variant="outline" className="text-[9px] text-foreground bg-muted shrink-0">PASS</Badge>
+                    <Badge
+                      variant="outline"
+                      className="text-[9px] text-foreground bg-muted shrink-0"
+                    >
+                      PASS
+                    </Badge>
                   </div>
 
                   <div className="p-2.5 rounded border border-border bg-muted/30 flex items-start justify-between gap-2">
                     <div className="flex items-start gap-2">
                       <CheckCircle2 className="h-4 w-4 text-foreground shrink-0 mt-0.5" />
                       <div>
-                        <p className="font-medium text-foreground text-[11px]">Similar Highway Completion Proof</p>
-                        <p className="text-[10px] text-muted-foreground">Required: 1 project &gt; ₹100 Cr &bull; Matched: PWD NH-44 Expressway</p>
+                        <p className="font-medium text-foreground text-[11px]">
+                          Similar Highway Completion Proof
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">
+                          Required: 1 project &gt; ₹100 Cr &bull; Matched: PWD NH-44 Expressway
+                        </p>
                       </div>
                     </div>
-                    <Badge variant="outline" className="text-[9px] text-foreground bg-muted shrink-0">PASS</Badge>
+                    <Badge
+                      variant="outline"
+                      className="text-[9px] text-foreground bg-muted shrink-0"
+                    >
+                      PASS
+                    </Badge>
                   </div>
 
                   <div className="p-2.5 rounded border border-orange-500/25 bg-orange-500/5 flex items-start justify-between gap-2">
                     <div className="flex items-start gap-2">
                       <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400 shrink-0 mt-0.5" />
                       <div>
-                        <p className="font-medium text-foreground text-[11px]">Liquidated Damages Clause (Sec 14.2)</p>
-                        <p className="text-[10px] text-muted-foreground">High Risk: Penalty capped at 15% (Exceeds standard 10% ceiling)</p>
+                        <p className="font-medium text-foreground text-[11px]">
+                          Liquidated Damages Clause (Sec 14.2)
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">
+                          High Risk: Penalty capped at 15% (Exceeds standard 10% ceiling)
+                        </p>
                       </div>
                     </div>
-                    <Badge variant="outline" className="text-[9px] text-orange-600 dark:text-orange-400 border-orange-500/30 bg-orange-500/10 shrink-0">REVIEW</Badge>
+                    <Badge
+                      variant="outline"
+                      className="text-[9px] text-orange-600 dark:text-orange-400 border-orange-500/30 bg-orange-500/10 shrink-0"
+                    >
+                      REVIEW
+                    </Badge>
                   </div>
                 </div>
 
@@ -196,7 +236,9 @@ export const LandingPage: React.FC = () => {
               Why Indian contractors lose tenders before technical bids even open
             </p>
             <p className="text-sm sm:text-base text-muted-foreground">
-              Public procurement departments in India disqualify over 35% of bids during technical scrutiny due to missing certificates, overlooked restrictive clauses, or calculation mismatches.
+              Public procurement departments in India disqualify over 35% of bids during technical
+              scrutiny due to missing certificates, overlooked restrictive clauses, or calculation
+              mismatches.
             </p>
           </div>
 
@@ -209,7 +251,8 @@ export const LandingPage: React.FC = () => {
                 </div>
                 <h3 className="text-base font-bold text-foreground">500+ Page NIT Documents</h3>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Tender requirements, special conditions of contract (SCC), and turnover formulas are buried across massive multi-part PDFs.
+                  Tender requirements, special conditions of contract (SCC), and turnover formulas
+                  are buried across massive multi-part PDFs.
                 </p>
               </CardContent>
             </Card>
@@ -220,9 +263,12 @@ export const LandingPage: React.FC = () => {
                 <div className="w-10 h-10 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center">
                   <Layers className="h-5 w-5" />
                 </div>
-                <h3 className="text-base font-bold text-foreground">Scattered Evidence &amp; Proofs</h3>
+                <h3 className="text-base font-bold text-foreground">
+                  Scattered Evidence &amp; Proofs
+                </h3>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Past completion certificates, CA UDINs, and bank solvency letters live in disorganized drives, leading to missed submission deadlines.
+                  Past completion certificates, CA UDINs, and bank solvency letters live in
+                  disorganized drives, leading to missed submission deadlines.
                 </p>
               </CardContent>
             </Card>
@@ -235,7 +281,8 @@ export const LandingPage: React.FC = () => {
                 </div>
                 <h3 className="text-base font-bold text-foreground">Disqualification Traps</h3>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Unreasonable Liquidated Damages, aggressive bank guarantee forfeiture clauses, or joint venture restrictions get noticed too late.
+                  Unreasonable Liquidated Damages, aggressive bank guarantee forfeiture clauses, or
+                  joint venture restrictions get noticed too late.
                 </p>
               </CardContent>
             </Card>
@@ -248,7 +295,8 @@ export const LandingPage: React.FC = () => {
                 </div>
                 <h3 className="text-base font-bold text-foreground">Multi-Entity Confusion</h3>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Contractors operating through parent companies, subsidiaries, or consortiums struggle to pick the right legal entity with qualifying turnover.
+                  Contractors operating through parent companies, subsidiaries, or consortiums
+                  struggle to pick the right legal entity with qualifying turnover.
                 </p>
               </CardContent>
             </Card>
@@ -269,7 +317,8 @@ export const LandingPage: React.FC = () => {
               From raw tender PDF to audit-ready submission
             </p>
             <p className="text-sm sm:text-base text-muted-foreground">
-              A structured 6-stage lifecycle engineered for accuracy, evidence provenance, and team accountability.
+              A structured 6-stage lifecycle engineered for accuracy, evidence provenance, and team
+              accountability.
             </p>
           </div>
 
@@ -278,11 +327,16 @@ export const LandingPage: React.FC = () => {
             <div className="p-6 rounded-xl border border-border bg-card space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-mono font-bold text-primary">STAGE 01</span>
-                <Badge variant="outline" className="text-[10px]">Ingestion</Badge>
+                <Badge variant="outline" className="text-[10px]">
+                  Ingestion
+                </Badge>
               </div>
-              <h3 className="text-base font-bold text-foreground">Tender Intelligence &amp; Ingestion</h3>
+              <h3 className="text-base font-bold text-foreground">
+                Tender Intelligence &amp; Ingestion
+              </h3>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Upload NIT, RFP, or BOQ documents. The engine extracts eligibility criteria, financial thresholds, EMD terms, and submission deadlines.
+                Upload NIT, RFP, or BOQ documents. The engine extracts eligibility criteria,
+                financial thresholds, EMD terms, and submission deadlines.
               </p>
             </div>
 
@@ -290,11 +344,14 @@ export const LandingPage: React.FC = () => {
             <div className="p-6 rounded-xl border border-border bg-card space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-mono font-bold text-primary">STAGE 02</span>
-                <Badge variant="outline" className="text-[10px]">Evidence</Badge>
+                <Badge variant="outline" className="text-[10px]">
+                  Evidence
+                </Badge>
               </div>
               <h3 className="text-base font-bold text-foreground">Multi-Company Evidence Match</h3>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Automatically evaluates your legal entities against tender criteria using your company dossier (turnover, past work certificates, machinery).
+                Automatically evaluates your legal entities against tender criteria using your
+                company dossier (turnover, past work certificates, machinery).
               </p>
             </div>
 
@@ -302,11 +359,16 @@ export const LandingPage: React.FC = () => {
             <div className="p-6 rounded-xl border border-border bg-card space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-mono font-bold text-primary">STAGE 03</span>
-                <Badge variant="outline" className="text-[10px]">Scoring</Badge>
+                <Badge variant="outline" className="text-[10px]">
+                  Scoring
+                </Badge>
               </div>
-              <h3 className="text-base font-bold text-foreground">Deterministic Bid/No-Bid Decision</h3>
+              <h3 className="text-base font-bold text-foreground">
+                Deterministic Bid/No-Bid Decision
+              </h3>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Receive an objective Fit Score (0-100%) and instant recommendation (BID, NO-BID, or CONDITIONAL) backed by hard matching facts.
+                Receive an objective Fit Score (0-100%) and instant recommendation (BID, NO-BID, or
+                CONDITIONAL) backed by hard matching facts.
               </p>
             </div>
 
@@ -314,11 +376,16 @@ export const LandingPage: React.FC = () => {
             <div className="p-6 rounded-xl border border-border bg-card space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-mono font-bold text-primary">STAGE 04</span>
-                <Badge variant="outline" className="text-[10px]">Compliance</Badge>
+                <Badge variant="outline" className="text-[10px]">
+                  Compliance
+                </Badge>
               </div>
-              <h3 className="text-base font-bold text-foreground">Clause-by-Clause Compliance Matrix</h3>
+              <h3 className="text-base font-bold text-foreground">
+                Clause-by-Clause Compliance Matrix
+              </h3>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Review every mandatory technical and financial clause with exact PDF provenance, confidence scores, and missing document flags.
+                Review every mandatory technical and financial clause with exact PDF provenance,
+                confidence scores, and missing document flags.
               </p>
             </div>
 
@@ -326,11 +393,14 @@ export const LandingPage: React.FC = () => {
             <div className="p-6 rounded-xl border border-border bg-card space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-mono font-bold text-primary">STAGE 05</span>
-                <Badge variant="outline" className="text-[10px]">Human Review</Badge>
+                <Badge variant="outline" className="text-[10px]">
+                  Human Review
+                </Badge>
               </div>
               <h3 className="text-base font-bold text-foreground">Human-in-the-Loop Sign-off</h3>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Legal Counsel, Bid Managers, and Financial Controllers review flagged items, apply overrides with audit justification, and sign off.
+                Legal Counsel, Bid Managers, and Financial Controllers review flagged items, apply
+                overrides with audit justification, and sign off.
               </p>
             </div>
 
@@ -338,11 +408,14 @@ export const LandingPage: React.FC = () => {
             <div className="p-6 rounded-xl border border-border bg-card space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-mono font-bold text-primary">STAGE 06</span>
-                <Badge variant="outline" className="text-[10px]">Submission</Badge>
+                <Badge variant="outline" className="text-[10px]">
+                  Submission
+                </Badge>
               </div>
               <h3 className="text-base font-bold text-foreground">Audit-Ready Submission Packet</h3>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Export full compliance matrices, signed qualification summaries, and document index packets ready for GeM or CPPP upload.
+                Export full compliance matrices, signed qualification summaries, and document index
+                packets ready for GeM or CPPP upload.
               </p>
             </div>
           </div>
@@ -366,7 +439,9 @@ export const LandingPage: React.FC = () => {
               </h2>
 
               <p className="text-sm text-muted-foreground leading-relaxed">
-                In government procurement, competitive confidentiality is paramount. TenderPulse AI enforces mathematical boundary isolation across tenants, companies, and database queries.
+                In government procurement, competitive confidentiality is paramount. TenderPulse AI
+                enforces mathematical boundary isolation across tenants, companies, and database
+                queries.
               </p>
 
               <div className="space-y-3.5 text-xs">
@@ -375,8 +450,13 @@ export const LandingPage: React.FC = () => {
                     <Check className="h-3.5 w-3.5" />
                   </div>
                   <div>
-                    <span className="font-semibold text-foreground">Fiber-Safe Tenant Isolation: </span>
-                    <span className="text-muted-foreground">Every incoming API execution runs inside Node.js AsyncLocalStorage. Cross-tenant leakage is architecturally impossible.</span>
+                    <span className="font-semibold text-foreground">
+                      Fiber-Safe Tenant Isolation:{' '}
+                    </span>
+                    <span className="text-muted-foreground">
+                      Every incoming API execution runs inside Node.js AsyncLocalStorage.
+                      Cross-tenant leakage is architecturally impossible.
+                    </span>
                   </div>
                 </div>
 
@@ -385,8 +465,13 @@ export const LandingPage: React.FC = () => {
                     <Check className="h-3.5 w-3.5" />
                   </div>
                   <div>
-                    <span className="font-semibold text-foreground">Never Hallucinated Decisions: </span>
-                    <span className="text-muted-foreground">The LLM never makes tenant access or compliance decisions. All evaluations follow deterministic rule engines.</span>
+                    <span className="font-semibold text-foreground">
+                      Never Hallucinated Decisions:{' '}
+                    </span>
+                    <span className="text-muted-foreground">
+                      The LLM never makes tenant access or compliance decisions. All evaluations
+                      follow deterministic rule engines.
+                    </span>
                   </div>
                 </div>
 
@@ -396,7 +481,10 @@ export const LandingPage: React.FC = () => {
                   </div>
                   <div>
                     <span className="font-semibold text-foreground">Immutable Audit Trail: </span>
-                    <span className="text-muted-foreground">Every human override, review sign-off, and status change is logged with timestamp, user ID, and reasoning.</span>
+                    <span className="text-muted-foreground">
+                      Every human override, review sign-off, and status change is logged with
+                      timestamp, user ID, and reasoning.
+                    </span>
                   </div>
                 </div>
               </div>
@@ -405,20 +493,33 @@ export const LandingPage: React.FC = () => {
             {/* Architecture Visual Box */}
             <div className="p-6 rounded-xl border border-border bg-card/80 space-y-4 font-mono text-xs">
               <div className="flex items-center justify-between border-b border-border pb-3">
-                <span className="text-muted-foreground text-[11px]">SECURITY_ISOLATION_SPEC.md</span>
-                <Badge variant="outline" className="text-[10px] text-foreground border-border bg-muted">
+                <span className="text-muted-foreground text-[11px]">
+                  SECURITY_ISOLATION_SPEC.md
+                </span>
+                <Badge
+                  variant="outline"
+                  className="text-[10px] text-foreground border-border bg-muted"
+                >
                   ENFORCED
                 </Badge>
               </div>
 
               <div className="space-y-2 text-[11px] text-muted-foreground bg-muted/40 p-4 rounded-lg">
-                <p className="text-foreground font-semibold">{'// 1 Tenant -> N Users | 1 Tenant -> N Companies'}</p>
-                <p className="text-orange-600 dark:text-orange-400 font-mono">{'TenantContextHolder.run({ organizationId }, async () => {'}</p>
+                <p className="text-foreground font-semibold">
+                  {'// 1 Tenant -> N Users | 1 Tenant -> N Companies'}
+                </p>
+                <p className="text-orange-600 dark:text-orange-400 font-mono">
+                  {'TenantContextHolder.run({ organizationId }, async () => {'}
+                </p>
                 <p className="pl-4 text-foreground">const bids = await db.query(</p>
-                <p className="pl-8 text-foreground">"SELECT * FROM bids WHERE organization_id = $1",</p>
+                <p className="pl-8 text-foreground">
+                  "SELECT * FROM bids WHERE organization_id = $1",
+                </p>
                 <p className="pl-8 text-foreground">[context.organizationId]</p>
                 <p className="pl-4 text-foreground">);</p>
-                <p className="pl-4 text-muted-foreground">{'// Automatic anti-IDOR rejection on company mismatch'}</p>
+                <p className="pl-4 text-muted-foreground">
+                  {'// Automatic anti-IDOR rejection on company mismatch'}
+                </p>
                 <p className="text-orange-600 dark:text-orange-400 font-mono">{'}'});</p>
               </div>
 
@@ -428,7 +529,9 @@ export const LandingPage: React.FC = () => {
                   <span className="font-semibold text-foreground">AWS Mumbai (ap-south-1)</span>
                 </div>
                 <div className="p-2.5 rounded bg-muted/30 border border-border/60">
-                  <span className="text-muted-foreground block text-[10px]">Regulatory Alignment</span>
+                  <span className="text-muted-foreground block text-[10px]">
+                    Regulatory Alignment
+                  </span>
                   <span className="font-semibold text-foreground">DPDP Act 2023</span>
                 </div>
               </div>
@@ -450,7 +553,8 @@ export const LandingPage: React.FC = () => {
               Plans built to scale with your bidding pipeline
             </h2>
             <p className="text-sm text-muted-foreground max-w-2xl mx-auto">
-              From solo contractors analyzing local NITs to enterprise EPC conglomerates managing 15 sister companies and 150+ monthly tenders.
+              From solo contractors analyzing local NITs to enterprise EPC conglomerates managing 15
+              sister companies and 150+ monthly tenders.
             </p>
           </div>
 
@@ -490,7 +594,9 @@ export const LandingPage: React.FC = () => {
                 How does TenderPulse extract clauses from 500-page NIT documents?
               </h3>
               <p className="text-xs text-muted-foreground leading-relaxed pl-6">
-                Our ingestion pipeline processes PDF documents using structured section chunking, identifying Eligibility Criteria, Special Conditions of Contract (SCC), Turnovers, and Joint Venture limits while preserving exact page number provenance.
+                Our ingestion pipeline processes PDF documents using structured section chunking,
+                identifying Eligibility Criteria, Special Conditions of Contract (SCC), Turnovers,
+                and Joint Venture limits while preserving exact page number provenance.
               </p>
             </div>
 
@@ -500,7 +606,10 @@ export const LandingPage: React.FC = () => {
                 Can I manage multiple sister companies or joint ventures in one account?
               </h3>
               <p className="text-xs text-muted-foreground leading-relaxed pl-6">
-                Yes! TenderPulse is designed for 1 Tenant to N Companies. You can register multiple business entities (e.g. Acme Infra Pvt Ltd, Acme Solar LLP) each with their own GSTIN, turnover certificates, and past experience dossiers, and seamlessly switch contexts during evaluation.
+                Yes! TenderPulse is designed for 1 Tenant to N Companies. You can register multiple
+                business entities (e.g. Acme Infra Pvt Ltd, Acme Solar LLP) each with their own
+                GSTIN, turnover certificates, and past experience dossiers, and seamlessly switch
+                contexts during evaluation.
               </p>
             </div>
 
@@ -510,7 +619,10 @@ export const LandingPage: React.FC = () => {
                 Does the AI replace our bidding team or legal counsel?
               </h3>
               <p className="text-xs text-muted-foreground leading-relaxed pl-6">
-                No. TenderPulse AI accelerates the discovery and scoring phases, but enforces Human-in-the-Loop governance. All critical flags, risk waivers, and final submission sign-offs must be approved by designated team members (Bid Manager, Legal Counsel, Financial Controller).
+                No. TenderPulse AI accelerates the discovery and scoring phases, but enforces
+                Human-in-the-Loop governance. All critical flags, risk waivers, and final submission
+                sign-offs must be approved by designated team members (Bid Manager, Legal Counsel,
+                Financial Controller).
               </p>
             </div>
 
@@ -520,7 +632,9 @@ export const LandingPage: React.FC = () => {
                 Where is our sensitive tender and financial data stored?
               </h3>
               <p className="text-xs text-muted-foreground leading-relaxed pl-6">
-                All data is encrypted in transit and at rest, hosted exclusively in AWS Mumbai (ap-south-1) in compliance with the Digital Personal Data Protection (DPDP) Act 2023. We never train public foundation models on your private bid documents.
+                All data is encrypted in transit and at rest, hosted exclusively in AWS Mumbai
+                (ap-south-1) in compliance with the Digital Personal Data Protection (DPDP) Act
+                2023. We never train public foundation models on your private bid documents.
               </p>
             </div>
           </div>
@@ -536,7 +650,8 @@ export const LandingPage: React.FC = () => {
             Stop losing tenders to fine print and missed clauses.
           </h2>
           <p className="text-sm text-muted-foreground max-w-xl mx-auto">
-            Create your workspace today and analyze your first 3 tenders completely free. No credit card required.
+            Create your workspace today and analyze your first 3 tenders completely free. No credit
+            card required.
           </p>
           <div className="pt-2 flex justify-center">
             <Link to="/signup">

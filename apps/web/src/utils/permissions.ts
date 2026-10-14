@@ -50,11 +50,7 @@ const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     PERMISSIONS.COMPLIANCE_REVIEW,
     PERMISSIONS.AUDIT_READ,
   ],
-  VIEWER: [
-    PERMISSIONS.BIDS_READ,
-    PERMISSIONS.DOCUMENTS_READ,
-    PERMISSIONS.AUDIT_READ,
-  ],
+  VIEWER: [PERMISSIONS.BIDS_READ, PERMISSIONS.DOCUMENTS_READ, PERMISSIONS.AUDIT_READ],
 };
 
 /**
@@ -68,9 +64,6 @@ export function getPermissionsForRole(role: string): Permission[] {
 /**
  * Check if a set of permissions includes a specific permission.
  */
-export function hasPermission(
-  userPermissions: string[],
-  required: Permission,
-): boolean {
+export function hasPermission(userPermissions: string[], required: Permission): boolean {
   return userPermissions.includes(required);
 }

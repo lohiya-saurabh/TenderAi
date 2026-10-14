@@ -10,7 +10,9 @@ const mockTopic = vi.fn().mockImplementation(() => ({
 const mockPull = vi.fn();
 const mockAcknowledge = vi.fn();
 const mockModifyAckDeadline = vi.fn();
-const mockSubscriptionPath = vi.fn().mockImplementation((proj: string, sub: string) => `projects/${proj}/subscriptions/${sub}`);
+const mockSubscriptionPath = vi
+  .fn()
+  .mockImplementation((proj: string, sub: string) => `projects/${proj}/subscriptions/${sub}`);
 
 vi.mock('@google-cloud/pubsub', () => {
   return {
@@ -91,7 +93,10 @@ describe('GcpPubSubJobQueue (Google Cloud Pub/Sub Adapter)', () => {
 
       const messages = await queue.receiveMessages(5, 120);
 
-      expect(mockSubscriptionPath).toHaveBeenCalledWith('tenderpulse-gcp-test', 'tenderpulse-ingestion-sub-dev');
+      expect(mockSubscriptionPath).toHaveBeenCalledWith(
+        'tenderpulse-gcp-test',
+        'tenderpulse-ingestion-sub-dev',
+      );
       expect(mockPull).toHaveBeenCalledWith({
         subscription: 'projects/tenderpulse-gcp-test/subscriptions/tenderpulse-ingestion-sub-dev',
         maxMessages: 5,
@@ -178,7 +183,7 @@ describe('GcpPubSubJobQueue (Google Cloud Pub/Sub Adapter)', () => {
       expect(mockPublishMessage).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.any(Buffer),
-        })
+        }),
       );
     });
 

@@ -4,15 +4,7 @@ import { getPlans, type PlanDefinition, type BillingInterval } from '../../api/b
 import { Button } from '../ui/button.js';
 import { Badge } from '../ui/badge.js';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card.js';
-import {
-  Check,
-  ArrowRight,
-  Building2,
-  Users,
-  FileText,
-  HardDrive,
-  Sparkles,
-} from 'lucide-react';
+import { Check, ArrowRight, Building2, Users, FileText, HardDrive, Sparkles } from 'lucide-react';
 
 export const CANONICAL_PLANS: PlanDefinition[] = [
   {
@@ -154,9 +146,10 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
     fetchCatalog();
   }, []);
 
-  const displayedPlans = displayMode === 'flagship'
-    ? plans.filter((p) => p.tier === 'STARTER' || p.tier === 'GROWTH' || p.tier === 'BUSINESS')
-    : plans;
+  const displayedPlans =
+    displayMode === 'flagship'
+      ? plans.filter((p) => p.tier === 'STARTER' || p.tier === 'GROWTH' || p.tier === 'BUSINESS')
+      : plans;
 
   const isAnnual = billingInterval === 'ANNUAL';
 
@@ -205,7 +198,7 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
       >
         {displayedPlans.map((plan) => {
           const price = isAnnual
-            ? plan.annualMonthlyPriceInr ?? plan.monthlyPriceInr
+            ? (plan.annualMonthlyPriceInr ?? plan.monthlyPriceInr)
             : plan.monthlyPriceInr;
 
           const isHighlighted = plan.highlighted || plan.tier === 'GROWTH';
@@ -247,9 +240,7 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
                   </Badge>
                 </div>
 
-                <CardTitle className="text-lg font-bold text-foreground">
-                  {plan.name}
-                </CardTitle>
+                <CardTitle className="text-lg font-bold text-foreground">{plan.name}</CardTitle>
 
                 <CardDescription className="text-xs text-muted-foreground min-h-[48px] line-clamp-3 leading-relaxed">
                   {plan.description}
@@ -370,9 +361,7 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
                       </Button>
                     </Link>
                   ) : (
-                    <Link
-                      to={`/signup?plan=${plan.tier}&interval=${billingInterval}`}
-                    >
+                    <Link to={`/signup?plan=${plan.tier}&interval=${billingInterval}`}>
                       <Button
                         variant={isHighlighted ? 'default' : 'outline'}
                         className="w-full text-xs font-semibold gap-1.5"
@@ -381,8 +370,8 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
                           {isHighlighted
                             ? 'Start Growth Trial'
                             : isBusiness
-                            ? 'Select Business'
-                            : `Select ${plan.name.replace(' Plan', '').replace(' Evaluation', '')}`}
+                              ? 'Select Business'
+                              : `Select ${plan.name.replace(' Plan', '').replace(' Evaluation', '')}`}
                         </span>
                         <ArrowRight className="h-3.5 w-3.5" />
                       </Button>

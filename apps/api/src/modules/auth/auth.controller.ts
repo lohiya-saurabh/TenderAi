@@ -1,14 +1,14 @@
 /**
  * AuthController — NestJS controller for authentication endpoints with cookie security.
  */
-import { Controller, Post, Body, Req, Res, HttpCode } from '@nestjs/common';
+import { Controller, Post, Body, Req, Res, HttpCode, Inject } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service.js';
 import { Public } from '../../common/security/decorators/public.decorator.js';
 
 @Controller('api/v1/auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(@Inject(AuthService) private readonly authService: AuthService) {}
 
   private extractCookie(req: Request, name: string): string | undefined {
     const cookieHeader = req.headers?.cookie;
@@ -126,4 +126,3 @@ export class AuthController {
     return { success: true, message: 'Logged out successfully.' };
   }
 }
-

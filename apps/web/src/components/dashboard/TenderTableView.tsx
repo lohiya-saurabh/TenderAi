@@ -2,14 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { BidSummary } from '../../api/bids.js';
 import { deleteBid } from '../../api/bids.js';
-import {
-  Table,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableHeader,
-  TableCell,
-} from '../ui/table.js';
+import { Table, TableHead, TableBody, TableRow, TableHeader, TableCell } from '../ui/table.js';
 import { Button } from '../ui/button.js';
 import { Progress } from '../ui/progress.js';
 import { Skeleton } from '../ui/skeleton.js';
@@ -197,7 +190,7 @@ function SortableHeader({
         title={`Sort by ${label}`}
         className={cn(
           'inline-flex items-center gap-1 bg-transparent border-0 p-0 font-inherit cursor-pointer transition-colors',
-          isActive ? 'text-primary font-bold' : 'text-muted-foreground hover:text-foreground'
+          isActive ? 'text-primary font-bold' : 'text-muted-foreground hover:text-foreground',
         )}
       >
         {label}
@@ -220,9 +213,7 @@ function DeadlineCell({ bid, nowMs }: { bid: BidSummary; nowMs: number }) {
   const { daysLeft, urgency } = getDeadlineInfo(bid.submissionDeadline!, nowMs);
 
   const label =
-    urgency === 'passed'
-      ? 'Window closed'
-      : `${daysLeft} day${daysLeft === 1 ? '' : 's'} left`;
+    urgency === 'passed' ? 'Window closed' : `${daysLeft} day${daysLeft === 1 ? '' : 's'} left`;
 
   const colorClass =
     urgency === 'urgent'
@@ -238,7 +229,12 @@ function DeadlineCell({ bid, nowMs }: { bid: BidSummary; nowMs: number }) {
       <span className="font-mono text-xs font-medium whitespace-nowrap text-foreground">
         {formatDate(bid.submissionDeadline!)}
       </span>
-      <span className={cn('text-[10px] font-bold uppercase tracking-wider whitespace-nowrap', colorClass)}>
+      <span
+        className={cn(
+          'text-[10px] font-bold uppercase tracking-wider whitespace-nowrap',
+          colorClass,
+        )}
+      >
         {label}
       </span>
     </div>
@@ -249,11 +245,7 @@ function ReadinessCell({ bid }: { bid: BidSummary }) {
   const { total, approved, pct } = computeReadiness(bid);
 
   if (total === 0) {
-    return (
-      <span className="text-[11px] text-muted-foreground">
-        Pending intake
-      </span>
-    );
+    return <span className="text-[11px] text-muted-foreground">Pending intake</span>;
   }
 
   const indicatorClass =
@@ -266,9 +258,7 @@ function ReadinessCell({ bid }: { bid: BidSummary }) {
   return (
     <div className="flex flex-col gap-1 w-24">
       <div className="flex justify-between text-[10px] font-semibold">
-        <span className="text-foreground">
-          {pct}%
-        </span>
+        <span className="text-foreground">{pct}%</span>
         <span className="text-muted-foreground">
           {approved}/{total}
         </span>
@@ -451,7 +441,10 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
               {visibleColumns.includes('fit') && (
                 <TableHead
                   style={{ width: COLUMN_WIDTHS.fit }}
-                  className={cn('text-xs font-semibold uppercase tracking-wider', COLUMN_MIN_WIDTHS.fit)}
+                  className={cn(
+                    'text-xs font-semibold uppercase tracking-wider',
+                    COLUMN_MIN_WIDTHS.fit,
+                  )}
                 >
                   Fit
                 </TableHead>
@@ -459,7 +452,10 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
               {visibleColumns.includes('recommendation') && (
                 <TableHead
                   style={{ width: COLUMN_WIDTHS.recommendation }}
-                  className={cn('text-xs font-semibold uppercase tracking-wider', COLUMN_MIN_WIDTHS.recommendation)}
+                  className={cn(
+                    'text-xs font-semibold uppercase tracking-wider',
+                    COLUMN_MIN_WIDTHS.recommendation,
+                  )}
                 >
                   Recommendation
                 </TableHead>
@@ -482,7 +478,10 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
               />
               <TableHead
                 style={{ width: COLUMN_WIDTHS.actions }}
-                className={cn('text-right text-xs font-semibold uppercase tracking-wider', COLUMN_MIN_WIDTHS.actions)}
+                className={cn(
+                  'text-right text-xs font-semibold uppercase tracking-wider',
+                  COLUMN_MIN_WIDTHS.actions,
+                )}
               >
                 Actions
               </TableHead>
@@ -585,13 +584,14 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
       </div>
 
       {/* Delete confirmation dialog using shadcn Dialog */}
-      <Dialog open={deleteTarget !== null} onOpenChange={(open) => !open && !isDeleting && setDeleteTarget(null)}>
+      <Dialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => !open && !isDeleting && setDeleteTarget(null)}
+      >
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Delete Tender Project</DialogTitle>
-            <DialogDescription>
-              This action is permanent and cannot be undone.
-            </DialogDescription>
+            <DialogDescription>This action is permanent and cannot be undone.</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3 py-2 text-sm text-foreground">
@@ -599,8 +599,8 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
               Are you sure you want to delete <strong>{deleteTarget?.title}</strong>?
             </p>
             <p className="text-xs text-muted-foreground">
-              This permanently removes the tender project, all uploaded documents,
-              and the derived compliance matrix. Cloud storage objects are pruned.
+              This permanently removes the tender project, all uploaded documents, and the derived
+              compliance matrix. Cloud storage objects are pruned.
             </p>
             {deleteError && <ErrorBanner message={deleteError} />}
           </div>

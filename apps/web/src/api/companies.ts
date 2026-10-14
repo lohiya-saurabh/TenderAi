@@ -36,12 +36,7 @@ export interface CompanyItem {
 }
 
 export type EvidenceVerificationStatus =
-  | 'IMPORTED'
-  | 'EXTRACTED'
-  | 'SOURCE_VERIFIED'
-  | 'NEEDS_REVIEW'
-  | 'EXPIRED'
-  | 'REJECTED';
+  'IMPORTED' | 'EXTRACTED' | 'SOURCE_VERIFIED' | 'NEEDS_REVIEW' | 'EXPIRED' | 'REJECTED';
 
 export interface EvidenceDocumentItem {
   id: string;
@@ -175,10 +170,7 @@ export function verifyGstin(
   );
 }
 
-export function verifyMca(
-  companyId: string,
-  cin: string,
-): Promise<ApiResult<VerificationResult>> {
+export function verifyMca(companyId: string, cin: string): Promise<ApiResult<VerificationResult>> {
   return apiPost<VerificationResult>(
     `/api/v1/companies/${encodeURIComponent(companyId)}/verification/mca`,
     { cin },
@@ -243,9 +235,7 @@ export function reviewEvidenceDiscrepancy(
 // Evidence Documents Vault & Cloud Ingestion
 // ---------------------------------------------------------------------------
 
-export function listCompanyEvidence(
-  companyId: string,
-): Promise<ApiResult<EvidenceDocumentItem[]>> {
+export function listCompanyEvidence(companyId: string): Promise<ApiResult<EvidenceDocumentItem[]>> {
   return apiGet<EvidenceDocumentItem[]>(
     `/api/v1/companies/${encodeURIComponent(companyId)}/evidence`,
   );
@@ -299,4 +289,3 @@ export function listCloudFiles(
     `/api/v1/companies/${encodeURIComponent(companyId)}/evidence/cloud-files?provider=${provider}${query}`,
   );
 }
-

@@ -5,8 +5,15 @@
  * Handles authentication headers, timeout protection, error mapping, and sanitization.
  */
 import { Injectable, Logger } from '@nestjs/common';
-import type { IGstVerificationPort, GstTaxpayerDetails } from '../domain/ports/IGstVerificationPort.js';
-import { BadRequestError, NotFoundError, InternalServerError } from '../../../common/errors/errors.js';
+import type {
+  IGstVerificationPort,
+  GstTaxpayerDetails,
+} from '../domain/ports/IGstVerificationPort.js';
+import {
+  BadRequestError,
+  NotFoundError,
+  InternalServerError,
+} from '../../../common/errors/errors.js';
 
 interface IrisTaxpayerResponse {
   gstin?: string;
@@ -71,7 +78,7 @@ export class IrisIrpGstAdapter implements IGstVerificationPort {
 
     try {
       const headers: Record<string, string> = {
-        'Accept': 'application/json',
+        Accept: 'application/json',
         'Content-Type': 'application/json',
       };
 
@@ -93,7 +100,9 @@ export class IrisIrpGstAdapter implements IGstVerificationPort {
 
       if (response.status === 400) {
         const errJson = (await response.json().catch(() => ({}))) as IrisTaxpayerResponse;
-        throw new BadRequestError(errJson.error?.message || `Invalid GSTIN request for '${normalized}'.`);
+        throw new BadRequestError(
+          errJson.error?.message || `Invalid GSTIN request for '${normalized}'.`,
+        );
       }
 
       if (!response.ok) {
@@ -111,7 +120,11 @@ export class IrisIrpGstAdapter implements IGstVerificationPort {
       return this.mapIrisResponse(normalized, body);
     } catch (err: unknown) {
       clearTimeout(timer);
-      if (err instanceof BadRequestError || err instanceof NotFoundError || err instanceof InternalServerError) {
+      if (
+        err instanceof BadRequestError ||
+        err instanceof NotFoundError ||
+        err instanceof InternalServerError
+      ) {
         throw err;
       }
 
@@ -119,7 +132,9 @@ export class IrisIrpGstAdapter implements IGstVerificationPort {
         throw new InternalServerError(`IRIS IRP request timed out after ${this.timeoutMs}ms.`);
       }
 
-      this.logger.error(`Failed to connect to IRIS IRP: ${err instanceof Error ? err.message : String(err)}`);
+      this.logger.error(
+        `Failed to connect to IRIS IRP: ${err instanceof Error ? err.message : String(err)}`,
+      );
       throw new InternalServerError('Unable to reach IRIS IRP verification service.');
     }
   }

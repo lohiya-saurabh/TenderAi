@@ -23,7 +23,7 @@ export class ExecutionRules {
     if (props.stampPaperRequired) {
       if (!props.stampPaperDenominationInr || props.stampPaperDenominationInr <= 0) {
         throw new InvalidExecutionRulesException(
-          'stampPaperDenominationInr must be greater than 0 when stampPaperRequired is true.'
+          'stampPaperDenominationInr must be greater than 0 when stampPaperRequired is true.',
         );
       }
       this.stampPaperDenominationInr = props.stampPaperDenominationInr;

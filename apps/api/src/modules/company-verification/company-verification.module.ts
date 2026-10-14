@@ -62,9 +62,7 @@ import { CompanyVerificationController } from './presentation/CompanyVerificatio
     {
       provide: COMPANY_REGISTRY_PROVIDER,
       useClass:
-        process.env.MCA_REGISTRY_PROVIDER === 'mca'
-          ? McaRegistryAdapter
-          : MockMcaRegistryAdapter,
+        process.env.MCA_REGISTRY_PROVIDER === 'mca' ? McaRegistryAdapter : MockMcaRegistryAdapter,
     },
 
     // MSME Udyam Verification Port (Udyam vs Mock)

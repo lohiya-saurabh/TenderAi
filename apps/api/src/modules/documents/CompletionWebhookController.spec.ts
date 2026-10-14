@@ -150,7 +150,8 @@ describe('CompletionWebhookController & DocumentCompletionService (Design B)', (
           provenance: {
             pageNumber: 3,
             clauseReference: 'NIT Sub-Clause 4.1',
-            verbatimQuote: 'The contractor shall provide a Mobilization Advance Guarantee in the form of Bank Guarantee.',
+            verbatimQuote:
+              'The contractor shall provide a Mobilization Advance Guarantee in the form of Bank Guarantee.',
             confidenceScore: 0.98,
           },
         },
@@ -167,7 +168,8 @@ describe('CompletionWebhookController & DocumentCompletionService (Design B)', (
           provenance: {
             pageNumber: 8,
             clauseReference: 'GCC Clause 18',
-            verbatimQuote: 'Minimum average annual financial turnover of INR 50 Crores with CA certificate bearing UDIN.',
+            verbatimQuote:
+              'Minimum average annual financial turnover of INR 50 Crores with CA certificate bearing UDIN.',
             confidenceScore: 0.96,
           },
         },
@@ -188,10 +190,7 @@ describe('CompletionWebhookController & DocumentCompletionService (Design B)', (
     expect(persistedDoc?.processingCompletedAt).toBeDefined();
 
     // Verify Bid in PostgreSQL is transitioned to REVIEW_READY
-    const [updatedBid] = await db
-      .select()
-      .from(schema.bids)
-      .where(eq(schema.bids.id, bid!.id));
+    const [updatedBid] = await db.select().from(schema.bids).where(eq(schema.bids.id, bid!.id));
     expect(updatedBid?.status).toBe('REVIEW_READY');
     expect(updatedBid?.totalRequirements).toBeGreaterThanOrEqual(2);
 
@@ -261,7 +260,12 @@ describe('CompletionWebhookController & DocumentCompletionService (Design B)', (
   it('5. AiDocumentExtractor.dispatchExtraction: triggers non-blocking dispatch to FastAPI worker', async () => {
     const storageService = new MockStorageService();
     const normalizer = new DocumentContentNormalizer();
-    storageService.simulateUploadedObject('storage/test.pdf', 1024, 'dummy-hash', 'Sample PDF text');
+    storageService.simulateUploadedObject(
+      'storage/test.pdf',
+      1024,
+      'dummy-hash',
+      'Sample PDF text',
+    );
 
     let dispatchCalled = false;
     const extractor = new AiDocumentExtractor(storageService, normalizer, {
@@ -316,7 +320,11 @@ describe('CompletionWebhookController & DocumentCompletionService (Design B)', (
       ],
     };
 
-    const result = await controller.handleExtractionCompleted(validKey, undefined, nonExistentDocEvent);
+    const result = await controller.handleExtractionCompleted(
+      validKey,
+      undefined,
+      nonExistentDocEvent,
+    );
     expect(result.processed).toBe(false);
     expect(result.status).toBe('DROPPED');
     expect(result.documentId).toBe('doc-orphan-01');
@@ -334,7 +342,11 @@ describe('CompletionWebhookController & DocumentCompletionService (Design B)', (
       error: 'Worker crash',
     };
 
-    const failResult = await controller.handleExtractionCompleted(validKey, undefined, nonExistentFailEvent);
+    const failResult = await controller.handleExtractionCompleted(
+      validKey,
+      undefined,
+      nonExistentFailEvent,
+    );
     expect(failResult.processed).toBe(false);
     expect(failResult.status).toBe('DROPPED');
   });

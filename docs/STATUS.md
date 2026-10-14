@@ -1,6 +1,221 @@
 # Project Status & Milestone Tracker
 
-## Current implementation milestone: Dark Mode Audit, Anti-FOUC Architecture & Swiss Monochrome Theme Harmonization
+## Current implementation milestone: Core Architecture Documentation Synchronization (`AI.md`, `ARCHITECTURE.md`, `ASYNC_DOCUMENT_HANDOFF.md`, `DOMAIN.md`)
+
+1. **Problem Statement & Scope of Delivery**:
+   - Synchronized core architectural, AI engineering, asynchronous handoff, and domain specification documents to reflect all production implementations completed across recent milestones:
+     1. *`docs/AI.md`*: Documented the foundational distinction between physical layout `DoclingBlock`s (bounding boxes, reading order, page coordinates) vs semantic `SectionNode`s (AST tree lineage, `parent_id`, owned `block_ids`) vs LangGraph execution nodes. Formalized High-Recall Candidate Scoring & Context Fusion (ADR 0028) with continuous priority scoring ($0.0 - 1.0$), cross-page repeating boilerplate detection ($\ge 3$ pages), and the two-tier triage pipeline. Updated the 11-node LangGraph extraction diagram to include Node 5B (`rescue_pass`), hoisted document-level precomputation ($O(1)$ document parsing vs per-page $O(N^2)$), and refined confidence routing. Added ADR-AI-06.
+     2. *`docs/ARCHITECTURE.md`*: Updated end-to-end architecture flow and diagrams with Docling Layout AST, DocumentStructureBuilder, CandidateDetector, LangGraph 11-node state machine with Tier-2 Rescue Pass, and DeterministicValidator. Documented the Dedicated Two-Queue Architecture (`INGESTION_QUEUE_TOKEN` and `COMPLETION_QUEUE_TOKEN` with AWS SQS / GCP Cloud Pub/Sub parity). Added Section 10.1 on Dual-Sink Rotated Structured Logging (ADR 0027) and Section 10.2 on Frontend In-Flight Request Coalescing and Polling Backoff.
+     3. *`docs/ASYNC_DOCUMENT_HANDOFF.md`*: Formalized document precomputation hoisting where `DoclingParserEngine`, `DocumentStructureBuilder`, `CandidateDetector`, and `ContextAssembler` precompute once at the document level before page parallelization, allowing page-level nodes to short-circuit in 0ms. Updated Section 4.3 with the two-tier LangGraph extraction workflow, Tier-2 `rescue_pass`, and bounded refinement conditions.
+     4. *`docs/DOMAIN.md`*: Expanded Section 8 into a comprehensive Indian Public Procurement regulatory mapping covering GFR 2017 Rule 151 debarments, state-specific stamp paper mandates (Delhi ₹100, Maharashtra ₹500), ICAI 18-digit UDIN rules for CA certificates, 3-2-1 technical similar works equations, and the Context Fusion architecture linking physical blocks to parent section AST nodes.
+   
+2. **Automated Verification Record**:
+   - TypeScript Monorepo Type Check (`npm run type-check`): **4 / 4 workspaces passed (0 errors)**.
+   - Web Test Suite (`npm --prefix apps/web test`): **22 / 22 test files, 164 / 164 tests passed (100% pass)**.
+   - API Test Suite (`npm --prefix apps/api test`): **35 / 35 test files, 264 / 264 tests passed (100% pass)**.
+   - Python AI Test Suite (`./apps/ai/.venv/bin/pytest apps/ai -q`): **140 passed, 1 skipped (100% pass)** in 20.51s.
+   - Knowledge Graph (`graphify update .`): **4,723 nodes, 11,676 edges, 226 communities rebuilt**.
+
+## Previous implementation milestone: Design System Token Restoration & Card Padding Polish (`Card.tsx`, `index.css`, `ComplianceRow.tsx`, `SourceCitationDrawer.tsx`)
+
+1. **Problem Statement & Scope of Delivery**:
+   - Diagnosed and resolved UI layout defects where `<Card padding="md">` and drawer panels rendered with `0px` internal padding, causing titles, body text, quotes, and buttons to touch card borders directly:
+     1. *Root Cause Discovery*: In `Card.tsx`, padding was calculated via `getPaddingStyles()` returning CSS variable references (`var(--space-3)` for `sm`, `var(--space-5)` for `md`, `var(--space-6)` for `lg`). However, `--space-1` through `--space-16` were completely omitted from `apps/web/src/index.css`. Under standard CSS rules, undeclared CSS variables compute to `initial` (which evaluates to `0px` for padding). Consequently, every card and drawer relying on default padding collapsed to `0px` padding.
+     2. *CSS Design Token Scale Restoration*: Added the full 4px modular spacing scale (`--space-0-5` through `--space-16`), typography scale, shadows (`--shadow-xs` through `--shadow-xl` with dark mode counterparts), transitions (`--transition-fast`, `--transition-normal`), and z-indices into `:root` and `.dark` in `apps/web/src/index.css`, exactly matching `@tenderpulse/ui/src/tokens.ts`.
+     3. *Defensive Fallbacks Across Card Component*: Updated `Card.tsx` (`getVariantStyles`, `getPaddingStyles`, `CardHeader`, `CardTitle`, `CardDescription`, `CardFooter`) with inline defensive fallback values (`var(--space-5, 1.25rem)`, `var(--space-3, 0.75rem)`, `var(--space-6, 1.5rem)`, `var(--radius-lg, 0.75rem)`, etc.) guaranteeing proper spacing even in isolated environments or un-themed contexts.
+     4. *Empty Space Void Elimination & Structured Card Grid (`ComplianceRow.tsx`)*: In the expanded 4-question clause breakdown, eliminated floating text and white voids when evidence or rationale was not present. Wrapped empty states in subtle bordered panels (`bg-muted/15 border-dashed min-h-[72px] flex items-center`) and populated states in matching structured containers (`bg-muted/30 border min-h-[72px] flex flex-col justify-center`). Added `fullWidth` to bottom action buttons so they anchor symmetrically at the bottom across all 3 cards with 20px breathing space.
+     5. *Source Citation Drawer Inset Polish (`SourceCitationDrawer.tsx`)*: Restored 20px (`1.25rem`) padding across `Tender Source Location`, `Verbatim Tender Clause`, and `Clause Traceability & Integrity` cards, cleanly indenting the orange-bordered quote callout from outer card borders.
+
+2. **Automated Verification Record**:
+   - TypeScript Monorepo Type Check (`npm run type-check`): **4 / 4 workspaces passed (0 errors)**.
+   - Web Test Suite (`npm --prefix apps/web test`): **22 / 22 test files, 164 / 164 tests passed (100% pass)**.
+   - API Test Suite (`npm --prefix apps/api test`): **35 / 35 test files, 264 / 264 tests passed (100% pass)**.
+   - Python AI Test Suite (`./apps/ai/.venv/bin/pytest apps/ai -q`): **140 passed, 1 skipped (100% pass)** in 20.51s.
+   - Knowledge Graph (`graphify update .`): **4,894 nodes, 11,860 edges, 236 communities rebuilt**.
+
+## Previous implementation milestone: High-Recall Candidate Scoring, Context Fusion & Two-Tier Extraction Rescue Pass (P0/P1 Recall-First Architecture)
+
+1. **Problem Statement & Scope of Delivery**:
+   - Resolved critical silent requirement omission risks and replaced heuristic binary gating with a recall-first priority scoring and two-tier triage pipeline:
+     1. *Eliminated Hard Unconditional Discards*: Removed the naive `len(text) < 15` skip that silently killed short table cells and instructions (`"Submit EMD"`, `"Must sign"`, `"₹5,00,000"`). Implemented true cross-page repetition filtering that detects identical running headers/footers appearing across $\ge 3$ distinct pages while preserving compact requirement signals.
+     2. *Expanded Rule Vocabulary to 20+ Categories*: Overcame keyword blindness by adding explicit patterns for debarment/disqualification restrictions (`"Bids submitted by firms appearing on the debarred list will be rejected."`), mandatory legal undertakings (PoA, board resolutions, integrity pact, consortium/JV agreements), negative covenants (`shall not`, `prohibited from`, `in the event of default`), technical experience criteria, and short mandatory instructions.
+     3. *Hierarchical Context Fusion*: Stitched parent section headers (`SECTION 2: ELIGIBILITY & QUALIFICATION`) and section lineage paths into candidate evaluations, ensuring un-keyworded clauses in requirement chapters are recognized as candidates. Preserved structured table rows (`doc.tables`) with column headers and cell metrics.
+     4. *Two-Tier Triage & Rescue Pass Node*: Split candidate detection into `(candidates, unselected_passages)`. Integrated a dedicated LangGraph `rescue_pass` node (Node 5B) running between `llm_extraction` and `validation`. The rescue pass sweeps unselected passages in compact batches to catch un-keyworded or split clauses, tagging them with `extraction_tier="RESCUE"` and feeding them into `DeterministicValidator` for strict verbatim grounding.
+     5. *ADR 0028 & Candidate Recall Benchmark*: Documented complete architecture decision record in [`docs/adr/0028-high-recall-candidate-scoring-context-fusion-rescue-pass.md`](file:///Users/belikesaurabh/main/TenderAi/docs/adr/0028-high-recall-candidate-scoring-context-fusion-rescue-pass.md). Added unit test suite [`test_candidate_detector_recall.py`](file:///Users/belikesaurabh/main/TenderAi/apps/ai/tests/test_candidate_detector_recall.py) demonstrating $100\%$ candidate recall ($\ge 98\%$ acceptance gate).
+
+2. **Automated Verification Record**:
+   - TypeScript Monorepo Type Check (`npm run type-check`): **4 / 4 workspaces passed (0 errors)**.
+   - API Test Suite (`npm --prefix apps/api test`): **35 / 35 test files, 264 / 264 tests passed (100% pass)**.
+   - Web Test Suite (`npm --prefix apps/web test`): **22 / 22 test files, 164 / 164 tests passed (100% pass)**.
+   - Python AI Test Suite (`./apps/ai/.venv/bin/pytest apps/ai -q`): **140 passed, 1 skipped (100% pass)** in 12.61s.
+
+## Previous implementation milestone: GCP Cloud Pub/Sub Adapter Parity & Dependency Manifest Alignment (`google-cloud-pubsub`)
+
+1. **Problem Statement & Scope of Delivery**:
+   - Diagnosed static analysis import failure and runtime fragility in `apps/ai/src/tenderpulse_ai/infrastructure/queue/consumer.py:L269` (`Could not import pubsub_v1 from google.cloud`):
+     1. *Manifest Parity Gap*: In `apps/ai/pyproject.toml`, `boto3` was declared for AWS SQS support, but `google-cloud-pubsub` was omitted despite ADR 0014 establishing GCP as a co-equal cloud provider. Under PEP 420 implicit namespace packaging, installed `protobuf` and `googleapis-common-protos` exposed the `google.cloud` namespace without the `pubsub_v1` package distribution, resulting in static analysis errors in IDEs and runtime `ImportError` on GCP execution.
+     2. *Adapter Client Consolidation*: In `GcpPubSubQueueConsumer`, inline imports of `from google.cloud import pubsub_v1` were repeated across `receive_messages`, `delete_message`, and `change_message_visibility` with inconsistent exception catching. Refactored into a single `_get_subscriber_client()` helper ensuring fail-fast `RuntimeError` on missing library and clean propagation.
+     3. *Clean Type Suppression Elimination*: Removed obsolete `# type: ignore` in `GcpPubSubCompletionPublisher` (`publisher.py`).
+     4. *Unit Test Coverage*: Added explicit unit test `test_gcp_pubsub_queue_consumer_client_and_methods` in `test_queue_worker.py` validating `receive_messages`, `change_message_visibility`, and `delete_message` with mocked `SubscriberClient`.
+
+2. **Automated Verification Record**:
+   - Python AI Type Check (`npx pyright apps/ai/src/tenderpulse_ai/infrastructure/queue`): **0 errors, 0 warnings**.
+   - Python AI Test Suite (`./apps/ai/.venv/bin/pytest apps/ai -q`): **134 passed, 1 skipped (100% pass)** in 11.87s.
+
+## Previous implementation milestone: UI Layout Harmonization, Card Height Matching & Empty Space Void Elimination (`ObligationsCard`, `ComplianceRow`, `ExecutionRulesCard`, `EvidenceTraceabilityChain`)
+
+1. **Problem Statement & Scope of Delivery**:
+   - Resolved UI layout defects, variable-height card misalignments, and excessive empty white spaces across the Bid Detail and Compliance Matrix views:
+     1. *Eliminated Empty Space Voids & Summarized Signing Authorities (`ObligationsCard.tsx`)*: In `ObligationGrid`, an unformatted 21-element list of raw signing authority roles expanded Card 4's height to ~380px. Because Cards 1, 2, and 3 used `flex flex-col justify-between`, their labels were pushed to the top and single-line details were forced to the bottom, creating a ~300px blank white void between them. Replaced the raw text list with an executive badge summary (count badge, top 3 compact badges with tooltips, and `+X more` badge). Re-architected the cards with `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 items-stretch`, `h-full flex flex-col justify-between gap-2`, and standard top header rows (label + `REQUIRED` / `OPTIONAL` badge) and `mt-auto pt-1` detail containers so all 4 cards stretch to the exact same height without internal separation voids.
+     2. *Card Height Matching & Baseline-Anchored Action Buttons (`ComplianceRow.tsx`)*: In the expanded 4-question breakdown of each compliance clause, Question 4 (source document quote) was tall due to the verbatim citation callout, while Question 2 (company evidence) and Question 3 (decision rationale) had short fallback text when unlinked, leaving floating buttons and large empty spaces below them. Added `items-stretch` to the grid, wrapped each card in `<Card padding="md" className="flex flex-col justify-between h-full">`, grouped header and body content together, and anchored action buttons inside `<div className="pt-3 mt-auto">`. All 3 cards now match row height and action buttons align on the exact same horizontal baseline.
+     3. *Full-Height Flex Stretches & Fallback Content (`EvidenceTraceabilityChain.tsx`)*: Enforced explicit `height: '100%'` and `boxSizing: 'border-box'` across all 4 chain nodes (Tender Mandate, Required Evidence, Company Evidence, Assessment Verdict). Added fallback text for empty states (`UDIN not applicable` / `No credential attached` when credentials/expiry dates are absent, and `Automated Rule Comparison` when ruleApplied is empty), and anchored bottom metadata with `marginTop: 'auto'`.
+     4. *Statutory Rules Uniformity (`ExecutionRulesCard.tsx`)*: Applied `items-stretch` and `h-full flex flex-col justify-between gap-1.5` to all 4 execution rule items, ensuring equal heights and consistent padding.
+
+2. **Automated Verification Record**:
+   - Monorepo Production Build (`npm run build`): **100% build success across all packages and apps**.
+   - TypeScript Monorepo Type Check (`npm run type-check`): **4 / 4 workspaces passed (0 errors)**.
+   - API Test Suite (`npm --prefix apps/api test`): **35 / 35 test files, 264 / 264 tests passed (100% pass)**.
+   - Web Test Suite (`npm --prefix apps/web test`): **22 / 22 test files, 164 / 164 tests passed (100% pass)**.
+   - Python AI Test Suite (`./apps/ai/.venv/bin/pytest apps/ai -q`): **133 passed, 1 skipped (100% pass)** in 12.54s.
+
+## Previous implementation milestone: Elimination of Processing & Request Cascades (Hoisted Document AST Parsing, Blind LangGraph Refinement Elimination, In-Flight GET Coalescing & Frontend Polling Backoff)
+
+1. **Problem Statement & Scope of Delivery**:
+   - Resolved four compounding request/processing loops and log explosions identified across `apps/ai`, `apps/api`, and `apps/web`:
+     1. *Eliminated $O(N^2)$ PDF Parsing Loop & Redundant Preprocessing (`apps/ai`)*: Previously, `_process_page` in `pipeline.py` passed all $N$ document pages to each page's LangGraph instance. `docling_parse_node` re-parsed the entire document inside each page invocation ($N^2$ executions, e.g. 2,025 page parses for a 45-page document), while `candidate_detection` and `context_assembly` executed 45 redundant times. Hoisted `DoclingParserEngine`, `DocumentStructureBuilder`, `CandidateDetector`, and `ContextAssembler` to execute once at the document level before page parallelization, and updated `make_docling_parse_node`, `make_build_structure_node`, `make_candidate_detection_node`, and `make_context_assembly_node` in `nodes.py` to short-circuit in 0ms when pre-computed structures are present in state.
+     2. *Eliminated Futile LangGraph Refinement Loop (`apps/ai`)*: In `graph.py`, `route_verification_outcome` checked `elif state.get("retry_count", 0) < 2:` without asserting `len(unverified) > 0`. When 100% of candidate items passed deterministic verification but average confidence was < 0.80 (Mandatory Human Review tier), the router retried LLM extraction twice in a loop (3 LLM calls per page $\times$ 45 pages = 135 LLM calls). Updated router to route to `targeted_refine` strictly when `len(unverified) > 0 and retry_count < 2`, and otherwise transition immediately to human review and PostgreSQL persistence without repeated LLM calls.
+     3. *Decoupled Frontend Polling & Backed Off Intervals (`apps/web`)*: In `BidDetailPage.tsx`, `refetchBid()` and `refetchCompliance()` ran on an aggressive 2.5s timer. Every time `bid` updated reference, a dependent `useEffect([bid])` triggered `getBidDecision()`, generating 3 concurrent network requests every 2.5 seconds. Decoupled `fetchDecision` to load once on mount, re-evaluate on completed state transitions via `prevInFlightRef`, and backed off polling interval from 2.5s to 10s as a safety fallback while relying on Server-Sent Events (`ExtractionProgress.onComplete`) for real-time completion.
+     4. *Coalesced Concurrent In-Flight GET Requests (`apps/web`)*: React 18 `StrictMode` in development and concurrent sibling components mounted simultaneously within 2–15ms, triggering duplicate parallel requests (`/notifications`, `/bids/:id`, `/compliance-items`). Added an in-flight request coalescing map (`inFlightGetRequests = new Map()`) in `client.ts` to deduplicate concurrent in-flight GET promises for identical paths, returning the active promise and deleting on completion.
+     5. *Automated Unit Test Coverage*: Added explicit proof tests for `route_verification_outcome` covering zero-unverified and low-confidence branches in `test_compliance_workflow.py`, and concurrent in-flight GET coalescing unit tests in `client.spec.ts`.
+
+2. **Automated Verification Record**:
+   - Monorepo Production Build (`npm run build`): **100% build success across all packages and apps**.
+   - TypeScript Monorepo Type Check (`npm run type-check`): **4 / 4 workspaces passed (0 errors)**.
+   - API Test Suite (`npm --prefix apps/api test`): **35 / 35 test files, 264 / 264 tests passed (100% pass)**.
+   - Web Test Suite (`npm --prefix apps/web test`): **22 / 22 test files, 164 / 164 tests passed (100% pass)**.
+   - Python AI Test Suite (`./apps/ai/.venv/bin/pytest apps/ai -q`): **133 passed, 1 skipped (100% pass)** in 13.00s.
+
+## Previous implementation milestone: Dual-Sink Rotated Structured Logging, Log Retention Caps & Zero-Trust Content Truncation
+
+1. **Problem Statement & Scope of Delivery**:
+   - Resolved terminal log flooding and implemented dual-sink, size-rotated, machine-readable structured logging across the NestJS API gateway and FastAPI AI engine:
+     1. *Zero-Dependency Rotating File Stream in Node.js*: Built [`RotatingLogStream.ts`](file:///Users/belikesaurabh/main/TenderAi/apps/api/src/common/logging/RotatingLogStream.ts) using native `node:fs` atomic file descriptors and sync append (`0o600` permissions) to prevent async rotation race conditions and `ENOENT` faults. Size-capped at 10 MB per file with 5 rotated backups (`api.log.1` ... `api.log.5`).
+     2. *Dual-Sink Routing in `StructuredLogger`*: Updated [`StructuredLogger.ts`](file:///Users/belikesaurabh/main/TenderAi/apps/api/src/common/logging/StructuredLogger.ts) to decouple machine diagnostics from human terminal output. Rotated file sink stores full canonical JSON down to `DEBUG` (`LOG_LEVEL_FILE`), while console sink emits clean, readable single-line summaries at `INFO` (`LOG_LEVEL_CONSOLE`). Automatically suppresses noisy NestJS framework route mapping spam unless console level is explicitly set to `DEBUG`.
+     3. *Python AI Engine Dual-Sink Setup*: Attached Python standard library `RotatingFileHandler` writing JSON directly to `logs/ai.log` (10 MB cap, 5 backups) and `StreamHandler` emitting clean single-line messages with [`ConsoleLogFormatter`](file:///Users/belikesaurabh/main/TenderAi/apps/ai/src/tenderpulse_ai/logging/formatter.py). Silenced third-party poller spam (`httpx`, `botocore`, `urllib3`) on the console.
+     4. *Zero-Trust Prompt & Document Truncation Boundary*: Updated [`LogSanitizer.ts`](file:///Users/belikesaurabh/main/TenderAi/apps/api/src/common/logging/LogSanitizer.ts) and [`sanitizer.py`](file:///Users/belikesaurabh/main/TenderAi/apps/ai/src/tenderpulse_ai/security/sanitizer.py) to truncate oversized prompt templates, raw PDF page text chunks, and layout dictionaries at 250 characters with explicit omission indicators, preventing confidential document leakage and log payload explosion.
+     5. *ADR 0027*: Documented complete architecture decision record, rationale, disk exhaustion protections, and CLI analysis workflows (`jq`, `tail -f`) in [`docs/adr/0027-dual-sink-rotated-structured-logging.md`](file:///Users/belikesaurabh/main/TenderAi/docs/adr/0027-dual-sink-rotated-structured-logging.md).
+
+2. **Automated Verification Record**:
+   - Monorepo Production Build (`npm run build`): **100% build success across all packages and apps**.
+   - TypeScript Monorepo Type Check (`npm run type-check`): **4 / 4 workspaces passed (0 errors)**.
+   - API Test Suite (`npm --prefix apps/api test`): **35 / 35 test files, 264 / 264 tests passed (100% pass)**.
+   - Web Test Suite (`npm --prefix apps/web test`): **22 / 22 test files, 163 / 163 tests passed (100% pass)**.
+   - Python AI Test Suite (`./apps/ai/.venv/bin/pytest apps/ai -q`): **132 passed, 1 skipped (100% pass)** in 12.34s.
+
+## Previous implementation milestone: Two-Queue Async Extraction Resilience, Fast-Fail Circuit Breaker & SQS End-to-End Hardening
+
+## Previous implementation milestone: Two-Queue Cloud Architecture (Option B) — Direct Python Queue Worker & Dedicated Completion Queue
+
+## Previous implementation milestone: Monorepo Formatting Standards & Format-on-Save Integration
+
+1. **Problem Statement & Scope of Delivery**:
+   - Monorepo required standardized, robust Prettier formatting rules across all workspaces (`packages/*`, `apps/*`), an exhaustive `.prettierignore` to prevent corruption or slowdown from build outputs, virtual environments, Terraform configs, and knowledge graphs, and native IDE "Format on Save" configuration.
+   - Deliverables:
+     - `.prettierrc`: Configured with `"trailingComma": "all"`, `"singleQuote": true`, `"tabWidth": 2`, `"printWidth": 100`, `"endOfLine": "lf"`, and `"proseWrap": "preserve"` with specific overrides for JSON/YAML/Markdown.
+     - `.prettierignore`: Comprehensive exclusions for dependencies, nested dist/build folders, Python caches (`.venv`, `__pycache__`, `.pytest_cache`, `.ruff_cache`), Terraform (`.tf`, `.tfstate`, `.hcl`), sample PDFs/spreadsheets, and knowledge graph (`graphify-out`).
+     - `.vscode/settings.json`: Configured workspace-level `"editor.formatOnSave": true`, default formatter `esbenp.prettier-vscode` across TS/JS/JSON/CSS/HTML/YAML/Markdown, and Ruff for Python.
+     - `.vscode/extensions.json`: Recommended `esbenp.prettier-vscode`, `dbaeumer.vscode-eslint`, `charliermarsh.ruff`, and `editorconfig.editorconfig`.
+     - `.editorconfig`: Cross-editor configuration for space indentation, UTF-8, LF line endings, and trimmed whitespace.
+     - `package.json`: Updated `npm run format` and `npm run format:check` to target root with `.prettierignore` compliance.
+
+2. **Automated Verification Record**:
+   - TypeScript Monorepo Type Check (`npm run type-check`): **4 / 4 workspaces passed (0 errors)**.
+   - Python AI Test Suite (`./.venv/bin/pytest apps/ai -q`): **126 passed, 1 skipped** in 3.11s.
+   - Prettier Syntax Verification: Configuration files validated and 100% formatted.
+   - Knowledge Graph (`graphify update .`): Re-indexed (4,735 nodes, 11,478 edges, 242 communities).
+
+## Previous implementation milestone: AI Systems Architecture Masterclass & Full Conceptual Consolidation (docs/AI.md)
+
+1. **Problem Statement & Scope of Delivery**:
+   - `docs/AI.md` required a unified, masterclass-level consolidation eliminating all repetitive fluff, synchronizing 100% with the production implementation in `apps/ai/src/tenderpulse_ai/`, and breaking down core engineering concepts from first principles (mathematical foundations, architectural trade-offs, failure modes, and interview defenses).
+   - Deepened technical foundations for:
+     1. **Vector DBs & ANN Indexing at Scale**: Cosine vs. inner product vs. $L_2$, exact kNN vs. ANN, HNSW layered graph mechanics ($M$, $ef_{construction}$, $ef_{search}$), and why PostgreSQL `pgvector` with RLS beats decoupled vector databases (Pinecone/Milvus).
+     2. **Production RAG Architecture**: Failure modes of naive text chunking (`RecursiveCharacterTextSplitter`), Docling Multimodal Layout AST and table grid reconstruction, Dense + Sparse lexical hybrid retrieval, and Reciprocal Rank Fusion ($RRF$, $k=60$).
+     3. **JEV vs. LLM-as-a-Judge**: Liabilities of autoregressive LLM judges (latency, token costs, positional/self-preference bias, uncalibrated scoring), TypeSafe System One sub-25ms calibrated sigmoid logit scoring (`JevCalibratedReranker`), and hybrid deterministic Python substring grounding.
+     4. **LangChain vs. LangGraph**: Why linear DAGs (LCEL) fail on real-world cycles, crashes, and interrupts; LangGraph typed state (`TypedDict`), channel reducers (`operator.add`), persistent checkpoints (`PostgresSaver`), and native `interrupt()` suspension.
+     5. **Zero-Trust AI Architecture**: Strict separation of intelligence and authority (ADR 0019/0021), immutable `SecurityContext`, prompt XML encapsulation, secret sanitization, and deterministic eligibility/calculation boundaries.
+     6. **Principal/Staff AI Engineer Interview Playbook**: 6 battle-tested architectural defenses with concise, authoritative engineering answers.
+
+2. **Automated Verification Record**:
+   - Python AI Test Suite (`./.venv/bin/pytest apps/ai -q`): **126 passed, 1 skipped** in 3.15s.
+   - Knowledge Graph (`graphify update .`): Re-indexed and verified current.
+
+## Previous implementation milestone: Production Implementation of AI Roadmap — Hybrid RAG + JEV Reranking, Docling Table AST Engine, Corrigendum Drift Radar & Multi-Agent Collaborative Dossier Graph
+
+1. **Problem Statement & Scope of Delivery**:
+   - Following the architectural review and user direction ("Implement everything"), we implemented the 4 core AI engineering initiatives from the strategic product roadmap into the production codebase:
+     1. **Phase 2: Hybrid Dense+Sparse RAG with JEV Calibrated System One Reranking** in `apps/ai/src/tenderpulse_ai/tools/retrieval.py`.
+     2. **Phase 1: Multimodal Layout Parsing & Table Structure AST Engine** in `apps/ai/src/tenderpulse_ai/domain/docling_parser.py` and `models.py`.
+     3. **Phase 5: Corrigendum AST Diffing & Semantic Requirement Drift Radar** in `apps/ai/src/tenderpulse_ai/corrigendum/`.
+     4. **Phase 4: Multi-Agent Collaborative Dossier Assembly with LangGraph Subgraphs** in `apps/ai/src/tenderpulse_ai/dossier/`.
+
+2. **Key Deliverables & Architectural Implementation**:
+   - **Hybrid RAG & JEV System One Calibrated Reranker (`retrieval.py`)**:
+     - Upgraded `ScopedRetrievalTool` with dual ranking: sparse lexical (BM25 term overlap) + dense vector cosine similarity (`compute_cosine_similarity`).
+     - Fused candidate pools via **Reciprocal Rank Fusion** (`reciprocal_rank_fusion` with smoothing $k=60$).
+     - Built `JevCalibratedReranker`: TypeSafe System One evaluator executing in $<5\text{ms}$, applying statutory procurement keyword boosts (`STATUTORY_KEYWORDS`) and exact alphanumeric tender/act identifier detection (`IDENTIFIER_REGEX`) mapped through a calibrated sigmoid probability function.
+     - Preserved 100% backward compatibility and strict multi-tenant isolation (`SecurityContext`).
+   - **Multimodal Layout & Table Structure AST Engine (`docling_parser.py`, `models.py`)**:
+     - Enhanced `DoclingTable` with GitHub-flavored markdown serialization (`to_markdown`), record dictionaries (`to_dict_records`), and cell coordinate lookup (`get_cell`).
+     - Refactored `DoclingParserEngine` table parsing to cleanly group multi-row delimited/markdown tables, skip table separators, and attach simulated A4 spatial bounding boxes (`bbox`) to all blocks and tables.
+   - **Corrigendum AST Diffing & Requirement Drift Radar (`corrigendum/`)**:
+     - Built `CorrigendumDiffEngine`: Compares original tender clauses against late-breaking corrigenda, classifying amendment types (`MODIFICATION`, `ADDITION`, `DELETION`, `DEADLINE_CHANGE`), severity (`CRITICAL`, `HIGH`, `MEDIUM`), and extracting numeric deltas.
+     - Built `DriftImpactAnalyzer`: Determines overall commercial impact (`FAVORABLE`, `ADVERSE`, `NEUTRAL`), flags mandatory eligibility re-evaluation, and synthesizes prioritized action items.
+   - **Multi-Agent Collaborative Dossier Assembly Graph (`dossier/`)**:
+     - Built specialized domain subagents in `subagents.py`: `TechnicalAppraiserAgent`, `StatutoryLegalAgent`, and `CommercialFinanceAgent`.
+     - Built `build_bid_dossier_workflow_graph`: A compiled LangGraph StateGraph (`DossierWorkflowState`) orchestrating the specialist agent pipeline with `operator.add` appraisal reducers, worst-state-wins deterministic rollup, and executive `BidDirectorAgent` dossier synthesis.
+     - Supports both ephemeral execution and stateful checkpointing via `MemorySaver`/`PostgresSaver`.
+
+3. **Automated Verification Record**:
+   - Python AI Test Suite (`./.venv/bin/pytest apps/ai -v`): **126 passed, 1 skipped (0 failures)** in 3.03s.
+     - `test_hybrid_retrieval_jev.py`: 4/4 passed.
+     - `test_docling_table_ast.py`: 2/2 passed.
+     - `test_corrigendum_diff.py`: 2/2 passed.
+     - `test_multi_agent_dossier.py`: 2/2 passed.
+     - Existing agent, workflow, regression, and security tests: 116 passed.
+   - TypeScript Monorepo Type Check (`npm run type-check`): **4 / 4 workspaces passed (0 errors)**.
+   - Knowledge Graph (`graphify update .`): AST re-indexed (4,731 nodes, 11,450 edges, 241 communities).
+
+## Previous implementation milestone: AI Architecture Synchronization, LangGraph Production Engines, JEV Calibrated Evaluation & Product AI Roadmap
+
+1. **Problem Statement & Audit Findings**:
+   - `docs/AI.md` previously described the LangGraph extraction pipeline as "conceptual" (`The First LangGraph Workflow (Conceptual)`), when in fact `apps/ai` already implements two complete, compiled, and tested LangGraph StateGraphs (`ComplianceWorkflowState` / 11 nodes in `workflow/graph.py` and `BidDecisionWorkflowState` / 6 nodes in `decision/workflow/graph.py`).
+   - Lack of explicit treatment of **JEV (Judge / Evaluation / Verification & TypeSafe System One Models)**: developers and interviewers frequently ask how TenderPulse AI avoids the high-latency, non-deterministic pitfalls of "LLM-as-a-judge".
+   - The 12-dimension automated evaluation scorecard framework (`EvaluationSuiteMetrics` in `apps/ai/src/tenderpulse_ai/evaluation/`) was implemented in code but lacked formal architecture documentation.
+   - Need for a clear, precision-driven product AI roadmap and an interview defense masterclass for senior engineering candidates.
+
+2. **Key Deliverables & Architectural Updates**:
+   - **Full LangGraph Engine Alignment (`docs/AI.md` Section 6)**:
+     - Documented `ComplianceWorkflowGraph`: 11 nodes (`docling_parse` → `build_structure` → `candidate_detection` → `context_assembly` → `llm_extraction` → `validation` → `confidence_routing` → conditional `targeted_refine` / `escalate_human_review` → `human_review` with native `interrupt()` → `postgres_store`).
+     - Documented `BidDecisionWorkflowGraph`: 6 nodes (`evidence_retrieval` → `deterministic_evaluation` → `commercial_risk` → `review_routing` → conditional `human_review_gate` / `executive_synthesis` → `executive_synthesis`).
+     - State reducers (`operator.add`), state checkpointing (`PostgresSaver` / `MemorySaver`), and tenant-isolated resume invariants.
+   - **JEV & System One Decision Architecture (`docs/AI.md` Section 6.4)**:
+     - Clarified System One (high-speed, typed, calibrated decisions $<25\text{ms}$) vs System Two (deliberative generative reasoning).
+     - Integrated JEV across query routing, pre-generation chunk filtering, and LangGraph conditional edge routing.
+     - Codified the TenderPulse AI Grounding Rule: exact-substring Python validation over uncalibrated LLM self-judgment.
+   - **Evaluation Scorecard & CI Regression Gate (`docs/AI.md` Section 10)**:
+     - Documented the 12 evaluation metrics across extraction, classification, grounding, adversarial robustness, and multi-tenant security.
+     - Documented hard CI regression floors (100% tenant isolation, 100% document isolation, 100% hallucination suppression).
+   - **Strategic AI Product Roadmap (`docs/AI.md` Section 11)**:
+     - Multimodal layout AST (Docling v2), Hybrid Dense+Sparse RAG with Cross-Encoder & JEV reranking, Fine-Tuned Small Language Models (SLMs) for statutory procurement NER, Multi-Agent Collaborative Dossier Assembly, and Corrigendum AST diffing radar.
+   - **Technical Interview Defense Mastery (`docs/AI.md` Section 12)**:
+     - Battle-tested answers for why LangGraph over LCEL, zero-hallucination defense, JEV vs LLM-as-a-judge, multi-tenant agent security, and context window optimization.
+
+3. **Verification Record**:
+   - Pytest AI Test Suite (`./.venv/bin/pytest apps/ai -v`): 116 passed, 1 skipped (0 failures).
+   - Graphify Knowledge Graph (`graphify update .`): AST indexed and verified.
+
+## Previous implementation milestone: Dark Mode Audit, Anti-FOUC Architecture & Swiss Monochrome Theme Harmonization
 
 1. **Problem Statement & Root Causes**:
    - **Flash of Unstyled Content (FOUC) on Page Load / Reload**: In `apps/web/index.html`, there was no inline pre-hydration script in `<head>`. When users visited in dark mode, the browser painted an unstyled white canvas for 200–800ms while loading React and `ThemeContext`, creating a jarring white flash before switching to dark mode.
@@ -18,7 +233,7 @@
      - Initial state checks `localStorage`, falls back to `(prefers-color-scheme: dark)`, and defaults to high-contrast `'dark'`.
      - Added an active `media.addEventListener('change', ...)` listener to seamlessly adapt to macOS / OS appearance changes when no manual override is active.
    - **Clear, High-Contrast Header & Nav Theme Switchers (`Header.tsx`, `PublicNav.tsx`)**:
-     - Standardized theme button to display the *currently active* mode:
+     - Standardized theme button to display the _currently active_ mode:
        - Dark mode: `Moon` icon with orange accent + `"Dark"` label.
        - Light mode: `Sun` icon with amber accent + `"Light"` label.
      - Synchronized across authenticated `Header.tsx` and unauthenticated `PublicNav.tsx`.
@@ -229,10 +444,10 @@
    - For Indian MSME contractors bidding on government tenders (via GeM, CPPP, State e-Procurement Portals), technical disqualification frequently occurs due to expired, missing, or mismatched statutory certificates, unverifiable financial claims, or inaccurate eligibility tags.
    - Traditional tender platforms rely on repetitive manual text entry and ad-hoc file attachments, forcing bidders to re-upload evidence for every tender without provenance or verification.
    - To build a defensible, reusable company evidence layer, TenderPulse AI required an evidence onboarding and multi-provider verification pipeline capable of answering:
-     - *Is this business registered, active, and legally eligible?*
-     - *Which statutory certificates and licenses does it hold, and are they source-verified?*
-     - *Does it meet turnover, net worth, and past experience requirements with verifiable documents?*
-     - *Which evidence is missing, expired, or needs human review?*
+     - _Is this business registered, active, and legally eligible?_
+     - _Which statutory certificates and licenses does it hold, and are they source-verified?_
+     - _Does it meet turnover, net worth, and past experience requirements with verifiable documents?_
+     - _Which evidence is missing, expired, or needs human review?_
 
 2. **Architectural Improvements & Deliverables**:
    - **Cloud-Agnostic Domain Ports & Infrastructure Adapters (`apps/api/src/modules/company-verification/`)**:
@@ -359,9 +574,9 @@
        - `GcsStorageService`: native `bucket.getFiles({ prefix })`.
        - `MockStorageService`: native in-memory prefix key filtering.
      - Fully decoupled `DocumentsService` from `GcsStorageService`: removed infrastructure imports, type union casts `(IStorageService & Partial<GcsStorageService>)`, and internal `gcsStorageService` getter, enabling pure polymorphic storage operations across AWS S3, Google Cloud Storage, and Mock Storage.
-    - **ORM JSONB Schema Type Hardening**:
-      - Strongly typed `complianceItems.provenance` in Drizzle ORM schema (`apps/api/src/common/database/schema.ts`) using `.$type<ComplianceItemProvenance>()`.
-      - Resolved `unknown` type inference across test suites and application queries, eliminating unsafe type casts while preserving full backwards compatibility for nullable JSON attributes.
+   - **ORM JSONB Schema Type Hardening**:
+     - Strongly typed `complianceItems.provenance` in Drizzle ORM schema (`apps/api/src/common/database/schema.ts`) using `.$type<ComplianceItemProvenance>()`.
+     - Resolved `unknown` type inference across test suites and application queries, eliminating unsafe type casts while preserving full backwards compatibility for nullable JSON attributes.
 
 3. **Verification Record**:
    - API Unit & Integration Tests (Vitest): 33 test files, 245 tests passed (100% green).
@@ -822,12 +1037,12 @@
 3. **Multilingual Status**:
    - On strict **HOLD** per user instruction. Indic / Kannada font conversion pipeline is paused without interfering with operational procurement workflows.
 
-2. **Operative Clause Extraction & TOC Elimination**:
+4. **Operative Clause Extraction & TOC Elimination**:
    - **Root Cause**: Earlier versions yielded truncated snippets and Table of Contents noise (e.g. `"8 Defect Liability and Maintenance Period ."`, `"14. Taxes and Duties ."`) because candidate pages unconditionally included orientation pages 0..10 and extractors matched the first keyword occurrence without checking for operative obligations.
    - **TOC Filtering (`AiDocumentExtractor.ts`)**: Implemented `isPureTocPage` detection (>20% dot-leaders/page numbers without operative modals) to prune index/contents pages before dispatching candidate batches to the AI extraction engine.
    - **Operative Extraction (`pipeline.py` & `documents.service.ts`)**: Implemented `is_toc_or_definition`, `has_operative_obligation`, and `extract_operative_clause`. Candidate keyword matches are ranked by deontic obligation scores (`shall`, `must`, `will be forfeited`, deadlines, amounts) and expanded backwards to clause/section numbers (`GC Sub-Clause 13.3.1 (Page 25)`), producing substantive 150–600 character clause blocks.
 
-3. **Multi-Document Deduplication & Rule Fusion**:
+5. **Multi-Document Deduplication & Rule Fusion**:
    - **Root Cause**: Tenders uploaded with multiple volumes (e.g., General Conditions + Special Conditions + Employer Requirements) previously hashed `documentId` into `compliance_items.id`, inserting duplicate rows for PBG, EMD, Turnover, etc.
    - **Write-Time Deduplication (`DocumentProcessingRuntime.ts`)**: Scoped canonical item ID to `(organizationId, companyId, bidId, category, normalizedTitle)`. Multi-document uploads match existing items and perform rule fusion (takes strictest `stampPaperRequired`, `max(denomination)`, `notarizationRequired`, `udinRequired`, and keeps the most operative verbatim quote).
    - **Read-Time Deduplication (`compliance.service.ts`)**: Defensive consolidation in `listItems`, `listReviewTasks`, `getReadinessRollup`, `getEvidenceMatches`, and `getRiskFindings`.
@@ -835,6 +1050,7 @@
    - **Frontend Deduplication**: Added defensive memoized deduplication in `ComplianceTable.tsx`, `BidDetailPage.tsx`, and `useBidComplianceItems.ts` to ensure UI tables and KPI cards remain 100% duplicate-free.
 
 Verification: Full unit, integration, and e2e test suites pass cleanly across all stacks:
+
 - `@tenderpulse/api`: 28 test suites, 222 tests passed.
 - `@tenderpulse/web`: 18 test suites, 152 tests passed.
 - `apps/ai`: 83 pytest tests passed.
@@ -955,30 +1171,30 @@ This HTTP compatibility path should not be described as verified asynchronous qu
 
 The earlier claims in [DOCUMENT_PROCESSING_ARCHITECTURE_GAP.md](DOCUMENT_PROCESSING_ARCHITECTURE_GAP.md) have been replaced with the verified current-versus-target trace. The current observed boundary is:
 
-| Stage | Current implementation | Evidence-based gap |
-|---|---|---|
-| Upload and metadata | NestJS `DocumentsController` / `DocumentsService`; metadata and audit use Drizzle | Controller method tests are not proof of a real browser/cloud upload |
-| Object storage | Provider adapter selected by runtime configuration; tests use mocks | Confirm's `headObject()` check is best effort and does not gate enqueue |
-| Queue publish | `jobQueue.enqueue()` when configured | Publish errors are logged and swallowed; provider consumer is not wired to FastAPI |
-| Queue consumer | No production consumer found | The NestJS `IngestionWorker` is manually invoked in E2E; FastAPI only has HTTP routes |
-| Document retrieval | NestJS extractor path can read through `IStorageService`; FastAPI resolver does not use object storage | No queue-connected FastAPI object retrieval |
-| Parsing / OCR | NestJS `DocumentContentNormalizer` uses `pdf-parse` for supported binary PDFs | FastAPI does not parse PDFs; neither path performs OCR |
-| Requirement extraction | FastAPI LangGraph pipeline can run by HTTP; default `default_tender_extractor` uses fixed keyword/rule logic | Not called from queue flow; not an external LLM by default |
-| Compliance items | `compliance_items` via separate NestJS `markExtractionComplete()` path; test worker uses an in-memory repository | Queue-produced worker result has no wired PostgreSQL persistence |
-| PostgreSQL result/status | Legacy direct method performs separate Drizzle writes; E2E queue worker updates in-memory test repositories | No durable queue-worker result transaction; final SQL bid status remains `QUEUED` in E2E |
-| Acknowledgement | E2E mock worker deletes its mock message after in-memory writes | No real consumer acknowledgement/deletion behavior is verified |
+| Stage                    | Current implementation                                                                                           | Evidence-based gap                                                                       |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Upload and metadata      | NestJS `DocumentsController` / `DocumentsService`; metadata and audit use Drizzle                                | Controller method tests are not proof of a real browser/cloud upload                     |
+| Object storage           | Provider adapter selected by runtime configuration; tests use mocks                                              | Confirm's `headObject()` check is best effort and does not gate enqueue                  |
+| Queue publish            | `jobQueue.enqueue()` when configured                                                                             | Publish errors are logged and swallowed; provider consumer is not wired to FastAPI       |
+| Queue consumer           | No production consumer found                                                                                     | The NestJS `IngestionWorker` is manually invoked in E2E; FastAPI only has HTTP routes    |
+| Document retrieval       | NestJS extractor path can read through `IStorageService`; FastAPI resolver does not use object storage           | No queue-connected FastAPI object retrieval                                              |
+| Parsing / OCR            | NestJS `DocumentContentNormalizer` uses `pdf-parse` for supported binary PDFs                                    | FastAPI does not parse PDFs; neither path performs OCR                                   |
+| Requirement extraction   | FastAPI LangGraph pipeline can run by HTTP; default `default_tender_extractor` uses fixed keyword/rule logic     | Not called from queue flow; not an external LLM by default                               |
+| Compliance items         | `compliance_items` via separate NestJS `markExtractionComplete()` path; test worker uses an in-memory repository | Queue-produced worker result has no wired PostgreSQL persistence                         |
+| PostgreSQL result/status | Legacy direct method performs separate Drizzle writes; E2E queue worker updates in-memory test repositories      | No durable queue-worker result transaction; final SQL bid status remains `QUEUED` in E2E |
+| Acknowledgement          | E2E mock worker deletes its mock message after in-memory writes                                                  | No real consumer acknowledgement/deletion behavior is verified                           |
 
 ### Current critical findings
 
-| # | Finding |
-|---|---|
-| 1 | Queue publish currently has no production consumer path to FastAPI. |
-| 2 | FastAPI's `/api/v1/worker/process-message` is callable over HTTP, but its storage-reference resolver does not retrieve a real object. |
-| 3 | FastAPI does not parse binary PDFs or run OCR; PDF text extraction is in the separate NestJS normalizer path. |
-| 4 | The default FastAPI extractor is deterministic keyword/rule code; package/client naming alone does not imply an external LLM call. |
-| 5 | The LangGraph persistence node is in-memory; its HTTP result is not written to PostgreSQL. |
-| 6 | The E2E worker's compliance repository is in-memory; PGlite confirms zero `compliance_items` rows and bid state remains `QUEUED`. |
-| 7 | The legacy direct NestJS writer is non-transactional and omits company/workflow/correlation columns. |
+| #   | Finding                                                                                                                               |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Queue publish currently has no production consumer path to FastAPI.                                                                   |
+| 2   | FastAPI's `/api/v1/worker/process-message` is callable over HTTP, but its storage-reference resolver does not retrieve a real object. |
+| 3   | FastAPI does not parse binary PDFs or run OCR; PDF text extraction is in the separate NestJS normalizer path.                         |
+| 4   | The default FastAPI extractor is deterministic keyword/rule code; package/client naming alone does not imply an external LLM call.    |
+| 5   | The LangGraph persistence node is in-memory; its HTTP result is not written to PostgreSQL.                                            |
+| 6   | The E2E worker's compliance repository is in-memory; PGlite confirms zero `compliance_items` rows and bid state remains `QUEUED`.     |
+| 7   | The legacy direct NestJS writer is non-transactional and omits company/workflow/correlation columns.                                  |
 
 ### Current observed paths
 
@@ -1026,14 +1242,14 @@ The upload-confirm method does **not** invoke the legacy method above.
 
 ### Remediation areas (not implemented here)
 
-| Priority | Area |
-|---|---|
-| P0 | Connect the configured queue to a real consumer with explicit retry, failure, and acknowledgement semantics. |
-| P0 | Give the worker a real tenant-safe object-storage adapter and binary PDF/OCR capability. |
-| P1 | Connect extraction output to a durable, transactional compliance persistence path and update bid/document statuses consistently. |
-| P1 | Propagate company/workflow/correlation context into persisted compliance rows where required. |
-| P1 | Decide whether the keyword extractor is an acceptable prototype or replace it with a configured model provider and evaluate grounding/threshold extraction. |
-| P1 | Persist LangGraph checkpoints if restart-safe human review is required. |
+| Priority | Area                                                                                                                                                        |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P0       | Connect the configured queue to a real consumer with explicit retry, failure, and acknowledgement semantics.                                                |
+| P0       | Give the worker a real tenant-safe object-storage adapter and binary PDF/OCR capability.                                                                    |
+| P1       | Connect extraction output to a durable, transactional compliance persistence path and update bid/document statuses consistently.                            |
+| P1       | Propagate company/workflow/correlation context into persisted compliance rows where required.                                                               |
+| P1       | Decide whether the keyword extractor is an acceptable prototype or replace it with a configured model provider and evaluate grounding/threshold extraction. |
+| P1       | Persist LangGraph checkpoints if restart-safe human review is required.                                                                                     |
 
 ---
 
@@ -1124,6 +1340,7 @@ Implemented, validated, and integrated the complete end-to-end multi-tenant onbo
 The 11-stage workflow: Tender Discovery → Tender-to-Company Matching → Bid/No-Bid Decision → Requirement Extraction → Company Evidence Matching → Compliance Analysis → Risk Analysis → Missing Evidence → Human Review → Bid Readiness → Submission Preparation → Corrigendum Monitoring.
 
 **Enterprise In-App Notifications & Preference Gating (2026-10-06):** Implemented, verified, and integrated the production multi-channel notification engine, database schema, preference-gated delivery, and interactive header feed in `apps/api` and `apps/web`:
+
 1. **Multi-Channel & Category-Gated Notification Architecture**:
    - Gated delivery across 4 key categories (`DEADLINE`, `EVIDENCE_EXPIRY`, `REVIEW_REQUEST`, `HIGH_RISK_FLAG`) checking `tenant_settings.notification_preferences` before persistence and dispatch.
    - Built automated deadline & certificate expiration scanner (`triggerDeadlineAndExpiryScan`) computing point-in-time day differences for active tenders within 7 days.
@@ -1139,6 +1356,7 @@ The 11-stage workflow: Tender Discovery → Tender-to-Company Matching → Bid/N
 5. **Quality Gates & Monorepo Test Verification (430 / 430 tests passing)**: 207 in `apps/api` (including 7 in `notifications.spec.ts`), 147 in `apps/web`, 76 in `apps/ai`. `npm run type-check` clean with 0 errors across all 4 monorepo packages.
 
 **User Profile, Workspace Settings & Team Management Persistence (2026-10-06):** Implemented, verified, and exposed complete backend REST endpoints, database schema additions, and live frontend integrations for user profiles, workspace configurations, and multi-user tenant team collaboration:
+
 1. **Clear Domain Boundary & Separation of Concerns**:
    - **User Profile (`/profile`)**: Manages individual credentials (`users` table), display name, phone number, and bcrypt-hashed password rotation (10 salt rounds with constant-time verification).
    - **Workspace Settings (`/settings`)**: Configures tenant-level defaults (`tenant_settings` table) including `default_company_id` and granular notification preferences (`notifyDeadlines`, `notifyEvidenceExpiry`, `notifyReviewRequests`, `notifyHighRiskFlags`).
@@ -1157,6 +1375,7 @@ The 11-stage workflow: Tender Discovery → Tender-to-Company Matching → Bid/N
 5. **Full Monorepo Verification (422 / 422 tests passing)**: 200 in `apps/api` (including 8 in `profile-settings-teams.spec.ts`), 146 in `apps/web`, 76 in `apps/ai`. `npm run type-check` clean with 0 errors across all 4 monorepo packages.
 
 **1 Tenant → N Companies Multi-Company Architecture (2026-10-06):** Validated and implemented the 1 Tenant → N Companies domain hierarchy end-to-end across database, backend, frontend, AI context, and security:
+
 1. **Clear Domain Boundary & Anti-IDOR Model**: A Tenant (`organization_id`) is the immutable SaaS security boundary; a Company (`company_id`) is a business legal entity represented and evaluated within that tenant. Every query and mutation strictly enforces `company.organization_id == caller.organizationId`, denying cross-tenant access with 404/403.
 2. **Database Schema & DDL Updates (`schema.ts`, `database.provider.ts`)**: Added `companies` table with legal name, slug, GSTIN, PAN, Udyam ID, constitution, and timestamps. Added `company_id` to `bids`, `company_profiles`, `company_profile_versions`, and `bid_decisions`.
 3. **Companies Feature Module (`apps/api/src/modules/companies/`)**: Created `CompaniesService`, `CompaniesController`, and `CompaniesModule` supporting `GET /api/v1/companies`, `POST /api/v1/companies`, `GET /api/v1/companies/:id`, `GET /api/v1/companies/:id/profile`, `POST /api/v1/companies/:id/profile`, and `GET /api/v1/companies/:id/expiring-certificates`.
@@ -1165,18 +1384,21 @@ The 11-stage workflow: Tender Discovery → Tender-to-Company Matching → Bid/N
 6. **Zero-Regress Monorepo Verification (408 / 408 tests passing)**: 192 in `apps/api` (including 10 in `multi-company-security.spec.ts`), 140 in `apps/web`, 76 in `apps/ai`. `npm run type-check` clean with 0 errors.
 
 **Object Storage Upload & Mock Resolution Fix (2026-10-06):** Resolved the `net::ERR_NAME_NOT_RESOLVED` document upload failure:
+
 1. **Root Cause Analysis**: In local development environments without an active cloud bucket or with `MockStorageService`, `generatePresignedUploadUrl` previously emitted synthetic hostnames (`https://mock-s3.tenderpulse.local/...`), which caused the browser's direct XHR PUT request to fail DNS name resolution (`ERR_NAME_NOT_RESOLVED`).
 2. **Dynamic Endpoint Routing & Protocol Awareness**: Updated `DocumentsService.generateUploadUrl` and `DocumentsService.getDownloadUrl` in `apps/api` to detect unresolvable mock domains and automatically route uploads/downloads to the live NestJS mock endpoints (`/api/v1/mock-upload/:bidId/:docId/:fileName` and `/api/v1/mock-download/...`) with dynamic protocol resolution (`http`/`https`).
 3. **Frontend Upload Resilience**: Enhanced `DocumentUploader.tsx` in `apps/web` with URL sanitization and automatic fallback to `/api/v1/mock-upload/...` on external DNS/network resolution failures, ensuring zero broken upload states in local and hybrid development.
 4. **All Monorepo Tests Passing (398 / 398)**: 182 in `apps/api`, 140 in `apps/web`, 76 in `apps/ai`.
 
 **Unified Enterprise Iconography & Zero-Emoji Standardization (2026-10-06):** Enforced a strict zero-emoji iconography policy across the frontend application in `apps/web`:
+
 1. **Zero-Emoji UI Policy**: Purged all emojis, raw Unicode symbols, and decorative glyphs (e.g. 🏢, 📜, 💰, ⚠️, ✓, ❌, 🧠, ⚡) across navigation, sidebars, buttons, cards, dashboard, badges, tables, alerts, and empty states.
 2. **Standardized Lucide Iconography**: Refactored `Icons.tsx` and all UI components to exclusively use official `lucide-react` icons (e.g. `Building2`, `FileSearch`, `ListChecks`, `Files`, `TriangleAlert`, `ClipboardCheck`, `ShieldCheck`, `CheckCircle2`, `MinusCircle`, `XCircle`, `Clock`, `Ban`, `Loader2`, `Landmark`, `FileSignature`, `Scale`, `Bot`, `Zap`, `Upload`, `FolderArchive`, `MapPin`, `Lock`, `FileText`).
 3. **Restrained Semantic Badges**: Upgraded status indicators and risk levels to use shadcn/ui `Badge` primitives with subtle semantic colors and functional Lucide icons.
 4. **Comprehensive Test Suite**: All 398 unit, integration, and security tests pass cleanly across monorepo (182 in `apps/api`, 140 in `apps/web`, 76 in `apps/ai`).
 
 **Production Backend APIs & Zero-Mock Intelligence Implemented (2026-10-06):** Implemented, verified, and exposed the complete suite of backend REST endpoints across NestJS (`apps/api`) and React (`apps/web`), replacing all pending placeholders with live PostgreSQL data and deterministic engines:
+
 1. **`GET /api/v1/bids/:id/evidence-matches` (Evidence Grounding & Proof Cross-Linking)**: Computes real-time coverage rollups mapping extracted tender clauses to company evidence documents with status (`MATCHED`, `PARTIAL`, `UNMATCHED`, `EXPIRED`) and execution rules (stamp paper denomination, notarization, CA UDIN).
 2. **`GET /api/v1/bids/:id/risk-findings` (Consolidated Risk Radar)**: Consolidates statutory constraints, execution penalties, and commercial risks from deterministic eligibility evaluations and requirement matrices with severity counts and financial impact estimation.
 3. **`GET /api/v1/bids/:id/deadlines` (Tender Lifecycle Milestone Schedules)**: Calculates pre-bid meeting, clarification window, EMD submission, and online bid freeze deadlines with real-time countdowns.
@@ -1185,6 +1407,7 @@ The 11-stage workflow: Tender Discovery → Tender-to-Company Matching → Bid/N
 6. **Full Multi-Tenant RBAC & Monorepo Test Verification**: Strict `TenantContextHolder` isolation enforced across all endpoints. 397 total tests passing across monorepo (181 in `apps/api`, 140 in `apps/web`, 76 in `apps/ai`).
 
 **Application Shell & Dashboard UI Redesign Implemented (2026-10-06):** Complete redesign of the global Application Shell and main Dashboard in `apps/web` guided by shadcn/ui, Linear, Stripe, and Vercel design principles:
+
 1. **Restrained Pro Visual System**: Established a crisp, distraction-free zinc palette (`#09090b` canvas, `#121215` cards, `#27272a` 1px borders) eliminating garish side borders, neon gradients, and visual noise.
 2. **Precision Executive KPI Strip**: Implemented 4 high-density metric cards (Active Pipeline, Total Contract Value INR, Compliance Flags, Imminent Deadlines < 7 days) with subtle top hairline accents and tabular figures.
 3. **Linear-Density Attention Queue & Workflow Funnel**: Refined Action Required queue with monospaced clause/tender anchors (`№ NHAI/HQ/2026/EPC-4482`), category pills, and clean urgency indicators, paired with interactive Bid Pipeline stage distribution filters.
@@ -1192,37 +1415,39 @@ The 11-stage workflow: Tender Discovery → Tender-to-Company Matching → Bid/N
 5. **Full E2E & Unit Test Verification**: All 133 web unit tests pass, and Playwright headless E2E verification confirmed flawless rendering, zero console errors, and smooth navigation.
 
 **Human Review Adjudication Experience Implemented (2026-10-06):** Complete redesign of the compliance adjudication experience in `apps/web` (`ComplianceReviewPage.tsx`, `ReviewActions.tsx`):
+
 1. **6-Stage Linear Adjudication Flow**: Replaced fragmented cards with a sequential decision model (Requirement → Tender Evidence Grounding → Company Evidence Dossier → AI Pre-Assessment → Review Trigger Reason → Human Decision Console).
 2. **Clear AI Advisory vs. Human Decision Distinction**: Machine analysis rendered with advisory badges and dashed borders stating "AI Recommendation — Advisory Only, Not Final", keeping human verdict visibly distinct.
 3. **5 Explicit Human Review Actions**: Upgraded review actions to `Approve (Pass)`, `Reject (Fail)`, `Request Evidence (Missing)`, `Mark Uncertain (Needs Review)`, and `Waive (Not Applicable)` with required rationale for overrides and OCC protection (`expectedVersion`).
 4. **Zero-Trust Audit Trail & Verification**: Integrated grounding provenance with exact quote copies, UDIN and validity status indicators, and tenant RBAC enforcement (`compliance:review`). All 127 web unit tests passing.
 
 **Company Capability Profile UI Overhaul (2026-10-06):** Complete transformation of the Company Profile from a generic settings page into a high-density, reusable Enterprise Capability Dossier in `apps/web`:
+
 1. **11 Procurement Capability Domains**: Segmented into Company Overview, Registrations (GSTIN, PAN, Udyam, GeM, CPWD), Certifications (ISO 9001/14001/45001, CMMI), Financials & CA UDIN, Past Experience (7-year qualifying work orders), Major Projects, OEM Relationships & MAFs, Key Personnel & Staff, Plant & Equipment, Geographic Coverage (HQ & State Branches with SLA metrics), and Evidence Vault.
 2. **5 Semantic Status Indicators**: Formalized `VERIFIED`, `EXPIRING_SOON`, `EXPIRED`, `MISSING`, and `NEEDS_REVIEW` with dedicated visual indicators and real-time days-until-expiry calculations.
 3. **Core Reusability Value Banner**: "Maintain your company information once and reuse it across tenders" value proposition, real-time Tender Readiness health progress bar, immutable version publishing, and document integrity tracking with SHA-256 hashes.
 4. **Comprehensive Test Suite**: Added `companyProfileData.spec.ts` testing health calculations, expiration countdowns, and profile domain rules. 14 test files / 133 web unit tests passing.
 
 **Tender Processing Lifecycle & Document Upload Overhaul (2026-10-06):** Complete redesign of the async document upload and extraction experience in `apps/web` (`DocumentUploader.tsx`, `ExtractionProgress.tsx`, `BidDetailPage.tsx`):
+
 1. **Full-Lifecycle Processing Stepper**: Replaced generic loading spinners with a 5-stage contextual pipeline (Upload & Storage → Document Normalization → Requirement Extraction → Evidence & Risk Analysis → Bid Readiness Ready) consuming live Server-Sent Events (SSE).
-2. **Contextual Live State Messages**: Dynamic real-time messages (e.g. *"Extracting eligibility requirements and statutory clauses"*, *"Analyzing company evidence against CA UDIN records"*) paired with exact progress percentages.
+2. **Contextual Live State Messages**: Dynamic real-time messages (e.g. _"Extracting eligibility requirements and statutory clauses"_, _"Analyzing company evidence against CA UDIN records"_) paired with exact progress percentages.
 3. **Actionable 3-Part Failure Guarantees**: Structured error handling explicitly detailing (1) What failed, (2) Data safety guarantees (original PDF encrypted & preserved in tenant storage), and (3) Actionable next steps (Retry with OCR, Re-upload clean PDF, or manual entry).
 4. **Direct S3 Byte Transfer Meter**: Real-time XHR upload progress meter displaying transferred megabytes, percentage, and live upload status. All 14 test files / 133 tests passing.
 
 **First-Class Evidence & Provenance UX Overhaul (2026-10-06):** Elevated evidence from passive attachment lists into a central, verified business object across `apps/web` (`EvidenceTraceabilityChain.tsx`, `EvidenceDrawer.tsx`, `ComplianceRow.tsx`, `ComplianceReviewPage.tsx`):
+
 1. **4-Node Traceability Chain**: Visually mapped the complete verification relationship: Tender Requirement → Required Evidence Spec → Company Evidence Dossier → Assessment Verdict.
 2. **Dual-Sided Provenance Inspector**: Consolidated tender grounding (document, page, clause, exact quote, grounding score) and corporate proof (file name, type, issue date, validity countdown, ICAI UDIN) into a unified drawer.
 3. **5 Semantic Evidence States**: Formalized `VERIFIED`, `EXPIRING`, `EXPIRED`, `MISSING`, and `NEEDS_REVIEW` across rows, drawers, and compliance cards. All 14 test files / 133 tests passing.
 
 **NestJS Backend Full Capabilities & Live PostgreSQL Seeding (2026-10-06):** Implemented production database persistence, complete NestJS API endpoints, and rich Indian public procurement seed dossier, eliminating all static/mock data:
-1. **11-Domain Enterprise Company Profile Seed**: Populated `company_profile_versions` & `company_profiles` for *Acme Infrastructure Solutions Ltd.* with GSTIN, PAN, Udyam, GeM, ISO 9001/14001/45001, CMMI Dev-3, 3-year CA-audited financials with valid UDINs, 7-year EPC highway work orders, OEM authorizations (Wirtgen, Schneider, Honeywell), staff, equipment, and state branches.
+
+1. **11-Domain Enterprise Company Profile Seed**: Populated `company_profile_versions` & `company_profiles` for _Acme Infrastructure Solutions Ltd._ with GSTIN, PAN, Udyam, GeM, ISO 9001/14001/45001, CMMI Dev-3, 3-year CA-audited financials with valid UDINs, 7-year EPC highway work orders, OEM authorizations (Wirtgen, Schneider, Honeywell), staff, equipment, and state branches.
 2. **Realistic Tender Opportunities & Documents**: Seeded `bid-nhai-44-001` (`REVIEW_READY`, 245 Cr EPC highway with NIT, BOQ, Corrigendum, Technical Specs), `bid-cpwd-gov-002` (`ANALYZING`, 185 Cr green building complex), and `bid-mha-surv-003` (`DRAFT`, 95 Cr smart city surveillance).
 3. **Grounded Compliance Matrix**: Seeded real extracted requirements with execution rules (stamp paper denomination, notarization, CA UDIN), dual-sided provenance citations, risk assessments, and company evidence bindings.
 4. **Backend Review State Machine**: Extended `ComplianceService` & `ComplianceController` to handle 5 standard review statuses (`PASS`, `FAIL`, `MISSING`, `REVIEW_REQUIRED`, `NOT_APPLICABLE`) along with optimistic concurrency control (`version`).
 5. **Full Monorepo Verification**: 383 total tests passing across monorepo (174 in `apps/api`, 133 in `apps/web`, 76 in `apps/ai`).
-
-
-
 
 **Domain model documented (2026-10-04):** `docs/DOMAIN.md` Part B now teaches the bidder-side domain model and ubiquitous language — aggregate roots (CompanyProfile, Tender, BidCase, ReviewTask, WorkflowRun, AuditEvent), entities (CapabilityEntry specializations, EvidenceDocument, TenderRequirement, TenderAmendment, EvidenceMatch, RiskFinding, GeneratedArtifact), value objects (Permission, ExecutionRules, Provenance, Money, Criterion, EligibilityVerdict, MatchState, ProfileVersionRef), workflows (Workflow, ComplianceAssessment, BidReadiness, CorrigendumMonitoring), lifecycle state machines for all major concepts, the 10-step "how a tender is evaluated against a company profile" walkthrough, and a full domain glossary. Design-only; no database changes.
 
@@ -1232,9 +1457,9 @@ The 11-stage workflow: Tender Discovery → Tender-to-Company Matching → Bid/N
 
 **Tender ingestion & requirement normalization designed (2026-10-05, PROMPT 6):** `docs/DOMAIN.md` Part D (§25–34) and `docs/ARCHITECTURE.md` (new pipeline section). Key decisions: tender = package of 17 typed documents (never a single blob); 10-stage async pipeline (document processing → extraction → OCR-on-demand → section segmentation → section-aware chunking → 3-tier requirement detection → normalization → classification → source citation → persistence); **deterministic-first execution** (regex → structural → LLM fallback with identical output contracts and per-requirement `detectionMethod`); normalized requirement schema with four traceability anchors (document, page, section, clause) + verbatim quote + chunkId; hard grounding invariant (exact-substring verification pre-persistence; failures rejected, never stored); corrigenda as first-class amendments (diff → SUPERSEDE → re-evaluate changed criteria only → human re-confirmation); idempotency at document (SHA-256), requirement (deterministic key upsert), and workflow levels; per-document failure isolation with honest zero-extraction. Design-only; no code implemented.
 
-**Evidence & Compliance Engine designed (2026-10-06, PROMPT 7):** `docs/DOMAIN.md` Part F (§49–60), `docs/LLD.md` §9, `docs/AI.md` §5, and new **ADR 0021** (evidence-first compliance engine). The engine answers *"For this tender requirement, what evidence does the company have?"* — never a bare percentage. Five separated stages with distinct owners: (1) evidence retrieval (deterministic, recall-oriented, tenant-scoped, pinned profile version), (2) evidence matching (dual-sided provenance: tender anchors §28 + company EvidenceRef, many-to-many, cross-document dedup), (3) deterministic validation (Part E evaluators + expiry-at-submission-date, tier-sufficiency, and ordered conflict policies — tier → recency → source authority → REVIEW_REQUIRED, never silently pick), (4) AI explanation (grounded narrative with **no verdict field in the output schema**; citation-verified against the result bundle; template fallback so prose never blocks verdicts), (5) human decision (confirm/override/waive; `compliance:override` permission, mandatory reason, OCC; engine verdict preserved immutably, both verdicts always displayed). Assessment states PASS / FAIL / MISSING_EVIDENCE / REVIEW_REQUIRED with deterministic rollup mapping (FAIL > MISSING_EVIDENCE > REVIEW_REQUIRED > PASS). Designed hard cases: conflicting evidence, expired certificates, insufficient evidence, ambiguous clauses, missing dates (UNKNOWN_VALIDITY → REVIEW_REQUIRED), contradictory company data, multiple evidence documents, manual override, and append-only reference-only audit trail (RETRIEVAL_EXECUTED → … → ASSESSMENT_OVERRIDDEN). Design-only; no code implemented.
+**Evidence & Compliance Engine designed (2026-10-06, PROMPT 7):** `docs/DOMAIN.md` Part F (§49–60), `docs/LLD.md` §9, `docs/AI.md` §5, and new **ADR 0021** (evidence-first compliance engine). The engine answers _"For this tender requirement, what evidence does the company have?"_ — never a bare percentage. Five separated stages with distinct owners: (1) evidence retrieval (deterministic, recall-oriented, tenant-scoped, pinned profile version), (2) evidence matching (dual-sided provenance: tender anchors §28 + company EvidenceRef, many-to-many, cross-document dedup), (3) deterministic validation (Part E evaluators + expiry-at-submission-date, tier-sufficiency, and ordered conflict policies — tier → recency → source authority → REVIEW_REQUIRED, never silently pick), (4) AI explanation (grounded narrative with **no verdict field in the output schema**; citation-verified against the result bundle; template fallback so prose never blocks verdicts), (5) human decision (confirm/override/waive; `compliance:override` permission, mandatory reason, OCC; engine verdict preserved immutably, both verdicts always displayed). Assessment states PASS / FAIL / MISSING_EVIDENCE / REVIEW_REQUIRED with deterministic rollup mapping (FAIL > MISSING_EVIDENCE > REVIEW_REQUIRED > PASS). Designed hard cases: conflicting evidence, expired certificates, insufficient evidence, ambiguous clauses, missing dates (UNKNOWN_VALIDITY → REVIEW_REQUIRED), contradictory company data, multiple evidence documents, manual override, and append-only reference-only audit trail (RETRIEVAL_EXECUTED → … → ASSESSMENT_OVERRIDDEN). Design-only; no code implemented.
 
-**LangGraph critical determination & first workflow designed (2026-10-06, PROMPT 11):** `docs/learning/langgraph.md` §7 and `docs/AI.md` §6. Key teaching: the 8-step product workflow is an **orchestration of services, not one LangGraph graph**. LangGraph earns its place only where its three justifying conditions hold — cyclic feedback, durable mid-run resumption, human-in-the-loop inside reasoning. Applied to the tender workflow: Extract Requirements (LangGraph: LLM → deterministic verification → bounded feedback-retry cycle → escalation) and conditional Human Review (`interrupt()`/`Command(resume=...)` when multi-day waits must preserve in-flight state; terminal decisions use the plain async ReviewTask + PATCH API instead); Load Context, Retrieve Evidence, Analyze Match, Deterministic Validation, and Final Assessment are plain services/pure functions (ADR 0019/0021 — company financials must never enter the AI boundary, so they *cannot* be graph nodes). All 11 concepts (graph, nodes, edges, state, checkpoints, branching, retries, persistence, human interruption, resuming, failure handling) taught against the real implementation in `apps/ai/src/tenderpulse_ai/workflow/` (`ComplianceWorkflowState`, `build_compliance_workflow_graph`, `route_verification_outcome`, dynamic `interrupt()`, `CrossTenantReviewException` guard). First LangGraph workflow designed conceptually: TenderRequirementExtractionWorkflow (per BidCase+TenderDocument, SQS-triggered, thread_id = `tenant_{id}:bid_{id}:run_{id}`, PostgresSaver checkpoints, retry bound < 2, four-layer failure handling). Design-only; no code implemented.
+**LangGraph critical determination & first workflow designed (2026-10-06, PROMPT 11):** `docs/learning/langgraph.md` §7 and `docs/AI.md` §6. Key teaching: the 8-step product workflow is an **orchestration of services, not one LangGraph graph**. LangGraph earns its place only where its three justifying conditions hold — cyclic feedback, durable mid-run resumption, human-in-the-loop inside reasoning. Applied to the tender workflow: Extract Requirements (LangGraph: LLM → deterministic verification → bounded feedback-retry cycle → escalation) and conditional Human Review (`interrupt()`/`Command(resume=...)` when multi-day waits must preserve in-flight state; terminal decisions use the plain async ReviewTask + PATCH API instead); Load Context, Retrieve Evidence, Analyze Match, Deterministic Validation, and Final Assessment are plain services/pure functions (ADR 0019/0021 — company financials must never enter the AI boundary, so they _cannot_ be graph nodes). All 11 concepts (graph, nodes, edges, state, checkpoints, branching, retries, persistence, human interruption, resuming, failure handling) taught against the real implementation in `apps/ai/src/tenderpulse_ai/workflow/` (`ComplianceWorkflowState`, `build_compliance_workflow_graph`, `route_verification_outcome`, dynamic `interrupt()`, `CrossTenantReviewException` guard). First LangGraph workflow designed conceptually: TenderRequirementExtractionWorkflow (per BidCase+TenderDocument, SQS-triggered, thread_id = `tenant_{id}:bid_{id}:run_{id}`, PostgresSaver checkpoints, retry bound < 2, four-layer failure handling). Design-only; no code implemented.
 
 **First real AI agent implemented (2026-10-06, PROMPT 12):** `TenderRequirementAgent` in `apps/ai/src/tenderpulse_ai/agent/` (`agent.py`, `schemas.py`, `validation.py`, `ambiguity.py`, `__init__.py`) + `POST /api/v1/agent/analyze-requirements` and `docs/AI.md` §7. Solves tender content analysis, requirement extraction, 8-domain classification, structured normalization (`CriterionProps`, `ExecutionRulesProps`), deterministic ambiguity scanning (6 heuristic patterns), exact-substring source citations, and structured `AgentOutput`. Enforces zero-trust boundaries: read-only tools, no authorization decisions, no arbitrary data querying, no irreversible actions, and strict tenant isolation via `SecurityContext`. Bounded resilience: 30s timeout guard, transient 429/503 linear backoff (max 2 attempts), and bounded semantic refinement cycle (max 1 pass). 19 unit & security tests in `apps/ai/tests/test_tender_requirement_agent.py` passing.
 
@@ -1247,6 +1472,7 @@ The 11-stage workflow: Tender Discovery → Tender-to-Company Matching → Bid/N
 `docs/PRODUCT.md` §6 contains the explicit **Existing capability → New product role** mapping: ingestion, PDF extraction, 16-domain taxonomy, execution rules, verbatim provenance, human review, async pipeline, RBAC, AI safety tooling, frontend shell, and Terraform all carry forward; `BidProject` adapts into TenderOpportunity + BidCase; the Company Profile, Evidence Vault, Matching engine, Bid/No-Bid decision, Risk radar, Readiness score, and Corrigendum diff are **new** (see `docs/CURRENT_STATE.md` §3). No features implemented yet.
 
 **P0 Backend Auth & RBAC Hardening implemented (2026-10-06):** Production-grade authentication and authorization pipeline implemented across NestJS (`apps/api`):
+
 1. **RFC 7519 HMAC-SHA256 TokenService (`TokenService.ts`):** Zero-external-dependency, constant-time signature verification (`crypto.timingSafeEqual`) preventing timing attacks. Cryptographically signed access tokens and refresh tokens with enforced token-type separation.
 2. **Global NestJS JwtAuthGuard (`jwt-auth.guard.ts`):** Enforces Bearer token authentication across all `/api/v1/*` endpoints by default (rejecting unauthenticated requests with 401 Unauthorized), with `@Public()` opt-outs only on `/api/v1/auth/login`, `/api/v1/auth/refresh`, and mock S3 upload/download endpoints. Supports `?token=` query param for browser `EventSource` SSE streaming.
 3. **Global NestJS RolesGuard (`roles.guard.ts`):** Evaluates atomic permissions via `@RequirePermission(...)` (e.g. `bids:create`, `bids:delete`, `compliance:review`, `audit:read`), rejecting unauthorized roles with 403 Forbidden.
@@ -1256,12 +1482,14 @@ The 11-stage workflow: Tender Discovery → Tender-to-Company Matching → Bid/N
 7. **Comprehensive Integration Suite:** 19 integration tests in `apps/api/src/modules/__tests__/auth-rbac.spec.ts` passing (180 total tests passing across monorepo).
 
 **Cloud-Agnostic Infrastructure & GCP Target designed (2026-10-06, PROMPT 19):** Complete production infrastructure specification and cloud-agnostic architecture documented in `docs/GCP.md`, `docs/ARCHITECTURE.md` §11, and **ADR 0022**.
+
 1. **Cloud-Agnostic Core:** Strict enforcement of Hexagonal Ports & Adapters (`ObjectStorage`, `MessageQueue`, `EventPublisher`, `Cache`, `DocumentRepository`, `WorkflowStore`, `ArtifactStore`). Zero cloud-provider SDKs or terms leaked into domain/application logic.
 2. **Component Necessity Evaluation:** Rigorously justified Cloud Run (serverless autoscaling, scale-to-zero), Cloud SQL PostgreSQL 16 (single-region HA, PITR in `asia-south1` Mumbai), Cloud Storage (CMEK, V4 presigned URLs), and Cloud Pub/Sub (pull subscriptions with ack deadlines and DLT). Rejected premature over-engineering: GKE (saves $74+/mo), Cloud Spanner (saves $600+/mo), and dedicated Memorystore Redis (saves $35–50/mo for MVP).
 3. **Network & Security Boundaries:** Private VPC peering for Cloud SQL with zero public IPs, Serverless VPC Access Connector for Cloud Run, Cloud NAT for controlled procurement portal egress, and Cloud Armor WAF at the edge.
 4. **Resilience & Governance:** RPO $\le$ 5m (WAL archiving), RTO $\le$ 30m (Terraform + HA failover), CMEK encryption with Cloud KMS, and Secret Manager versioning. Design-only; no infrastructure deployed.
 
 **End-to-End Pipeline Verified & Wired (2026-10-06):** Complete verification and runtime wiring of the decoupled Frontend → API → S3 → SQS → AI Extraction → DB Persistence pipeline:
+
 1. **QueueModule Globally Registered:** `QueueModule` registered into `AppModule` providing `QUEUE_TOKEN` (`IJobQueue`) with auto-fallback to `MockSqsJobQueue`, `AwsSqsJobQueue`, or `GcpPubSubJobQueue`.
 2. **StorageModule Dual-Cloud & Fallback:** `StorageModule` enhanced to detect AWS S3, GCS, or fallback to in-memory `MockStorageService`, ensuring zero null references across feature modules.
 3. **Live SQS Dispatch on Confirm Upload:** `DocumentsService.confirmUpload` now optionally injects `QUEUE_TOKEN` and enqueues `IngestionJobMessage` `{ jobId, organizationId, bidId, documentId, timestamp }` onto the queue.
@@ -1269,6 +1497,7 @@ The 11-stage workflow: Tender Discovery → Tender-to-Company Matching → Bid/N
 5. **Full E2E Integration Suite:** Added `apps/api/src/test/e2e/EndToEndFrontendToAiPipeline.e2e.spec.ts` testing the complete 6-stage chain, Anti-IDOR guards, DLQ routing for poisoned SQS payloads, and SSE progress streaming. 149 passing tests in `apps/api`, 76 in `apps/ai`, 35 in `apps/web` (260 total passing).
 
 **Frontend UI Audit & Reusable Design System Implemented (2026-10-06):** Complete UX audit across 20 dimensions documented in `docs/UI_AUDIT.md`, with zero business page disruption:
+
 1. **Technology Stack Conserved:** Reused React 18 + TypeScript + Vite with native CSS Variables and typed `@tenderpulse/ui` tokens. Rejected introducing heavy external frameworks (Tailwind, MUI, Chakra).
 2. **Standardized Token Architecture:** Formalized 9-step typography scale (`--text-2xs` to `--text-4xl`), 4px modular spacing grid (`--space-0-5` to `--space-16`), 6-tier radii (`--radius-sm` to `--radius-full`), and elevations in `index.css` and `@tenderpulse/ui/src/tokens.ts`.
 3. **Canonical Semantic Statuses & Risk Levels:** Formalized `PASS`, `FAIL`, `MISSING`, `REVIEW_REQUIRED`, `NOT_APPLICABLE` and risk levels `CRITICAL`, `HIGH`, `MEDIUM`, `LOW`.
@@ -1277,6 +1506,7 @@ The 11-stage workflow: Tender Discovery → Tender-to-Company Matching → Bid/N
 6. **Monorepo Integration & Verification:** 15 new unit tests added in `design-system.spec.ts`. All 149 API tests, 50 Web tests, and integration tests passing (275 tests total across monorepo).
 
 **B2B Enterprise Application Shell & Responsive Navigation Implemented (2026-10-06):** Production-quality global shell hardening across `apps/web`:
+
 1. **Information-Dense B2B Navigation:** Clean SVG iconography (`TendersIcon`, `PlusCircleIcon`, `BuildingOfficeIcon`) replacing emojis. Solid left-accent active route borders (`3px solid var(--color-primary-500)`), subtle hover states, zero decorative dashboard fluff or glassmorphism.
 2. **Desktop Collapsible & Mobile Drawer Sidebar:** Dual-mode sidebar supporting 260px standard desktop, 68px collapsed icon rail mode, and off-canvas slide-over drawer with backdrop blur on mobile/tablet (<1024px) with Escape key listeners.
 3. **Dynamic Path-Derived Breadcrumbs (`Breadcrumbs.tsx`):** URL-synchronized hierarchical breadcrumbs with clickable ancestors and `ChevronRightIcon` dividers, announcing `aria-current="page"` on terminal routes.
@@ -1286,6 +1516,7 @@ The 11-stage workflow: Tender Discovery → Tender-to-Company Matching → Bid/N
 7. **Monorepo Verification:** 7 new unit tests in `layout.spec.ts`. 57 Web tests, 149 API tests, 76 AI tests passing (282 total across monorepo).
 
 **Dashboard Overhaul — Honest "What is happening with my bids?" (2026-10-05):** `apps/web` dashboard restructured around real API data only:
+
 1. **Action Required (ADAPT `ActionRequiredCard`)**: now renders clause-level action items from the existing `GET /api/v1/bids/:id/compliance-items` API (parallel fetch via new `useBidComplianceItems` hook with per-bid failure tolerance) — FLAGGED clauses (critical, deep-linked to `/bids/:id/compliance/:itemId` with category badges and provenance anchors), PENDING+humanReviewRequired clauses (high), ANALYZING extraction (medium), 7-day deadlines (high/critical), incomplete DRAFT intake (medium). Sorted by urgency then deadline.
 2. **Bid Pipeline (NEW `BidPipelineCard`)**: DRAFT → ANALYZING → REVIEW_READY → SUBMITTED funnel derived from live bid statuses, with per-stage aggregate readiness %, flagged counts, and click-to-filter wiring into the Active Tenders tabs.
 3. **Company Readiness (REPLACE `CompanyReadinessCard`)**: removed the hardcoded `DEFAULT_COMPANY_PROFILE` rendering (fabricated data). Now renders an honest "capability data not yet available" state documenting the missing `GET /api/v1/company-profile` and `GET /api/v1/company-profile/expiring-certificates` endpoints.
@@ -1294,6 +1525,7 @@ The 11-stage workflow: Tender Discovery → Tender-to-Company Matching → Bid/N
 6. **MissingApiCallout (ADAPT)**: documents 5 missing target endpoints (`dashboard/metrics`, `dashboard/action-items`, `company-profile`, `company-profile/expiring-certificates`, `tenders/amendments`) with the current gap each one blocks. N+1 per-bid compliance fetch is the documented trade-off until `dashboard/action-items` ships.
 
 **Tender List Overhaul — Dense Table Workflow (2026-10-05; updated 2026-10-06):** the `/bids` tender list (sidebar "Tender Bids") rebuilt as an information-dense table workflow in `apps/web`:
+
 1. **Dense table (REWRITE `TenderTableView`)**: 10 columns from the existing `BidSummary` contract — Tender (title + №), Organization, Est. Value, Deadline (date + days-left urgency coloring), Status (`StatusBadge`), Fit, Recommendation, Risk (`RiskBadge` from flagged counts), Readiness (progress bar), Actions. Compact mode for density; card-grid view removed per product direction ("do not turn every tender into a giant card").
 2. **Real bid-decision data**: Fit & Recommendation now consume `GET /api/v1/bids/:id/bid-decision` via the new `useBidDecisions` hook (same N+1-with-tolerance pattern as `useBidComplianceItems`). Fit shows the engine's readinessScore as a percent + micro progress bar with STRONG/MODERATE/WEAK tier colors; Recommendation shows the deterministic verdict (Go/Conditional/No-Go/Review) as a `Badge` with the human-in-the-loop state label (AI-proposed / In review / Confirmed / Overridden) and a tooltip explaining the confirmation requirement. 404 = honest "Not evaluated" placeholder. The documented missing endpoint is removed from `MissingApiCallout`; the N+1 trade-off is documented in the pagination gap.
 3. **Risk cell consistency**: uses shared `computeRiskLevel` + `RiskBadge` (LOW=Clean, HIGH/CRITICAL=flagged count) — matches the risk filter thresholds exactly.
@@ -1312,6 +1544,7 @@ The 11-stage workflow: Tender Discovery → Tender-to-Company Matching → Bid/N
 A full repository audit was completed on 2026-10-04. See **`docs/CURRENT_STATE.md`** for the complete area-by-area classification (KEEP / ADAPT / REPLACE / MISSING), the "Existing ParakhSetu-like capabilities" inventory, and the "Capabilities required for the new product but currently missing" gap list.
 
 **Audit headline status:**
+
 1. ~~Access tokens are unsigned base64 JSON~~ — **RESOLVED (2026-10-06)**: Native HMAC-SHA256 JWTs with constant-time verification, global `JwtAuthGuard`, global `RolesGuard`, and secure user-bound refresh tokens.
 2. ~~Tenant isolation is hardcoded to `org_acme_infra_001`~~ — **RESOLVED (2026-10-06)**: Fiber-safe `TenantContextInterceptor` populates `TenantContextHolder` from token claims on every request; domain and feature services query with dynamic `organizationId`.
 3. The production persistence path is embedded PGlite, not the real PostgreSQL defined in docker-compose/Terraform; `DATABASE_URL` is never read.
@@ -1644,11 +1877,11 @@ The milestone log below reflects design/build history. The **actual next actions
     - **13-Stage Business Journey Implementation (`apps/web`)**:
       - Transformed React 18 frontend from a simple upload page into a full 13-stage bidding operating system for Indian MSME contractors.
       - 5 Intuitive Milestones:
-        1. *Basics & Intake:* Company Profile (`CompanyProfileSection.tsx`), Tender Intake (`DocumentUploader.tsx`), Tender Overview (`TenderOverviewHeader.tsx`), Key Deadlines (`KeyDeadlinesCard.tsx`).
-        2. *Eligibility & Go/No-Go:* 9-Factor Technical & Financial Scorecard (`EligibilitySummaryCards.tsx`), Bid/No-Bid Recommendation (`BidDecisionBanner.tsx`).
-        3. *Requirements & Evidence:* Filterable Requirement Matrix (`ComplianceTable.tsx`), Evidence Mapping with Grounded Citations (`EvidenceCitationDrawer.tsx`).
-        4. *Risks, Gaps & Review:* Commercial Risk Radar (`RiskRadarCard.tsx`), Missing Evidence Acquisition (`MissingEvidenceSection.tsx`), Human Review Task (`HumanReviewTaskCard.tsx`).
-        5. *Readiness & Submission:* 4-Pillar Bid Readiness Score (`BidReadinessGauge.tsx`), Two-Cover Packager & Procedural Checklist (`SubmissionPrepChecklist.tsx`).
+        1. _Basics & Intake:_ Company Profile (`CompanyProfileSection.tsx`), Tender Intake (`DocumentUploader.tsx`), Tender Overview (`TenderOverviewHeader.tsx`), Key Deadlines (`KeyDeadlinesCard.tsx`).
+        2. _Eligibility & Go/No-Go:_ 9-Factor Technical & Financial Scorecard (`EligibilitySummaryCards.tsx`), Bid/No-Bid Recommendation (`BidDecisionBanner.tsx`).
+        3. _Requirements & Evidence:_ Filterable Requirement Matrix (`ComplianceTable.tsx`), Evidence Mapping with Grounded Citations (`EvidenceCitationDrawer.tsx`).
+        4. _Risks, Gaps & Review:_ Commercial Risk Radar (`RiskRadarCard.tsx`), Missing Evidence Acquisition (`MissingEvidenceSection.tsx`), Human Review Task (`HumanReviewTaskCard.tsx`).
+        5. _Readiness & Submission:_ 4-Pillar Bid Readiness Score (`BidReadinessGauge.tsx`), Two-Cover Packager & Procedural Checklist (`SubmissionPrepChecklist.tsx`).
     - **MSME Usability & Zero-Jargon Guarantee**:
       - All probabilistic terminology replaced with contractor-friendly language (verbatim clause citations, CA UDIN verification status, stamp paper rules, Liquidated Damages caps, and working capital lock-in).
     - **Traceable Dual-Sided Citation Inspector**:
@@ -1661,6 +1894,7 @@ The milestone log below reflects design/build history. The **actual next actions
       - 0 TypeScript compiler errors across all monorepo workspaces.
 
 **Code Quality Cleanup (2026-10-06, PROMPT 21):** Resolved all lint and type-check errors across the monorepo:
+
 1. **Import path fixes** in new modules (`GetBidDecisionUseCase`, `RequirementMapper`, `CompanyProfileService`, `CompanyProfileController`) — corrected relative depths from `../../` to `../../../` for common modules.
 2. **Unused variable cleanup** — removed dead code in `design-system.spec.ts` (unused `Badge`, `SectionHeader` imports), `CompanyProfileSection.tsx` (removed `as any` cast via `as const` array), `TenderTableView.tsx` (unused icons, `LoadingCell` function, `decisionsByBid`/`decisionsLoading` props), `TenderListSection.tsx` (unused imports `CloseIcon`, `TenderTableSkeleton`, `useBidDecisions`, `useBreakpoint`, `getVisibleColumns`, `describeActiveFilters`), `BidVerdictCard.tsx` (unused `WarningIcon`, `DECISION_STATE_LABELS` constant).
 3. **Type safety improvements** — `RequirementMapper.ts` now defensively narrows JSONB `unknown` fields with safe defaults; `roles.guard.ts` widens permissions array for wildcard check; `tenant-context.interceptor.ts` types stream as `unknown`; e2e test uses proper `Request`/`Response` types.
@@ -1679,95 +1913,94 @@ Per the 2026-10-04 audit (`docs/CURRENT_STATE.md`), the next actions are **P0 ha
 3. Switch runtime persistence to real PostgreSQL via `DATABASE_URL` with a migration tool and indexes.
 4. Then build the product gaps: contractor profile + eligibility engine, evidence repository + matching, risk radar, corrigendum handling, export, observability.
 
+5. [x] **Phase 41: Tender Detail Page Redesign — "Should I Bid on This Tender?" (2026-10-05)** _(Completed)_
+   - **Complete redesign of `/bids/:id` (`BidDetailPage.tsx`)** around the single question: _"Should I bid on this tender?"_ with the deterministic three-verdict framework (PURSUE / DO_NOT_PURSUE / REVIEW_REQUIRED).
+   - **Eliminated all fabricated data**: Removed the entire 13-stage fabricated workflow (`WorkflowStageStepper`, `TenderOverviewHeader`, `KeyDeadlinesCard`, `EligibilitySummaryCards`, `BidDecisionBanner`, `EvidenceCitationDrawer`, `RiskRadarCard`, `MissingEvidenceSection`, `HumanReviewTaskCard`, `BidReadinessGauge`, `SubmissionPrepChecklist`) and the hardcoded `DEFAULT_COMPANY_PROFILE` — all 11 fabricated workflow components deleted.
+   - **Real API-only architecture**:
+     - `TenderInfoHeader`: Real tender fields only (title, authority, value, deadline, status) — no EMD fabrication, no fake "closing at 15:00 IST", no fallback values.
+     - `BidVerdictCard`: Honest three-verdict framework (PURSUE / DO_NOT_PURSUE / REVIEW_REQUIRED) with "no recommendation yet" state when the bid-decision engine is absent; shows real input signals (requirements count, flagged, review-needed, deadline buffer) and documents the missing `GET /api/v1/bids/:id/bid-decision` + `GET /api/v1/company-profile` endpoints.
+     - `ComplianceTable` (KEPT): Real requirement matrix with grounded provenance, execution rules, and OCC review actions.
+     - `ProvenanceDrawer` (NEW): Real grounded provenance viewer — verbatim quote, document, page, clause, confidence score — with explicit "company evidence matching not yet available" gap disclosure.
+     - `ObligationsCard` (NEW): Aggregated statutory obligations (stamp paper max denomination, notarization count, UDIN count, signing ranks) + flagged requirements as real disqualification-risk signals.
+     - `ReviewNeededCard` (NEW): Real PENDING / humanReviewRequired items deep-linking to the real compliance review page.
+     - `ReadinessCard` (NEW): Real readiness rollup (approved/total %) + deadline buffer; 4-pillar engine gap documented.
+     - `MissingDataCallout` (NEW): Documents 7 missing endpoints (`bid-decision`, `company-profile`, `evidence-matches`, `risk-findings`, `review-tasks`, `readiness`, `deadlines`).
+     - Document package + uploader: Real documents with type badges, download, RBAC-gated delete.
+   - **Backend bid-decision pipeline implemented**:
+     - `AiDecisionClient.ts`: HTTP client for the deterministic `POST /api/v1/agent/bid-decision` (internal service key, security context, timeout, injectable fetch for tests).
+     - `RequirementMapper.ts`: Pure mapping from stored `ComplianceItem` → AI `RequirementCandidate` (category→kind, criticality derivation: FINANCIAL/STATUTORY/TECHNICAL→HARD_ELIGIBILITY; provenance mapping).
+     - `GetBidDecisionUseCase.ts`: Orchestrates bid + compliance items → requirement candidates → pinned company profile → AI engine call → persists `bid_decisions` → returns.
+     - Database: `company_profile_versions` (immutable JSONB snapshots), `company_profiles` (active pointer), `bid_decisions` (immutable audit trail with full AI response JSONB).
+     - Company Profile module: GET/POST `/api/v1/company-profile` (CRUD with version pinning, validation).
+     - Projections: `GET /api/v1/bids/:id/review-tasks` (real PENDING/humanReviewRequired items), `GET /api/v1/bids/:id/readiness` (server-side rollup).
+     - Endpoints: `GET/POST /api/v1/bids/:id/bid-decision` in `BidsController` (BIDS_READ / BIDS_UPDATE).
+     - Permission: `COMPANY_PROFILE_MANAGE` (ADMIN only).
+   - **Web wiring**: `getBidDecision` / `evaluateBidDecision` in `api/bids.ts`, `companyProfile.ts` CRUD, `mapApiDecisionToBidDecision` mapping (GO→PURSUE, CONDITIONAL_GO→REVIEW_REQUIRED, NO_GO→DO_NOT_PURSUE), `BidDetailPage` fetches decision on load, "Re-evaluate" button for ADMIN/BID_MANAGER, `BidVerdictCard` renders real verdict + reasons + disqualifiers + gaps.
+   - **Tests**: 9 RequirementMapper tests, 9 GetBidDecisionUseCase integration tests (PGlite + fake AI client), 8 CompanyProfileService tests, 174 API tests, 117 web tests, 76 Python AI tests — all 368 passing.
+   - **Cleanup**: 11 fabricated workflow components deleted; `TenderTableView` simplified to "Not evaluated" for fit/recommendation; `TenderListSection` cleanup; all 368 tests passing.
+   - **Documentation**: `MissingDataCallout` on detail page documents 7 missing endpoints; `MissingApiCallout` on dashboard updated.
 
-33. [x] **Phase 41: Tender Detail Page Redesign — "Should I Bid on This Tender?" (2026-10-05)** _(Completed)_
-    - **Complete redesign of `/bids/:id` (`BidDetailPage.tsx`)** around the single question: *"Should I bid on this tender?"* with the deterministic three-verdict framework (PURSUE / DO_NOT_PURSUE / REVIEW_REQUIRED).
-    - **Eliminated all fabricated data**: Removed the entire 13-stage fabricated workflow (`WorkflowStageStepper`, `TenderOverviewHeader`, `KeyDeadlinesCard`, `EligibilitySummaryCards`, `BidDecisionBanner`, `EvidenceCitationDrawer`, `RiskRadarCard`, `MissingEvidenceSection`, `HumanReviewTaskCard`, `BidReadinessGauge`, `SubmissionPrepChecklist`) and the hardcoded `DEFAULT_COMPANY_PROFILE` — all 11 fabricated workflow components deleted.
-    - **Real API-only architecture**:
-      - `TenderInfoHeader`: Real tender fields only (title, authority, value, deadline, status) — no EMD fabrication, no fake "closing at 15:00 IST", no fallback values.
-      - `BidVerdictCard`: Honest three-verdict framework (PURSUE / DO_NOT_PURSUE / REVIEW_REQUIRED) with "no recommendation yet" state when the bid-decision engine is absent; shows real input signals (requirements count, flagged, review-needed, deadline buffer) and documents the missing `GET /api/v1/bids/:id/bid-decision` + `GET /api/v1/company-profile` endpoints.
-      - `ComplianceTable` (KEPT): Real requirement matrix with grounded provenance, execution rules, and OCC review actions.
-      - `ProvenanceDrawer` (NEW): Real grounded provenance viewer — verbatim quote, document, page, clause, confidence score — with explicit "company evidence matching not yet available" gap disclosure.
-      - `ObligationsCard` (NEW): Aggregated statutory obligations (stamp paper max denomination, notarization count, UDIN count, signing ranks) + flagged requirements as real disqualification-risk signals.
-      - `ReviewNeededCard` (NEW): Real PENDING / humanReviewRequired items deep-linking to the real compliance review page.
-      - `ReadinessCard` (NEW): Real readiness rollup (approved/total %) + deadline buffer; 4-pillar engine gap documented.
-      - `MissingDataCallout` (NEW): Documents 7 missing endpoints (`bid-decision`, `company-profile`, `evidence-matches`, `risk-findings`, `review-tasks`, `readiness`, `deadlines`).
-      - Document package + uploader: Real documents with type badges, download, RBAC-gated delete.
-    - **Backend bid-decision pipeline implemented**:
-      - `AiDecisionClient.ts`: HTTP client for the deterministic `POST /api/v1/agent/bid-decision` (internal service key, security context, timeout, injectable fetch for tests).
-      - `RequirementMapper.ts`: Pure mapping from stored `ComplianceItem` → AI `RequirementCandidate` (category→kind, criticality derivation: FINANCIAL/STATUTORY/TECHNICAL→HARD_ELIGIBILITY; provenance mapping).
-      - `GetBidDecisionUseCase.ts`: Orchestrates bid + compliance items → requirement candidates → pinned company profile → AI engine call → persists `bid_decisions` → returns.
-      - Database: `company_profile_versions` (immutable JSONB snapshots), `company_profiles` (active pointer), `bid_decisions` (immutable audit trail with full AI response JSONB).
-      - Company Profile module: GET/POST `/api/v1/company-profile` (CRUD with version pinning, validation).
-      - Projections: `GET /api/v1/bids/:id/review-tasks` (real PENDING/humanReviewRequired items), `GET /api/v1/bids/:id/readiness` (server-side rollup).
-      - Endpoints: `GET/POST /api/v1/bids/:id/bid-decision` in `BidsController` (BIDS_READ / BIDS_UPDATE).
-      - Permission: `COMPANY_PROFILE_MANAGE` (ADMIN only).
-    - **Web wiring**: `getBidDecision` / `evaluateBidDecision` in `api/bids.ts`, `companyProfile.ts` CRUD, `mapApiDecisionToBidDecision` mapping (GO→PURSUE, CONDITIONAL_GO→REVIEW_REQUIRED, NO_GO→DO_NOT_PURSUE), `BidDetailPage` fetches decision on load, "Re-evaluate" button for ADMIN/BID_MANAGER, `BidVerdictCard` renders real verdict + reasons + disqualifiers + gaps.
-    - **Tests**: 9 RequirementMapper tests, 9 GetBidDecisionUseCase integration tests (PGlite + fake AI client), 8 CompanyProfileService tests, 174 API tests, 117 web tests, 76 Python AI tests — all 368 passing.
-    - **Cleanup**: 11 fabricated workflow components deleted; `TenderTableView` simplified to "Not evaluated" for fit/recommendation; `TenderListSection` cleanup; all 368 tests passing.
-    - **Documentation**: `MissingDataCallout` on detail page documents 7 missing endpoints; `MissingApiCallout` on dashboard updated.
+6. [x] **Phase 42: Requirement / Compliance Matrix Overhaul (2026-10-05)** _(Completed)_
+   - **Rebuilt the Requirement / Compliance Matrix** into one of the strongest, most intuitive, and production-grade screens in the product (`apps/web`):
+     - **7 Standardized Columns**: `Requirement` (Title, Subcategory, Clause Ref), `Category` (`LEGAL`, `TECHNICAL`, `FINANCIAL`, `STATUTORY`, `EXECUTION`, `COMMERCIAL`), `Mandatory` (Yes/No badge), `Company Evidence` (Linked evidence status & document title), `Status` (`PASS`, `FAIL`, `MISSING`, `REVIEW_REQUIRED`, `NOT_APPLICABLE`), `Risk` (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`), `Source` (Document name & page citation).
+     - **Dense, Readable Layout**: Avoided dumping huge walls of unformatted text directly in table cells. Implemented single-line expandable rows with collapsible chevrons.
+     - **Answered the 4 Core Contractor Questions**:
+       1. _"What does the tender require?"_: Full requirement text + `ExecutionRulesCard` (Non-judicial stamp paper INR denomination, notarization rules, 18-digit CA UDIN mandate, signing authority rank).
+       2. _"Do we have evidence?"_: Linked company evidence status badge, document type, file name, CA UDIN, expiry date, and `EvidenceDrawer` with status interpretations.
+       3. _"Why did the system reach this result?"_: Structured rationale comparison (Tender Requirement vs Company Capability cards, evaluation rule applied, logic breakdown points, confidence percentage) in `AssessmentPanel`.
+       4. _"Where did this requirement come from?"_: Grounded source coordinates (Document name, Page number, Section/Clause name, and verbatim quote block with copy button) in `SourceCitationDrawer`.
+     - **Search, Multi-Filter & Total Sorting**:
+       - Status filter tabs with live item counts for `ALL`, `PASS`, `FAIL`, `MISSING`, `REVIEW_REQUIRED`, `NOT_APPLICABLE`.
+       - Free-text search across requirements, categories, clauses, evidence titles, and evaluation rules.
+       - Dropdown filters for Category, Risk level, and Mandatory status with active filter badge and "Reset Filters" action.
+       - Full column sorting on all 7 columns via `ColumnSorter`.
+     - **Interactive Human Review with OCC**:
+       - Role-based permissions check (`compliance:review`), modal for reviewer notes/justification, and optimistic concurrency version validation (`expectedVersion: item.version`).
+     - **Unit Test Coverage**: Added `complianceMatrix.spec.ts` testing all 7 columns, filtering, multi-field search, sorting, and 4-question derivations (10 new tests, 127 total web tests passing, 378 passing across monorepo).
 
-34. [x] **Phase 42: Requirement / Compliance Matrix Overhaul (2026-10-05)** _(Completed)_
-    - **Rebuilt the Requirement / Compliance Matrix** into one of the strongest, most intuitive, and production-grade screens in the product (`apps/web`):
-      - **7 Standardized Columns**: `Requirement` (Title, Subcategory, Clause Ref), `Category` (`LEGAL`, `TECHNICAL`, `FINANCIAL`, `STATUTORY`, `EXECUTION`, `COMMERCIAL`), `Mandatory` (Yes/No badge), `Company Evidence` (Linked evidence status & document title), `Status` (`PASS`, `FAIL`, `MISSING`, `REVIEW_REQUIRED`, `NOT_APPLICABLE`), `Risk` (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`), `Source` (Document name & page citation).
-      - **Dense, Readable Layout**: Avoided dumping huge walls of unformatted text directly in table cells. Implemented single-line expandable rows with collapsible chevrons.
-      - **Answered the 4 Core Contractor Questions**:
-        1. *"What does the tender require?"*: Full requirement text + `ExecutionRulesCard` (Non-judicial stamp paper INR denomination, notarization rules, 18-digit CA UDIN mandate, signing authority rank).
-        2. *"Do we have evidence?"*: Linked company evidence status badge, document type, file name, CA UDIN, expiry date, and `EvidenceDrawer` with status interpretations.
-        3. *"Why did the system reach this result?"*: Structured rationale comparison (Tender Requirement vs Company Capability cards, evaluation rule applied, logic breakdown points, confidence percentage) in `AssessmentPanel`.
-        4. *"Where did this requirement come from?"*: Grounded source coordinates (Document name, Page number, Section/Clause name, and verbatim quote block with copy button) in `SourceCitationDrawer`.
-      - **Search, Multi-Filter & Total Sorting**:
-        - Status filter tabs with live item counts for `ALL`, `PASS`, `FAIL`, `MISSING`, `REVIEW_REQUIRED`, `NOT_APPLICABLE`.
-        - Free-text search across requirements, categories, clauses, evidence titles, and evaluation rules.
-        - Dropdown filters for Category, Risk level, and Mandatory status with active filter badge and "Reset Filters" action.
-        - Full column sorting on all 7 columns via `ColumnSorter`.
-      - **Interactive Human Review with OCC**:
-        - Role-based permissions check (`compliance:review`), modal for reviewer notes/justification, and optimistic concurrency version validation (`expectedVersion: item.version`).
-      - **Unit Test Coverage**: Added `complianceMatrix.spec.ts` testing all 7 columns, filtering, multi-field search, sorting, and 4-question derivations (10 new tests, 127 total web tests passing, 378 passing across monorepo).
-
-35. [x] **Phase 43: 1 Tenant → N Companies Architecture & Multi-Surface Selection (2026-10-06)** _(Completed)_
-    - **Established and validated the canonical enterprise multi-tenancy hierarchy**:
-      ```text
-      Tenant (SaaS / Security / RBAC Boundary)
-        └── N × Companies (Legal business entities evaluated within tenant)
-              ├── Capability Profile (Versioned registrations, CA UDINs, financials)
-              ├── Corporate Evidence Vault
-              └── Tenders / Bids (Evaluated per company profile)
-      ```
-    - **Backend Multi-Company Security (`apps/api`)**:
-      - `companies` table scoped by `tenant_id` (`organization_id`), composite index `(tenant_id, id)`.
-      - Scoped `company_profiles` and `company_profile_versions` by `(tenant_id, company_id)`.
-      - Dynamic tenant context resolution in `BidsService`, `CompanyProfileService`, and `CompaniesController`.
-      - Strict multi-company anti-IDOR security tests verifying cross-tenant and intra-tenant isolation in `multi-company-security.spec.ts` (10 tests, 192 total API tests passing).
-    - **Multi-Surface Frontend Company Selection (`apps/web`)**:
-      - **Global Header**: Interactive `CompanySelector` dropdown with active company badge, GSTIN details, and inline "+ Add Legal Company Entity" modal.
-      - **Sidebar**: Sticky "Active Company" card above navigation items, displaying current business entity name.
-      - **Dashboard**: Prominent active company badge with direct entity switcher alongside the "New Bid Project" CTA.
-      - **Bid Creation Workflow**: Dedicated "Bidding Company Entity *" selector in `CreateBidPage.tsx` wiring `companyId` into tender initialization.
-      - **Company Dossier Header**: Instant company switching in `CompanyProfileHeader.tsx` updating legal details and version tracking.
-      - **Tenant-Aware Fallback & Persistence**: `CompanyContext` with instant hydration from `localStorage` keyed by `tenderpulse_active_company_${organizationId}` so the UI never flashes empty.
-36. [x] **Phase 44: Profile & Workspace Settings Pages (2026-10-06)** _(Completed)_
-    - **Implemented Dedicated User Profile Experience (`/profile`, `ProfilePage.tsx`)**:
-      - Represents the authenticated individual (`name`, `email`, deterministic initials `AvatarFallback`, `role`, `id`, `permissions`).
-      - Inline form editing for user display name with validation, loading state, error handling, and success feedback.
-      - Tenant Workspace details (`organizationName`, `organizationId`) and active RBAC permissions list.
-      - Session security architecture summary (HMAC-SHA256, Fiber-Safe Tenant Gating, OCC Concurrency).
-      - Prominent domain boundary callout clearly differentiating individual User Profile from the multi-entity **Company Capability Profile** (`/company-profile`).
-    - **Implemented Multi-Tab Workspace Settings Experience (`/settings`, `SettingsPage.tsx`)**:
-      - Structured with shadcn `Tabs` across 5 dedicated sections:
-        1. **General**: Workspace Name, Tenant ID, default active company selection, and regional procurement parameters (GeM, CPPP, INR ₹).
-        2. **Notifications**: In-app toggles for Tender Deadline warnings, Evidence Expiry alerts, Human Review task requests, and High-Risk clause flags, with clear roadmap disclosure regarding outbound webhooks.
-        3. **Security**: Session token specifications (RFC 7519 HS256, timing-safe verification), tenant isolation guarantees, and upcoming security roadmap (2FA TOTP, SIEM audit exports).
-        4. **Team & RBAC**: Tenant role breakdown (`ADMIN`, `BID_MANAGER`, `LEGAL_COUNSEL`, `FINANCIAL_CONTROLLER`, `VIEWER`), assigned permissions, and active scope descriptions.
-        5. **Companies**: Multi-company entity management, listing registered companies with GSTIN, one-click active entity switching, inline entity registration form, and direct links to each company's capability dossier.
-    - **Navigation & Layout Integration**:
-      - [UserAccountMenu.tsx](file:///Users/belikesaurabh/main/TenderAi/apps/web/src/components/layout/UserAccountMenu.tsx): Added direct links to `User Profile` and `Workspace Settings`.
-      - [Sidebar.tsx](file:///Users/belikesaurabh/main/TenderAi/apps/web/src/components/layout/Sidebar.tsx): Added direct `Settings` item with `SettingsIcon`.
-      - [Breadcrumbs.tsx](file:///Users/belikesaurabh/main/TenderAi/apps/web/src/components/layout/Breadcrumbs.tsx): Added dynamic breadcrumbs for `/profile` and `/settings`.
-    - **Design System & Primitives**:
-      - Built shadcn [label.tsx](file:///Users/belikesaurabh/main/TenderAi/apps/web/src/components/ui/label.tsx) and [switch.tsx](file:///Users/belikesaurabh/main/TenderAi/apps/web/src/components/ui/switch.tsx).
-      - Strict adherence to design constraints: 0 emojis, 0 decorative graphics, 0 custom CSS, Linear/Stripe style hierarchy.
-    - **Quality Gates**:
-      - Added `profile-settings.spec.ts` unit test suite (6 new tests).
-      - 414 automated tests passing across the monorepo (192 API + 146 Web + 76 AI).
-      - 0 TypeScript compiler errors across all monorepo packages.
+7. [x] **Phase 43: 1 Tenant → N Companies Architecture & Multi-Surface Selection (2026-10-06)** _(Completed)_
+   - **Established and validated the canonical enterprise multi-tenancy hierarchy**:
+     ```text
+     Tenant (SaaS / Security / RBAC Boundary)
+       └── N × Companies (Legal business entities evaluated within tenant)
+             ├── Capability Profile (Versioned registrations, CA UDINs, financials)
+             ├── Corporate Evidence Vault
+             └── Tenders / Bids (Evaluated per company profile)
+     ```
+   - **Backend Multi-Company Security (`apps/api`)**:
+     - `companies` table scoped by `tenant_id` (`organization_id`), composite index `(tenant_id, id)`.
+     - Scoped `company_profiles` and `company_profile_versions` by `(tenant_id, company_id)`.
+     - Dynamic tenant context resolution in `BidsService`, `CompanyProfileService`, and `CompaniesController`.
+     - Strict multi-company anti-IDOR security tests verifying cross-tenant and intra-tenant isolation in `multi-company-security.spec.ts` (10 tests, 192 total API tests passing).
+   - **Multi-Surface Frontend Company Selection (`apps/web`)**:
+     - **Global Header**: Interactive `CompanySelector` dropdown with active company badge, GSTIN details, and inline "+ Add Legal Company Entity" modal.
+     - **Sidebar**: Sticky "Active Company" card above navigation items, displaying current business entity name.
+     - **Dashboard**: Prominent active company badge with direct entity switcher alongside the "New Bid Project" CTA.
+     - **Bid Creation Workflow**: Dedicated "Bidding Company Entity *" selector in `CreateBidPage.tsx` wiring `companyId` into tender initialization.
+     - **Company Dossier Header**: Instant company switching in `CompanyProfileHeader.tsx` updating legal details and version tracking.
+     - **Tenant-Aware Fallback & Persistence**: `CompanyContext` with instant hydration from `localStorage` keyed by `tenderpulse_active_company_${organizationId}` so the UI never flashes empty.
+8. [x] **Phase 44: Profile & Workspace Settings Pages (2026-10-06)** _(Completed)_
+   - **Implemented Dedicated User Profile Experience (`/profile`, `ProfilePage.tsx`)**:
+     - Represents the authenticated individual (`name`, `email`, deterministic initials `AvatarFallback`, `role`, `id`, `permissions`).
+     - Inline form editing for user display name with validation, loading state, error handling, and success feedback.
+     - Tenant Workspace details (`organizationName`, `organizationId`) and active RBAC permissions list.
+     - Session security architecture summary (HMAC-SHA256, Fiber-Safe Tenant Gating, OCC Concurrency).
+     - Prominent domain boundary callout clearly differentiating individual User Profile from the multi-entity **Company Capability Profile** (`/company-profile`).
+   - **Implemented Multi-Tab Workspace Settings Experience (`/settings`, `SettingsPage.tsx`)**:
+     - Structured with shadcn `Tabs` across 5 dedicated sections:
+       1. **General**: Workspace Name, Tenant ID, default active company selection, and regional procurement parameters (GeM, CPPP, INR ₹).
+       2. **Notifications**: In-app toggles for Tender Deadline warnings, Evidence Expiry alerts, Human Review task requests, and High-Risk clause flags, with clear roadmap disclosure regarding outbound webhooks.
+       3. **Security**: Session token specifications (RFC 7519 HS256, timing-safe verification), tenant isolation guarantees, and upcoming security roadmap (2FA TOTP, SIEM audit exports).
+       4. **Team & RBAC**: Tenant role breakdown (`ADMIN`, `BID_MANAGER`, `LEGAL_COUNSEL`, `FINANCIAL_CONTROLLER`, `VIEWER`), assigned permissions, and active scope descriptions.
+       5. **Companies**: Multi-company entity management, listing registered companies with GSTIN, one-click active entity switching, inline entity registration form, and direct links to each company's capability dossier.
+   - **Navigation & Layout Integration**:
+     - [UserAccountMenu.tsx](file:///Users/belikesaurabh/main/TenderAi/apps/web/src/components/layout/UserAccountMenu.tsx): Added direct links to `User Profile` and `Workspace Settings`.
+     - [Sidebar.tsx](file:///Users/belikesaurabh/main/TenderAi/apps/web/src/components/layout/Sidebar.tsx): Added direct `Settings` item with `SettingsIcon`.
+     - [Breadcrumbs.tsx](file:///Users/belikesaurabh/main/TenderAi/apps/web/src/components/layout/Breadcrumbs.tsx): Added dynamic breadcrumbs for `/profile` and `/settings`.
+   - **Design System & Primitives**:
+     - Built shadcn [label.tsx](file:///Users/belikesaurabh/main/TenderAi/apps/web/src/components/ui/label.tsx) and [switch.tsx](file:///Users/belikesaurabh/main/TenderAi/apps/web/src/components/ui/switch.tsx).
+     - Strict adherence to design constraints: 0 emojis, 0 decorative graphics, 0 custom CSS, Linear/Stripe style hierarchy.
+   - **Quality Gates**:
+     - Added `profile-settings.spec.ts` unit test suite (6 new tests).
+     - 414 automated tests passing across the monorepo (192 API + 146 Web + 76 AI).
+     - 0 TypeScript compiler errors across all monorepo packages.

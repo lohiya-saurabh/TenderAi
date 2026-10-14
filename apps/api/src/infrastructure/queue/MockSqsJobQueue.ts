@@ -18,7 +18,7 @@ export class MockSqsJobQueue implements IJobQueue {
   private readonly messages: Map<string, InternalQueueItem> = new Map();
   private readonly deadLetterQueue: DeadLetterMessage<IngestionJobMessage>[] = [];
 
-  constructor(public readonly maxReceiveCount = 3) { }
+  constructor(public readonly maxReceiveCount = 3) {}
 
   public async enqueue(payload: IngestionJobMessage): Promise<void> {
     const id = uuidv4();
@@ -33,7 +33,7 @@ export class MockSqsJobQueue implements IJobQueue {
 
   public async receiveMessages(
     maxMessages = 10,
-    visibilityTimeoutSeconds = 300
+    visibilityTimeoutSeconds = 300,
   ): Promise<QueueMessage<IngestionJobMessage>[]> {
     const now = Date.now();
     const result: QueueMessage<IngestionJobMessage>[] = [];
@@ -82,7 +82,7 @@ export class MockSqsJobQueue implements IJobQueue {
 
   public async changeMessageVisibility(
     receiptHandle: string,
-    visibilityTimeoutSeconds: number
+    visibilityTimeoutSeconds: number,
   ): Promise<void> {
     for (const item of this.messages.values()) {
       if (item.receiptHandle === receiptHandle) {
@@ -95,7 +95,7 @@ export class MockSqsJobQueue implements IJobQueue {
   public async moveToDeadLetter(
     message: IngestionJobMessage,
     reason: string,
-    receiveCount = 1
+    receiveCount = 1,
   ): Promise<void> {
     // Remove from active queue if present
     for (const [id, item] of this.messages.entries()) {

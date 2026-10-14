@@ -28,7 +28,7 @@ describe('ExecutionRules Value Object', () => {
           stampPaperDenominationInr: 0,
           notarizationRequired: true,
           udinRequired: false,
-        })
+        }),
     ).toThrow(InvalidExecutionRulesException);
   });
 

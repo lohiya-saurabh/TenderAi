@@ -21,7 +21,13 @@ import {
   type PlanTier,
 } from '../api/billing.js';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs.js';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card.js';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '../components/ui/card.js';
 import { Badge } from '../components/ui/badge.js';
 import { Button } from '../components/ui/button.js';
 import { Input } from '../components/ui/input.js';
@@ -97,7 +103,10 @@ export const SettingsPage: React.FC = () => {
   const [usage, setUsage] = useState<UsageSummary | null>(null);
   const [plans, setPlans] = useState<PlanDefinition[]>([]);
   const [isChangingPlan, setIsChangingPlan] = useState(false);
-  const [billingFeedback, setBillingFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [billingFeedback, setBillingFeedback] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
 
   // Load workspace settings on mount
   useEffect(() => {
@@ -254,7 +263,9 @@ export const SettingsPage: React.FC = () => {
       {/* 1. Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/80 pb-5">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Workspace &amp; System Settings</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            Workspace &amp; System Settings
+          </h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
             Configure tenant workspace parameters, billing subscriptions, team members, and alerts
           </p>
@@ -327,7 +338,9 @@ export const SettingsPage: React.FC = () => {
         <TabsContent value="general" className="space-y-6 mt-0">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base font-semibold">Tenant Workspace Configuration</CardTitle>
+              <CardTitle className="text-base font-semibold">
+                Tenant Workspace Configuration
+              </CardTitle>
               <CardDescription className="text-xs">
                 Core workspace properties and tenant-level regional defaults
               </CardDescription>
@@ -338,7 +351,9 @@ export const SettingsPage: React.FC = () => {
                   <Label htmlFor="workspaceName">Workspace Name</Label>
                   <Input
                     id="workspaceName"
-                    value={workspaceSettings?.organizationName || user?.organizationName || 'Workspace'}
+                    value={
+                      workspaceSettings?.organizationName || user?.organizationName || 'Workspace'
+                    }
                     disabled
                     className="bg-muted/30 font-medium text-foreground cursor-not-allowed border-border"
                   />
@@ -366,7 +381,8 @@ export const SettingsPage: React.FC = () => {
               <div className="space-y-3">
                 <Label className="text-xs font-semibold">Default Active Company Entity</Label>
                 <p className="text-xs text-muted-foreground">
-                  Select which registered company is automatically selected when you launch new tenders or review dossiers.
+                  Select which registered company is automatically selected when you launch new
+                  tenders or review dossiers.
                 </p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
@@ -412,8 +428,12 @@ export const SettingsPage: React.FC = () => {
                   <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                     Procurement Standard &amp; Region
                   </span>
-                  <p className="font-medium text-foreground">India Public Procurement (GeM / CPPP)</p>
-                  <p className="text-[10px] text-muted-foreground">INR Currency (₹ Lakhs / Crores)</p>
+                  <p className="font-medium text-foreground">
+                    India Public Procurement (GeM / CPPP)
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">
+                    INR Currency (₹ Lakhs / Crores)
+                  </p>
                 </div>
 
                 <div className="p-3 rounded-lg bg-muted/30 border border-border/60 space-y-1">
@@ -421,7 +441,9 @@ export const SettingsPage: React.FC = () => {
                     Data Residency &amp; Compliance
                   </span>
                   <p className="font-medium text-foreground">AWS ap-south-1 (Mumbai)</p>
-                  <p className="text-[10px] text-muted-foreground">DPDP Act 2023 Compliant Storage</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    DPDP Act 2023 Compliant Storage
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -430,9 +452,12 @@ export const SettingsPage: React.FC = () => {
           {/* Appearance & Color Theme */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base font-semibold">Appearance &amp; Visual Theme</CardTitle>
+              <CardTitle className="text-base font-semibold">
+                Appearance &amp; Visual Theme
+              </CardTitle>
               <CardDescription className="text-xs">
-                Select your preferred interface display mode. Saved persistently to tenant preferences.
+                Select your preferred interface display mode. Saved persistently to tenant
+                preferences.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -453,7 +478,8 @@ export const SettingsPage: React.FC = () => {
                       <span>Executive Dark (Default)</span>
                     </div>
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                      Deep zinc canvas with crisp high-contrast cards and surgical terracotta orange accents.
+                      Deep zinc canvas with crisp high-contrast cards and surgical terracotta orange
+                      accents.
                     </p>
                   </div>
                   {theme === 'dark' && (
@@ -479,7 +505,8 @@ export const SettingsPage: React.FC = () => {
                       <span>Crisp Daylight Light</span>
                     </div>
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                      Pure white canvas with ink-black typography and hairline zinc dividers for daytime audits.
+                      Pure white canvas with ink-black typography and hairline zinc dividers for
+                      daytime audits.
                     </p>
                   </div>
                   {theme === 'light' && (
@@ -545,7 +572,9 @@ export const SettingsPage: React.FC = () => {
                     </Badge>
                   </div>
                   <p className="text-[10px] text-muted-foreground">
-                    {subscription?.billingInterval === 'ANNUAL' ? 'Billed Annually' : 'Billed Monthly'}
+                    {subscription?.billingInterval === 'ANNUAL'
+                      ? 'Billed Annually'
+                      : 'Billed Monthly'}
                   </p>
                 </div>
 
@@ -558,9 +587,7 @@ export const SettingsPage: React.FC = () => {
                       ? `₹${subscription.priceInr.toLocaleString('en-IN')} / mo`
                       : 'Custom Enterprise'}
                   </p>
-                  <p className="text-[10px] text-muted-foreground">
-                    Provider-Agnostic Invoicing
-                  </p>
+                  <p className="text-[10px] text-muted-foreground">Provider-Agnostic Invoicing</p>
                 </div>
 
                 <div className="p-3.5 rounded-lg bg-muted/40 border border-border space-y-1">
@@ -576,7 +603,9 @@ export const SettingsPage: React.FC = () => {
                       ? new Date(subscription.currentPeriodEnd).toLocaleDateString()
                       : 'Renewal Active'}
                   </p>
-                  <p className="text-[10px] text-muted-foreground font-medium">Auto-renewal enabled</p>
+                  <p className="text-[10px] text-muted-foreground font-medium">
+                    Auto-renewal enabled
+                  </p>
                 </div>
               </div>
 
@@ -602,8 +631,13 @@ export const SettingsPage: React.FC = () => {
                         <span>Registered Legal Entities</span>
                       </span>
                       <span className="font-mono text-xs text-muted-foreground">
-                        <strong className="text-foreground">{usage?.activeCompanies ?? companies.length}</strong> /{' '}
-                        {(usage?.maxCompanies ?? 5) >= 9999 ? 'Unlimited' : (usage?.maxCompanies ?? 5)}
+                        <strong className="text-foreground">
+                          {usage?.activeCompanies ?? companies.length}
+                        </strong>{' '}
+                        /{' '}
+                        {(usage?.maxCompanies ?? 5) >= 9999
+                          ? 'Unlimited'
+                          : (usage?.maxCompanies ?? 5)}
                       </span>
                     </div>
                     <Progress
@@ -612,7 +646,9 @@ export const SettingsPage: React.FC = () => {
                           ? 10
                           : Math.min(
                               100,
-                              ((usage?.activeCompanies ?? companies.length) / (usage?.maxCompanies ?? 5)) * 100
+                              ((usage?.activeCompanies ?? companies.length) /
+                                (usage?.maxCompanies ?? 5)) *
+                                100,
                             )
                       }
                       className="h-1.5"
@@ -635,7 +671,10 @@ export const SettingsPage: React.FC = () => {
                       value={
                         (usage?.maxUsers ?? 10) >= 9999
                           ? 10
-                          : Math.min(100, ((usage?.activeUsers ?? 1) / (usage?.maxUsers ?? 10)) * 100)
+                          : Math.min(
+                              100,
+                              ((usage?.activeUsers ?? 1) / (usage?.maxUsers ?? 10)) * 100,
+                            )
                       }
                       className="h-1.5"
                     />
@@ -661,7 +700,8 @@ export const SettingsPage: React.FC = () => {
                           ? 5
                           : Math.min(
                               100,
-                              ((usage?.monthlyAnalyses ?? 0) / (usage?.maxMonthlyAnalyses ?? 50)) * 100
+                              ((usage?.monthlyAnalyses ?? 0) / (usage?.maxMonthlyAnalyses ?? 50)) *
+                                100,
                             )
                       }
                       className="h-1.5"
@@ -724,14 +764,34 @@ export const SettingsPage: React.FC = () => {
                             ? `₹${p.monthlyPriceInr.toLocaleString('en-IN')}`
                             : 'Custom'}
                           {p.monthlyPriceInr !== null && (
-                            <span className="text-[10px] text-muted-foreground font-normal">/mo</span>
+                            <span className="text-[10px] text-muted-foreground font-normal">
+                              /mo
+                            </span>
                           )}
                         </p>
 
                         <div className="text-[10px] text-muted-foreground space-y-1 pt-1">
-                          <p>&bull; {p.entitlements['companies.max'] >= 9999 ? 'Unlimited' : p.entitlements['companies.max']} Companies</p>
-                          <p>&bull; {p.entitlements['users.max'] >= 9999 ? 'Unlimited' : p.entitlements['users.max']} Users</p>
-                          <p>&bull; {p.entitlements['tender_analyses.monthly'] >= 9999 ? 'Unlimited' : p.entitlements['tender_analyses.monthly']} Analyses/mo</p>
+                          <p>
+                            &bull;{' '}
+                            {p.entitlements['companies.max'] >= 9999
+                              ? 'Unlimited'
+                              : p.entitlements['companies.max']}{' '}
+                            Companies
+                          </p>
+                          <p>
+                            &bull;{' '}
+                            {p.entitlements['users.max'] >= 9999
+                              ? 'Unlimited'
+                              : p.entitlements['users.max']}{' '}
+                            Users
+                          </p>
+                          <p>
+                            &bull;{' '}
+                            {p.entitlements['tender_analyses.monthly'] >= 9999
+                              ? 'Unlimited'
+                              : p.entitlements['tender_analyses.monthly']}{' '}
+                            Analyses/mo
+                          </p>
                         </div>
                       </div>
 
@@ -742,7 +802,9 @@ export const SettingsPage: React.FC = () => {
                         onClick={() => handleChangePlan(p.tier)}
                         className="w-full text-xs h-8"
                       >
-                        {isCurrent ? 'Active Plan' : `Switch to ${p.name.replace(' Plan', '').replace(' Tier', '')}`}
+                        {isCurrent
+                          ? 'Active Plan'
+                          : `Switch to ${p.name.replace(' Plan', '').replace(' Tier', '')}`}
                       </Button>
                     </div>
                   );
@@ -760,7 +822,8 @@ export const SettingsPage: React.FC = () => {
             <CardHeader>
               <CardTitle className="text-base font-semibold">Tender Alert Preferences</CardTitle>
               <CardDescription className="text-xs">
-                Control in-app status banners and critical procurement timeline alerts (Persisted to Database)
+                Control in-app status banners and critical procurement timeline alerts (Persisted to
+                Database)
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -788,7 +851,8 @@ export const SettingsPage: React.FC = () => {
                       Company Evidence Expiration Alerts
                     </Label>
                     <p className="text-xs text-muted-foreground">
-                      Notify when CA UDIN certificates, solvency letters, or ISO audits are expiring within 90 days
+                      Notify when CA UDIN certificates, solvency letters, or ISO audits are expiring
+                      within 90 days
                     </p>
                   </div>
                   <Switch
@@ -805,7 +869,8 @@ export const SettingsPage: React.FC = () => {
                       Human Review Task Requests
                     </Label>
                     <p className="text-xs text-muted-foreground">
-                      Flag tender clauses requiring manual sign-off by Legal Counsel or Financial Controller
+                      Flag tender clauses requiring manual sign-off by Legal Counsel or Financial
+                      Controller
                     </p>
                   </div>
                   <Switch
@@ -822,7 +887,8 @@ export const SettingsPage: React.FC = () => {
                       Critical Disqualification Risk Alerts
                     </Label>
                     <p className="text-xs text-muted-foreground">
-                      Highlight Liquidated Damages caps exceeding 10% or non-refundable EMD forfeiture clauses
+                      Highlight Liquidated Damages caps exceeding 10% or non-refundable EMD
+                      forfeiture clauses
                     </p>
                   </div>
                   <Switch
@@ -843,7 +909,9 @@ export const SettingsPage: React.FC = () => {
         <TabsContent value="security" className="space-y-6 mt-0">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base font-semibold">Session Security &amp; Token Architecture</CardTitle>
+              <CardTitle className="text-base font-semibold">
+                Session Security &amp; Token Architecture
+              </CardTitle>
               <CardDescription className="text-xs">
                 Active cryptographic session properties and isolation enforcement
               </CardDescription>
@@ -856,7 +924,8 @@ export const SettingsPage: React.FC = () => {
                     <span>Cryptographic Token Session</span>
                   </div>
                   <p className="text-muted-foreground leading-relaxed">
-                    Access is signed using RFC 7519 HMAC-SHA256 tokens with timing-safe signature verification.
+                    Access is signed using RFC 7519 HMAC-SHA256 tokens with timing-safe signature
+                    verification.
                   </p>
                   <div className="flex items-center gap-2 pt-1 font-mono text-[10px] text-muted-foreground">
                     <span>Algorithm: HS256</span>
@@ -871,7 +940,8 @@ export const SettingsPage: React.FC = () => {
                     <span>Fiber-Safe Tenant Isolation</span>
                   </div>
                   <p className="text-muted-foreground leading-relaxed">
-                    Every API request executes in an isolated Node.js AsyncLocalStorage fiber with anti-IDOR filters.
+                    Every API request executes in an isolated Node.js AsyncLocalStorage fiber with
+                    anti-IDOR filters.
                   </p>
                   <div className="flex items-center gap-2 pt-1 font-mono text-[10px] text-muted-foreground">
                     <span>Context: TenantContextHolder</span>
@@ -888,21 +958,29 @@ export const SettingsPage: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                   <div className="p-3 rounded-lg border border-border/80 bg-muted/20 space-y-1">
                     <div className="flex items-center justify-between">
-                      <span className="font-semibold text-foreground">Two-Factor Authentication (2FA)</span>
-                      <Badge variant="outline" className="text-[10px]">Roadmap</Badge>
+                      <span className="font-semibold text-foreground">
+                        Two-Factor Authentication (2FA)
+                      </span>
+                      <Badge variant="outline" className="text-[10px]">
+                        Roadmap
+                      </Badge>
                     </div>
                     <p className="text-[11px] text-muted-foreground">
-                      Time-based One-Time Password (TOTP) enforcement for administrative role changes.
+                      Time-based One-Time Password (TOTP) enforcement for administrative role
+                      changes.
                     </p>
                   </div>
 
                   <div className="p-3 rounded-lg border border-border/80 bg-muted/20 space-y-1">
                     <div className="flex items-center justify-between">
                       <span className="font-semibold text-foreground">Audit Log Export (SIEM)</span>
-                      <Badge variant="outline" className="text-[10px]">Roadmap</Badge>
+                      <Badge variant="outline" className="text-[10px]">
+                        Roadmap
+                      </Badge>
                     </div>
                     <p className="text-[11px] text-muted-foreground">
-                      Stream cryptographic audit event logs directly to external security dashboards.
+                      Stream cryptographic audit event logs directly to external security
+                      dashboards.
                     </p>
                   </div>
                 </div>
@@ -918,9 +996,12 @@ export const SettingsPage: React.FC = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
               <div>
-                <CardTitle className="text-base font-semibold">Tenant Team Members &amp; RBAC</CardTitle>
+                <CardTitle className="text-base font-semibold">
+                  Tenant Team Members &amp; RBAC
+                </CardTitle>
                 <CardDescription className="text-xs">
-                  Manage users provisioned in {user?.organizationName || 'your workspace'} ({teamMembers.length} Members)
+                  Manage users provisioned in {user?.organizationName || 'your workspace'} (
+                  {teamMembers.length} Members)
                 </CardDescription>
               </div>
               {!isInvitingMember && (
@@ -951,7 +1032,9 @@ export const SettingsPage: React.FC = () => {
                   className="p-4 rounded-lg bg-muted/40 border border-border space-y-4"
                 >
                   <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-semibold text-foreground">Provision New Team Member</h4>
+                    <h4 className="text-xs font-semibold text-foreground">
+                      Provision New Team Member
+                    </h4>
                     <Button
                       type="button"
                       variant="ghost"
@@ -1029,7 +1112,9 @@ export const SettingsPage: React.FC = () => {
               {/* Team Members List */}
               <div className="space-y-2">
                 {isTeamLoading ? (
-                  <p className="text-xs text-muted-foreground py-4 text-center">Loading team members...</p>
+                  <p className="text-xs text-muted-foreground py-4 text-center">
+                    Loading team members...
+                  </p>
                 ) : teamMembers.length > 0 ? (
                   teamMembers.map((member) => (
                     <div
@@ -1042,8 +1127,13 @@ export const SettingsPage: React.FC = () => {
                         </div>
                         <div className="space-y-0.5">
                           <div className="flex items-center gap-2">
-                            <span className="font-semibold text-foreground text-xs">{member.name}</span>
-                            <Badge variant="secondary" className="text-[10px] uppercase font-semibold">
+                            <span className="font-semibold text-foreground text-xs">
+                              {member.name}
+                            </span>
+                            <Badge
+                              variant="secondary"
+                              className="text-[10px] uppercase font-semibold"
+                            >
                               {member.role.replace(/_/g, ' ')}
                             </Badge>
                           </div>
@@ -1057,7 +1147,10 @@ export const SettingsPage: React.FC = () => {
 
                       <div className="flex items-center gap-1.5 flex-wrap">
                         {member.permissions.slice(0, 3).map((p) => (
-                          <span key={p} className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border">
+                          <span
+                            key={p}
+                            className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border"
+                          >
                             {p}
                           </span>
                         ))}
@@ -1070,7 +1163,9 @@ export const SettingsPage: React.FC = () => {
                     </div>
                   ))
                 ) : (
-                  <p className="text-xs text-muted-foreground py-4 text-center">No team members found.</p>
+                  <p className="text-xs text-muted-foreground py-4 text-center">
+                    No team members found.
+                  </p>
                 )}
               </div>
             </CardContent>
@@ -1084,9 +1179,12 @@ export const SettingsPage: React.FC = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
               <div>
-                <CardTitle className="text-base font-semibold">Registered Company Legal Entities</CardTitle>
+                <CardTitle className="text-base font-semibold">
+                  Registered Company Legal Entities
+                </CardTitle>
                 <CardDescription className="text-xs">
-                  Legal business entities evaluated under this tenant workspace ({companies.length} Registered)
+                  Legal business entities evaluated under this tenant workspace ({companies.length}{' '}
+                  Registered)
                 </CardDescription>
               </div>
               {!isAddingCompany && (
@@ -1109,7 +1207,9 @@ export const SettingsPage: React.FC = () => {
                   className="p-4 rounded-lg bg-muted/40 border border-border space-y-4"
                 >
                   <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-semibold text-foreground">Register New Legal Business Entity</h4>
+                    <h4 className="text-xs font-semibold text-foreground">
+                      Register New Legal Business Entity
+                    </h4>
                     <Button
                       type="button"
                       variant="ghost"
@@ -1197,9 +1297,7 @@ export const SettingsPage: React.FC = () => {
                               {company.constitution.replace(/_/g, ' ').toLowerCase()}
                             </span>
                           )}
-                          <span className="font-mono text-[10px]">
-                            ID: {company.id}
-                          </span>
+                          <span className="font-mono text-[10px]">ID: {company.id}</span>
                         </div>
                       </div>
 

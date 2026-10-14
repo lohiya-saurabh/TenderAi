@@ -26,7 +26,14 @@ async function testToggle() {
     const classAfter = await page.evaluate(() => document.documentElement.className);
     const textAfter = await toggleBtn.innerText();
     const stored = await page.evaluate(() => localStorage.getItem('tenderpulse_theme'));
-    console.log('After click 1: html class =', classAfter, '| button text =', textAfter, '| stored =', stored);
+    console.log(
+      'After click 1: html class =',
+      classAfter,
+      '| button text =',
+      textAfter,
+      '| stored =',
+      stored,
+    );
 
     const styles = await page.evaluate(() => {
       const bodyBg = window.getComputedStyle(document.body).backgroundColor;

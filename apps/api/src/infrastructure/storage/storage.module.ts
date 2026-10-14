@@ -27,15 +27,15 @@ export const STORAGE_TOKEN = 'STORAGE_SERVICE';
             logger.log(`Connected to AWS S3 bucket: s3://${s3Bucket}`);
             return service;
           } catch (e) {
-            logger.warn(`AWS S3 initialization failed, falling back to local mock: ${e instanceof Error ? e.message : e}`);
+            logger.warn(
+              `AWS S3 initialization failed, falling back to local mock: ${e instanceof Error ? e.message : e}`,
+            );
           }
         }
 
         // 2. Google Cloud Storage detection
         const keyPath = path.resolve(process.cwd(), 'gcp-key.json');
-        const gcsBucket =
-          process.env.STORAGE_BUCKET_NAME ||
-          process.env.GCS_BUCKET_NAME;
+        const gcsBucket = process.env.STORAGE_BUCKET_NAME || process.env.GCS_BUCKET_NAME;
 
         if (gcsBucket) {
           try {
@@ -57,7 +57,9 @@ export const STORAGE_TOKEN = 'STORAGE_SERVICE';
               return service;
             }
           } catch (e) {
-            logger.warn(`GCS initialization failed, falling back to local mock: ${e instanceof Error ? e.message : e}`);
+            logger.warn(
+              `GCS initialization failed, falling back to local mock: ${e instanceof Error ? e.message : e}`,
+            );
           }
         }
 

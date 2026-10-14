@@ -2,10 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '../common/Button.js';
 import { Badge } from '../common/Badge.js';
 import { Modal } from '../common/Modal.js';
-import {
-  type FullCompanyProfile,
-  computeProfileHealth,
-} from './companyProfileData.js';
+import { type FullCompanyProfile, computeProfileHealth } from './companyProfileData.js';
 import { Zap, Building2, Check, CheckCircle2, FolderArchive, Plus, RefreshCw } from 'lucide-react';
 import { useCompany } from '../../context/CompanyContext.js';
 
@@ -26,7 +23,10 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
   const [publishSuccess, setPublishSuccess] = useState(false);
 
   const displayName = selectedCompany?.legalName || profile.companyName;
-  const displayGstin = selectedCompany?.gstin || profile.registrations.find((r) => r.regType === 'GSTIN')?.regNumber || '27AAKCA1234F1Z5';
+  const displayGstin =
+    selectedCompany?.gstin ||
+    profile.registrations.find((r) => r.regType === 'GSTIN')?.regNumber ||
+    '27AAKCA1234F1Z5';
 
   const handlePublishVersion = () => {
     setPublishSuccess(true);
@@ -49,16 +49,26 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
               Maintain your company information once and reuse it across tenders.
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              All verified registrations, CA UDIN financials, and past experience are automatically matched for every new tender.
+              All verified registrations, CA UDIN financials, and past experience are automatically
+              matched for every new tender.
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <Badge variant="neutral" size="sm" className="font-mono bg-muted/50 border-border text-foreground">
+          <Badge
+            variant="neutral"
+            size="sm"
+            className="font-mono bg-muted/50 border-border text-foreground"
+          >
             {profile.profileVersion}
           </Badge>
-          <Button variant="outline" size="sm" onClick={() => setIsPublishModalOpen(true)} className="gap-1.5 text-xs">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsPublishModalOpen(true)}
+            className="gap-1.5 text-xs"
+          >
             <RefreshCw className="w-3.5 h-3.5" />
             Publish Version
           </Button>
@@ -116,7 +126,12 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
               <FolderArchive className="w-3.5 h-3.5" />
               Evidence Vault ({profile.evidenceVault.length})
             </Button>
-            <Button variant="primary" size="sm" onClick={onAddCredential} className="gap-1.5 text-xs shadow-xs">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={onAddCredential}
+              className="gap-1.5 text-xs shadow-xs"
+            >
               <Plus className="w-3.5 h-3.5" />
               Add Capability
             </Button>
@@ -150,7 +165,9 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
 
             {health.expiringSoonCount > 0 && (
               <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg px-3 py-1.5 text-xs font-mono">
-                <span className="text-orange-600 dark:text-orange-400 font-bold">{health.expiringSoonCount}</span>{' '}
+                <span className="text-orange-600 dark:text-orange-400 font-bold">
+                  {health.expiringSoonCount}
+                </span>{' '}
                 <span className="text-muted-foreground">Expiring Soon</span>
               </div>
             )}
@@ -185,17 +202,21 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
           <div className="flex flex-col gap-3 text-sm">
             {publishSuccess ? (
               <div className="text-primary text-center py-4 flex items-center justify-center gap-2 font-semibold">
-                <CheckCircle2 className="w-5 h-5" /> Profile Version v2.5 published and pinned successfully!
+                <CheckCircle2 className="w-5 h-5" /> Profile Version v2.5 published and pinned
+                successfully!
               </div>
             ) : (
               <>
                 <p className="m-0 text-foreground">
-                  Publishing creates a permanent cryptographic snapshot of all verified credentials, CA UDIN statements, and registrations.
+                  Publishing creates a permanent cryptographic snapshot of all verified credentials,
+                  CA UDIN statements, and registrations.
                 </p>
                 <div className="bg-background p-3 rounded-lg border border-border text-xs text-muted-foreground font-mono space-y-1">
                   <div>• Active bids will retain their pinned versions.</div>
                   <div>• New bid evaluations will automatically utilize this new snapshot.</div>
-                  <div>• All linked evidence documents will be locked in the tamper-proof ledger.</div>
+                  <div>
+                    • All linked evidence documents will be locked in the tamper-proof ledger.
+                  </div>
                 </div>
               </>
             )}

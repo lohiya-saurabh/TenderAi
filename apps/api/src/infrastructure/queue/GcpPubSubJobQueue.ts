@@ -70,26 +70,31 @@ export class GcpPubSubJobQueue implements IJobQueue {
     const dataBuffer = Buffer.from(JSON.stringify(enrichedPayload));
     await topic.publishMessage({ data: dataBuffer });
 
-    this.logger.info('queue.message.published', `Published ingestion job ${payload.jobId} to PubSub`, {
-      jobId: payload.jobId,
-      documentId: payload.documentId,
-      bidId: payload.bidId,
-    }, {
-      trace_id: enrichedPayload.traceId,
-      correlation_id: enrichedPayload.correlationId,
-      job_id: payload.jobId,
-      document_id: payload.documentId,
-      tender_id: payload.bidId,
-    });
+    this.logger.info(
+      'queue.message.published',
+      `Published ingestion job ${payload.jobId} to PubSub`,
+      {
+        jobId: payload.jobId,
+        documentId: payload.documentId,
+        bidId: payload.bidId,
+      },
+      {
+        trace_id: enrichedPayload.traceId,
+        correlation_id: enrichedPayload.correlationId,
+        job_id: payload.jobId,
+        document_id: payload.documentId,
+        tender_id: payload.bidId,
+      },
+    );
   }
 
   public async receiveMessages(
     maxMessages = 10,
-    visibilityTimeoutSeconds = 300
+    visibilityTimeoutSeconds = 300,
   ): Promise<QueueMessage<IngestionJobMessage>[]> {
     const formattedSubscription = this.subClient.subscriptionPath(
       this.projectId,
-      this.subscriptionName
+      this.subscriptionName,
     );
 
     try {
@@ -121,9 +126,10 @@ export class GcpPubSubJobQueue implements IJobQueue {
         if (!msg.ackId || !msg.message?.data) continue;
 
         try {
-          const rawString = typeof msg.message.data === 'string'
-            ? msg.message.data
-            : Buffer.from(msg.message.data as Uint8Array).toString('utf-8');
+          const rawString =
+            typeof msg.message.data === 'string'
+              ? msg.message.data
+              : Buffer.from(msg.message.data as Uint8Array).toString('utf-8');
 
           const body = JSON.parse(rawString) as IngestionJobMessage;
           const receiveCount = msg.deliveryAttempt ? Number(msg.deliveryAttempt) : 1;
@@ -140,16 +146,19 @@ export class GcpPubSubJobQueue implements IJobQueue {
 
       return results;
     } catch (error) {
-      throw new Error(`Failed to pull messages from Pub/Sub subscription '${this.subscriptionName}'.`, {
-        cause: error,
-      });
+      throw new Error(
+        `Failed to pull messages from Pub/Sub subscription '${this.subscriptionName}'.`,
+        {
+          cause: error,
+        },
+      );
     }
   }
 
   public async deleteMessage(receiptHandle: string): Promise<void> {
     const formattedSubscription = this.subClient.subscriptionPath(
       this.projectId,
-      this.subscriptionName
+      this.subscriptionName,
     );
 
     await this.subClient.acknowledge({
@@ -160,11 +169,11 @@ export class GcpPubSubJobQueue implements IJobQueue {
 
   public async changeMessageVisibility(
     receiptHandle: string,
-    visibilityTimeoutSeconds: number
+    visibilityTimeoutSeconds: number,
   ): Promise<void> {
     const formattedSubscription = this.subClient.subscriptionPath(
       this.projectId,
-      this.subscriptionName
+      this.subscriptionName,
     );
 
     await this.subClient.modifyAckDeadline({
@@ -177,10 +186,12 @@ export class GcpPubSubJobQueue implements IJobQueue {
   public async moveToDeadLetter(
     message: IngestionJobMessage,
     reason: string,
-    receiveCount = 1
+    receiveCount = 1,
   ): Promise<void> {
     if (!this.dlqTopicName) {
-      throw new Error('Cannot move a Pub/Sub message to the dead-letter queue: GCP_PUBSUB_DLQ_TOPIC is not configured.');
+      throw new Error(
+        'Cannot move a Pub/Sub message to the dead-letter queue: GCP_PUBSUB_DLQ_TOPIC is not configured.',
+      );
     }
 
     const deadLetterPayload = {
@@ -202,7 +213,7 @@ export class GcpPubSubJobQueue implements IJobQueue {
 
     const formattedSubscription = this.subClient.subscriptionPath(
       this.projectId,
-      this.dlqSubscriptionName
+      this.dlqSubscriptionName,
     );
 
     try {
@@ -221,9 +232,10 @@ export class GcpPubSubJobQueue implements IJobQueue {
         if (!msg.message?.data) continue;
 
         try {
-          const rawString = typeof msg.message.data === 'string'
-            ? msg.message.data
-            : Buffer.from(msg.message.data as Uint8Array).toString('utf-8');
+          const rawString =
+            typeof msg.message.data === 'string'
+              ? msg.message.data
+              : Buffer.from(msg.message.data as Uint8Array).toString('utf-8');
 
           const parsed = JSON.parse(rawString) as {
             message: IngestionJobMessage;

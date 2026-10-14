@@ -26,14 +26,16 @@ class OpenAICompatibleLlmClient:
         self,
         api_key: str,
         base_url: str = "https://openrouter.ai/api/v1",
-        model: str = "google/gemini-2.0-flash-001",
+        model: str = "google/gemini-2.5-flash",
         timeout: float = 45.0,
+        max_tokens: int = 2048,
         client: httpx.AsyncClient | None = None,
     ):
         self.api_key = api_key
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.timeout = timeout
+        self.max_tokens = max_tokens
         self._custom_client = client
 
     def _get_client(self) -> httpx.AsyncClient:
@@ -62,6 +64,7 @@ class OpenAICompatibleLlmClient:
                 {"role": "user", "content": user_prompt},
             ],
             "response_format": {"type": "json_object"},
+            "max_tokens": self.max_tokens,
             "temperature": 0.0,
         }
 
@@ -143,6 +146,9 @@ class OpenAICompatibleLlmClient:
                         "error_code": "ERR_LLM_NETWORK",
                     },
                 )
+                # Never retry client/auth/payment errors (400, 401, 402, 403, 404)
+                if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code in (400, 401, 402, 403, 404):
+                    break
                 if attempt < max_retries:
                     await asyncio.sleep(1.0 * (2**attempt))
                     continue

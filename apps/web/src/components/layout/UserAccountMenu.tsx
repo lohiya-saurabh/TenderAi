@@ -61,13 +61,14 @@ export const UserAccountMenu: React.FC = () => {
               <p className="text-sm font-semibold text-foreground leading-none">
                 {user?.name || 'Account'}
               </p>
-              <Badge variant="secondary" className="text-[10px] font-medium uppercase px-1.5 py-0.5">
+              <Badge
+                variant="secondary"
+                className="text-[10px] font-medium uppercase px-1.5 py-0.5"
+              >
                 {user?.role?.replace(/_/g, ' ') || 'User'}
               </Badge>
             </div>
-            <p className="text-xs text-muted-foreground truncate">
-              {user?.email}
-            </p>
+            <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />

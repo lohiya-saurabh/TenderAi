@@ -6,7 +6,11 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
 import { eq, and, desc } from 'drizzle-orm';
-import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '../../common/database/database.module.js';
+import {
+  DRIZZLE_TOKEN,
+  type DrizzleDb,
+  createDrizzle,
+} from '../../common/database/database.module.js';
 import * as schema from '../../common/database/schema.js';
 import { NotFoundError, BadRequestError } from '../../common/errors/errors.js';
 import { TenantContextHolder } from '../../common/security/TenantContext.js';
@@ -49,8 +53,11 @@ export class CompaniesService {
 
   constructor(
     @Inject(DRIZZLE_TOKEN) db: DrizzleDb | PGlite,
+    @Inject(CompanyProfileService)
     private readonly companyProfileService: CompanyProfileService,
-    @Optional() @Inject(EntitlementService) private readonly entitlementService?: EntitlementService,
+    @Optional()
+    @Inject(EntitlementService)
+    private readonly entitlementService?: EntitlementService,
   ) {
     this.db = 'select' in db ? (db as DrizzleDb) : createDrizzle(db as PGlite);
   }
@@ -79,12 +86,7 @@ export class CompaniesService {
     const [record] = await this.db
       .select()
       .from(schema.companies)
-      .where(
-        and(
-          eq(schema.companies.id, companyId),
-          eq(schema.companies.organizationId, orgId),
-        ),
-      )
+      .where(and(eq(schema.companies.id, companyId), eq(schema.companies.organizationId, orgId)))
       .limit(1);
 
     if (!record) {
@@ -176,11 +178,23 @@ export class CompaniesService {
       pan: r.pan,
       udyamId: r.udyamId,
       constitution: r.constitution,
-      gstinVerifiedAt: r.gstinVerifiedAt ? (r.gstinVerifiedAt instanceof Date ? r.gstinVerifiedAt.toISOString() : String(r.gstinVerifiedAt)) : null,
+      gstinVerifiedAt: r.gstinVerifiedAt
+        ? r.gstinVerifiedAt instanceof Date
+          ? r.gstinVerifiedAt.toISOString()
+          : String(r.gstinVerifiedAt)
+        : null,
       gstinVerificationData: (r.gstinVerificationData as Record<string, unknown>) ?? null,
-      udyamVerifiedAt: r.udyamVerifiedAt ? (r.udyamVerifiedAt instanceof Date ? r.udyamVerifiedAt.toISOString() : String(r.udyamVerifiedAt)) : null,
+      udyamVerifiedAt: r.udyamVerifiedAt
+        ? r.udyamVerifiedAt instanceof Date
+          ? r.udyamVerifiedAt.toISOString()
+          : String(r.udyamVerifiedAt)
+        : null,
       udyamVerificationData: (r.udyamVerificationData as Record<string, unknown>) ?? null,
-      digilockerLinkedAt: r.digilockerLinkedAt ? (r.digilockerLinkedAt instanceof Date ? r.digilockerLinkedAt.toISOString() : String(r.digilockerLinkedAt)) : null,
+      digilockerLinkedAt: r.digilockerLinkedAt
+        ? r.digilockerLinkedAt instanceof Date
+          ? r.digilockerLinkedAt.toISOString()
+          : String(r.digilockerLinkedAt)
+        : null,
       digilockerMetadata: (r.digilockerMetadata as Record<string, unknown>) ?? null,
       createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
       updatedAt: r.updatedAt instanceof Date ? r.updatedAt.toISOString() : String(r.updatedAt),

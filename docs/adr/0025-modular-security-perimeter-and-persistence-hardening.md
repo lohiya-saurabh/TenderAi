@@ -29,6 +29,7 @@ Following the comprehensive cross-tier system audit documented in `docs/END_TO_E
 We implement a hardened, modular security perimeter and persistence architecture across the gateway, authentication provider, database, and client layers:
 
 ### 1. Dual-Transport Authentication & HTTP-Only Cookie Perimeter
+
 - **Access & Refresh Cookies**: On `/api/v1/auth/login`, `/register`, and `/refresh`, the backend issues `httpOnly`, `Secure`, `SameSite=Strict` cookies:
   - `tp_access_token` (15-minute TTL, path: `/`)
   - `tp_refresh_token` (7-day TTL, path: `/api/v1/auth`)
@@ -39,6 +40,7 @@ We implement a hardened, modular security perimeter and persistence architecture
   - The `useSSE` hook initializes `EventSource` with `{ withCredentials: true }`, relying on the `tp_access_token` cookie rather than appending tokens to query strings.
 
 ### 2. Server-Side Refresh Token Rotation & Revocation Store
+
 - **`refresh_tokens` Canonical Table**:
   - Schema: `id`, `user_id`, `organization_id`, `token_hash` (SHA-256), `expires_at`, `revoked_at`, `replaced_by_token_id`, `created_at`.
   - Tokens are never stored in plaintext; only the SHA-256 cryptographic digest is stored.
@@ -49,6 +51,7 @@ We implement a hardened, modular security perimeter and persistence architecture
   - `POST /api/v1/auth/logout` revokes the active refresh token hash and clears both `tp_access_token` and `tp_refresh_token` cookies with expired headers.
 
 ### 3. Environment-Gated Development Vectors
+
 - In `documents.controller.ts`, the `mockUpload` endpoint is guarded with:
   ```typescript
   if (process.env.NODE_ENV === 'production') {
@@ -57,9 +60,11 @@ We implement a hardened, modular security perimeter and persistence architecture
   ```
 
 ### 4. Generation Counter Guard Against Frontend Race Conditions
+
 - In `useApi.ts`, an `activeRequestId` counter ensures that when multiple requests are dispatched in rapid succession (e.g., search filtering, page switching), responses with a generation counter lower than the current counter are discarded before updating state.
 
 ### 5. Canonical PostgreSQL DDL & Index Hardening
+
 - Rebuilt `apps/api/src/infrastructure/persistence/schema.sql` into a 17-table canonical schema aligned with `apps/api/src/common/database/schema.ts`.
 - Deleted orphaned `schema.prisma`.
 - Added composite indexes:
@@ -70,6 +75,7 @@ We implement a hardened, modular security perimeter and persistence architecture
   - `idx_bid_decisions_bid` (`bid_decisions(bid_id)`)
 
 ### 6. Domain Flow Consistency
+
 - Repaired `companies.ts` to correctly route folder paths in `listCloudFiles`.
 - Updated `OnboardingPage.tsx` to commit user sector selections into company profile versions via `createCompanyProfileVersion`.
 
@@ -78,18 +84,22 @@ We implement a hardened, modular security perimeter and persistence architecture
 ## Architectural Analysis & Interview Defensibility
 
 ### WHY
+
 Storing JWTs in `localStorage` is an anti-pattern for enterprise SaaS because client-side JavaScript has full access to `window.localStorage`. In the event of an XSS flaw in a dependency, an attacker can exfiltrate tokens and maintain indefinite session access. Furthermore, pure stateless JWTs cannot be revoked if a user logs out or if their credentials are compromised.
 
 By adopting `httpOnly` cookies with server-side SHA-256 token rotation, tokens are unreachable by client JavaScript, and server-side revocation provides immediate kill-switch capability while preserving sub-millisecond JWT access validation.
 
 ### WHAT
+
 A dual-transport security architecture that:
+
 1. Secures browser clients using `httpOnly`, `Secure`, `SameSite=Strict` cookies.
 2. Supports API clients and SDKs via standard `Authorization: Bearer` headers.
 3. Implements refresh token rotation with token-family reuse detection in PostgreSQL.
 4. Aligns database DDL and indexes with the domain model and eliminates UI race conditions.
 
 ### HOW
+
 1. **NestJS `AuthService`**: Manages hashing (`crypto.createHash('sha256')`), token table persistence, rotation logic, and revocation.
 2. **NestJS `AuthController`**: Sets `Set-Cookie` response headers with security flags and handles logout.
 3. **NestJS `JwtAuthGuard`**: Extracts tokens from either `req.headers.authorization` or `req.cookies.tp_access_token`.
@@ -99,29 +109,32 @@ A dual-transport security architecture that:
 
 ### WHY NOT Alternatives
 
-| Alternative | Evaluation & Why Rejected |
-| :--- | :--- |
-| **Keep tokens exclusively in localStorage** | Rejected. High XSS vulnerability. Tokens cannot be revoked server-side upon logout or breach. |
-| **Store full session state in Redis for every request** | Deferred per ADR 0007. Introduces a hard operational dependency on Redis before traffic justifies it. Hashed refresh tokens in PostgreSQL provide server-side revocation on refresh, while short-lived access JWTs keep standard requests stateless. |
-| **Full OAuth 2.0 Authorization Server (Keycloak / Ory Hydra)** | Overkill for the current phase. Introduces heavy operational overhead before product-market fit. The internal dual-token architecture satisfies enterprise compliance while keeping deployment self-contained. |
-| **URL-based JWT tokens for SSE** | Rejected. Query string tokens appear in reverse proxy logs, APM traces, and browser history, creating an unacceptable credential leak surface. |
+| Alternative                                                    | Evaluation & Why Rejected                                                                                                                                                                                                                            |
+| :------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Keep tokens exclusively in localStorage**                    | Rejected. High XSS vulnerability. Tokens cannot be revoked server-side upon logout or breach.                                                                                                                                                        |
+| **Store full session state in Redis for every request**        | Deferred per ADR 0007. Introduces a hard operational dependency on Redis before traffic justifies it. Hashed refresh tokens in PostgreSQL provide server-side revocation on refresh, while short-lived access JWTs keep standard requests stateless. |
+| **Full OAuth 2.0 Authorization Server (Keycloak / Ory Hydra)** | Overkill for the current phase. Introduces heavy operational overhead before product-market fit. The internal dual-token architecture satisfies enterprise compliance while keeping deployment self-contained.                                       |
+| **URL-based JWT tokens for SSE**                               | Rejected. Query string tokens appear in reverse proxy logs, APM traces, and browser history, creating an unacceptable credential leak surface.                                                                                                       |
 
 ### TRADE-OFFS
+
 - **Cookie CORS Complexity**: Using credentials (`credentials: 'include'`) requires explicit `Access-Control-Allow-Credentials: true` and forbids wildcard `Access-Control-Allow-Origin: *`. The gateway must maintain an explicit allowed-origin whitelist.
 - **CSRF Consideration**: Storing access tokens in cookies introduces CSRF risk. This is mitigated by `SameSite=Strict` (or `Lax` in staging cross-subdomain setups) and requiring custom headers (`X-Requested-With` / `Content-Type: application/json`) on mutating requests.
 
 ### FAILURE MODES & MITIGATIONS
+
 1. **Refresh Token Theft & Replay**:
-   - *Failure Mode*: An attacker intercepts a refresh token and attempts to use it after the legitimate user has already rotated it.
-   - *Mitigation*: The reuse detection mechanism detects that the token was already replaced, flags a potential breach, and revokes all active refresh tokens for the user, forcing a re-login.
+   - _Failure Mode_: An attacker intercepts a refresh token and attempts to use it after the legitimate user has already rotated it.
+   - _Mitigation_: The reuse detection mechanism detects that the token was already replaced, flags a potential breach, and revokes all active refresh tokens for the user, forcing a re-login.
 2. **Database Outage During Refresh**:
-   - *Failure Mode*: PostgreSQL is unavailable when a client attempts to refresh their access token.
-   - *Mitigation*: The refresh request fails with a 500 error; the client retries with exponential backoff. Short-lived access tokens continue working for their remaining lifespan on all other stateless routes.
+   - _Failure Mode_: PostgreSQL is unavailable when a client attempts to refresh their access token.
+   - _Mitigation_: The refresh request fails with a 500 error; the client retries with exponential backoff. Short-lived access tokens continue working for their remaining lifespan on all other stateless routes.
 3. **Out-of-Order Responses in UI**:
-   - *Failure Mode*: A slow search query resolves after a fast, newer search query, corrupting the UI display.
-   - *Mitigation*: The `activeRequestId` counter in `useApi.ts` rejects any response whose request ID does not match the latest dispatched request.
+   - _Failure Mode_: A slow search query resolves after a fast, newer search query, corrupting the UI display.
+   - _Mitigation_: The `activeRequestId` counter in `useApi.ts` rejects any response whose request ID does not match the latest dispatched request.
 
 ### SECURITY IMPLICATIONS
+
 - **XSS Mitigation**: Sensitive tokens cannot be read by `document.cookie` or `window.localStorage`.
 - **Log Leakage Elimination**: SSE streams no longer log JWTs in reverse proxy or CDN access logs.
 - **Tenant Boundary Enforcement**: All database indexes are explicitly compound-indexed with `organization_id` to ensure tenant partitioning is optimized and verifiable in query execution plans.

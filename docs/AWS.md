@@ -94,33 +94,34 @@ flowchart TD
 
 Every AWS service considered for TenderPulse AI has been evaluated against strict architectural justification criteria:
 
-| AWS Service | Architectural Status | Primary Role in TenderPulse AI |
-| :--- | :--- | :--- |
-| **Route 53** | **ACCEPTED** | Authoritative DNS, DNSSEC, health-checked failover routing. |
-| **CloudFront** | **ACCEPTED** | Edge caching for React SPA, DDoS mitigation, TLS 1.3 termination, S3 OAC. |
-| **Amazon S3** | **ACCEPTED** | Durable encrypted blob storage for 10MB–100MB tender PDFs and static SPA bundle. |
-| **ALB (Load Balancer)** | **ACCEPTED** | Layer 7 load balancing, SSL termination, path routing, long-lived SSE connections. |
-| **API Gateway** | **REJECTED** | 29-second hard timeout breaks Server-Sent Events (SSE) and heavy doc workflows. |
-| **NestJS on ECS Fargate** | **ACCEPTED** | Enterprise application boundary, auth/RBAC, bid state machine, Presigned URL signer. |
-| **FastAPI on ECS Fargate**| **ACCEPTED** | Python worker for PyMuPDF extraction, OCR, LangGraph orchestration, SQS consumer. |
-| **Amazon RDS PostgreSQL** | **ACCEPTED** | Transactional source of truth, multi-tenant RLS, `pgvector`, Multi-AZ ACID storage. |
-| **Redis / ElastiCache** | **DEFERRED (Ph 24)** | Deferred to Phase 24 for distributed rate limiting and token revocation denylist. |
-| **AWS SQS + DLQ** | **ACCEPTED** | Decoupled asynchronous job queue, worker resilience, automatic retry with DLQ. |
-| **AWS EventBridge** | **ACCEPTED** | Decoupled cross-module domain events and scheduled cron jobs (nightly deadline alerts). |
-| **Amazon DynamoDB** | **REJECTED** | Lacks relational integrity, composite foreign keys, and RLS needed for tender matrices. |
-| **AWS AppSync** | **REJECTED** | Unnecessary complexity; replaced by unidirectional Server-Sent Events (SSE) + REST. |
-| **Amazon CloudWatch** | **ACCEPTED** | Centralized container logs, operational metrics, CPU/memory alarms, DLQ alerts. |
-| **AWS Secrets Manager** | **ACCEPTED** | Secure credential injection at container boot time with automatic rotation. |
-| **AWS KMS** | **ACCEPTED** | Customer Managed Keys (CMK) for envelope encryption at rest across S3, RDS, SQS. |
-| **AWS IAM** | **ACCEPTED** | Role-based least-privilege security boundaries (Task Execution vs Task Runtime). |
-| **Amazon VPC & Endpoints**| **ACCEPTED** | 3-tier isolated subnet architecture with PrivateLink endpoints for zero-internet traffic. |
-| **Amazon ECR** | **ACCEPTED** | Private container image registry with automated vulnerability scanning on push. |
+| AWS Service                | Architectural Status | Primary Role in TenderPulse AI                                                            |
+| :------------------------- | :------------------- | :---------------------------------------------------------------------------------------- |
+| **Route 53**               | **ACCEPTED**         | Authoritative DNS, DNSSEC, health-checked failover routing.                               |
+| **CloudFront**             | **ACCEPTED**         | Edge caching for React SPA, DDoS mitigation, TLS 1.3 termination, S3 OAC.                 |
+| **Amazon S3**              | **ACCEPTED**         | Durable encrypted blob storage for 10MB–100MB tender PDFs and static SPA bundle.          |
+| **ALB (Load Balancer)**    | **ACCEPTED**         | Layer 7 load balancing, SSL termination, path routing, long-lived SSE connections.        |
+| **API Gateway**            | **REJECTED**         | 29-second hard timeout breaks Server-Sent Events (SSE) and heavy doc workflows.           |
+| **NestJS on ECS Fargate**  | **ACCEPTED**         | Enterprise application boundary, auth/RBAC, bid state machine, Presigned URL signer.      |
+| **FastAPI on ECS Fargate** | **ACCEPTED**         | Python worker for PyMuPDF extraction, OCR, LangGraph orchestration, SQS consumer.         |
+| **Amazon RDS PostgreSQL**  | **ACCEPTED**         | Transactional source of truth, multi-tenant RLS, `pgvector`, Multi-AZ ACID storage.       |
+| **Redis / ElastiCache**    | **DEFERRED (Ph 24)** | Deferred to Phase 24 for distributed rate limiting and token revocation denylist.         |
+| **AWS SQS + DLQ**          | **ACCEPTED**         | Decoupled asynchronous job queue, worker resilience, automatic retry with DLQ.            |
+| **AWS EventBridge**        | **ACCEPTED**         | Decoupled cross-module domain events and scheduled cron jobs (nightly deadline alerts).   |
+| **Amazon DynamoDB**        | **REJECTED**         | Lacks relational integrity, composite foreign keys, and RLS needed for tender matrices.   |
+| **AWS AppSync**            | **REJECTED**         | Unnecessary complexity; replaced by unidirectional Server-Sent Events (SSE) + REST.       |
+| **Amazon CloudWatch**      | **ACCEPTED**         | Centralized container logs, operational metrics, CPU/memory alarms, DLQ alerts.           |
+| **AWS Secrets Manager**    | **ACCEPTED**         | Secure credential injection at container boot time with automatic rotation.               |
+| **AWS KMS**                | **ACCEPTED**         | Customer Managed Keys (CMK) for envelope encryption at rest across S3, RDS, SQS.          |
+| **AWS IAM**                | **ACCEPTED**         | Role-based least-privilege security boundaries (Task Execution vs Task Runtime).          |
+| **Amazon VPC & Endpoints** | **ACCEPTED**         | 3-tier isolated subnet architecture with PrivateLink endpoints for zero-internet traffic. |
+| **Amazon ECR**             | **ACCEPTED**         | Private container image registry with automated vulnerability scanning on push.           |
 
 ---
 
 ## 4. Deep-Dive Service Evaluations (WHY, WHAT, HOW, COST, FAILURES, SECURITY, ALTERNATIVES)
 
 ### 4.1 Route 53 (DNS & Traffic Routing)
+
 - **WHY**: High-availability global DNS resolution with millisecond latency, DNSSEC support, and alias records to CloudFront and ALB.
 - **WHAT**: Highly available and scalable cloud Domain Name System (DNS) web service.
 - **HOW**: Hosts public zone `tenderpulse.ai`. Routes `app.tenderpulse.ai` via Alias record to CloudFront CDN, and `api.tenderpulse.ai` to ALB.
@@ -130,6 +131,7 @@ Every AWS service considered for TenderPulse AI has been evaluated against stric
 - **ALTERNATIVES**: Cloudflare DNS. Route 53 is preferred for native AWS ACM certificate integration and automated alias record resolution.
 
 ### 4.2 CloudFront (Content Delivery Network & Edge Security)
+
 - **WHY**: Delivers the React 18 SPA to Indian procurement users with single-digit millisecond latency via edge locations in Mumbai, Delhi, Chennai, Bangalore, Hyderabad, and Kolkata, while providing L3/L4 DDoS mitigation.
 - **WHAT**: Global Content Delivery Network (CDN) with Origin Access Control (OAC).
 - **HOW**:
@@ -141,6 +143,7 @@ Every AWS service considered for TenderPulse AI has been evaluated against stric
 - **ALTERNATIVES**: Cloudflare CDN, Fastly.
 
 ### 4.3 Amazon S3 (Simple Storage Service)
+
 - **WHY**: Government tenders (NIT, BoQ, Technical Specs, Corrigenda) range from 10MB to 100MB+. Storing large PDF blobs in PostgreSQL degrades database performance and bloats backups.
 - **WHAT**: Highly durable (99.999999999%), scalable, encrypted object storage.
 - **HOW**:
@@ -153,6 +156,7 @@ Every AWS service considered for TenderPulse AI has been evaluated against stric
 - **ALTERNATIVES**: Cloudflare R2, MinIO. S3 is preferred for AWS IAM Presigned URL integration and AWS KMS native governance.
 
 ### 4.4 Application Load Balancer (ALB) vs API Gateway
+
 - **DECISION**: **ALB ACCEPTED; API Gateway REJECTED**.
 - **WHY**:
   1. **Server-Sent Events (SSE)**: Document extraction streams progress over long-lived HTTP connections (60–180 seconds). API Gateway enforces a hard, unalterable **29-second execution timeout**, which abruptly terminates SSE streams and long-running AI extractions. ALB supports configurable idle timeouts up to 4,000 seconds.
@@ -161,10 +165,11 @@ Every AWS service considered for TenderPulse AI has been evaluated against stric
 - **HOW**: Routes incoming HTTPS traffic on port 443 to Target Group 1 (NestJS ECS Fargate containers on port 3000). Health checks target `/api/v1/health`.
 - **COST**: ~$16.20/month base + $0.008 per LCU-hour (approx. **$20–$35/month**).
 - **FAILURES**: Target group unhealthy. Mitigated by container health checks, graceful shutdown (`SIGTERM` handling), and connection draining (30s).
-- **SECURITY**: Security group accepts ingress *only* from CloudFront managed prefix list or AWS WAF. TLS 1.3 negotiated with ACM SSL certificate.
+- **SECURITY**: Security group accepts ingress _only_ from CloudFront managed prefix list or AWS WAF. TLS 1.3 negotiated with ACM SSL certificate.
 - **ALTERNATIVES**: Nginx on EC2 (undue maintenance/patching overhead), AWS HTTP API Gateway (lacks WAF integration on HTTP API tier, timeout limitations).
 
 ### 4.5 NestJS Runtime (Application API on ECS Fargate)
+
 - **WHY**: Governs the deterministic sovereign application boundary: user authentication, multi-tenant isolation, RBAC, tender state machines, S3 presigned URL signing, and audit logging.
 - **WHAT**: Containerized Node.js application running on AWS ECS Fargate in private subnets across 2 Availability Zones.
 - **HOW**: Container image pulled from Amazon ECR. Auto-scales from 2 to 10 tasks based on CPU utilization (>70%) and ALB request count per target.
@@ -174,6 +179,7 @@ Every AWS service considered for TenderPulse AI has been evaluated against stric
 - **ALTERNATIVES**: AWS Lambda (cold starts, 15-min timeout, connection exhaustion on PostgreSQL without proxy, incompatible with long-lived SSE connections), AWS EKS (massive operational overhead for a modular monolith).
 
 ### 4.6 FastAPI Runtime (AI & Document Intelligence Worker on ECS Fargate)
+
 - **WHY**: Isolates heavy document layout parsing (PyMuPDF, pdfplumber), OCR, and LangGraph multi-step cyclic reasoning in Python, preventing memory spikes from impacting the main web API.
 - **WHAT**: Containerized asynchronous Python worker consuming messages from AWS SQS.
 - **HOW**:
@@ -191,6 +197,7 @@ Every AWS service considered for TenderPulse AI has been evaluated against stric
 - **ALTERNATIVES**: AWS Batch (unnecessary queue orchestration overhead for sub-3-minute jobs), Celery on EC2 (requires managing VMs, Redis broker, and OS patching).
 
 ### 4.7 Amazon RDS PostgreSQL 16 (Multi-AZ Database)
+
 - **WHY**: Single transactional source of truth for all structured data (Tenants, Users, Bids, Documents, Compliance Items, Audit Logs) and vector embeddings (`pgvector`).
 - **WHAT**: Managed relational database with Multi-AZ automated failover, synchronous replication, and automated backups.
 - **HOW**:
@@ -199,16 +206,18 @@ Every AWS service considered for TenderPulse AI has been evaluated against stric
   - Automated daily backups + continuous Point-In-Time Recovery (PITR) with 30-day retention window.
 - **COST**: `db.t4g.medium` Multi-AZ (2 vCPU, 4GB RAM, 100GB gp3 SSD) = approx. **$75–$95/month**.
 - **FAILURES**: Primary database hardware failure triggers automatic Multi-AZ failover in <60 seconds with zero data loss (synchronous commit). Storage auto-scaling expands disk up to 1TB.
-- **SECURITY**: KMS CMK encryption at rest (`alias/tenderpulse-rds-key`). SSL/TLS 1.3 enforced (`sslmode=require`). Deployed in isolated subnet with Security Group accepting connections *only* from NestJS and FastAPI ECS security groups on port 5432.
+- **SECURITY**: KMS CMK encryption at rest (`alias/tenderpulse-rds-key`). SSL/TLS 1.3 enforced (`sslmode=require`). Deployed in isolated subnet with Security Group accepting connections _only_ from NestJS and FastAPI ECS security groups on port 5432.
 - **ALTERNATIVES**: Self-hosted PostgreSQL on EC2 (excessive operational risk), Amazon Aurora PostgreSQL (justified in future when read traffic requires automatic multi-region read replicas; standard RDS is more cost-effective for MVP/early growth).
 
 ### 4.8 Redis / Amazon ElastiCache (Caching & Distributed Locking)
+
 - **DECISION**: **DEFERRED TO PHASE 24**.
 - **WHY DEFERRED**: In Phase 23, in-memory rate limiting and PostgreSQL optimistic locking (`version` column) provide complete consistency. Introducing ElastiCache prematurely adds infrastructure cost ($15/mo) without architectural necessity.
 - **PLANNED ROLE (Phase 24)**: Distributed rate limiting across ECS tasks, JWT token revocation denylist, and LangGraph checkpoint memory.
 - **SECURITY**: Private subnet, transit encryption (TLS), auth token.
 
 ### 4.9 AWS SQS (Simple Queue Service) + Dead-Letter Queue (DLQ)
+
 - **WHY**: Eliminates synchronous coupling between API and AI extraction. Guarantees zero dropped jobs during traffic spikes or brief worker restarts.
 - **WHAT**: Fully managed, highly scalable distributed message queue.
 - **HOW**:
@@ -221,6 +230,7 @@ Every AWS service considered for TenderPulse AI has been evaluated against stric
 - **ALTERNATIVES**: RabbitMQ on EC2 (manual clustering/patching), Kafka/MSK (massive cost and complexity overkill for background job processing).
 
 ### 4.10 AWS EventBridge (Domain Events & Scheduled Jobs)
+
 - **WHY**: Enables asynchronous decoupling for cross-domain side effects (e.g. audit dispatch, user notifications) and scheduled cron rules (e.g. nightly tender deadline checks).
 - **WHAT**: Serverless event bus and scheduler.
 - **HOW**: Custom event bus `tenderpulse-domain-events`. NestJS emits reference-only domain events (`BidProjectCreated`, `ComplianceItemReviewed`). EventBridge Scheduler triggers nightly cron tasks.
@@ -230,14 +240,17 @@ Every AWS service considered for TenderPulse AI has been evaluated against stric
 - **ALTERNATIVES**: In-process EventEmitter (lost on container restart), Redis Pub/Sub (lacks durable delivery guarantees).
 
 ### 4.11 Amazon DynamoDB
+
 - **DECISION**: **REJECTED (ADR 0004)**.
 - **WHY REJECTED**: Government tender compliance workflows demand multi-entity relational integrity (Organizations $\rightarrow$ Users $\rightarrow$ Bids $\rightarrow$ Documents $\rightarrow$ Compliance Items $\rightarrow$ Provenance $\rightarrow$ Audit Logs), ACID transactions, composite foreign keys, and Row-Level Security (RLS). DynamoDB lacks relational joins and complex multi-column filter queries needed for interactive compliance checklists. PostgreSQL handles semi-structured metadata via native `JSONB` without sacrificing relational guarantees.
 
 ### 4.12 AWS AppSync / WebSockets
+
 - **DECISION**: **REJECTED (ADR 0005)**.
 - **WHY REJECTED**: TenderPulse real-time progress requirements are unidirectional (server broadcasting document extraction progress to the user). Server-Sent Events (SSE) over HTTP/2 provide native browser reconnection, standard Authorization headers, zero additional gateway infrastructure, and zero WebSocket connection state management. AppSync adds GraphQL schema overhead, DynamoDB lock-in, and unnecessary cost.
 
 ### 4.13 Amazon CloudWatch & Container Insights
+
 - **WHY**: Comprehensive operational telemetry, centralized container logs, infrastructure metrics, and automated alerts for system errors and security events.
 - **WHAT**: Cloud monitoring and observability service.
 - **HOW**:
@@ -250,15 +263,17 @@ Every AWS service considered for TenderPulse AI has been evaluated against stric
 - **ALTERNATIVES**: Datadog / New Relic (significantly higher cost; native CloudWatch integrates seamlessly with AWS IAM and alarms).
 
 ### 4.14 AWS Secrets Manager
+
 - **WHY**: Prevents database passwords, Bedrock configuration, JWT signing keys, and service tokens from being committed to Git or stored in plaintext environment variables.
 - **WHAT**: Managed secret storage with fine-grained IAM access control and automatic rotation.
 - **HOW**: Secrets stored as JSON: `tenderpulse/production/secrets`. Injected securely into ECS Fargate containers at task launch time via ECS task definition `secrets` block (retrieved directly by AWS Fargate infrastructure without writing secrets to container environment files).
 - **COST**: $0.40/secret/month + $0.05 per 10,000 API calls (approx. **$2–$5/month**).
-- **FAILURES**: Secrets Manager API rate limiting. Mitigated because secrets are fetched *only once* at container startup, then cached in application memory.
+- **FAILURES**: Secrets Manager API rate limiting. Mitigated because secrets are fetched _only once_ at container startup, then cached in application memory.
 - **SECURITY**: Encrypted with KMS CMK (`alias/tenderpulse-secrets-key`). IAM Task Execution Role is granted `secretsmanager:GetSecretValue` strictly for the application's secret ARN.
 - **ALTERNATIVES**: AWS Systems Manager Parameter Store (cheaper, but lacks native automated RDS password rotation).
 
 ### 4.15 AWS Key Management Service (KMS)
+
 - **WHY**: Central cryptographic authority providing hardware security module (HSM) backed envelope encryption for data at rest across all AWS services.
 - **WHAT**: Managed key generation and cryptographic operation service.
 - **HOW**: Dedicated Customer Managed Keys (CMK) created with automatic annual key rotation:
@@ -273,6 +288,7 @@ Every AWS service considered for TenderPulse AI has been evaluated against stric
 - **ALTERNATIVES**: AWS Managed Keys (`aws/s3`, `aws/rds`). CMKs are required because they provide explicit CloudTrail audit logging, key access revocation, and annual automatic rotation.
 
 ### 4.16 AWS Identity and Access Management (IAM)
+
 - **WHY**: Enforces the principle of least privilege across all human and machine identities, ensuring that compromising one service cannot lead to unauthorized lateral movement.
 - **WHAT**: Global identity and access authorization service.
 - **HOW**: Strict separation between **ECS Task Execution Role** (infrastructure boot permissions) and **ECS Task Role** (application runtime permissions):
@@ -283,6 +299,7 @@ Every AWS service considered for TenderPulse AI has been evaluated against stric
 - **SECURITY**: Zero wildcard `*` actions on sensitive resources; all IAM policies reference exact Resource ARNs and condition keys (`aws:PrincipalOrgID`, `aws:SecureTransport`).
 
 ### 4.17 Amazon Virtual Private Cloud (VPC) & Network Boundaries
+
 - **WHY**: Provides private network isolation, segmentation into distinct security zones, and ensures zero unauthenticated network paths to database and worker tiers.
 - **WHAT**: Dedicated private virtual network in `ap-south-1` (`10.0.0.0/16`).
 - **HOW**: 3-tier multi-AZ subnet topology (Public, Private Application, Isolated Database) across 2 Availability Zones (`ap-south-1a`, `ap-south-1b`).
@@ -291,6 +308,7 @@ Every AWS service considered for TenderPulse AI has been evaluated against stric
 - **SECURITY**: Network ACLs, Security Group chaining, zero public IP on private compute and database instances, VPC Flow Logs enabled for security auditing.
 
 ### 4.18 Amazon ECR (Elastic Container Registry)
+
 - **WHY**: Private, high-speed, secure container registry for storing and scanning Docker images for `@tenderpulse/api`, `@tenderpulse/web`, and `apps/ai`.
 - **WHAT**: Managed Docker container image registry.
 - **HOW**: CI/CD pipeline builds Docker images, runs automated vulnerability scans on push (`SCAN_ON_PUSH`), and tags images with Git commit SHA. ECS Fargate pulls images privately via ECR VPC Endpoints.
@@ -350,16 +368,16 @@ Security groups form a strict, chained firewall where each tier accepts traffic 
    - Ingress: Port 443 from `0.0.0.0/0` (filtered by CloudFront / AWS WAF).
    - Egress: Port 3000 to `sg-tenderpulse-api`.
 2. **API Container Security Group (`sg-tenderpulse-api`)**:
-   - Ingress: Port 3000 *only* from `sg-tenderpulse-alb`.
+   - Ingress: Port 3000 _only_ from `sg-tenderpulse-alb`.
    - Egress: Port 5432 to `sg-tenderpulse-db`, Port 443 to `sg-tenderpulse-vpce`.
 3. **AI Worker Security Group (`sg-tenderpulse-worker`)**:
    - Ingress: None (Worker pulls from SQS).
    - Egress: Port 5432 to `sg-tenderpulse-db`, Port 443 to `sg-tenderpulse-vpce`.
 4. **Database Security Group (`sg-tenderpulse-db`)**:
-   - Ingress: Port 5432 *only* from `sg-tenderpulse-api` and `sg-tenderpulse-worker`.
+   - Ingress: Port 5432 _only_ from `sg-tenderpulse-api` and `sg-tenderpulse-worker`.
    - Egress: None.
 5. **VPC Endpoints Security Group (`sg-tenderpulse-vpce`)**:
-   - Ingress: Port 443 *only* from `sg-tenderpulse-api` and `sg-tenderpulse-worker`.
+   - Ingress: Port 443 _only_ from `sg-tenderpulse-api` and `sg-tenderpulse-worker`.
    - Egress: None.
 
 ### 5.3 IAM Least Privilege: Execution Role vs Task Role
@@ -381,6 +399,7 @@ In AWS ECS Fargate, every container task utilizes two distinct IAM roles:
 ```
 
 #### Exact IAM Task Role Policy for NestJS API (`TenderPulseApiTaskPolicy`):
+
 ```json
 {
   "Version": "2012-10-17",
@@ -430,12 +449,12 @@ In AWS ECS Fargate, every container task utilizes two distinct IAM roles:
 
 ### 5.5 Backup & Disaster Recovery Strategy
 
-| Resource | Backup Mechanism | Recovery Point Objective (RPO) | Recovery Time Objective (RTO) | Retention Policy |
-| :--- | :--- | :--- | :--- | :--- |
-| **RDS PostgreSQL** | Continuous Point-In-Time Recovery (PITR) + Daily Automated Snapshots | RPO $\le$ 5 minutes | RTO $\le$ 15 minutes | 30 Days |
-| **S3 Document Vault** | S3 Object Versioning + Cross-Region Replication (CRR) to `ap-south-2` | RPO $\approx$ 0 (Synchronous write) | RTO $\le$ 5 minutes | Indefinite / Lifecycle rule |
-| **Infrastructure** | 100% Declarative Terraform Code in Version Control | RPO = 0 (Git committed) | RTO $\le$ 30 minutes | Git History |
-| **Container Images** | Amazon ECR with Immutable Image Tags | RPO = 0 (Registry stored) | RTO $\le$ 5 minutes | 30 recent builds |
+| Resource              | Backup Mechanism                                                      | Recovery Point Objective (RPO)      | Recovery Time Objective (RTO) | Retention Policy            |
+| :-------------------- | :-------------------------------------------------------------------- | :---------------------------------- | :---------------------------- | :-------------------------- |
+| **RDS PostgreSQL**    | Continuous Point-In-Time Recovery (PITR) + Daily Automated Snapshots  | RPO $\le$ 5 minutes                 | RTO $\le$ 15 minutes          | 30 Days                     |
+| **S3 Document Vault** | S3 Object Versioning + Cross-Region Replication (CRR) to `ap-south-2` | RPO $\approx$ 0 (Synchronous write) | RTO $\le$ 5 minutes           | Indefinite / Lifecycle rule |
+| **Infrastructure**    | 100% Declarative Terraform Code in Version Control                    | RPO = 0 (Git committed)             | RTO $\le$ 30 minutes          | Git History                 |
+| **Container Images**  | Amazon ECR with Immutable Image Tags                                  | RPO = 0 (Registry stored)           | RTO $\le$ 5 minutes           | 30 recent builds            |
 
 ---
 
@@ -477,28 +496,29 @@ TenderPulse AI guarantees that **Tenant A can NEVER access or infer Tenant B's d
 
 ## 7. Monthly AWS Infrastructure Cost Model (Production MVP)
 
-| Component | AWS Resource Details | Estimated Monthly Cost (USD) |
-| :--- | :--- | :--- |
-| **Compute: Application API** | 2 × ECS Fargate Tasks (0.5 vCPU, 1GB RAM) in Multi-AZ | $28.00 |
-| **Compute: AI Worker** | 2 × ECS Fargate Tasks (1 vCPU, 2GB RAM) in Multi-AZ | $45.00 |
-| **Database** | Amazon RDS PostgreSQL 16 Multi-AZ (`db.t4g.medium`, 100GB gp3) | $78.00 |
-| **Load Balancing** | Application Load Balancer (ALB) + LCU hours | $22.00 |
-| **Networking & Egress** | 1 × NAT Gateway + VPC Interface Endpoints (S3, SQS, Bedrock) | $48.00 |
-| **Object Storage** | Amazon S3 (500GB Standard + 1TB Glacier Flexible) | $15.00 |
-| **CDN & DNS** | CloudFront (500GB transfer out) + Route 53 (2 Hosted Zones) | $12.00 |
-| **Queues & Events** | AWS SQS (5M requests) + EventBridge (1M events) | $3.00 |
-| **Security & Secrets** | AWS KMS (5 CMKs) + AWS Secrets Manager (4 secrets) | $7.00 |
-| **Observability** | CloudWatch Logs (20GB ingestion) + Alarms | $12.00 |
-| **AI Inference** | AWS Bedrock (Claude 3.5 Sonnet token consumption - pay per use) | $50.00 – $150.00 |
-| **TOTAL ESTIMATED MONTHLY**| **High-Availability, Multi-AZ, Enterprise Sovereign SaaS** | **~$320.00 – $420.00 / month** |
+| Component                    | AWS Resource Details                                            | Estimated Monthly Cost (USD)   |
+| :--------------------------- | :-------------------------------------------------------------- | :----------------------------- |
+| **Compute: Application API** | 2 × ECS Fargate Tasks (0.5 vCPU, 1GB RAM) in Multi-AZ           | $28.00                         |
+| **Compute: AI Worker**       | 2 × ECS Fargate Tasks (1 vCPU, 2GB RAM) in Multi-AZ             | $45.00                         |
+| **Database**                 | Amazon RDS PostgreSQL 16 Multi-AZ (`db.t4g.medium`, 100GB gp3)  | $78.00                         |
+| **Load Balancing**           | Application Load Balancer (ALB) + LCU hours                     | $22.00                         |
+| **Networking & Egress**      | 1 × NAT Gateway + VPC Interface Endpoints (S3, SQS, Bedrock)    | $48.00                         |
+| **Object Storage**           | Amazon S3 (500GB Standard + 1TB Glacier Flexible)               | $15.00                         |
+| **CDN & DNS**                | CloudFront (500GB transfer out) + Route 53 (2 Hosted Zones)     | $12.00                         |
+| **Queues & Events**          | AWS SQS (5M requests) + EventBridge (1M events)                 | $3.00                          |
+| **Security & Secrets**       | AWS KMS (5 CMKs) + AWS Secrets Manager (4 secrets)              | $7.00                          |
+| **Observability**            | CloudWatch Logs (20GB ingestion) + Alarms                       | $12.00                         |
+| **AI Inference**             | AWS Bedrock (Claude 3.5 Sonnet token consumption - pay per use) | $50.00 – $150.00               |
+| **TOTAL ESTIMATED MONTHLY**  | **High-Availability, Multi-AZ, Enterprise Sovereign SaaS**      | **~$320.00 – $420.00 / month** |
 
 ---
 
 ## 8. Summary & Next Steps
 
-This architecture delivers a **production-grade, secure, multi-tenant, SOC2/DPDP-compliant** infrastructure on AWS. 
+This architecture delivers a **production-grade, secure, multi-tenant, SOC2/DPDP-compliant** infrastructure on AWS.
 
 Proceed to Phase 23 implementation:
+
 1. Initialize Terraform modular structure in `infrastructure/terraform/`.
 2. Define VPC, Subnets, Gateways, and Security Groups in `infrastructure/terraform/modules/vpc/`.
 3. Define RDS PostgreSQL Multi-AZ and PgBouncer in `infrastructure/terraform/modules/rds/`.

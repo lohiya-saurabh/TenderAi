@@ -8,7 +8,11 @@ import type {
   CompanyRegistryProvider,
   McaCompanyMasterDetails,
 } from '../domain/ports/CompanyRegistryProvider.js';
-import { BadRequestError, NotFoundError, InternalServerError } from '../../../common/errors/errors.js';
+import {
+  BadRequestError,
+  NotFoundError,
+  InternalServerError,
+} from '../../../common/errors/errors.js';
 
 interface RawMcaResponse {
   cin?: string;
@@ -96,13 +100,19 @@ export class McaRegistryAdapter implements CompanyRegistryProvider {
       };
     } catch (err: unknown) {
       clearTimeout(timer);
-      if (err instanceof BadRequestError || err instanceof NotFoundError || err instanceof InternalServerError) {
+      if (
+        err instanceof BadRequestError ||
+        err instanceof NotFoundError ||
+        err instanceof InternalServerError
+      ) {
         throw err;
       }
       if (err instanceof Error && err.name === 'AbortError') {
         throw new InternalServerError(`MCA request timed out after ${this.timeoutMs}ms.`);
       }
-      this.logger.error(`Error connecting to MCA API: ${err instanceof Error ? err.message : String(err)}`);
+      this.logger.error(
+        `Error connecting to MCA API: ${err instanceof Error ? err.message : String(err)}`,
+      );
       throw new InternalServerError('Unable to reach MCA verification service.');
     }
   }

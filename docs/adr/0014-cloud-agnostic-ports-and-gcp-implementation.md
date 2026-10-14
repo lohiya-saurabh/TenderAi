@@ -35,15 +35,16 @@ We adopt a **Cloud-Agnostic Port-and-Adapter Architecture** and deliver full **G
 
 We maintain pluggable adapters selectable via environment variables (`STORAGE_PROVIDER`, `QUEUE_PROVIDER`):
 
-| Cloud Provider | Storage Adapter (`IStorageService`) | Queue Adapter (`IJobQueue`) | AI Model Provider |
-| :--- | :--- | :--- | :--- |
-| **GCP** | `GcsStorageService` (Cloud Storage V4 Signed URLs) | `GcpPubSubJobQueue` (Cloud Pub/Sub + Dead Letter) | Vertex AI Gemini 1.5 Pro (`asia-south1`) |
-| **AWS** | `AwsS3StorageService` (S3 Presigned URLs) | `AwsSqsJobQueue` (SQS + DLQ Redrive) | Bedrock Claude 3.5 Sonnet (`ap-south-1`) |
-| **Local / Test** | `MockStorageService` / In-Memory | `MockJobQueue` / In-Memory | Local In-Memory Mock Extractor |
+| Cloud Provider   | Storage Adapter (`IStorageService`)                | Queue Adapter (`IJobQueue`)                       | AI Model Provider                        |
+| :--------------- | :------------------------------------------------- | :------------------------------------------------ | :--------------------------------------- |
+| **GCP**          | `GcsStorageService` (Cloud Storage V4 Signed URLs) | `GcpPubSubJobQueue` (Cloud Pub/Sub + Dead Letter) | Vertex AI Gemini 1.5 Pro (`asia-south1`) |
+| **AWS**          | `AwsS3StorageService` (S3 Presigned URLs)          | `AwsSqsJobQueue` (SQS + DLQ Redrive)              | Bedrock Claude 3.5 Sonnet (`ap-south-1`) |
+| **Local / Test** | `MockStorageService` / In-Memory                   | `MockJobQueue` / In-Memory                        | Local In-Memory Mock Extractor           |
 
 ### 3. Google Cloud Platform (GCP) Infrastructure
 
 A dedicated Terraform environment is created at `infrastructure/terraform/environments/gcp-local/`:
+
 1. **Google Cloud Storage (GCS)**:
    - Regional bucket in `asia-south1` (Mumbai).
    - Uniform bucket-level access enabled.

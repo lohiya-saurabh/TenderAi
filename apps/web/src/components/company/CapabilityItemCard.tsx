@@ -1,10 +1,7 @@
 import React from 'react';
 import { Button } from '../common/Button.js';
 import { CapabilityStatusBadge } from './CapabilityStatusBadge.js';
-import {
-  type BaseCapabilityItem,
-  getDaysUntilExpiry,
-} from './companyProfileData.js';
+import { type BaseCapabilityItem, getDaysUntilExpiry } from './companyProfileData.js';
 import { AlertTriangle, FileText } from 'lucide-react';
 
 export interface KeyValueField {
@@ -45,9 +42,7 @@ export const CapabilityItemCard: React.FC<CapabilityItemCardProps> = ({
               {typeBadge}
             </span>
           )}
-          <h3 className="text-sm font-bold text-foreground m-0">
-            {item.title}
-          </h3>
+          <h3 className="text-sm font-bold text-foreground m-0">{item.title}</h3>
         </div>
 
         <div className="flex items-center gap-2">
@@ -85,7 +80,9 @@ export const CapabilityItemCard: React.FC<CapabilityItemCardProps> = ({
             <span className="text-xs font-semibold text-foreground">
               {expiryDate}{' '}
               {daysRemaining !== null && (
-                <span className={`text-[11px] ${daysRemaining <= 30 ? 'text-orange-600 font-bold' : 'text-muted-foreground'}`}>
+                <span
+                  className={`text-[11px] ${daysRemaining <= 30 ? 'text-orange-600 font-bold' : 'text-muted-foreground'}`}
+                >
                   ({daysRemaining > 0 ? `${daysRemaining}d left` : 'Expired'})
                 </span>
               )}
@@ -116,9 +113,7 @@ export const CapabilityItemCard: React.FC<CapabilityItemCardProps> = ({
             </span>
           </div>
         ) : (
-          <span className="text-xs text-muted-foreground italic">
-            No evidence document linked
-          </span>
+          <span className="text-xs text-muted-foreground italic">No evidence document linked</span>
         )}
 
         {item.evidenceDocName && onViewEvidence && (

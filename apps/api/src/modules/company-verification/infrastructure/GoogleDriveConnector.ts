@@ -37,7 +37,7 @@ export class GoogleDriveConnector implements DocumentSourceConnector {
     // Production: Call Google Drive v3 REST API when OAuth token is supplied
     if (accessToken) {
       try {
-        const queryParts = ["trashed = false", "mimeType = 'application/pdf'"];
+        const queryParts = ['trashed = false', "mimeType = 'application/pdf'"];
         if (folderId) {
           queryParts.push(`'${folderId}' in parents`);
         }
@@ -64,7 +64,9 @@ export class GoogleDriveConnector implements DocumentSourceConnector {
         }));
       } catch (err: unknown) {
         if (err instanceof BadRequestError) throw err;
-        this.logger.error(`Error connecting to Google Drive API: ${err instanceof Error ? err.message : String(err)}`);
+        this.logger.error(
+          `Error connecting to Google Drive API: ${err instanceof Error ? err.message : String(err)}`,
+        );
         throw new InternalServerError('Unable to connect to Google Drive service.');
       }
     }
@@ -120,7 +122,9 @@ export class GoogleDriveConnector implements DocumentSourceConnector {
         });
 
         if (!response.ok) {
-          throw new BadRequestError(`Failed to download file from Google Drive (${response.status}).`);
+          throw new BadRequestError(
+            `Failed to download file from Google Drive (${response.status}).`,
+          );
         }
 
         const arrayBuf = await response.arrayBuffer();

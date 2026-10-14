@@ -46,7 +46,8 @@ export const AuditHistoryPage: React.FC = () => {
           Tamper-Evident Audit Trail
         </h1>
         <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-          Cryptographically recorded timeline of all document extractions, human adjudications, risk waivers, and state transitions for this tender project.
+          Cryptographically recorded timeline of all document extractions, human adjudications, risk
+          waivers, and state transitions for this tender project.
         </p>
       </div>
 

@@ -4,11 +4,7 @@ import type { ComplianceItem } from '../../../api/compliance.js';
 import { Card, CardHeader, CardTitle, CardContent } from '../../common/Card.js';
 import { Badge } from '../../common/Badge.js';
 import { StatusBadge } from '../../common/StatusBadge.js';
-import {
-  ReviewRequiredIcon,
-  CheckIcon,
-  ChevronRightIcon,
-} from '../../common/Icons.js';
+import { ReviewRequiredIcon, CheckIcon, ChevronRightIcon } from '../../common/Icons.js';
 import { getReviewNeededItems } from './bidDetailData.js';
 
 export interface ReviewNeededCardProps {
@@ -75,7 +71,13 @@ export const ReviewNeededCard: React.FC<ReviewNeededCardProps> = ({ items }) => 
               <CheckIcon size={14} />
             </span>
             <div>
-              <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-surface-text)' }}>
+              <div
+                style={{
+                  fontSize: 'var(--text-sm)',
+                  fontWeight: 600,
+                  color: 'var(--color-surface-text)',
+                }}
+              >
                 All caught up
               </div>
               <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)' }}>
@@ -86,45 +88,67 @@ export const ReviewNeededCard: React.FC<ReviewNeededCardProps> = ({ items }) => 
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {reviewNeeded.map((item) => {
-                const title = (item as { title?: string }).title || item.requirement;
-                return (
-              <Link
-                key={item.id}
-                to={`/bids/${item.bidId}/compliance/${item.id}`}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 'var(--space-3)',
-                  padding: '0.65rem 0.85rem',
-                  borderRadius: 'var(--radius-md)',
-                  backgroundColor: 'var(--color-surface-card-subtle)',
-                  border: '1px solid var(--color-surface-border)',
-                  textDecoration: 'none',
-                  transition: 'background-color var(--transition-fast)',
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-surface-card-hover)')}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-surface-card-subtle)')}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', minWidth: 0 }}>
-                  <span style={{ color: 'var(--color-warning)', display: 'inline-flex', flexShrink: 0 }}>
-                    <ReviewRequiredIcon size={15} />
-                  </span>
-                  <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                    <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-surface-text)' }}>
-                      {title}
+              const title = (item as { title?: string }).title || item.requirement;
+              return (
+                <Link
+                  key={item.id}
+                  to={`/bids/${item.bidId}/compliance/${item.id}`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 'var(--space-3)',
+                    padding: '0.65rem 0.85rem',
+                    borderRadius: 'var(--radius-md)',
+                    backgroundColor: 'var(--color-surface-card-subtle)',
+                    border: '1px solid var(--color-surface-border)',
+                    textDecoration: 'none',
+                    transition: 'background-color var(--transition-fast)',
+                  }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.backgroundColor = 'var(--color-surface-card-hover)')
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.backgroundColor = 'var(--color-surface-card-subtle)')
+                  }
+                >
+                  <div
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', minWidth: 0 }}
+                  >
+                    <span
+                      style={{
+                        color: 'var(--color-warning)',
+                        display: 'inline-flex',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <ReviewRequiredIcon size={15} />
                     </span>
-                    <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)' }}>
-                      {item.category}
-                      {item.humanReviewRequired ? ' • flagged for human review' : ''}
-                    </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                      <span
+                        style={{
+                          fontSize: 'var(--text-sm)',
+                          fontWeight: 600,
+                          color: 'var(--color-surface-text)',
+                        }}
+                      >
+                        {title}
+                      </span>
+                      <span
+                        style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)' }}
+                      >
+                        {item.category}
+                        {item.humanReviewRequired ? ' • flagged for human review' : ''}
+                      </span>
+                    </div>
                   </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
-                  <StatusBadge status={item.status} size="sm" />
-                  <ChevronRightIcon size={14} color="var(--color-surface-subtle)" />
-                </div>
-              </Link>
+                  <div
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}
+                  >
+                    <StatusBadge status={item.status} size="sm" />
+                    <ChevronRightIcon size={14} color="var(--color-surface-subtle)" />
+                  </div>
+                </Link>
               );
             })}
           </div>

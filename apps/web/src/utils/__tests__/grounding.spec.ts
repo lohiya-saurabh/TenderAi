@@ -9,7 +9,8 @@ describe('deriveGroundingMatch — Deterministic Citation Verification', () => {
         documentName: 'Notice_Inviting_Tender_Vol_I.pdf',
         pageNumber: 12,
         sectionOrClause: 'Section II — ITB Clause 2.2.2.1',
-        verbatimQuote: 'The Bidder must have successfully completed as a prime contractor at least one similar highway project.',
+        verbatimQuote:
+          'The Bidder must have successfully completed as a prime contractor at least one similar highway project.',
         confidenceScore: 0.96,
       },
     };

@@ -25,10 +25,7 @@ import { computeReadiness, type ReadinessSummary } from '../../../utils/readines
 // ---------------------------------------------------------------------------
 
 export type BidRecommendation =
-  | 'PURSUE'
-  | 'DO_NOT_PURSUE'
-  | 'REVIEW_REQUIRED'
-  | 'RECOMMENDATION_UNAVAILABLE';
+  'PURSUE' | 'DO_NOT_PURSUE' | 'REVIEW_REQUIRED' | 'RECOMMENDATION_UNAVAILABLE';
 
 /**
  * Frontend-friendly decision view mapped from the API response.
@@ -123,8 +120,16 @@ export function formatDisqualifierItem(d: unknown): string | null {
   if (typeof d === 'object') {
     const obj = d as Record<string, unknown>;
     const title = String(obj.title || obj.requirement_title || obj.requirementTitle || '');
-    const reason = String(obj.reason || obj.shortfall_detail || obj.shortfallDetail || obj.detail || '');
-    const shortfall = String(obj.shortfallDetail || obj.shortfall_detail || obj.clauseReference || obj.clause_reference || '');
+    const reason = String(
+      obj.reason || obj.shortfall_detail || obj.shortfallDetail || obj.detail || '',
+    );
+    const shortfall = String(
+      obj.shortfallDetail ||
+        obj.shortfall_detail ||
+        obj.clauseReference ||
+        obj.clause_reference ||
+        '',
+    );
     if (title && reason) {
       return `${title}: ${reason}${shortfall && shortfall !== reason ? ` (${shortfall})` : ''}`;
     }
@@ -145,7 +150,9 @@ export function formatMissingItem(g: unknown): string | null {
   if (typeof g === 'object') {
     const obj = g as Record<string, unknown>;
     const title = String(obj.title || obj.requirement_title || obj.requirementTitle || '');
-    const missing = String(obj.missingFactor || obj.missing_factor || obj.detail || obj.reason || '');
+    const missing = String(
+      obj.missingFactor || obj.missing_factor || obj.detail || obj.reason || '',
+    );
     const action = String(obj.suggestedAction || obj.suggested_action || obj.mitigation || '');
     if (title && missing) {
       return `${title}: ${missing}${action ? ` — ${action}` : ''}`;
@@ -166,8 +173,17 @@ export function formatUncertainItem(u: unknown): string | null {
   if (typeof u === 'string') return u;
   if (typeof u === 'object') {
     const obj = u as Record<string, unknown>;
-    const title = String(obj.title || obj.clauseReference || obj.clause_reference || obj.ambiguityType || '');
-    const detail = String(obj.detail || obj.quote || obj.recommendedClarification || obj.recommended_clarification || obj.summary || '');
+    const title = String(
+      obj.title || obj.clauseReference || obj.clause_reference || obj.ambiguityType || '',
+    );
+    const detail = String(
+      obj.detail ||
+        obj.quote ||
+        obj.recommendedClarification ||
+        obj.recommended_clarification ||
+        obj.summary ||
+        '',
+    );
     if (title && detail) return `${title}: ${detail}`;
     if (detail) return detail;
     if (title) return title;
@@ -185,7 +201,12 @@ export function formatCommercialRiskItem(r: unknown): string | null {
   if (typeof r === 'string') return r;
   if (typeof r === 'object') {
     const obj = r as Record<string, unknown>;
-    const title = String(obj.title || (obj.category ? String(obj.category).replace(/_/g, ' ') : '') || (obj.level ? `${obj.level} Risk` : (obj.severity ? `${obj.severity} Risk` : '')) || '');
+    const title = String(
+      obj.title ||
+        (obj.category ? String(obj.category).replace(/_/g, ' ') : '') ||
+        (obj.level ? `${obj.level} Risk` : obj.severity ? `${obj.severity} Risk` : '') ||
+        '',
+    );
     const detail = String(obj.detail || obj.summary || obj.description || '');
     const advice = String(obj.mitigationAdvice || obj.mitigation_advice || obj.mitigation || '');
     if (title && detail && advice) return `${title}: ${detail} [${advice}]`;
@@ -305,9 +326,12 @@ export function getComplianceRollup(
     pending: items.filter((i) => getStatus(i) === 'PENDING' || getStatus(i) === 'MISSING').length,
     ready: items.filter((i) => getStatus(i) === 'READY' || getStatus(i) === 'PASS').length,
     flagged: items.filter((i) => getStatus(i) === 'FLAGGED' || getStatus(i) === 'FAIL').length,
-    waived: items.filter((i) => getStatus(i) === 'WAIVED' || getStatus(i) === 'NOT_APPLICABLE').length,
+    waived: items.filter((i) => getStatus(i) === 'WAIVED' || getStatus(i) === 'NOT_APPLICABLE')
+      .length,
     reviewRequired: items.filter((i) => i.humanReviewRequired).length,
-    reviewNeeded: items.filter((i) => getStatus(i) === 'PENDING' || getStatus(i) === 'MISSING' || i.humanReviewRequired).length,
+    reviewNeeded: items.filter(
+      (i) => getStatus(i) === 'PENDING' || getStatus(i) === 'MISSING' || i.humanReviewRequired,
+    ).length,
     readiness: computeReadiness(bid),
   };
 }
@@ -380,7 +404,9 @@ export function getReviewNeededItems(items: ComplianceItem[]): ComplianceItem[] 
   const getStatus = (item: ComplianceItem): string => item.status;
 
   return items
-    .filter((i) => getStatus(i) === 'PENDING' || getStatus(i) === 'MISSING' || i.humanReviewRequired)
+    .filter(
+      (i) => getStatus(i) === 'PENDING' || getStatus(i) === 'MISSING' || i.humanReviewRequired,
+    )
     .sort((a, b) => {
       const aPending = getStatus(a) === 'PENDING' || getStatus(a) === 'MISSING' ? 0 : 1;
       const bPending = getStatus(b) === 'PENDING' || getStatus(b) === 'MISSING' ? 0 : 1;
@@ -442,9 +468,7 @@ export interface ApiBidDecisionSummary {
  *
  * All reasons are flattened into a single evidence-backed string list without `undefined` artifacts.
  */
-export function mapApiDecisionToBidDecision(
-  api: ApiBidDecisionSummary,
-): BidDecision {
+export function mapApiDecisionToBidDecision(api: ApiBidDecisionSummary): BidDecision {
   // GO → PURSUE, CONDITIONAL_GO → REVIEW_REQUIRED, NO_GO → DO_NOT_PURSUE, REVIEW_REQUIRED → REVIEW_REQUIRED
   const verdictMap: Record<ApiBidDecisionSummary['verdict'], BidRecommendation> = {
     GO: 'PURSUE',

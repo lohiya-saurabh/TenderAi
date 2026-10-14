@@ -9,7 +9,7 @@ import { BulkIngestComplianceDto, BulkIngestPayload } from './dto/BulkIngestComp
 export class InternalWorkerController {
   constructor(
     private readonly bulkIngestUseCase: BulkIngestComplianceUseCase,
-    private readonly serviceGuard: InternalServiceGuard
+    private readonly serviceGuard: InternalServiceGuard,
   ) {}
 
   public async ingestBatch(
@@ -17,7 +17,7 @@ export class InternalWorkerController {
     organizationId: string,
     bidId: string,
     workerId: string,
-    rawPayload: BulkIngestPayload
+    rawPayload: BulkIngestPayload,
   ): Promise<BulkIngestComplianceResult> {
     this.serviceGuard.validate(authHeaderKey);
     const dto = new BulkIngestComplianceDto(rawPayload);

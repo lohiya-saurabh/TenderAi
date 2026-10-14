@@ -180,3 +180,68 @@ class TestTraceLoggingMiddleware:
         assert response.status_code == 200
         assert "X-Trace-Id" in response.headers
         assert len(response.headers["X-Trace-Id"]) > 0
+
+
+class TestDualSinkLoggingAndTruncation:
+    def test_truncates_oversized_prompts_and_document_content(self):
+        huge_prompt = "Extract all requirements from the following tender " * 20
+        raw_payload = json.dumps({"prompt": huge_prompt, "other_field": "safe"})
+
+        scrubbed, was_scrubbed = SecretSanitizer.scrub(raw_payload)
+        assert was_scrubbed is True
+        assert "[TRUNCATED:" in scrubbed
+        assert "chars omitted for log safety" in scrubbed
+
+        # Ensure valid JSON output after truncation
+        parsed = json.loads(scrubbed)
+        assert parsed["other_field"] == "safe"
+        assert len(parsed["prompt"]) < 400
+
+    def test_console_log_formatter_emits_clean_single_line(self):
+        from tenderpulse_ai.logging.formatter import ConsoleLogFormatter
+
+        formatter = ConsoleLogFormatter(service_name="fastapi")
+        logger = logging.getLogger("test_console")
+
+        with scoped_logging_context(trace_id="trc_test_9999", tenant_id="tenant_acme"):
+            record = logger.makeRecord(
+                name="test_console",
+                level=logging.INFO,
+                fn="test.py",
+                lno=42,
+                msg="Pipeline step completed",
+                args=(),
+                exc_info=None,
+                extra={"duration_ms": 45.2},
+            )
+            line = formatter.format(record)
+
+            assert "INFO" in line
+            assert "[fastapi]" in line
+            assert "[trc_test_999]" in line
+            assert "Pipeline step completed" in line
+            assert "(45.2ms)" in line
+            assert "{" not in line  # Not raw JSON!
+
+    def test_rotating_file_handler_rotates_and_enforces_retention(self, tmp_path):
+        from logging.handlers import RotatingFileHandler
+
+        log_file = tmp_path / "test_ai.log"
+        handler = RotatingFileHandler(str(log_file), maxBytes=200, backupCount=2, encoding="utf-8")
+        handler.setFormatter(JSONLogFormatter(service_name="fastapi"))
+
+        test_logger = logging.getLogger("test_rotator")
+        test_logger.setLevel(logging.INFO)
+        test_logger.addHandler(handler)
+
+        try:
+            for i in range(5):
+                test_logger.info("Log line #%d with some long content padding %s", i, "y" * 60)
+            handler.flush()
+            handler.close()
+
+            assert log_file.exists()
+            assert (tmp_path / "test_ai.log.1").exists()
+        finally:
+            test_logger.removeHandler(handler)
+

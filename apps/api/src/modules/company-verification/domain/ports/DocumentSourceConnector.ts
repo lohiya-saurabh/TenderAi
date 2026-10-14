@@ -31,12 +31,18 @@ export interface DocumentSourceConnector {
   /**
    * List files available for import from the external repository.
    */
-  listFiles(authContext?: Record<string, unknown>, folderId?: string): Promise<ExternalSourceFile[]>;
+  listFiles(
+    authContext?: Record<string, unknown>,
+    folderId?: string,
+  ): Promise<ExternalSourceFile[]>;
 
   /**
    * Download a specific file's binary stream for persistent object storage.
    */
-  downloadFile(authContext: Record<string, unknown>, externalFileId: string): Promise<DownloadedSourceFile>;
+  downloadFile(
+    authContext: Record<string, unknown>,
+    externalFileId: string,
+  ): Promise<DownloadedSourceFile>;
 }
 
 export const DOCUMENT_SOURCE_CONNECTOR = Symbol('DocumentSourceConnector');

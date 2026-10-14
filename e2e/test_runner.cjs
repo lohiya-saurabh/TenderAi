@@ -8,13 +8,13 @@ const { chromium } = require('playwright');
   const consoleLogs = [];
   const networkErrors = [];
 
-  page.on('console', msg => {
+  page.on('console', (msg) => {
     if (msg.type() === 'error' || msg.type() === 'warning') {
       consoleLogs.push({ type: msg.type(), text: msg.text() });
     }
   });
 
-  page.on('response', resp => {
+  page.on('response', (resp) => {
     if (resp.status() >= 400) {
       networkErrors.push({ url: resp.url(), status: resp.status() });
     }

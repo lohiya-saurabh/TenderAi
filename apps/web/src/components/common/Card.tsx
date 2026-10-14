@@ -21,9 +21,9 @@ export const Card: React.FC<CardProps> = ({
         return {
           backgroundColor: 'var(--color-surface-card)',
           border: '1px solid var(--color-surface-border)',
-          boxShadow: 'var(--shadow-sm)',
+          boxShadow: 'var(--shadow-sm, 0 1px 3px 0 rgba(0, 0, 0, 0.06))',
           cursor: 'pointer',
-          transition: 'all var(--transition-fast)',
+          transition: 'all var(--transition-fast, 150ms cubic-bezier(0.4, 0, 0.2, 1))',
         };
       case 'bordered':
         return {
@@ -43,7 +43,7 @@ export const Card: React.FC<CardProps> = ({
         return {
           backgroundColor: 'var(--color-surface-card)',
           border: '1px solid var(--color-surface-border)',
-          boxShadow: 'var(--shadow-sm)',
+          boxShadow: 'var(--shadow-sm, 0 1px 3px 0 rgba(0, 0, 0, 0.04))',
         };
     }
   };
@@ -53,12 +53,12 @@ export const Card: React.FC<CardProps> = ({
       case 'none':
         return '0';
       case 'sm':
-        return 'var(--space-3)';
+        return 'var(--space-3, 0.75rem)';
       case 'lg':
-        return 'var(--space-6)';
+        return 'var(--space-6, 1.5rem)';
       case 'md':
       default:
-        return 'var(--space-5)';
+        return 'var(--space-5, 1.25rem)';
     }
   };
 
@@ -66,7 +66,7 @@ export const Card: React.FC<CardProps> = ({
     <div
       className={`card card-${variant} ${className}`}
       style={{
-        borderRadius: 'var(--radius-lg)',
+        borderRadius: 'var(--radius-lg, 0.75rem)',
         padding: getPaddingStyles(),
         display: 'flex',
         flexDirection: 'column',
@@ -98,8 +98,8 @@ export const CardHeader: React.FC<CardHeaderProps> = ({
         display: 'flex',
         alignItems: 'flex-start',
         justifyContent: 'space-between',
-        gap: 'var(--space-3)',
-        marginBottom: 'var(--space-3)',
+        gap: 'var(--space-3, 0.75rem)',
+        marginBottom: 'var(--space-3, 0.75rem)',
         ...style,
       }}
       {...props}
@@ -127,11 +127,11 @@ export const CardTitle: React.FC<CardTitleProps> = ({
     <Component
       className={`card-title ${className}`}
       style={{
-        fontSize: 'var(--text-lg)',
-        fontWeight: 'var(--font-semibold)' as unknown as number,
+        fontSize: 'var(--text-lg, 1.125rem)',
+        fontWeight: 'var(--font-semibold, 600)' as unknown as number,
         color: 'var(--color-surface-text)',
         letterSpacing: '-0.01em',
-        lineHeight: 'var(--leading-tight)',
+        lineHeight: 'var(--leading-tight, 1.25)',
         ...style,
       }}
       {...props}
@@ -151,9 +151,9 @@ export const CardDescription: React.FC<React.HTMLAttributes<HTMLParagraphElement
     <p
       className={`card-description ${className}`}
       style={{
-        fontSize: 'var(--text-sm)',
+        fontSize: 'var(--text-sm, 0.875rem)',
         color: 'var(--color-surface-muted)',
-        lineHeight: 'var(--leading-normal)',
+        lineHeight: 'var(--leading-normal, 1.5)',
         ...style,
       }}
       {...props}
@@ -196,9 +196,9 @@ export const CardFooter: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'flex-end',
-        gap: 'var(--space-3)',
-        marginTop: 'var(--space-4)',
-        paddingTop: 'var(--space-3)',
+        gap: 'var(--space-3, 0.75rem)',
+        marginTop: 'var(--space-4, 1rem)',
+        paddingTop: 'var(--space-3, 0.75rem)',
         borderTop: '1px solid var(--color-surface-border)',
         ...style,
       }}

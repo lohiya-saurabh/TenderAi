@@ -1,12 +1,7 @@
 import React from 'react';
 import type { BidSummary } from '../../api/bids.js';
 import { formatCurrency, formatCompactINR } from '../../utils/formatCurrency.js';
-import {
-  TendersIcon,
-  AlertCircleIcon,
-  WarningIcon,
-  CheckIcon,
-} from '../common/Icons.js';
+import { TendersIcon, AlertCircleIcon, WarningIcon, CheckIcon } from '../common/Icons.js';
 
 export interface DashboardKpiStripProps {
   bids: BidSummary[];
@@ -15,15 +10,9 @@ export interface DashboardKpiStripProps {
 export const DashboardKpiStrip: React.FC<DashboardKpiStripProps> = ({ bids }) => {
   const activeBids = bids.filter((b) => b.status !== 'ARCHIVED');
 
-  const totalValue = activeBids.reduce(
-    (sum, b) => sum + (Number(b.estimatedValueRupees) || 0),
-    0
-  );
+  const totalValue = activeBids.reduce((sum, b) => sum + (Number(b.estimatedValueRupees) || 0), 0);
 
-  const totalFlagged = bids.reduce(
-    (sum, b) => sum + (b.flaggedRequirements || 0),
-    0
-  );
+  const totalFlagged = bids.reduce((sum, b) => sum + (b.flaggedRequirements || 0), 0);
 
   const now = new Date().getTime();
   const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
@@ -51,7 +40,8 @@ export const DashboardKpiStrip: React.FC<DashboardKpiStripProps> = ({ bids }) =>
         <div className="text-xs font-medium text-foreground/80 flex items-center gap-1.5 mt-2">
           <span className="w-1.5 h-1.5 rounded-full bg-foreground inline-block" />
           <span>
-            {bids.filter((b) => b.status === 'REVIEW_READY').length} of {activeBids.length || 1} evaluated
+            {bids.filter((b) => b.status === 'REVIEW_READY').length} of {activeBids.length || 1}{' '}
+            evaluated
           </span>
         </div>
       </div>
@@ -66,10 +56,16 @@ export const DashboardKpiStrip: React.FC<DashboardKpiStripProps> = ({ bids }) =>
             <CheckIcon size={15} />
           </span>
         </div>
-        <div className="text-3xl font-bold tracking-tight text-foreground" title={formatCurrency(totalValue)}>
+        <div
+          className="text-3xl font-bold tracking-tight text-foreground"
+          title={formatCurrency(totalValue)}
+        >
           {formatCompactINR(totalValue)}
         </div>
-        <div className="text-xs font-medium text-muted-foreground mt-2 truncate" title={`Total: ${formatCurrency(totalValue)}`}>
+        <div
+          className="text-xs font-medium text-muted-foreground mt-2 truncate"
+          title={`Total: ${formatCurrency(totalValue)}`}
+        >
           Across {activeBids.length} active opportunities
         </div>
       </div>
@@ -80,7 +76,11 @@ export const DashboardKpiStrip: React.FC<DashboardKpiStripProps> = ({ bids }) =>
           <span className="mono text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
             EVIDENCE STATUS
           </span>
-          <span className={totalFlagged > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-foreground'}>
+          <span
+            className={
+              totalFlagged > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-foreground'
+            }
+          >
             <AlertCircleIcon size={15} />
           </span>
         </div>
@@ -88,10 +88,10 @@ export const DashboardKpiStrip: React.FC<DashboardKpiStripProps> = ({ bids }) =>
           {totalFlagged > 0 ? `${totalFlagged} Flags` : 'Verified'}
         </div>
         <div className="text-xs font-medium text-foreground/80 flex items-center gap-1.5 mt-2">
-          <span className={`w-1.5 h-1.5 rounded-full ${totalFlagged > 0 ? 'bg-orange-500' : 'bg-foreground'} inline-block`} />
-          <span>
-            {totalFlagged > 0 ? 'Requires proof or waiver' : 'IRIS GST & MCA RoC Active'}
-          </span>
+          <span
+            className={`w-1.5 h-1.5 rounded-full ${totalFlagged > 0 ? 'bg-orange-500' : 'bg-foreground'} inline-block`}
+          />
+          <span>{totalFlagged > 0 ? 'Requires proof or waiver' : 'IRIS GST & MCA RoC Active'}</span>
         </div>
       </div>
 
@@ -101,17 +101,23 @@ export const DashboardKpiStrip: React.FC<DashboardKpiStripProps> = ({ bids }) =>
           <span className="mono text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
             {urgentDeadlines.length > 0 ? 'IMMINENT DEADLINES' : 'PIPELINE HEALTH'}
           </span>
-          <span className={urgentDeadlines.length > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-foreground'}>
+          <span
+            className={
+              urgentDeadlines.length > 0
+                ? 'text-orange-600 dark:text-orange-400'
+                : 'text-foreground'
+            }
+          >
             <WarningIcon size={15} />
           </span>
         </div>
-        <div className={`text-2xl font-bold tracking-tight ${urgentDeadlines.length > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-foreground'}`}>
+        <div
+          className={`text-2xl font-bold tracking-tight ${urgentDeadlines.length > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-foreground'}`}
+        >
           {urgentDeadlines.length > 0 ? `${urgentDeadlines.length} Closing Soon` : 'PURSUE READY'}
         </div>
         <div className="text-xs font-medium text-foreground/80 mt-2">
-          {urgentDeadlines.length > 0
-            ? 'Submissions due < 7 days'
-            : 'Readiness evaluated'}
+          {urgentDeadlines.length > 0 ? 'Submissions due < 7 days' : 'Readiness evaluated'}
         </div>
       </div>
     </div>

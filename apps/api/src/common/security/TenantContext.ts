@@ -74,7 +74,7 @@ export class TenantContextHolder {
     const ctx = this.getRequired();
     if (!hasPermission(ctx.role, permission)) {
       throw new UnauthorizedTenantAccessException(
-        `Role '${ctx.role}' lacks required permission '${permission}'.`
+        `Role '${ctx.role}' lacks required permission '${permission}'.`,
       );
     }
   }

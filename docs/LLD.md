@@ -289,24 +289,24 @@ class ComplianceWorkflowState(TypedDict, total=False):
     raw_page_text: str
     pages: list[dict[str, Any]]
     storage_reference: str | None
-    
+
     # Node 1 & 2 outputs
     docling_document: dict[str, Any]
     document_structure: dict[str, Any]
-    
+
     # Node 3 & 4 outputs
     detected_candidates: list[dict[str, Any]]
     assembled_contexts: list[dict[str, Any]]
-    
+
     # Node 5 outputs
     retrieved_chunks: list[dict[str, Any]]
     extracted_candidates: list[CandidateComplianceItem]
-    
+
     # Node 6 & 7 outputs
     validation_reports: list[dict[str, Any]]
     confidence_tier: str  # AUTO_ACCEPT | REVIEWER_VERIFICATION | MANDATORY_HUMAN_REVIEW
     confidence_score: float
-    
+
     # Node 8 outputs & Reducers
     verified_items: Annotated[list[VerifiedComplianceItem], operator.add]
     unverified_items: list[CandidateComplianceItem]
@@ -430,7 +430,7 @@ sequenceDiagram
 
     Pipeline->>Webhook: POST /api/v1/internal/extraction-completed { event }
     Webhook->>Completion: processExtractionCompleted(event)
-    
+
     rect rgb(240, 248, 255)
         Note over Completion,DB: Single-Writer Atomic Database Transaction
         Completion->>DB: BEGIN TRANSACTION
@@ -461,7 +461,7 @@ sequenceDiagram
     SPA->>Ctrl: PATCH /api/v1/bids/:id/compliance-items/:itemId { status: 'READY', version: 1, notes: '...' }
     Ctrl->>Svc: updateItem(command)
     Svc->>DB: UPDATE compliance_items<br/>SET status = 'READY', version = 2, review_notes = '...'<br/>WHERE id = :itemId AND organization_id = :orgId AND version = 1
-    
+
     alt Version Matches (1 row affected)
         DB-->>Svc: Success (1 row updated)
         Svc->>DB: INSERT INTO audit_logs (action: 'COMPLIANCE_REVIEWED')
@@ -495,7 +495,7 @@ sequenceDiagram
     DecisionUC->>DB: Fetch pinned CompanyProfileSnapshot (versioned)
     DecisionUC->>DB: Fetch extracted ComplianceItems for bid
     DecisionUC->>FastAPIDecision: POST /api/v1/agent/bid-decision { company, requirements, deadline }
-    
+
     Note over FastAPIDecision,Evaluator: Zero LLM Inference — 100% Deterministic Code
     FastAPIDecision->>Evaluator: evaluate(...)
     Evaluator->>Evaluator: Check Statutory Debarment / Blacklist

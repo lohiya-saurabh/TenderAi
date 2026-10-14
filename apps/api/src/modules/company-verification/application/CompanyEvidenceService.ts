@@ -13,7 +13,11 @@ import { Injectable, Inject, Optional } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
 import { eq, and, desc } from 'drizzle-orm';
 import crypto from 'node:crypto';
-import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '../../../common/database/database.module.js';
+import {
+  DRIZZLE_TOKEN,
+  type DrizzleDb,
+  createDrizzle,
+} from '../../../common/database/database.module.js';
 import * as schema from '../../../common/database/schema.js';
 import { NotFoundError, BadRequestError } from '../../../common/errors/errors.js';
 import { TenantContextHolder } from '../../../common/security/TenantContext.js';
@@ -222,12 +226,7 @@ export class CompanyEvidenceService {
     const [comp] = await this.db
       .select()
       .from(schema.companies)
-      .where(
-        and(
-          eq(schema.companies.id, companyId),
-          eq(schema.companies.organizationId, orgId),
-        ),
-      )
+      .where(and(eq(schema.companies.id, companyId), eq(schema.companies.organizationId, orgId)))
       .limit(1);
 
     if (!comp) {

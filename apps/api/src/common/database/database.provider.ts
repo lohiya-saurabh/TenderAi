@@ -47,7 +47,10 @@ export async function getDatabase(dataDir?: string): Promise<PGlite> {
     dbInstance = pg;
     return dbInstance;
   } catch (err) {
-    console.warn('[Database] PGlite failed to boot from disk (dirty shutdown/WASM recovery). Recovering clean database...', err);
+    console.warn(
+      '[Database] PGlite failed to boot from disk (dirty shutdown/WASM recovery). Recovering clean database...',
+      err,
+    );
     try {
       fs.rmSync(dbPath, { recursive: true, force: true });
       fs.mkdirSync(dbPath, { recursive: true });
@@ -462,7 +465,9 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
     const unhashedUsers = await drizzleDb
       .select({ id: schema.users.id, password: schema.users.password })
       .from(schema.users)
-      .where(sql`${schema.users.password} NOT LIKE '$2b$%' AND ${schema.users.password} NOT LIKE '$2a$%'`);
+      .where(
+        sql`${schema.users.password} NOT LIKE '$2b$%' AND ${schema.users.password} NOT LIKE '$2a$%'`,
+      );
 
     for (const u of unhashedUsers) {
       const hashedPassword = await bcrypt.hash(u.password, 10);
@@ -659,7 +664,8 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
           channel: 'IN_APP',
           priority: 'HIGH',
           title: 'Human Review Required: Non-Blacklisting Affidavit',
-          message: 'Clause 1.4.3 requires notarized affidavit on ₹500 Maharashtra e-Stamp paper for NHAI EPC bypass tender.',
+          message:
+            'Clause 1.4.3 requires notarized affidavit on ₹500 Maharashtra e-Stamp paper for NHAI EPC bypass tender.',
           metadata: { bidId: 'bid-nhai-44-001', complianceItemId: 'comp-nhai-003' },
           isRead: false,
           createdAt: new Date('2026-10-02T10:15:00.000Z'),
@@ -672,7 +678,8 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
           channel: 'IN_APP',
           priority: 'MEDIUM',
           title: 'Tender Submission Deadline Reminder',
-          message: 'Four-laning of NH-44 Bypass Section (Km 120.000 to Km 154.200) submission deadline is in 40 days (15-Nov-2026).',
+          message:
+            'Four-laning of NH-44 Bypass Section (Km 120.000 to Km 154.200) submission deadline is in 40 days (15-Nov-2026).',
           metadata: { bidId: 'bid-nhai-44-001', deadline: '2026-11-15T15:00:00.000Z' },
           isRead: false,
           createdAt: new Date('2026-10-03T09:00:00.000Z'),
@@ -685,7 +692,8 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
           channel: 'IN_APP',
           priority: 'LOW',
           title: 'CA Turnover Certificate Verified',
-          message: '3-Year CA Turnover Certificate (UDIN 25089745AAAAAA1234) successfully matched against NHAI financial eligibility.',
+          message:
+            '3-Year CA Turnover Certificate (UDIN 25089745AAAAAA1234) successfully matched against NHAI financial eligibility.',
           metadata: { companyId: 'comp_acme_infra_001', udin: '25089745AAAAAA1234' },
           isRead: true,
           createdAt: new Date('2026-10-01T11:00:00.000Z'),
@@ -737,5 +745,7 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
     }
   }
 
-  console.log(`✅ PostgreSQL database ready (${seedUsers || seedBidsAndCompliance ? 'demo seeded' : 'clean state'}).`);
+  console.log(
+    `✅ PostgreSQL database ready (${seedUsers || seedBidsAndCompliance ? 'demo seeded' : 'clean state'}).`,
+  );
 }

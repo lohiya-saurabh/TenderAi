@@ -33,7 +33,7 @@ export class Provenance {
     if (!props.verbatimQuote || props.verbatimQuote.trim() === '') {
       throw new InvalidProvenanceException(
         'verbatimQuote',
-        'Must not be empty (zero-ungrounded claims policy)'
+        'Must not be empty (zero-ungrounded claims policy)',
       );
     }
     if (
@@ -43,7 +43,7 @@ export class Provenance {
     ) {
       throw new InvalidProvenanceException(
         'confidenceScore',
-        'Must be a float between 0.0 and 1.0'
+        'Must be a float between 0.0 and 1.0',
       );
     }
 

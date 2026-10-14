@@ -46,27 +46,27 @@ describe('E2E: Core Business Workflow WITHOUT AI (Bid Ingestion, Direct S3 Hands
       documentRepo,
       storageService,
       auditRepo,
-      unitOfWork
+      unitOfWork,
     );
     const confirmDocumentUploadUseCase = new ConfirmDocumentUploadUseCase(
       bidRepo,
       documentRepo,
       storageService,
       auditRepo,
-      unitOfWork
+      unitOfWork,
     );
     const getDocumentDownloadUrlUseCase = new GetDocumentDownloadUrlUseCase(
       bidRepo,
       documentRepo,
       storageService,
-      auditRepo
+      auditRepo,
     );
 
     bidsController = new BidsController(
       createBidUseCase,
       generateUploadUrlUseCase,
       confirmDocumentUploadUseCase,
-      getDocumentDownloadUrlUseCase
+      getDocumentDownloadUrlUseCase,
     );
   });
 
@@ -103,7 +103,7 @@ describe('E2E: Core Business Workflow WITHOUT AI (Bid Ingestion, Direct S3 Hands
             sizeBytes: 24 * 1024 * 1024, // 24MB
             mimeType: 'application/pdf',
             checksumSha256: validChecksum,
-          }
+          },
         );
 
         expect(uploadHandshake.documentId).toBeDefined();
@@ -120,7 +120,7 @@ describe('E2E: Core Business Workflow WITHOUT AI (Bid Ingestion, Direct S3 Hands
         storageService.simulateUploadedObject(
           uploadHandshake.s3Key,
           24 * 1024 * 1024,
-          validChecksum
+          validChecksum,
         );
 
         // Step 4: Confirm Document Upload Handshake
@@ -128,7 +128,7 @@ describe('E2E: Core Business Workflow WITHOUT AI (Bid Ingestion, Direct S3 Hands
           tenantA,
           bidManagerUser,
           createdBid.id,
-          { documentId: uploadHandshake.documentId }
+          { documentId: uploadHandshake.documentId },
         );
 
         expect(confirmResult.documentStatus).toBe('VERIFIED');
@@ -149,7 +149,7 @@ describe('E2E: Core Business Workflow WITHOUT AI (Bid Ingestion, Direct S3 Hands
           tenantA,
           bidManagerUser,
           createdBid.id,
-          uploadHandshake.documentId
+          uploadHandshake.documentId,
         );
 
         expect(downloadResult.documentId).toBe(uploadHandshake.documentId);
@@ -163,7 +163,7 @@ describe('E2E: Core Business Workflow WITHOUT AI (Bid Ingestion, Direct S3 Hands
         expect(actions).toContain('GENERATE_UPLOAD_URL');
         expect(actions).toContain('CONFIRM_DOCUMENT_UPLOAD');
         expect(actions).toContain('DOWNLOAD_DOCUMENT');
-      }
+      },
     );
   });
 
@@ -185,7 +185,7 @@ describe('E2E: Core Business Workflow WITHOUT AI (Bid Ingestion, Direct S3 Hands
           submissionDeadline: futureDate,
         });
         tenantABidId = bid.id;
-      }
+      },
     );
 
     // Tenant B attempts to tamper with Tenant A's bid
@@ -199,9 +199,9 @@ describe('E2E: Core Business Workflow WITHOUT AI (Bid Ingestion, Direct S3 Hands
             sizeBytes: 1024,
             mimeType: 'application/pdf',
             checksumSha256: validChecksum,
-          })
+          }),
         ).rejects.toThrow(EntityNotFoundException); // Anti-IDOR: Returns 404, never 403
-      }
+      },
     );
   });
 
@@ -230,7 +230,7 @@ describe('E2E: Core Business Workflow WITHOUT AI (Bid Ingestion, Direct S3 Hands
           checksumSha256: validChecksum,
         });
         tenantADocId = upload.documentId;
-      }
+      },
     );
 
     // Tenant B attempts to confirm Tenant A's document
@@ -240,9 +240,9 @@ describe('E2E: Core Business Workflow WITHOUT AI (Bid Ingestion, Direct S3 Hands
         await expect(
           bidsController.confirmDocumentUpload(tenantB, 'usr-competitor-hacker', tenantABidId, {
             documentId: tenantADocId,
-          })
+          }),
         ).rejects.toThrow(EntityNotFoundException);
-      }
+      },
     );
   });
 
@@ -261,9 +261,9 @@ describe('E2E: Core Business Workflow WITHOUT AI (Bid Ingestion, Direct S3 Hands
             tenderingAuthority: 'CPWD',
             estimatedValueRupees: 1000000,
             submissionDeadline: futureDate,
-          })
+          }),
         ).rejects.toThrow(UnauthorizedTenantAccessException);
-      }
+      },
     );
   });
 
@@ -278,9 +278,9 @@ describe('E2E: Core Business Workflow WITHOUT AI (Bid Ingestion, Direct S3 Hands
             sizeBytes: 1024,
             mimeType: 'application/pdf',
             checksumSha256: validChecksum,
-          })
+          }),
         ).rejects.toThrow(UnauthorizedTenantAccessException);
-      }
+      },
     );
   });
 
@@ -299,9 +299,9 @@ describe('E2E: Core Business Workflow WITHOUT AI (Bid Ingestion, Direct S3 Hands
             tenderingAuthority: 'CPWD',
             estimatedValueRupees: 1000000,
             submissionDeadline: pastDate,
-          })
+          }),
         ).rejects.toThrow(ValidationException);
-      }
+      },
     );
   });
 
@@ -325,9 +325,9 @@ describe('E2E: Core Business Workflow WITHOUT AI (Bid Ingestion, Direct S3 Hands
             sizeBytes: 150 * 1024 * 1024, // 150MB
             mimeType: 'application/pdf',
             checksumSha256: validChecksum,
-          })
+          }),
         ).rejects.toThrow(ValidationException);
-      }
+      },
     );
   });
 
@@ -351,9 +351,9 @@ describe('E2E: Core Business Workflow WITHOUT AI (Bid Ingestion, Direct S3 Hands
             sizeBytes: 1024,
             mimeType: 'application/x-msdownload',
             checksumSha256: validChecksum,
-          })
+          }),
         ).rejects.toThrow(ValidationException);
-      }
+      },
     );
   });
 
@@ -387,9 +387,9 @@ describe('E2E: Core Business Workflow WITHOUT AI (Bid Ingestion, Direct S3 Hands
             sizeBytes: 5000,
             mimeType: 'application/pdf',
             checksumSha256: validChecksum,
-          })
+          }),
         ).rejects.toThrow(ValidationException);
-      }
+      },
     );
   });
 
@@ -418,9 +418,9 @@ describe('E2E: Core Business Workflow WITHOUT AI (Bid Ingestion, Direct S3 Hands
         await expect(
           bidsController.confirmDocumentUpload(tenantA, bidManagerUser, bid.id, {
             documentId: upload.documentId,
-          })
+          }),
         ).rejects.toThrow(ValidationException);
-      }
+      },
     );
   });
 
@@ -457,7 +457,7 @@ describe('E2E: Core Business Workflow WITHOUT AI (Bid Ingestion, Direct S3 Hands
         await bidsController.confirmDocumentUpload(tenantA, bidManagerUser, bid.id, {
           documentId: upload.documentId,
         });
-      }
+      },
     );
 
     // Tenant B attacker attempts to get download URL for Tenant A's document
@@ -469,10 +469,10 @@ describe('E2E: Core Business Workflow WITHOUT AI (Bid Ingestion, Direct S3 Hands
             tenantB,
             'usr-competitor-hacker',
             tenantABidId,
-            tenantADocId
-          )
+            tenantADocId,
+          ),
         ).rejects.toThrow(EntityNotFoundException); // Anti-IDOR: Returns 404, never 403
-      }
+      },
     );
   });
 
@@ -499,9 +499,9 @@ describe('E2E: Core Business Workflow WITHOUT AI (Bid Ingestion, Direct S3 Hands
 
         // Attempting to download before confirmation
         await expect(
-          bidsController.getDocumentDownloadUrl(tenantA, bidManagerUser, bid.id, upload.documentId)
+          bidsController.getDocumentDownloadUrl(tenantA, bidManagerUser, bid.id, upload.documentId),
         ).rejects.toThrow(ValidationException);
-      }
+      },
     );
   });
 
@@ -530,9 +530,9 @@ describe('E2E: Core Business Workflow WITHOUT AI (Bid Ingestion, Direct S3 Hands
         // Verify S3 key does not contain directory traversal escape sequences
         expect(upload.s3Key).not.toContain('..');
         expect(upload.s3Key).toMatch(
-          new RegExp(`^tenants/${tenantA}/bids/${bid.id}/[a-f0-9-]+/passwd\\.pdf$`)
+          new RegExp(`^tenants/${tenantA}/bids/${bid.id}/[a-f0-9-]+/passwd\\.pdf$`),
         );
-      }
+      },
     );
   });
 
@@ -567,7 +567,7 @@ describe('E2E: Core Business Workflow WITHOUT AI (Bid Ingestion, Direct S3 Hands
         await bidsController.confirmDocumentUpload(tenantA, bidManagerUser, bid.id, {
           documentId: upload.documentId,
         });
-      }
+      },
     );
 
     // Step 2: VIEWER role in same tenant accesses the document (allowed read-only)
@@ -578,7 +578,7 @@ describe('E2E: Core Business Workflow WITHOUT AI (Bid Ingestion, Direct S3 Hands
           tenantA,
           viewerUser,
           bidId,
-          documentId
+          documentId,
         );
         expect(download.downloadUrl).toContain('response-content-disposition=attachment');
 
@@ -590,9 +590,9 @@ describe('E2E: Core Business Workflow WITHOUT AI (Bid Ingestion, Direct S3 Hands
             sizeBytes: 2000,
             mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             checksumSha256: validChecksum,
-          })
+          }),
         ).rejects.toThrow(UnauthorizedTenantAccessException);
-      }
+      },
     );
   });
 });

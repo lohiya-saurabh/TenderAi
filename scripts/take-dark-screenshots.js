@@ -65,10 +65,16 @@ async function main() {
 
   // 4. Real Bid Detail Page in Dark Mode
   try {
-    await page.goto('http://localhost:5173/bids/bid-nhai-44-001', { waitUntil: 'networkidle', timeout: 15000 });
+    await page.goto('http://localhost:5173/bids/bid-nhai-44-001', {
+      waitUntil: 'networkidle',
+      timeout: 15000,
+    });
     await page.waitForTimeout(2000);
     await page.screenshot({ path: path.join(outDir, '06_bid_detail_dark.png') });
-    await page.screenshot({ path: path.join(outDir, '06_bid_detail_full_dark.png'), fullPage: true });
+    await page.screenshot({
+      path: path.join(outDir, '06_bid_detail_full_dark.png'),
+      fullPage: true,
+    });
     console.log('Saved 06_bid_detail_dark.png');
 
     // Section 3: Statutory Execution Rules
@@ -85,14 +91,18 @@ async function main() {
     if (complianceSection) {
       await complianceSection.scrollIntoViewIfNeeded();
       await page.waitForTimeout(500);
-      await complianceSection.screenshot({ path: path.join(outDir, '06_section5_compliance_matrix_dark.png') });
+      await complianceSection.screenshot({
+        path: path.join(outDir, '06_section5_compliance_matrix_dark.png'),
+      });
 
       // Click the first row expand button
       const expandBtn = await page.$('button[aria-label="Expand row"]');
       if (expandBtn) {
         await expandBtn.click();
         await page.waitForTimeout(600);
-        await complianceSection.screenshot({ path: path.join(outDir, '06_section5_compliance_matrix_expanded_dark.png') });
+        await complianceSection.screenshot({
+          path: path.join(outDir, '06_section5_compliance_matrix_expanded_dark.png'),
+        });
       }
       console.log('Saved 06_section5_compliance_matrix_dark.png');
     }
@@ -102,10 +112,16 @@ async function main() {
 
   // 5. Compliance Review Page in Dark Mode
   try {
-    await page.goto('http://localhost:5173/bids/bid-nhai-44-001/compliance/comp-nhai-001', { waitUntil: 'networkidle', timeout: 15000 });
+    await page.goto('http://localhost:5173/bids/bid-nhai-44-001/compliance/comp-nhai-001', {
+      waitUntil: 'networkidle',
+      timeout: 15000,
+    });
     await page.waitForTimeout(2000);
     await page.screenshot({ path: path.join(outDir, '07_compliance_review_dark.png') });
-    await page.screenshot({ path: path.join(outDir, '07_compliance_review_full_dark.png'), fullPage: true });
+    await page.screenshot({
+      path: path.join(outDir, '07_compliance_review_full_dark.png'),
+      fullPage: true,
+    });
     console.log('Saved 07_compliance_review_dark.png');
   } catch (e) {
     console.error('Error on compliance review:', e.message);
@@ -113,10 +129,16 @@ async function main() {
 
   // 6. Audit History Page in Dark Mode
   try {
-    await page.goto('http://localhost:5173/bids/bid-nhai-44-001/audit', { waitUntil: 'networkidle', timeout: 15000 });
+    await page.goto('http://localhost:5173/bids/bid-nhai-44-001/audit', {
+      waitUntil: 'networkidle',
+      timeout: 15000,
+    });
     await page.waitForTimeout(1500);
     await page.screenshot({ path: path.join(outDir, '08_audit_history_dark.png') });
-    await page.screenshot({ path: path.join(outDir, '08_audit_history_full_dark.png'), fullPage: true });
+    await page.screenshot({
+      path: path.join(outDir, '08_audit_history_full_dark.png'),
+      fullPage: true,
+    });
     console.log('Saved 08_audit_history_dark.png');
   } catch (e) {
     console.error('Error on audit history:', e.message);
@@ -124,10 +146,16 @@ async function main() {
 
   // 7. Company Profile Page in Dark Mode
   try {
-    await page.goto('http://localhost:5173/company-profile', { waitUntil: 'networkidle', timeout: 15000 });
+    await page.goto('http://localhost:5173/company-profile', {
+      waitUntil: 'networkidle',
+      timeout: 15000,
+    });
     await page.waitForTimeout(2000);
     await page.screenshot({ path: path.join(outDir, '09_company_profile_dark.png') });
-    await page.screenshot({ path: path.join(outDir, '09_company_profile_full_dark.png'), fullPage: true });
+    await page.screenshot({
+      path: path.join(outDir, '09_company_profile_full_dark.png'),
+      fullPage: true,
+    });
     console.log('Saved 09_company_profile_dark.png');
   } catch (e) {
     console.error('Error on company profile:', e.message);

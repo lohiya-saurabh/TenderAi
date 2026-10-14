@@ -9,34 +9,40 @@ export interface RiskBadgeProps {
   label?: string; // Custom label to override the default level label
 }
 
-const riskConfigs: Record<RiskLevel, { bg: string; color: string; border: string; label: string }> = {
-  LOW: {
-    bg: 'var(--status-pass-bg)',
-    color: 'var(--status-pass-text)',
-    border: 'var(--status-pass-border)',
-    label: 'Low',
-  },
-  MEDIUM: {
-    bg: 'rgba(234, 88, 12, 0.08)',
-    color: '#ea580c',
-    border: 'rgba(234, 88, 12, 0.25)',
-    label: 'Medium',
-  },
-  HIGH: {
-    bg: 'rgba(234, 88, 12, 0.14)',
-    color: '#c2410c',
-    border: 'rgba(234, 88, 12, 0.35)',
-    label: 'High',
-  },
-  CRITICAL: {
-    bg: 'rgba(194, 65, 12, 0.18)',
-    color: '#9a3412',
-    border: 'rgba(194, 65, 12, 0.45)',
-    label: 'Critical',
-  },
-};
+const riskConfigs: Record<RiskLevel, { bg: string; color: string; border: string; label: string }> =
+  {
+    LOW: {
+      bg: 'var(--status-pass-bg)',
+      color: 'var(--status-pass-text)',
+      border: 'var(--status-pass-border)',
+      label: 'Low',
+    },
+    MEDIUM: {
+      bg: 'rgba(234, 88, 12, 0.08)',
+      color: '#ea580c',
+      border: 'rgba(234, 88, 12, 0.25)',
+      label: 'Medium',
+    },
+    HIGH: {
+      bg: 'rgba(234, 88, 12, 0.14)',
+      color: '#c2410c',
+      border: 'rgba(234, 88, 12, 0.35)',
+      label: 'High',
+    },
+    CRITICAL: {
+      bg: 'rgba(194, 65, 12, 0.18)',
+      color: '#9a3412',
+      border: 'rgba(194, 65, 12, 0.45)',
+      label: 'Critical',
+    },
+  };
 
-export const RiskBadge: React.FC<RiskBadgeProps> = ({ level, size = 'sm', showLabel = true, label }) => {
+export const RiskBadge: React.FC<RiskBadgeProps> = ({
+  level,
+  size = 'sm',
+  showLabel = true,
+  label,
+}) => {
   const config = riskConfigs[level];
   const isSmall = size === 'sm';
 

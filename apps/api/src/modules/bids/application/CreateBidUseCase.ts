@@ -37,7 +37,7 @@ export class CreateBidUseCase {
     private readonly bidRepository: IBidRepository,
     private readonly auditRepository: IAuditRepository,
     private readonly unitOfWork: IUnitOfWork = new DirectUnitOfWork(),
-    private readonly eventBus?: IEventBus
+    private readonly eventBus?: IEventBus,
   ) {}
 
   public async execute(command: CreateBidCommand): Promise<CreateBidResult> {
@@ -79,7 +79,7 @@ export class CreateBidUseCase {
             tenderNumber: bid.tenderNumber,
             estimatedValueRupees: command.estimatedValueRupees,
           },
-        })
+        }),
       );
     });
 

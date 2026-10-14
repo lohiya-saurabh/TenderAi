@@ -20,8 +20,15 @@ const KNOWN_UDYAM_DATABASE: Record<string, Partial<MsmeEnterpriseDetails>> = {
     enterpriseClassification: 'SMALL',
     registeredState: 'Maharashtra',
     nicCodes: [
-      { code: '42101', description: 'Construction of motorways, streets, roads, other vehicular and pedestrian ways' },
-      { code: '42201', description: 'Construction of water and sewage mains, pipe lines and treatment plants' },
+      {
+        code: '42101',
+        description:
+          'Construction of motorways, streets, roads, other vehicular and pedestrian ways',
+      },
+      {
+        code: '42201',
+        description: 'Construction of water and sewage mains, pipe lines and treatment plants',
+      },
     ],
     dateOfIncorporation: '2018-03-12',
     dateOfCommencement: '2018-04-01',
@@ -34,7 +41,10 @@ const KNOWN_UDYAM_DATABASE: Record<string, Partial<MsmeEnterpriseDetails>> = {
     enterpriseClassification: 'MEDIUM',
     registeredState: 'Delhi',
     nicCodes: [
-      { code: '62020', description: 'Computer consultancy and computer facilities management activities' },
+      {
+        code: '62020',
+        description: 'Computer consultancy and computer facilities management activities',
+      },
     ],
     dateOfIncorporation: '2020-01-10',
     dateOfCommencement: '2020-02-01',
@@ -47,7 +57,11 @@ const KNOWN_UDYAM_DATABASE: Record<string, Partial<MsmeEnterpriseDetails>> = {
     enterpriseClassification: 'MICRO',
     registeredState: 'Karnataka',
     nicCodes: [
-      { code: '23951', description: 'Manufacture of precast concrete, cement or artificial stone articles for use in construction' },
+      {
+        code: '23951',
+        description:
+          'Manufacture of precast concrete, cement or artificial stone articles for use in construction',
+      },
     ],
     dateOfIncorporation: '2021-08-20',
     dateOfCommencement: '2021-09-01',
@@ -110,7 +124,8 @@ export class MockMsmeVerificationAdapter implements IMsmeVerificationPort {
       ],
       dateOfIncorporation: '2019-05-10',
       dateOfCommencement: '2019-06-01',
-      registeredState: stateCode === 'DL' ? 'Delhi' : stateCode === 'KA' ? 'Karnataka' : 'Maharashtra',
+      registeredState:
+        stateCode === 'DL' ? 'Delhi' : stateCode === 'KA' ? 'Karnataka' : 'Maharashtra',
       units: [`Main Plant - ${stateCode}`],
       organizationType: 'Private Limited Company',
       rawResponse: { source: 'MOCK_UDYAM_ADAPTER', dynamicDerived: true },

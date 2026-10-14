@@ -16,7 +16,11 @@ import type { ComplianceItem } from '../../api/compliance.js';
 
 export interface ReviewActionsProps {
   currentStatus: ComplianceItem['status'];
-  onReview: (status: ComplianceItem['status'], notes?: string, expectedVersion?: number) => Promise<void>;
+  onReview: (
+    status: ComplianceItem['status'],
+    notes?: string,
+    expectedVersion?: number,
+  ) => Promise<void>;
   isLoading?: boolean;
   expectedVersion?: number;
   layout?: 'row' | 'card';
@@ -229,16 +233,30 @@ export const ReviewActions: React.FC<ReviewActionsProps> = ({
               }}
             >
               <div>
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)', display: 'block' }}>
+                <span
+                  style={{
+                    fontSize: 'var(--text-xs)',
+                    color: 'var(--color-surface-muted)',
+                    display: 'block',
+                  }}
+                >
                   Current Status
                 </span>
                 <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-surface-text)' }}>
                   {currentStatus}
                 </strong>
               </div>
-              <span style={{ fontSize: 'var(--text-lg)', color: 'var(--color-surface-muted)' }}>→</span>
+              <span style={{ fontSize: 'var(--text-lg)', color: 'var(--color-surface-muted)' }}>
+                →
+              </span>
               <div>
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)', display: 'block' }}>
+                <span
+                  style={{
+                    fontSize: 'var(--text-xs)',
+                    color: 'var(--color-surface-muted)',
+                    display: 'block',
+                  }}
+                >
                   New Human Verdict
                 </span>
                 <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-primary-300)' }}>
@@ -256,7 +274,13 @@ export const ReviewActions: React.FC<ReviewActionsProps> = ({
               }}
             >
               <p style={{ margin: '0 0 0.5rem' }}>{selectedAction.description}</p>
-              <p style={{ margin: 0, fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)' }}>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 'var(--text-xs)',
+                  color: 'var(--color-surface-muted)',
+                }}
+              >
                 <strong>Impact:</strong> {selectedAction.impact}
               </p>
             </div>
@@ -334,7 +358,8 @@ export const ReviewActions: React.FC<ReviewActionsProps> = ({
             >
               <Info size={14} className="text-primary shrink-0" />
               <span>
-                This adjudication is recorded immutably in the compliance audit ledger with your user credentials and timestamp.
+                This adjudication is recorded immutably in the compliance audit ledger with your
+                user credentials and timestamp.
               </span>
             </div>
           </div>

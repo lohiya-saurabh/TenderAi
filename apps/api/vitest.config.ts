@@ -7,5 +7,6 @@ export default defineConfig({
     include: ['src/**/*.spec.ts', 'src/**/*.test.ts'],
     hookTimeout: 30000,
     testTimeout: 30000,
+    fileParallelism: false,
   },
 });

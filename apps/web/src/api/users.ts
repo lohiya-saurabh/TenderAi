@@ -32,6 +32,8 @@ export function updateMe(dto: UpdateUserProfileDto): Promise<ApiResult<UserProfi
   return apiPatch<UserProfile>('/api/v1/users/me', dto);
 }
 
-export function changePassword(dto: ChangePasswordDto): Promise<ApiResult<{ success: boolean; message: string }>> {
+export function changePassword(
+  dto: ChangePasswordDto,
+): Promise<ApiResult<{ success: boolean; message: string }>> {
   return apiPost<{ success: boolean; message: string }>('/api/v1/users/change-password', dto);
 }

@@ -11,7 +11,11 @@ import {
   type BidDetail,
   type BidDocument,
 } from '../api/bids.js';
-import { listComplianceItems, reviewComplianceItem, type ComplianceItem } from '../api/compliance.js';
+import {
+  listComplianceItems,
+  reviewComplianceItem,
+  type ComplianceItem,
+} from '../api/compliance.js';
 import { useApi } from '../hooks/useApi.js';
 import { useAuth } from '../auth/useAuth.js';
 import { PERMISSIONS } from '../utils/permissions.js';
@@ -29,7 +33,10 @@ import { IngestedDocumentsSection } from '../components/bid/detail/IngestedDocum
 import { BidSignoffDock } from '../components/bid/detail/BidSignoffDock.js';
 import { MissingDataCallout } from '../components/bid/detail/MissingDataCallout.js';
 import { formatCurrency, formatCompactINR } from '../utils/formatCurrency.js';
-import { mapApiDecisionToBidDecision, type ApiBidDecisionSummary } from '../components/bid/detail/bidDetailData.js';
+import {
+  mapApiDecisionToBidDecision,
+  type ApiBidDecisionSummary,
+} from '../components/bid/detail/bidDetailData.js';
 
 /**
  * Tender Detail — "Should I bid on this tender?"
@@ -76,7 +83,12 @@ export const BidDetailPage: React.FC = () => {
 
   // Fetch Bid details
   const fetchBid = useCallback(() => getBid(bidId), [bidId]);
-  const { data: bid, isLoading: bidLoading, error: bidError, refetch: refetchBid } = useApi<BidDetail>(fetchBid, [bidId]);
+  const {
+    data: bid,
+    isLoading: bidLoading,
+    error: bidError,
+    refetch: refetchBid,
+  } = useApi<BidDetail>(fetchBid, [bidId]);
 
   // Fetch Compliance items
   const fetchCompliance = useCallback(() => listComplianceItems(bidId), [bidId]);
@@ -107,7 +119,9 @@ export const BidDetailPage: React.FC = () => {
   }, [complianceItems]);
 
   // Fetch Bid Decision
-  const [decision, setDecision] = useState<ReturnType<typeof mapApiDecisionToBidDecision> | null>(null);
+  const [decision, setDecision] = useState<ReturnType<typeof mapApiDecisionToBidDecision> | null>(
+    null,
+  );
   const [decisionLoading, setDecisionLoading] = useState(false);
 
   const fetchDecision = useCallback(async () => {
@@ -126,20 +140,30 @@ export const BidDetailPage: React.FC = () => {
     }
   }, [bidId]);
 
-  // Fetch decision when bid loads
+  // Fetch decision once on mount or when bidId changes
   React.useEffect(() => {
-    if (bid) {
-      fetchDecision();
-    }
-  }, [bid, fetchDecision]);
+    fetchDecision();
+  }, [bidId, fetchDecision]);
 
   // Check if any document or the bid itself is currently processing/analyzing
   const hasInFlightProcessing = useMemo(() => {
     if (isProcessing) return true;
     if (bid?.status === 'ANALYZING') return true;
-    if (bid?.documents?.some((d) => d.status === 'PROCESSING' || d.status === 'QUEUED_FOR_EXTRACTION')) return true;
+    if (
+      bid?.documents?.some((d) => d.status === 'PROCESSING' || d.status === 'QUEUED_FOR_EXTRACTION')
+    )
+      return true;
     return false;
   }, [isProcessing, bid]);
+
+  // When in-flight processing completes, automatically refresh the decision
+  const prevInFlightRef = React.useRef(hasInFlightProcessing);
+  React.useEffect(() => {
+    if (prevInFlightRef.current && !hasInFlightProcessing) {
+      fetchDecision();
+    }
+    prevInFlightRef.current = hasInFlightProcessing;
+  }, [hasInFlightProcessing, fetchDecision]);
 
   // When all documents have reached a settled status and bid is no longer analyzing, clear isProcessing
   React.useEffect(() => {
@@ -153,14 +177,14 @@ export const BidDetailPage: React.FC = () => {
     }
   }, [isProcessing, bid]);
 
-  // Auto-poll bid details and compliance matrix while in-flight extraction is running
+  // Auto-poll bid details and compliance matrix as a fallback while in-flight extraction is running (10s backoff)
   React.useEffect(() => {
     if (!hasInFlightProcessing) return;
 
     const interval = setInterval(() => {
       refetchBid();
       refetchCompliance();
-    }, 2500);
+    }, 10000);
 
     return () => clearInterval(interval);
   }, [hasInFlightProcessing, refetchBid, refetchCompliance]);
@@ -253,15 +277,21 @@ export const BidDetailPage: React.FC = () => {
   };
 
   // Inspect handlers for the new ComplianceTable
-  const handleInspectEvidence = useCallback((item: ComplianceItem) => {
-    // Navigate to the detailed review page for evidence inspection
-    window.open(`/bids/${bidId}/compliance/${item.id}`, '_blank');
-  }, [bidId]);
+  const handleInspectEvidence = useCallback(
+    (item: ComplianceItem) => {
+      // Navigate to the detailed review page for evidence inspection
+      window.open(`/bids/${bidId}/compliance/${item.id}`, '_blank');
+    },
+    [bidId],
+  );
 
-  const handleInspectAssessment = useCallback((item: ComplianceItem) => {
-    // Navigate to the detailed review page for assessment inspection
-    window.open(`/bids/${bidId}/compliance/${item.id}`, '_blank');
-  }, [bidId]);
+  const handleInspectAssessment = useCallback(
+    (item: ComplianceItem) => {
+      // Navigate to the detailed review page for assessment inspection
+      window.open(`/bids/${bidId}/compliance/${item.id}`, '_blank');
+    },
+    [bidId],
+  );
 
   const handleDeleteBid = async () => {
     setIsDeleting(true);
@@ -328,30 +358,37 @@ export const BidDetailPage: React.FC = () => {
         <Link to="/bids" style={{ color: 'var(--color-surface-muted)', fontSize: '0.9rem' }}>
           ← Back to Bids Dashboard
         </Link>
-        <ErrorBanner
-          message={bidError?.message || 'Bid project not found.'}
-          onRetry={refetchBid}
-        />
+        <ErrorBanner message={bidError?.message || 'Bid project not found.'} onRetry={refetchBid} />
       </div>
     );
   }
 
-
-
   const scoreNum = decision?.readinessScore
-    ? Math.round(Number(decision.readinessScore) > 1 ? Number(decision.readinessScore) : Number(decision.readinessScore) * 100)
+    ? Math.round(
+        Number(decision.readinessScore) > 1
+          ? Number(decision.readinessScore)
+          : Number(decision.readinessScore) * 100,
+      )
     : 84;
 
-  const verdictLabel = decision?.verdict ? decision.verdict.replace(/_/g, ' ') : (bid.status === 'REVIEW_READY' ? 'PURSUE BID' : 'REVIEW REQUIRED');
-  const verdictColor = verdictLabel.includes('PURSUE') || verdictLabel === 'GO'
-    ? 'text-foreground'
-    : 'text-orange-600 dark:text-orange-400';
+  const verdictLabel = decision?.verdict
+    ? decision.verdict.replace(/_/g, ' ')
+    : bid.status === 'REVIEW_READY'
+      ? 'PURSUE BID'
+      : 'REVIEW REQUIRED';
+  const verdictColor =
+    verdictLabel.includes('PURSUE') || verdictLabel === 'GO'
+      ? 'text-foreground'
+      : 'text-orange-600 dark:text-orange-400';
 
   return (
     <div className="space-y-6">
       {/* Top Toolbar */}
       <div className="flex justify-between items-center flex-wrap gap-3 pb-2 border-b border-border/60">
-        <Link to="/bids" className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+        <Link
+          to="/bids"
+          className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+        >
           ← Back to Bids Dashboard
         </Link>
         <div className="flex gap-2 items-center">
@@ -417,6 +454,7 @@ export const BidDetailPage: React.FC = () => {
             setIsProcessing(false);
             refetchBid();
             refetchCompliance();
+            fetchDecision();
           }}
           onRetry={() => {
             setIsProcessing(true);
@@ -443,9 +481,7 @@ export const BidDetailPage: React.FC = () => {
               <div className="mono text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
                 ACTIVE BIDS TRACKED
               </div>
-              <div className="mt-2 text-3xl font-bold tracking-tight text-foreground">
-                01
-              </div>
+              <div className="mt-2 text-3xl font-bold tracking-tight text-foreground">01</div>
               <div className="mt-2 text-xs font-medium text-foreground/80 flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-foreground inline-block" />
                 <span>100% evaluated</span>
@@ -456,10 +492,20 @@ export const BidDetailPage: React.FC = () => {
               <div className="mono text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
                 PIPELINE CONTRACT VALUE
               </div>
-              <div className="mt-2 text-3xl font-bold tracking-tight text-foreground" title={bid.estimatedValueRupees ? formatCurrency(bid.estimatedValueRupees) : '—'}>
-                {bid.estimatedValueRupees ? formatCompactINR(bid.estimatedValueRupees) : '₹1,250.00 Cr'}
+              <div
+                className="mt-2 text-3xl font-bold tracking-tight text-foreground"
+                title={bid.estimatedValueRupees ? formatCurrency(bid.estimatedValueRupees) : '—'}
+              >
+                {bid.estimatedValueRupees
+                  ? formatCompactINR(bid.estimatedValueRupees)
+                  : '₹1,250.00 Cr'}
               </div>
-              <div className="mt-2 text-xs font-medium text-muted-foreground truncate" title={bid.estimatedValueRupees ? formatCurrency(bid.estimatedValueRupees) : undefined}>
+              <div
+                className="mt-2 text-xs font-medium text-muted-foreground truncate"
+                title={
+                  bid.estimatedValueRupees ? formatCurrency(bid.estimatedValueRupees) : undefined
+                }
+              >
                 {bid.tenderingAuthority || 'NHAI'} BOT Highway
               </div>
             </div>
@@ -468,9 +514,7 @@ export const BidDetailPage: React.FC = () => {
               <div className="mono text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
                 EVIDENCE STATUS
               </div>
-              <div className="mt-2 text-3xl font-bold tracking-tight text-foreground">
-                Verified
-              </div>
+              <div className="mt-2 text-3xl font-bold tracking-tight text-foreground">Verified</div>
               <div className="mt-2 text-xs font-medium text-foreground/80 flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-foreground inline-block" />
                 <span>IRIS GST &amp; MCA RoC Active</span>
@@ -556,7 +600,8 @@ export const BidDetailPage: React.FC = () => {
                 5. Extracted Compliance Matrix
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Complete catalog of {items.length} candidate requirements parsed from ingested documents
+                Complete catalog of {items.length} candidate requirements parsed from ingested
+                documents
               </p>
             </div>
             <span className="mono text-xs font-semibold text-muted-foreground">
@@ -595,7 +640,11 @@ export const BidDetailPage: React.FC = () => {
         title="Delete Tender Project"
         footer={
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-            <Button variant="secondary" onClick={() => setShowDeleteModal(false)} disabled={isDeleting}>
+            <Button
+              variant="secondary"
+              onClick={() => setShowDeleteModal(false)}
+              disabled={isDeleting}
+            >
               Cancel
             </Button>
             <Button variant="danger" onClick={handleDeleteBid} isLoading={isDeleting}>
@@ -604,9 +653,17 @@ export const BidDetailPage: React.FC = () => {
           </div>
         }
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', color: 'var(--color-surface-text)' }}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem',
+            color: 'var(--color-surface-text)',
+          }}
+        >
           <p style={{ margin: 0 }}>
-            Are you sure you want to delete <strong>{bid.title}</strong> (<em>{bid.tenderNumber}</em>)?
+            Are you sure you want to delete <strong>{bid.title}</strong> (
+            <em>{bid.tenderNumber}</em>)?
           </p>
           <div
             style={{
@@ -618,7 +675,8 @@ export const BidDetailPage: React.FC = () => {
               color: 'var(--color-danger)',
             }}
           >
-            <strong>Warning:</strong> This operation will permanently delete all uploaded documents and extracted compliance requirements.
+            <strong>Warning:</strong> This operation will permanently delete all uploaded documents
+            and extracted compliance requirements.
           </div>
         </div>
       </Modal>
@@ -630,7 +688,11 @@ export const BidDetailPage: React.FC = () => {
         title="Remove Tender Document"
         footer={
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-            <Button variant="secondary" onClick={() => setDocToDelete(null)} disabled={isDeletingDoc}>
+            <Button
+              variant="secondary"
+              onClick={() => setDocToDelete(null)}
+              disabled={isDeletingDoc}
+            >
               Cancel
             </Button>
             <Button variant="danger" onClick={handleDeleteDocument} isLoading={isDeletingDoc}>
@@ -639,7 +701,14 @@ export const BidDetailPage: React.FC = () => {
           </div>
         }
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', color: 'var(--color-surface-text)' }}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem',
+            color: 'var(--color-surface-text)',
+          }}
+        >
           <p style={{ margin: 0 }}>
             Are you sure you want to remove <strong>{docToDelete?.fileName}</strong>?
           </p>
@@ -653,7 +722,8 @@ export const BidDetailPage: React.FC = () => {
               color: 'var(--color-danger)',
             }}
           >
-            <strong>Warning:</strong> Removing this document will delete all associated compliance items derived from it.
+            <strong>Warning:</strong> Removing this document will delete all associated compliance
+            items derived from it.
           </div>
         </div>
       </Modal>

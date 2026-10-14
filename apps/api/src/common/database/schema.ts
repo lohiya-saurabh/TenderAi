@@ -2,7 +2,16 @@
  * Drizzle ORM Schema definition for TenderPulse AI PostgreSQL database.
  * Single source of truth for compile-time types and query building.
  */
-import { pgTable, text, integer, bigint, timestamp, boolean, jsonb, real } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  text,
+  integer,
+  bigint,
+  timestamp,
+  boolean,
+  jsonb,
+  real,
+} from 'drizzle-orm/pg-core';
 
 export const users = pgTable('users', {
   id: text('id').primaryKey(),
@@ -273,7 +282,9 @@ export const subscriptions = pgTable('subscriptions', {
   planTier: text('plan_tier').notNull().default('FREE'), // 'FREE' | 'STARTER' | 'GROWTH' | 'BUSINESS' | 'ENTERPRISE'
   billingInterval: text('billing_interval').notNull().default('MONTHLY'), // 'MONTHLY' | 'ANNUAL'
   status: text('status').notNull().default('ACTIVE'), // 'TRIAL' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED'
-  currentPeriodStart: timestamp('current_period_start', { withTimezone: true }).notNull().defaultNow(),
+  currentPeriodStart: timestamp('current_period_start', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
   currentPeriodEnd: timestamp('current_period_end', { withTimezone: true }).notNull(),
   cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -300,18 +311,9 @@ export type NewUsageRecord = typeof usageRecords.$inferInsert;
 // ---------------------------------------------------------------------------
 
 export type EvidenceVerificationStatus =
-  | 'IMPORTED'
-  | 'EXTRACTED'
-  | 'SOURCE_VERIFIED'
-  | 'NEEDS_REVIEW'
-  | 'EXPIRED'
-  | 'REJECTED';
+  'IMPORTED' | 'EXTRACTED' | 'SOURCE_VERIFIED' | 'NEEDS_REVIEW' | 'EXPIRED' | 'REJECTED';
 
-export type EvidenceSourceProvider =
-  | 'LOCAL_UPLOAD'
-  | 'GOOGLE_DRIVE'
-  | 'ONEDRIVE'
-  | 'DIGILOCKER';
+export type EvidenceSourceProvider = 'LOCAL_UPLOAD' | 'GOOGLE_DRIVE' | 'ONEDRIVE' | 'DIGILOCKER';
 
 export const companyEvidenceDocuments = pgTable('company_evidence_documents', {
   id: text('id').primaryKey(),
@@ -329,10 +331,16 @@ export const companyEvidenceDocuments = pgTable('company_evidence_documents', {
   referenceNumber: text('reference_number'),
   validFrom: timestamp('valid_from', { withTimezone: true }),
   validTo: timestamp('valid_to', { withTimezone: true }),
-  sourceProvider: text('source_provider').notNull().default('LOCAL_UPLOAD').$type<EvidenceSourceProvider>(),
+  sourceProvider: text('source_provider')
+    .notNull()
+    .default('LOCAL_UPLOAD')
+    .$type<EvidenceSourceProvider>(),
   sourceReference: text('source_reference'),
   importedAt: timestamp('imported_at', { withTimezone: true }).notNull().defaultNow(),
-  verificationStatus: text('verification_status').notNull().default('IMPORTED').$type<EvidenceVerificationStatus>(),
+  verificationStatus: text('verification_status')
+    .notNull()
+    .default('IMPORTED')
+    .$type<EvidenceVerificationStatus>(),
   verificationMethod: text('verification_method'), // 'REGISTRY_API', 'DIGITAL_SIGNATURE', 'MANUAL_REVIEW'
   verifiedAt: timestamp('verified_at', { withTimezone: true }),
   verifiedBy: text('verified_by'),
@@ -376,6 +384,3 @@ export const refreshTokens = pgTable('refresh_tokens', {
 
 export type RefreshTokenRecord = typeof refreshTokens.$inferSelect;
 export type NewRefreshTokenRecord = typeof refreshTokens.$inferInsert;
-
-
-

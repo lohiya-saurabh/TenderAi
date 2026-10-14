@@ -94,7 +94,8 @@ export const WORKFLOW_STAGES: WorkflowStageMeta[] = [
     stepNumber: 8,
     label: 'Evidence Mapping',
     shortLabel: 'Evidence',
-    description: 'Dual-sided verification: verbatim tender clause side-by-side with corporate proof',
+    description:
+      'Dual-sided verification: verbatim tender clause side-by-side with corporate proof',
     icon: 'Files',
   },
   {
@@ -193,7 +194,8 @@ export const DEFAULT_COMPANY_PROFILE: CompanyCapabilityProfile = {
       contractValueRupees: 128000000, // 12.8 Cr
       completionDate: '2023-12-15',
       completionCertificateDocName: 'CR_ROB_Completion_Cert.pdf',
-      scopeSummary: 'RCC substructure, composite steel girders, high-grade concrete deck, and approach ramps.',
+      scopeSummary:
+        'RCC substructure, composite steel girders, high-grade concrete deck, and approach ramps.',
     },
     {
       id: 'exp_02',
@@ -290,7 +292,8 @@ export function deriveDeadlines(bid: BidDetail): TenderDeadline[] {
       time: '11:00 IST',
       isPassed: preBidDate < now,
       isCritical: false,
-      description: 'Online via Video Conference or Conference Hall, DRM Office. Submit queries in writing 48h prior.',
+      description:
+        'Online via Video Conference or Conference Hall, DRM Office. Submit queries in writing 48h prior.',
     },
     {
       id: 'dl_doc_sale',
@@ -308,7 +311,8 @@ export function deriveDeadlines(bid: BidDetail): TenderDeadline[] {
       time: '15:00 IST',
       isPassed: deadlineDate < now,
       isCritical: diffDays <= 3,
-      description: 'Both Cover 1 (Technical) and Cover 2 (Financial BOQ) must be digitally signed and uploaded.',
+      description:
+        'Both Cover 1 (Technical) and Cover 2 (Financial BOQ) must be digitally signed and uploaded.',
     },
     {
       id: 'dl_tech_opening',
@@ -317,7 +321,8 @@ export function deriveDeadlines(bid: BidDetail): TenderDeadline[] {
       time: '15:30 IST',
       isPassed: techOpenDate < now,
       isCritical: false,
-      description: 'Public opening of Technical Bids in presence of authorized bidder representatives.',
+      description:
+        'Public opening of Technical Bids in presence of authorized bidder representatives.',
     },
   ];
 }
@@ -340,7 +345,8 @@ export function deriveEligibilityFactors(
       title: 'Statutory Registration & Debarment Check',
       category: 'STATUTORY',
       status: company.isBlacklisted ? 'FAILED' : 'PASSED',
-      tenderRequirement: 'Bidder must possess valid GSTIN, PAN, and not be debarred by any Central/State Govt entity.',
+      tenderRequirement:
+        'Bidder must possess valid GSTIN, PAN, and not be debarred by any Central/State Govt entity.',
       companyCapability: `Active GSTIN (${company.registrations.gstin}), PAN (${company.registrations.pan}), and non-blacklisted declaration on file.`,
       explanation: 'Full statutory compliance. Zero debarment record across Indian public portals.',
       citationDocRef: 'GCC Clause 4.1, Page 8',
@@ -360,9 +366,12 @@ export function deriveEligibilityFactors(
       title: '7-Year Past Similar Work Experience',
       category: 'PAST_EXPERIENCE',
       status: hasRailwayExperience ? 'PASSED' : 'NEEDS_ATTENTION',
-      tenderRequirement: 'Must have successfully completed at least one similar railway/highway infrastructure project >= 40% value.',
-      companyCapability: 'Completed ROB project for Central Railway valued at ₹ 12.80 Cr with official completion certificate.',
-      explanation: 'Direct railway precedent meets the technical similarity threshold under GCC 2026.',
+      tenderRequirement:
+        'Must have successfully completed at least one similar railway/highway infrastructure project >= 40% value.',
+      companyCapability:
+        'Completed ROB project for Central Railway valued at ₹ 12.80 Cr with official completion certificate.',
+      explanation:
+        'Direct railway precedent meets the technical similarity threshold under GCC 2026.',
       citationDocRef: 'Section III, Clause 3.2, Page 16',
     },
     {
@@ -372,7 +381,8 @@ export function deriveEligibilityFactors(
       status: 'PASSED',
       tenderRequirement: 'Project execution within Maharashtra/Gujarat zone.',
       companyCapability: `Operational offices in ${company.operatingStates.join(', ')}.`,
-      explanation: 'Local presence established with registered office in Mumbai and project hub in Nagpur.',
+      explanation:
+        'Local presence established with registered office in Mumbai and project hub in Nagpur.',
       citationDocRef: 'NIT Clause 1.4, Page 3',
     },
     {
@@ -380,7 +390,8 @@ export function deriveEligibilityFactors(
       title: 'Quality & Safety Certifications',
       category: 'CERTIFICATIONS',
       status: 'PASSED',
-      tenderRequirement: 'Valid ISO 9001:2015 and ISO 14001:2015 certification at time of bid submission.',
+      tenderRequirement:
+        'Valid ISO 9001:2015 and ISO 14001:2015 certification at time of bid submission.',
       companyCapability: 'ISO 9001 and ISO 14001 active through late 2026 / 2027.',
       explanation: 'All certificates valid beyond the project completion horizon.',
       citationDocRef: 'Technical Specs Clause 8.1, Page 42',
@@ -390,9 +401,12 @@ export function deriveEligibilityFactors(
       title: 'Manufacturer Authorization (MAF)',
       category: 'OEM_AUTHORIZATION',
       status: 'NEEDS_ATTENTION',
-      tenderRequirement: 'Specific OEM Authorization Form required for signaling cable and structural steel.',
-      companyCapability: 'Tata Steel partner valid; specialized cable OEM authorization pending formal request.',
-      explanation: 'Must request specific tender-addressed MAF from cabling vendor before submission.',
+      tenderRequirement:
+        'Specific OEM Authorization Form required for signaling cable and structural steel.',
+      companyCapability:
+        'Tata Steel partner valid; specialized cable OEM authorization pending formal request.',
+      explanation:
+        'Must request specific tender-addressed MAF from cabling vendor before submission.',
       citationDocRef: 'SCC Clause 12.4, Page 58',
     },
     {
@@ -400,7 +414,8 @@ export function deriveEligibilityFactors(
       title: 'Key Project Personnel & Engineers',
       category: 'STAFFING',
       status: 'PASSED',
-      tenderRequirement: 'Resident Project Manager (B.E. Civil + 10 yrs) and 2 Site Quality Engineers (Diploma + 5 yrs).',
+      tenderRequirement:
+        'Resident Project Manager (B.E. Civil + 10 yrs) and 2 Site Quality Engineers (Diploma + 5 yrs).',
       companyCapability: 'Full-time staff roster meets experience requirements.',
       explanation: 'Staff CVs and PF contribution challans ready for attachment in Cover 1.',
       citationDocRef: 'BDS Clause 6.1, Page 22',
@@ -410,7 +425,8 @@ export function deriveEligibilityFactors(
       title: 'Essential Plant & Machinery',
       category: 'EQUIPMENT',
       status: 'PASSED',
-      tenderRequirement: 'Ownership or leased commitment for Concrete Paver, Excavators, and Transit Mixers.',
+      tenderRequirement:
+        'Ownership or leased commitment for Concrete Paver, Excavators, and Transit Mixers.',
       companyCapability: 'RMC batching plant and machinery fleet available on lease agreement.',
       explanation: 'Lease undertaking on ₹100 stamp paper required with machinery schedule.',
       citationDocRef: 'Section III Table 4, Page 29',
@@ -422,7 +438,8 @@ export function deriveEligibilityFactors(
       status: 'PASSED',
       tenderRequirement: 'EMD of ₹ 49.00 Lakhs payable via Online Gateway or Bank Guarantee.',
       companyCapability: `UDYAM Registered Small Enterprise (${company.registrations.udyamNumber}).`,
-      explanation: 'Eligible for MSME EMD exemption under Ministry of MSME Public Procurement Policy (if tender permits) or approved bank line for BG.',
+      explanation:
+        'Eligible for MSME EMD exemption under Ministry of MSME Public Procurement Policy (if tender permits) or approved bank line for BG.',
       citationDocRef: 'NIT Clause 2.1, Page 5',
     },
   ];
@@ -437,16 +454,19 @@ export function deriveBidDecision(
 
   let verdict: 'GO' | 'CONDITIONAL_GO' | 'NO_GO' | 'REVIEW_REQUIRED' = 'GO';
   let verdictLabel = 'RECOMMENDED TO BID (GO)';
-  let summary = 'High qualification probability. Your company comfortably satisfies financial turnover and railway past work criteria.';
+  let summary =
+    'High qualification probability. Your company comfortably satisfies financial turnover and railway past work criteria.';
 
   if (hasFailed) {
     verdict = 'NO_GO';
     verdictLabel = 'DO NOT BID (NO-GO)';
-    summary = 'Disqualifying barrier detected. Company falls short of mandatory minimum statutory or experience criteria.';
+    summary =
+      'Disqualifying barrier detected. Company falls short of mandatory minimum statutory or experience criteria.';
   } else if (needsAttention) {
     verdict = 'CONDITIONAL_GO';
     verdictLabel = 'BID WITH CONDITIONS (CONDITIONAL GO)';
-    summary = 'Eligible to bid, but 1-2 critical vendor authorizations (MAF) and CA certificates must be obtained before submission.';
+    summary =
+      'Eligible to bid, but 1-2 critical vendor authorizations (MAF) and CA certificates must be obtained before submission.';
   }
 
   return {
@@ -457,29 +477,34 @@ export function deriveBidDecision(
     reasonsToPursue: [
       {
         title: 'Strong Financial Headroom',
-        detail: 'Your 3-year average turnover exceeds the required ₹ 12.25 Cr threshold by over 21%, eliminating financial scrutiny risk.',
+        detail:
+          'Your 3-year average turnover exceeds the required ₹ 12.25 Cr threshold by over 21%, eliminating financial scrutiny risk.',
         impact: 'POSITIVE',
       },
       {
         title: 'Direct Railway Experience Precedent',
-        detail: 'Your Central Railway ROB completion certificate provides 100% clause alignment for Section III similar work criteria.',
+        detail:
+          'Your Central Railway ROB completion certificate provides 100% clause alignment for Section III similar work criteria.',
         impact: 'POSITIVE',
       },
       {
         title: 'Local Operational Presence',
-        detail: 'Registered operating hub in the project state minimizes mobilization lead time and logistics overheads.',
+        detail:
+          'Registered operating hub in the project state minimizes mobilization lead time and logistics overheads.',
         impact: 'POSITIVE',
       },
     ],
     reasonsNotToPursue: [
       {
         title: 'Working Capital Lock-in',
-        detail: 'Requires ₹ 49L EMD plus 5% Performance Security (₹ 1.22 Cr), locking ₹ 1.71 Cr bank guarantee limit for up to 24 months.',
+        detail:
+          'Requires ₹ 49L EMD plus 5% Performance Security (₹ 1.22 Cr), locking ₹ 1.71 Cr bank guarantee limit for up to 24 months.',
         impact: 'WARNING',
       },
       {
         title: 'Strict Liquidated Damages Cap',
-        detail: 'Tender specifies 0.5% per week delay penalty up to 10% maximum without grace periods for rain/monsoon delays.',
+        detail:
+          'Tender specifies 0.5% per week delay penalty up to 10% maximum without grace periods for rain/monsoon delays.',
         impact: 'WARNING',
       },
     ],
@@ -499,25 +524,31 @@ export function deriveEvidenceCitations(
   company: CompanyCapabilityProfile,
 ): EvidenceMappingCitation[] {
   const getTitle = (item: ComplianceItem) => (item as { title?: string }).title || item.requirement;
-  
+
   if (items.length > 0) {
     return items.map((item, idx) => ({
       id: `cite_${item.id}`,
       requirementTitle: getTitle(item),
       requirementCategory: item.category,
-      tenderClauseRef: item.provenance.sectionOrClause || item.tenderClauseRef || `Clause ${idx + 1}.0`,
+      tenderClauseRef:
+        item.provenance.sectionOrClause || item.tenderClauseRef || `Clause ${idx + 1}.0`,
       tenderPageNumber: item.provenance.pageNumber || 1,
-      tenderDocName: item.provenance.documentName || item.sourceCitation?.document || 'Notice_Inviting_Tender.pdf',
+      tenderDocName:
+        item.provenance.documentName ||
+        item.sourceCitation?.document ||
+        'Notice_Inviting_Tender.pdf',
       tenderVerbatimQuote: item.provenance.verbatimQuote || item.description,
       companyEvidenceTitle: item.executionRules.udinRequired
         ? 'Audited Financial Statement with CA UDIN'
         : item.executionRules.stampPaperRequired
-        ? `Undertaking on ₹${item.executionRules.stampPaperDenominationInr} Stamp Paper`
-        : 'Company Statutory Registration Certificate',
+          ? `Undertaking on ₹${item.executionRules.stampPaperDenominationInr} Stamp Paper`
+          : 'Company Statutory Registration Certificate',
       companyEvidenceRef: item.executionRules.udinRequired
         ? 'CA_Audited_Turnover_FY2023-24.pdf'
         : 'GST_PAN_Registration_Kit.pdf',
-      companyEvidenceDocType: item.executionRules.udinRequired ? 'FINANCIAL_AUDIT' : 'LEGAL_UNDERTAKING',
+      companyEvidenceDocType: item.executionRules.udinRequired
+        ? 'FINANCIAL_AUDIT'
+        : 'LEGAL_UNDERTAKING',
       verificationStatus: 'VERIFIED',
       udinNumber: item.executionRules.udinRequired ? company.turnoverRecords[0]?.caUdin : undefined,
       notes: 'Grounded against official tender clause and company capability repository.',
@@ -533,7 +564,8 @@ export function deriveEvidenceCitations(
       tenderClauseRef: 'Section III, Clause 2.1',
       tenderPageNumber: 14,
       tenderDocName: 'Tender_Document_Vol_1.pdf',
-      tenderVerbatimQuote: 'The average annual turnover of the tenderer during the last 3 financial years must not be less than 50% of the advertised tender value. The certificate must be issued by a practicing Chartered Accountant and bear a valid UDIN.',
+      tenderVerbatimQuote:
+        'The average annual turnover of the tenderer during the last 3 financial years must not be less than 50% of the advertised tender value. The certificate must be issued by a practicing Chartered Accountant and bear a valid UDIN.',
       companyEvidenceTitle: 'CA Audited Balance Sheet & Turnover Certificate',
       companyEvidenceRef: 'CA_Audited_Turnover_FY2023-24.pdf',
       companyEvidenceDocType: 'CA_CERTIFICATE',
@@ -548,7 +580,8 @@ export function deriveEvidenceCitations(
       tenderClauseRef: 'ITB Clause 4.2',
       tenderPageNumber: 9,
       tenderDocName: 'Instructions_To_Bidders.pdf',
-      tenderVerbatimQuote: 'The bid shall be signed by the legally authorized representative holding a Power of Attorney executed on non-judicial stamp paper of ₹ 100 denomination, duly notarized by an authorized Notary Public.',
+      tenderVerbatimQuote:
+        'The bid shall be signed by the legally authorized representative holding a Power of Attorney executed on non-judicial stamp paper of ₹ 100 denomination, duly notarized by an authorized Notary Public.',
       companyEvidenceTitle: 'Board Resolution & Executed Power of Attorney',
       companyEvidenceRef: 'Board_Resolution_PoA_Ramesh_Sharma.pdf',
       companyEvidenceDocType: 'LEGAL_AFFIDAVIT',
@@ -562,7 +595,8 @@ export function deriveEvidenceCitations(
       tenderClauseRef: 'Section III, Clause 3.2',
       tenderPageNumber: 16,
       tenderDocName: 'Tender_Document_Vol_1.pdf',
-      tenderVerbatimQuote: 'Tenderer should have completed at least one work of similar nature having value not less than 40% of the advertised tender value during the last 7 years ending the last day of the month prior to the tender opening.',
+      tenderVerbatimQuote:
+        'Tenderer should have completed at least one work of similar nature having value not less than 40% of the advertised tender value during the last 7 years ending the last day of the month prior to the tender opening.',
       companyEvidenceTitle: 'Central Railway Completion Certificate (ROB Project)',
       companyEvidenceRef: 'CR_ROB_Completion_Cert.pdf',
       companyEvidenceDocType: 'COMPLETION_CERTIFICATE',
@@ -580,9 +614,11 @@ export function deriveCommercialRisks(): CommercialRiskItem[] {
       severity: 'HIGH',
       category: 'LIQUIDATED_DAMAGES',
       clauseReference: 'GCC Clause 17.2',
-      penaltySummary: '0.5% per week of delay up to a hard ceiling of 10% of contract value (approx ₹ 2.45 Cr maximum exposure).',
+      penaltySummary:
+        '0.5% per week of delay up to a hard ceiling of 10% of contract value (approx ₹ 2.45 Cr maximum exposure).',
       financialImpactRupees: 24500000,
-      mitigationAdvice: 'Ensure 30-day buffer in project CPM/PERT schedule. Submit site-handover delay notices in writing within 7 days of occurrence.',
+      mitigationAdvice:
+        'Ensure 30-day buffer in project CPM/PERT schedule. Submit site-handover delay notices in writing within 7 days of occurrence.',
     },
     {
       id: 'risk_02',
@@ -590,9 +626,11 @@ export function deriveCommercialRisks(): CommercialRiskItem[] {
       severity: 'HIGH',
       category: 'WORKING_CAPITAL',
       clauseReference: 'NIT Clause 2.1 & 6.4',
-      penaltySummary: 'EMD ₹ 49L + 5% Performance Security (₹ 1.22 Cr) locked for 18 months plus 6 months defect liability period.',
+      penaltySummary:
+        'EMD ₹ 49L + 5% Performance Security (₹ 1.22 Cr) locked for 18 months plus 6 months defect liability period.',
       financialImpactRupees: 17150000,
-      mitigationAdvice: 'Seek MSME EMD exemption under UDYAM scheme if eligible. Arrange 100% margin BG limit from consortium bank in advance.',
+      mitigationAdvice:
+        'Seek MSME EMD exemption under UDYAM scheme if eligible. Arrange 100% margin BG limit from consortium bank in advance.',
     },
     {
       id: 'risk_03',
@@ -600,8 +638,10 @@ export function deriveCommercialRisks(): CommercialRiskItem[] {
       severity: 'MEDIUM',
       category: 'PAYMENT_TERMS',
       clauseReference: 'SCC Clause 8.1',
-      penaltySummary: 'No Price Variation Clause (PVC) is admissible for tenders with execution duration under 18 months. Fuel and cement price fluctuations are at contractor risk.',
-      mitigationAdvice: 'Factor in 6-8% material inflation contingency in BOQ unit rates for steel, bitumen, and cement.',
+      penaltySummary:
+        'No Price Variation Clause (PVC) is admissible for tenders with execution duration under 18 months. Fuel and cement price fluctuations are at contractor risk.',
+      mitigationAdvice:
+        'Factor in 6-8% material inflation contingency in BOQ unit rates for steel, bitumen, and cement.',
     },
     {
       id: 'risk_04',
@@ -609,7 +649,8 @@ export function deriveCommercialRisks(): CommercialRiskItem[] {
       severity: 'MEDIUM',
       category: 'LEGAL',
       clauseReference: 'GCC Clause 24.1',
-      penaltySummary: 'Retention money of 5% will be deducted from running bills and released only after 12 months from final completion date.',
+      penaltySummary:
+        'Retention money of 5% will be deducted from running bills and released only after 12 months from final completion date.',
       mitigationAdvice: 'Cash flow model must account for deferred 5% retention release.',
     },
   ];
@@ -622,7 +663,8 @@ export function deriveMissingEvidence(): MissingEvidenceItem[] {
       documentTitle: 'Manufacturer Authorization Form (MAF) from Cabling OEM',
       requiredFor: 'Technical Specification Clause 12.4 (Signaling & Power Cables)',
       criticality: 'CRITICAL_BLOCKER',
-      actionNeeded: 'Submit tender details to authorized OEM distributor to issue tender-specific authorization undertaking.',
+      actionNeeded:
+        'Submit tender details to authorized OEM distributor to issue tender-specific authorization undertaking.',
       issuingParty: 'OEM Technical Team (Havells / Polycab)',
       estimatedTurnaroundDays: 3,
       status: 'IN_PROGRESS',
@@ -632,7 +674,8 @@ export function deriveMissingEvidence(): MissingEvidenceItem[] {
       documentTitle: 'Chartered Accountant Net Worth Certificate with UDIN',
       requiredFor: 'Section III Financial Criteria (Net Worth must be positive)',
       criticality: 'CRITICAL_BLOCKER',
-      actionNeeded: 'Request practicing CA to generate Certificate of Net Worth on official letterhead with valid UDIN.',
+      actionNeeded:
+        'Request practicing CA to generate Certificate of Net Worth on official letterhead with valid UDIN.',
       issuingParty: 'Chartered Accountant',
       estimatedTurnaroundDays: 2,
       status: 'PENDING_REQUEST',
@@ -642,7 +685,8 @@ export function deriveMissingEvidence(): MissingEvidenceItem[] {
       documentTitle: 'Make in India (PPP-MII) Local Content Declaration',
       requiredFor: 'Public Procurement Preference to Make in India Order',
       criticality: 'RECOMMENDED',
-      actionNeeded: 'Prepare self-declaration on company letterhead certifying >50% Class-I local content.',
+      actionNeeded:
+        'Prepare self-declaration on company letterhead certifying >50% Class-I local content.',
       issuingParty: 'Authorized Signatory',
       estimatedTurnaroundDays: 1,
       status: 'PENDING_REQUEST',
@@ -657,7 +701,8 @@ export function deriveHumanReviewTask(): HumanReviewTaskState {
     assignedRole: 'BID_MANAGER',
     status: 'PENDING',
     title: 'Management Review: Ambiguous Cable Testing Scope & EMD Exemption',
-    description: 'Verify whether UDYAM MSME registration grants 100% EMD waiver for this railway tender, and confirm cabling OEM partnership.',
+    description:
+      'Verify whether UDYAM MSME registration grants 100% EMD waiver for this railway tender, and confirm cabling OEM partnership.',
     urgency: 'HIGH',
     decisionState: 'AI_PROPOSED',
     comments: [
@@ -666,14 +711,16 @@ export function deriveHumanReviewTask(): HumanReviewTaskState {
         authorName: 'Ramesh Sharma',
         authorRole: 'BID_MANAGER',
         timestamp: '2026-10-04 16:30 IST',
-        comment: 'We have applied for the cabling MAF with Polycab distributor. Expected by Wednesday.',
+        comment:
+          'We have applied for the cabling MAF with Polycab distributor. Expected by Wednesday.',
       },
       {
         id: 'comm_02',
         authorName: 'Sunil Verma',
         authorRole: 'FINANCIAL_CONTROLLER',
         timestamp: '2026-10-05 10:15 IST',
-        comment: 'Bank Guarantee limit of ₹ 1.5 Cr is sanction-approved if the client rejects the MSME EMD waiver.',
+        comment:
+          'Bank Guarantee limit of ₹ 1.5 Cr is sanction-approved if the client rejects the MSME EMD waiver.',
       },
     ],
   };
@@ -757,7 +804,8 @@ export function deriveSubmissionChecklist(): SubmissionChecklistItem[] {
       requirementDetail: 'Unprotected BOQ Excel file filled with item rates and digitally signed.',
       isMandatory: true,
       isCompleted: false,
-      notes: 'CRITICAL: Must be uploaded exclusively into Financial Cover slot. Never put rates in Technical Cover!',
+      notes:
+        'CRITICAL: Must be uploaded exclusively into Financial Cover slot. Never put rates in Technical Cover!',
     },
     {
       id: 'sub_08',

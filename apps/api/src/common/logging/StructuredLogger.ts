@@ -1,6 +1,9 @@
 import type { LoggerService } from '@nestjs/common';
+import fs from 'node:fs';
+import path from 'node:path';
 import { LoggingContextHolder } from './LoggingContext.js';
 import { LogSanitizer } from './LogSanitizer.js';
+import { RotatingLogStream } from './RotatingLogStream.js';
 
 export type LogLevelName = 'DEBUG' | 'INFO' | 'WARN' | 'ERROR' | 'FATAL';
 
@@ -36,6 +39,8 @@ export interface StructuredLogPayload {
 }
 
 export class StructuredLogger implements LoggerService {
+  private static fileStream: RotatingLogStream | null = null;
+
   private readonly contextName: string;
   private readonly serviceName: string;
   private readonly environment: string;
@@ -46,24 +51,97 @@ export class StructuredLogger implements LoggerService {
     this.environment = process.env.NODE_ENV || 'development';
   }
 
-  private getActiveMinLevel(): LogLevelName {
-    const envLevel = (process.env.LOG_LEVEL || '').toUpperCase();
-    if (envLevel in LOG_LEVEL_PRIORITY) {
-      return envLevel as LogLevelName;
+  public static getRotatingFileStream(): RotatingLogStream | null {
+    if (process.env.LOG_TO_FILE === 'false') {
+      return null;
     }
-    return this.environment === 'production' ? 'INFO' : 'DEBUG';
+    if (!this.fileStream) {
+      const isTest = process.env.NODE_ENV === 'test' || Boolean(process.env.VITEST);
+      if (isTest && process.env.LOG_TO_FILE !== 'true') {
+        return null;
+      }
+
+      const logDir =
+        process.env.LOG_DIR ||
+        (fs.existsSync(path.resolve(process.cwd(), 'apps/api')) ? 'logs' : '../../logs');
+      const resolvedDir = path.resolve(process.cwd(), logDir);
+      const filePath = path.join(resolvedDir, 'api.log');
+
+      const maxBytes = process.env.LOG_MAX_BYTES
+        ? parseInt(process.env.LOG_MAX_BYTES, 10)
+        : 10 * 1024 * 1024;
+      const maxFiles = process.env.LOG_MAX_FILES ? parseInt(process.env.LOG_MAX_FILES, 10) : 5;
+
+      this.fileStream = new RotatingLogStream({
+        filePath,
+        maxBytes,
+        maxFiles,
+      });
+    }
+    return this.fileStream;
   }
 
-  private shouldLog(level: LogLevelName): boolean {
-    const minLevel = this.getActiveMinLevel();
+  private getConsoleMinLevel(): LogLevelName {
+    const isTest = process.env.NODE_ENV === 'test' || Boolean(process.env.VITEST);
+    if (isTest) {
+      const envLevel = (process.env.LOG_LEVEL || '').toUpperCase();
+      if (envLevel in LOG_LEVEL_PRIORITY) return envLevel as LogLevelName;
+      return 'DEBUG';
+    }
+
+    const consoleLevel = (
+      process.env.LOG_LEVEL_CONSOLE ||
+      process.env.LOG_LEVEL ||
+      ''
+    ).toUpperCase();
+    if (consoleLevel in LOG_LEVEL_PRIORITY) {
+      return consoleLevel as LogLevelName;
+    }
+    return this.environment === 'production' ? 'WARN' : 'INFO';
+  }
+
+  private getFileMinLevel(): LogLevelName {
+    const fileLevel = (process.env.LOG_LEVEL_FILE || process.env.LOG_LEVEL || '').toUpperCase();
+    if (fileLevel in LOG_LEVEL_PRIORITY) {
+      return fileLevel as LogLevelName;
+    }
+    return 'DEBUG';
+  }
+
+  private shouldLogToConsole(level: LogLevelName, event?: string, message?: string): boolean {
+    if (process.env.LOG_TO_CONSOLE === 'false') {
+      return false;
+    }
+    const minLevel = this.getConsoleMinLevel();
+    if (LOG_LEVEL_PRIORITY[level] < LOG_LEVEL_PRIORITY[minLevel]) {
+      return false;
+    }
+
+    // Suppress noisy framework route discovery and module initialization spam on console
+    // unless console level is explicitly set to DEBUG
+    const isTest = process.env.NODE_ENV === 'test' || Boolean(process.env.VITEST);
+    if (!isTest && minLevel !== 'DEBUG') {
+      if (event === 'app.info' || event === 'app.verbose') {
+        const msg = message || '';
+        if (
+          msg.startsWith('Mapped {') ||
+          msg.endsWith('dependencies initialized') ||
+          msg.includes('Controller {/')
+        ) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
+  private shouldLogToFile(level: LogLevelName): boolean {
+    const minLevel = this.getFileMinLevel();
     return LOG_LEVEL_PRIORITY[level] >= LOG_LEVEL_PRIORITY[minLevel];
   }
 
   private formatAndEmit(payload: StructuredLogPayload): void {
-    if (!this.shouldLog(payload.level)) {
-      return;
-    }
-
     const context = LoggingContextHolder.get();
 
     const fullPayload: StructuredLogPayload = {
@@ -88,28 +166,44 @@ export class StructuredLogger implements LoggerService {
       metadata: payload.metadata || {},
     };
 
-    // Deep sanitize any potential secrets or sensitive identifiers
+    // Deep sanitize any potential secrets, credentials, or oversized document bodies
     const sanitized = LogSanitizer.sanitize(fullPayload) as StructuredLogPayload;
+    const jsonString = JSON.stringify(sanitized);
 
-    if (process.env.LOG_FORMAT === 'pretty') {
-      const traceTag = sanitized.trace_id ? ` [${sanitized.trace_id}]` : '';
-      const tenantTag = sanitized.tenant_id ? ` [tenant:${sanitized.tenant_id}]` : '';
+    // 1. Write to rotating file stream (full structured JSON)
+    const fileStream = StructuredLogger.getRotatingFileStream();
+    if (fileStream && this.shouldLogToFile(sanitized.level)) {
+      fileStream.write(jsonString + '\n');
+    }
+
+    // 2. Write to console (stdout / stderr)
+    if (this.shouldLogToConsole(sanitized.level, sanitized.event, sanitized.message)) {
+      const isTest = process.env.NODE_ENV === 'test' || Boolean(process.env.VITEST);
+
+      // In tests, or if LOG_FORMAT=json, output JSON string
+      if (isTest || process.env.LOG_FORMAT === 'json') {
+        if (sanitized.level === 'ERROR' || sanitized.level === 'FATAL') {
+          process.stderr.write(jsonString + '\n');
+        } else {
+          process.stdout.write(jsonString + '\n');
+        }
+        return;
+      }
+
+      // Default for development / terminal: Clean, human-friendly one-liner
+      const timeStr = sanitized.timestamp
+        ? sanitized.timestamp.slice(11, 19)
+        : new Date().toISOString().slice(11, 19);
+      const traceTag = sanitized.trace_id ? ` [${sanitized.trace_id.slice(0, 12)}]` : '';
+      const tenantTag = sanitized.tenant_id ? ` [${sanitized.tenant_id}]` : '';
       const durationTag = sanitized.duration_ms !== null ? ` (${sanitized.duration_ms}ms)` : '';
-      const formatted = `[${sanitized.timestamp}] [${sanitized.level}] [${this.contextName}]${traceTag}${tenantTag} ${sanitized.event}: ${sanitized.message}${durationTag}`;
+      const formatted = `[${timeStr}] ${sanitized.level.padEnd(5)} [${this.contextName}]${traceTag}${tenantTag} ${sanitized.message}${durationTag}`;
+
       if (sanitized.level === 'ERROR' || sanitized.level === 'FATAL') {
         process.stderr.write(formatted + '\n');
       } else {
         process.stdout.write(formatted + '\n');
       }
-      return;
-    }
-
-    // Default: Single-line Structured JSON
-    const jsonString = JSON.stringify(sanitized);
-    if (sanitized.level === 'ERROR' || sanitized.level === 'FATAL') {
-      process.stderr.write(jsonString + '\n');
-    } else {
-      process.stdout.write(jsonString + '\n');
     }
   }
 
@@ -132,10 +226,7 @@ export class StructuredLogger implements LoggerService {
     });
   }
 
-  public info(
-    eventOrMessage: unknown,
-    ...optionalParams: unknown[]
-  ): void {
+  public info(eventOrMessage: unknown, ...optionalParams: unknown[]): void {
     if (typeof eventOrMessage === 'string' && typeof optionalParams[0] === 'string') {
       const event = eventOrMessage;
       const message = optionalParams[0];
@@ -146,16 +237,14 @@ export class StructuredLogger implements LoggerService {
     }
 
     const message = String(eventOrMessage);
-    const metadata = optionalParams[0] && typeof optionalParams[0] === 'object'
-      ? (optionalParams[0] as Record<string, unknown>)
-      : undefined;
+    const metadata =
+      optionalParams[0] && typeof optionalParams[0] === 'object'
+        ? (optionalParams[0] as Record<string, unknown>)
+        : undefined;
     this.logStructured('INFO', 'app.info', message, metadata);
   }
 
-  public warn(
-    eventOrMessage: unknown,
-    ...optionalParams: unknown[]
-  ): void {
+  public warn(eventOrMessage: unknown, ...optionalParams: unknown[]): void {
     if (typeof eventOrMessage === 'string' && typeof optionalParams[0] === 'string') {
       const event = eventOrMessage;
       const message = optionalParams[0];
@@ -166,16 +255,14 @@ export class StructuredLogger implements LoggerService {
     }
 
     const message = String(eventOrMessage);
-    const metadata = optionalParams[0] && typeof optionalParams[0] === 'object'
-      ? (optionalParams[0] as Record<string, unknown>)
-      : undefined;
+    const metadata =
+      optionalParams[0] && typeof optionalParams[0] === 'object'
+        ? (optionalParams[0] as Record<string, unknown>)
+        : undefined;
     this.logStructured('WARN', 'app.warn', message, metadata);
   }
 
-  public error(
-    eventOrMessage: unknown,
-    ...optionalParams: unknown[]
-  ): void {
+  public error(eventOrMessage: unknown, ...optionalParams: unknown[]): void {
     if (typeof eventOrMessage === 'string' && typeof optionalParams[0] === 'string') {
       const event = eventOrMessage;
       const message = optionalParams[0];
@@ -206,9 +293,9 @@ export class StructuredLogger implements LoggerService {
 
     const message = String(eventOrMessage);
     const err = optionalParams[0];
-    const metadata = (optionalParams[1] && typeof optionalParams[1] === 'object'
-      ? optionalParams[1]
-      : undefined) as Record<string, unknown> | undefined;
+    const metadata = (
+      optionalParams[1] && typeof optionalParams[1] === 'object' ? optionalParams[1] : undefined
+    ) as Record<string, unknown> | undefined;
 
     const errorMetadata: Record<string, unknown> = { ...(metadata || {}) };
     let errorCode: string | null = null;
@@ -229,10 +316,7 @@ export class StructuredLogger implements LoggerService {
     });
   }
 
-  public debug(
-    eventOrMessage: unknown,
-    ...optionalParams: unknown[]
-  ): void {
+  public debug(eventOrMessage: unknown, ...optionalParams: unknown[]): void {
     if (typeof eventOrMessage === 'string' && typeof optionalParams[0] === 'string') {
       const event = eventOrMessage;
       const message = optionalParams[0];
@@ -243,9 +327,10 @@ export class StructuredLogger implements LoggerService {
     }
 
     const message = String(eventOrMessage);
-    const metadata = optionalParams[0] && typeof optionalParams[0] === 'object'
-      ? (optionalParams[0] as Record<string, unknown>)
-      : undefined;
+    const metadata =
+      optionalParams[0] && typeof optionalParams[0] === 'object'
+        ? (optionalParams[0] as Record<string, unknown>)
+        : undefined;
     this.logStructured('DEBUG', 'app.debug', message, metadata);
   }
 

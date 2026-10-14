@@ -50,9 +50,14 @@ export class DigiLockerAdapter implements IDigitalLockerPort {
   private readonly timeoutMs: number;
 
   constructor() {
-    this.authUrl = process.env.DIGILOCKER_AUTH_URL || 'https://digilocker.meripehchan.gov.in/public/oauth2/1/authorize';
-    this.tokenUrl = process.env.DIGILOCKER_TOKEN_URL || 'https://digilocker.meripehchan.gov.in/public/oauth2/1/token';
-    this.apiUrl = process.env.DIGILOCKER_API_URL || 'https://digilocker.meripehchan.gov.in/public/oauth2/1';
+    this.authUrl =
+      process.env.DIGILOCKER_AUTH_URL ||
+      'https://digilocker.meripehchan.gov.in/public/oauth2/1/authorize';
+    this.tokenUrl =
+      process.env.DIGILOCKER_TOKEN_URL ||
+      'https://digilocker.meripehchan.gov.in/public/oauth2/1/token';
+    this.apiUrl =
+      process.env.DIGILOCKER_API_URL || 'https://digilocker.meripehchan.gov.in/public/oauth2/1';
     this.clientId = process.env.DIGILOCKER_CLIENT_ID || 'tenderpulse_production_client';
     this.clientSecret = process.env.DIGILOCKER_CLIENT_SECRET || 'tenderpulse_production_secret';
     this.hmacSecret = process.env.DIGILOCKER_STATE_SECRET || 'tenderpulse-state-secret';
@@ -95,7 +100,10 @@ export class DigiLockerAdapter implements IDigitalLockerPort {
         payload: string;
         hmac: string;
       };
-      const expectedHmac = crypto.createHmac('sha256', this.hmacSecret).update(decoded.payload).digest('hex');
+      const expectedHmac = crypto
+        .createHmac('sha256', this.hmacSecret)
+        .update(decoded.payload)
+        .digest('hex');
       if (expectedHmac !== decoded.hmac) {
         throw new BadRequestError('Invalid DigiLocker state token (HMAC mismatch).');
       }
@@ -142,7 +150,9 @@ export class DigiLockerAdapter implements IDigitalLockerPort {
 
       const data = (await response.json()) as RawDigiLockerTokenPayload;
       if (!data.access_token) {
-        throw new BadRequestError(data.error_description || 'DigiLocker did not return an access token.');
+        throw new BadRequestError(
+          data.error_description || 'DigiLocker did not return an access token.',
+        );
       }
 
       return {
@@ -179,7 +189,9 @@ export class DigiLockerAdapter implements IDigitalLockerPort {
       clearTimeout(timer);
 
       if (!listResponse.ok) {
-        throw new InternalServerError(`Failed to fetch issued documents list (${listResponse.status}).`);
+        throw new InternalServerError(
+          `Failed to fetch issued documents list (${listResponse.status}).`,
+        );
       }
 
       const listData = (await listResponse.json()) as RawIssuedFileListResponse;
@@ -188,7 +200,11 @@ export class DigiLockerAdapter implements IDigitalLockerPort {
 
       for (const item of items) {
         if (!item.uri) continue;
-        const fileDoc = await this.downloadFileByUri(item.uri, accessToken, item.name || 'document.pdf');
+        const fileDoc = await this.downloadFileByUri(
+          item.uri,
+          accessToken,
+          item.name || 'document.pdf',
+        );
         if (fileDoc) {
           documents.push(fileDoc);
         }
@@ -197,7 +213,9 @@ export class DigiLockerAdapter implements IDigitalLockerPort {
       return documents;
     } catch (err: unknown) {
       clearTimeout(timer);
-      this.logger.error(`Error pulling documents from DigiLocker: ${err instanceof Error ? err.message : String(err)}`);
+      this.logger.error(
+        `Error pulling documents from DigiLocker: ${err instanceof Error ? err.message : String(err)}`,
+      );
       throw new InternalServerError('Failed to fetch issued files from DigiLocker repository.');
     }
   }

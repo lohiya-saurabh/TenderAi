@@ -85,6 +85,15 @@ def make_docling_parse_node(ctx: WorkflowNodeContext):
         file_name = state.get("file_name", "document.pdf")
         pages = state.get("pages", [])
 
+        if state.get("docling_document"):
+            raw_text = state.get("raw_page_text", "")
+            return {
+                "docling_document": state["docling_document"],
+                "raw_page_text": raw_text,
+                "status": WorkflowStatus.RETRIEVED.value,
+                "audit_events": [],
+            }
+
         logger.info(
             "LangGraph node docling_parse started for doc_id=%s, page=%s",
             doc_id,
@@ -179,6 +188,12 @@ def make_build_structure_node(ctx: WorkflowNodeContext):
         docling_dict = state.get("docling_document")
         docling_doc = DoclingParsedDocument(**docling_dict) if docling_dict else DoclingParsedDocument(document_id=state["document_id"])
 
+        if state.get("document_structure"):
+            return {
+                "document_structure": state["document_structure"],
+                "audit_events": [],
+            }
+
         builder = DocumentStructureBuilder()
         tree = builder.build_structure(docling_doc)
 
@@ -221,23 +236,35 @@ def make_candidate_detection_node(ctx: WorkflowNodeContext):
         start_time = time.perf_counter()
         doc_id = state.get("document_id")
         sec_context = SecurityContext(**state["security_context"])
+
+        if state.get("detected_candidates"):
+            return {
+                "detected_candidates": state["detected_candidates"],
+                "unselected_passages": state.get("unselected_passages", []),
+                "audit_events": [],
+            }
+
         docling_doc = DoclingParsedDocument(**state["docling_document"])
         tree = DocumentStructureTree(**state["document_structure"])
 
         detector = CandidateDetector()
-        candidates = detector.detect_candidates(docling_doc, tree)
+        candidates, unselected = detector.detect_candidates_with_unselected(docling_doc, tree)
 
         duration_ms = round((time.perf_counter() - start_time) * 1000, 1)
         logger.info(
-            "LangGraph node candidate_detection completed in %.1fms (candidates=%d)",
+            "LangGraph node candidate_detection completed in %.1fms (candidates=%d, unselected=%d)",
             duration_ms,
             len(candidates),
+            len(unselected),
             extra={
                 "event": "langgraph.node.completed",
                 "node": "candidate_detection",
                 "document_id": doc_id,
                 "duration_ms": duration_ms,
-                "metadata": {"candidates_count": len(candidates)},
+                "metadata": {
+                    "candidates_count": len(candidates),
+                    "unselected_count": len(unselected),
+                },
             },
         )
 
@@ -246,11 +273,12 @@ def make_candidate_detection_node(ctx: WorkflowNodeContext):
             action="NODE_3_CANDIDATE_DETECTION_COMPLETED",
             entity_type="TenderDocument",
             entity_id=state["document_id"],
-            details={"candidates_detected": len(candidates)},
+            details={"candidates_detected": len(candidates), "unselected_count": len(unselected)},
         )
 
         return {
             "detected_candidates": [c.model_dump() for c in candidates],
+            "unselected_passages": [u.model_dump() for u in unselected],
             "audit_events": [audit],
         }
 
@@ -266,6 +294,13 @@ def make_context_assembly_node(ctx: WorkflowNodeContext):
         start_time = time.perf_counter()
         doc_id = state.get("document_id")
         sec_context = SecurityContext(**state["security_context"])
+
+        if state.get("assembled_contexts"):
+            return {
+                "assembled_contexts": state["assembled_contexts"],
+                "audit_events": [],
+            }
+
         docling_doc = DoclingParsedDocument(**state["docling_document"])
         tree = DocumentStructureTree(**state["document_structure"])
 
@@ -453,6 +488,119 @@ def make_llm_extraction_node(ctx: WorkflowNodeContext):
             raise
 
     return llm_extraction_node
+
+
+# ==============================================================================
+# Node 5B: Rescue Pass (Tier-2 High-Recall Sweep for Unselected Passages)
+# ==============================================================================
+def make_rescue_pass_node(ctx: WorkflowNodeContext):
+    async def rescue_pass_node(state: ComplianceWorkflowState) -> dict[str, Any]:
+        node_var.set("rescue_pass")
+        start_time = time.perf_counter()
+        sec_context = SecurityContext(**state["security_context"])
+        doc_id = state["document_id"]
+        page_no = state.get("page_number", 1)
+
+        unselected_raw = state.get("unselected_passages", [])
+        page_unselected = [
+            u
+            for u in unselected_raw
+            if isinstance(u, dict)
+            and u.get("page_number") == page_no
+            and len(u.get("text", "").strip()) >= 15
+        ]
+
+        if not page_unselected:
+            return {
+                "audit_events": [],
+            }
+
+        logger.info(
+            "LangGraph node rescue_pass started for doc_id=%s, page=%s (unselected_chunks=%d)",
+            doc_id,
+            page_no,
+            len(page_unselected),
+            extra={
+                "event": "langgraph.node.started",
+                "node": "rescue_pass",
+                "document_id": doc_id,
+                "metadata": {"unselected_chunks_count": len(page_unselected)},
+            },
+        )
+
+        # Batch unselected chunks into wrapped untrusted text (top 10 per page to bound token usage)
+        combined_unselected_text = "\n\n".join(
+            SecretSanitizer.wrap_untrusted_data(
+                document_id=doc_id,
+                page_number=page_no,
+                content=u["text"],
+            )
+            for u in page_unselected[:10]
+        )
+
+        system_prompt = (
+            "You are an expert Indian Public Procurement and Legal Compliance Rescue Engine.\n"
+            "Analyze these unselected document passages for any restrictive conditions, disqualifications, debarment criteria, "
+            "technical standards, mandatory submissions, or legal covenants that may have lacked standard keywords.\n"
+            "Extract ONLY genuine binding obligations or disqualifications. If none exist, return an empty array.\n\n"
+            "Zero-Hallucination Invariant: Every item MUST cite an exact continuous verbatim quote.\n"
+            "Respond strictly in JSON format matching standard candidates array:\n"
+            '{"candidates": [{"category": "...", "title": "...", "description": "...", ...}]}'
+        )
+
+        user_prompt = f"Rescue sweep for unselected page passages:\n\n{combined_unselected_text}"
+
+        try:
+            rescue_candidates = await ctx.llm_client.extract_compliance(system_prompt, user_prompt)
+            duration_ms = round((time.perf_counter() - start_time) * 1000, 1)
+
+            # Avoid duplicates if candidate was already extracted in primary pass
+            existing_candidates = list(state.get("extracted_candidates", []))
+            existing_quotes = {
+                c.provenance.verbatim_quote.strip().lower() for c in existing_candidates
+            }
+
+            new_candidates = [
+                c
+                for c in rescue_candidates
+                if c.provenance.verbatim_quote.strip().lower() not in existing_quotes
+            ]
+            merged_candidates = existing_candidates + new_candidates
+
+            logger.info(
+                "LangGraph node rescue_pass completed in %.1fms (rescued=%d, total_candidates=%d)",
+                duration_ms,
+                len(new_candidates),
+                len(merged_candidates),
+                extra={
+                    "event": "langgraph.node.completed",
+                    "node": "rescue_pass",
+                    "document_id": doc_id,
+                    "duration_ms": duration_ms,
+                    "metadata": {
+                        "rescued_count": len(new_candidates),
+                        "total_candidates": len(merged_candidates),
+                    },
+                },
+            )
+
+            audit = create_audit_event(
+                context=sec_context,
+                action="RESCUE_PASS_COMPLETED",
+                entity_type="BidProject",
+                entity_id=state["bid_id"],
+                details={"rescued_count": len(new_candidates)},
+            )
+
+            return {
+                "extracted_candidates": merged_candidates,
+                "audit_events": [audit],
+            }
+        except Exception as exc:
+            logger.info("Rescue pass completed with 0 items: %s", exc)
+            return {"audit_events": []}
+
+    return rescue_pass_node
 
 
 # ==============================================================================

@@ -5,7 +5,13 @@ import { getMe, updateMe, changePassword, type UserProfile } from '../api/users.
 import { Avatar, AvatarFallback } from '../components/ui/avatar.js';
 import { Badge } from '../components/ui/badge.js';
 import { Button } from '../components/ui/button.js';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card.js';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '../components/ui/card.js';
 import { Input } from '../components/ui/input.js';
 import { Label } from '../components/ui/label.js';
 import { Separator } from '../components/ui/separator.js';
@@ -188,7 +194,10 @@ export const ProfilePage: React.FC = () => {
               <span className="text-base sm:text-lg font-semibold text-foreground tracking-tight">
                 {profile?.organizationName || user?.organizationName || 'Organization Workspace'}
               </span>
-              <Badge variant="outline" className="text-[10px] font-mono border-primary/30 text-primary bg-primary/5">
+              <Badge
+                variant="outline"
+                className="text-[10px] font-mono border-primary/30 text-primary bg-primary/5"
+              >
                 Multi-Tenant Isolated
               </Badge>
             </div>
@@ -218,7 +227,10 @@ export const ProfilePage: React.FC = () => {
           <p className="text-muted-foreground leading-relaxed">
             This page represents your individual user identity. To manage company registrations,
             GSTINs, CA UDIN certificates, or past contracts, visit the{' '}
-            <Link to="/company-profile" className="text-primary hover:underline font-medium inline-flex items-center gap-0.5">
+            <Link
+              to="/company-profile"
+              className="text-primary hover:underline font-medium inline-flex items-center gap-0.5"
+            >
               Company Capability Profile
               <ExternalLink className="h-3 w-3" />
             </Link>
@@ -281,9 +293,7 @@ export const ProfilePage: React.FC = () => {
             </Avatar>
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <span className="text-base font-semibold text-foreground">
-                  {displayName}
-                </span>
+                <span className="text-base font-semibold text-foreground">{displayName}</span>
                 <Badge variant="secondary" className="text-[10px] uppercase font-semibold">
                   {displayRole.replace(/_/g, ' ')}
                 </Badge>
@@ -482,7 +492,9 @@ export const ProfilePage: React.FC = () => {
                 <ShieldCheck className="h-4 w-4 text-foreground" />
                 <span>Password encrypted with bcrypt standard</span>
               </div>
-              <Badge variant="outline" className="text-[10px]">Secure</Badge>
+              <Badge variant="outline" className="text-[10px]">
+                Secure
+              </Badge>
             </div>
           )}
         </CardContent>
@@ -502,14 +514,18 @@ export const ProfilePage: React.FC = () => {
               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                 Tenant Workspace
               </span>
-              <p className="font-medium text-foreground">{profile?.organizationName || user?.organizationName || 'Default Workspace'}</p>
+              <p className="font-medium text-foreground">
+                {profile?.organizationName || user?.organizationName || 'Default Workspace'}
+              </p>
             </div>
 
             <div className="p-3 rounded-lg bg-muted/30 border border-border/60 space-y-1">
               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                 Organization Tenant ID
               </span>
-              <p className="font-mono text-foreground">{profile?.organizationId || user?.organizationId || '—'}</p>
+              <p className="font-mono text-foreground">
+                {profile?.organizationId || user?.organizationId || '—'}
+              </p>
             </div>
           </div>
 
@@ -541,7 +557,9 @@ export const ProfilePage: React.FC = () => {
       {/* 7. Session Security & Compliance Overview */}
       <Card>
         <CardHeader className="pb-4">
-          <CardTitle className="text-base font-semibold">Session Security &amp; Token Architecture</CardTitle>
+          <CardTitle className="text-base font-semibold">
+            Session Security &amp; Token Architecture
+          </CardTitle>
           <CardDescription className="text-xs">
             Cryptographic token session and multi-tenant security guarantees
           </CardDescription>

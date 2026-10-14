@@ -17,9 +17,13 @@ const { chromium } = require('playwright');
   await page.waitForTimeout(1000);
 
   // Fill in form inputs accurately using exact placeholder selectors
-  await page.locator('input[placeholder*="Supply and Commissioning"]').fill('Four-Laning of NH-66 Coastal Highway Package IV');
+  await page
+    .locator('input[placeholder*="Supply and Commissioning"]')
+    .fill('Four-Laning of NH-66 Coastal Highway Package IV');
   await page.locator('input[placeholder*="NTPC/2026/SOLAR"]').fill('NHAI/MUM/2026/EPC-0891');
-  await page.locator('input[placeholder*="NTPC Limited"]').fill('National Highways Authority of India');
+  await page
+    .locator('input[placeholder*="NTPC Limited"]')
+    .fill('National Highways Authority of India');
   await page.locator('input[placeholder*="50000000"]').fill('3200000000');
 
   const submitBtn = page.getByRole('button', { name: /Create Bid Project/i });

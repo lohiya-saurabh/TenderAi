@@ -68,8 +68,8 @@ export class BidProject extends AggregateRoot {
             submissionDeadline: this._submissionDeadline.toISOString(),
             status: this._status.value,
           },
-          this.version
-        )
+          this.version,
+        ),
       );
     }
   }

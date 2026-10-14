@@ -172,7 +172,9 @@ describe('Notifications Integration & Preference Gating Suite', () => {
       await TenantContextHolder.run(
         { organizationId: TENANT_B, userId: 'usr_bharat_01', role: 'ADMIN' },
         async () => {
-          await expect(notificationsService.markAsRead(notifIdTenantA)).rejects.toThrow(NotFoundError);
+          await expect(notificationsService.markAsRead(notifIdTenantA)).rejects.toThrow(
+            NotFoundError,
+          );
         },
       );
     });

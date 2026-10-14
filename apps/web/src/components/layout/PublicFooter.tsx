@@ -18,7 +18,8 @@ export const PublicFooter: React.FC = () => {
               </span>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Tender Intelligence &amp; Bid Readiness SaaS purpose-built for Indian contractors, MSMEs, and public sector vendors.
+              Tender Intelligence &amp; Bid Readiness SaaS purpose-built for Indian contractors,
+              MSMEs, and public sector vendors.
             </p>
             <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-mono">
               <Shield className="h-3.5 w-3.5 text-primary" />

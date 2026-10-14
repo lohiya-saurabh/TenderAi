@@ -23,11 +23,7 @@ export interface ProvenanceDrawerProps {
  * so the drawer states that gap explicitly instead of showing
  * fabricated company documents.
  */
-export const ProvenanceDrawer: React.FC<ProvenanceDrawerProps> = ({
-  isOpen,
-  onClose,
-  item,
-}) => {
+export const ProvenanceDrawer: React.FC<ProvenanceDrawerProps> = ({ isOpen, onClose, item }) => {
   if (!isOpen || !item) return null;
 
   const provenance = item.provenance;
@@ -93,7 +89,14 @@ export const ProvenanceDrawer: React.FC<ProvenanceDrawerProps> = ({
             >
               Requirement Citation
             </div>
-            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)' as unknown as number, color: 'var(--color-surface-text)', margin: 0 }}>
+            <h3
+              style={{
+                fontSize: 'var(--text-lg)',
+                fontWeight: 'var(--font-semibold)' as unknown as number,
+                color: 'var(--color-surface-text)',
+                margin: 0,
+              }}
+            >
               {item.requirement}
             </h3>
             <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)' }}>
@@ -118,10 +121,26 @@ export const ProvenanceDrawer: React.FC<ProvenanceDrawerProps> = ({
         </div>
 
         {/* Body */}
-        <div style={{ padding: 'var(--space-5)', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+        <div
+          style={{
+            padding: 'var(--space-5)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 'var(--space-4)',
+          }}
+        >
           {/* Grounded verbatim quote */}
           <div>
-            <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-surface-text)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.5rem' }}>
+            <div
+              style={{
+                fontSize: 'var(--text-xs)',
+                fontWeight: 600,
+                color: 'var(--color-surface-text)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+                marginBottom: '0.5rem',
+              }}
+            >
               Verbatim Tender Clause
             </div>
             <div
@@ -156,10 +175,7 @@ export const ProvenanceDrawer: React.FC<ProvenanceDrawerProps> = ({
             <Anchor label="Source document" value={provenance?.documentName || 'Unknown'} />
             <Anchor label="Page" value={provenance ? String(provenance.pageNumber) : '—'} />
             <Anchor label="Clause / Section" value={provenance?.sectionOrClause || '—'} />
-            <Anchor
-              label="Extraction confidence"
-              value={`${confidencePercent}%`}
-            />
+            <Anchor label="Extraction confidence" value={`${confidencePercent}%`} />
           </div>
 
           {/* Company-side evidence gap — honest, documented */}
@@ -174,29 +190,64 @@ export const ProvenanceDrawer: React.FC<ProvenanceDrawerProps> = ({
               border: '1px dashed var(--color-surface-border)',
             }}
           >
-            <span style={{ color: 'var(--color-primary-400)', flexShrink: 0, marginTop: '0.1rem', display: 'inline-flex' }}>
+            <span
+              style={{
+                color: 'var(--color-primary-400)',
+                flexShrink: 0,
+                marginTop: '0.1rem',
+                display: 'inline-flex',
+              }}
+            >
               <MissingIcon size={16} />
             </span>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-              <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-surface-text)' }}>
+              <span
+                style={{
+                  fontSize: 'var(--text-sm)',
+                  fontWeight: 600,
+                  color: 'var(--color-surface-text)',
+                }}
+              >
                 Company evidence matching not yet available
               </span>
-              <p style={{ margin: 0, fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)', lineHeight: 'var(--leading-normal)' }}>
-                "Which company document satisfies this clause?" requires the
-                Evidence Vault and the evidence-matching engine against the
-                Company Capability Profile. Neither has a backend API yet
-                (documented as missing endpoints), so no company-side proof
-                is shown.
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 'var(--text-xs)',
+                  color: 'var(--color-surface-muted)',
+                  lineHeight: 'var(--leading-normal)',
+                }}
+              >
+                "Which company document satisfies this clause?" requires the Evidence Vault and the
+                evidence-matching engine against the Company Capability Profile. Neither has a
+                backend API yet (documented as missing endpoints), so no company-side proof is
+                shown.
               </p>
             </div>
           </div>
 
           {/* Requirement detail */}
           <div>
-            <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-surface-text)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.5rem' }}>
+            <div
+              style={{
+                fontSize: 'var(--text-xs)',
+                fontWeight: 600,
+                color: 'var(--color-surface-text)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+                marginBottom: '0.5rem',
+              }}
+            >
               Requirement Detail
             </div>
-            <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--color-surface-muted)', lineHeight: 'var(--leading-normal)' }}>
+            <p
+              style={{
+                margin: 0,
+                fontSize: 'var(--text-sm)',
+                color: 'var(--color-surface-muted)',
+                lineHeight: 'var(--leading-normal)',
+              }}
+            >
               {item.description}
             </p>
           </div>
@@ -209,10 +260,24 @@ export const ProvenanceDrawer: React.FC<ProvenanceDrawerProps> = ({
 function Anchor({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-      <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+      <div
+        style={{
+          fontSize: 'var(--text-2xs)',
+          color: 'var(--color-surface-muted)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.04em',
+        }}
+      >
         {label}
       </div>
-      <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-surface-text)', wordBreak: 'break-word' }}>
+      <div
+        style={{
+          fontSize: 'var(--text-xs)',
+          fontWeight: 600,
+          color: 'var(--color-surface-text)',
+          wordBreak: 'break-word',
+        }}
+      >
         {value}
       </div>
     </div>

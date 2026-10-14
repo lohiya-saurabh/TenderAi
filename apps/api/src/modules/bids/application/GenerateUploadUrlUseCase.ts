@@ -39,7 +39,7 @@ export class GenerateUploadUrlUseCase {
     private readonly documentRepository: ITenderDocumentRepository,
     private readonly storageService: IStorageService,
     private readonly auditRepository: IAuditRepository,
-    private readonly unitOfWork: IUnitOfWork = new DirectUnitOfWork()
+    private readonly unitOfWork: IUnitOfWork = new DirectUnitOfWork(),
   ) {}
 
   public async execute(command: GenerateUploadUrlCommand): Promise<GenerateUploadUrlResult> {
@@ -57,11 +57,11 @@ export class GenerateUploadUrlUseCase {
     const existingDoc = await this.documentRepository.findByChecksum(
       command.bidId,
       command.checksumSha256,
-      command.organizationId
+      command.organizationId,
     );
     if (existingDoc) {
       throw new ValidationException(
-        `Duplicate document: A document with identical checksum '${command.checksumSha256}' is already registered for this bid ('${existingDoc.fileName}').`
+        `Duplicate document: A document with identical checksum '${command.checksumSha256}' is already registered for this bid ('${existingDoc.fileName}').`,
       );
     }
 
@@ -89,7 +89,7 @@ export class GenerateUploadUrlUseCase {
     const uploadUrl = await this.storageService.generatePresignedUploadUrl(
       s3Key,
       command.mimeType,
-      expiresInSeconds
+      expiresInSeconds,
     );
 
     // 7. Atomic transaction: Save document record in PENDING_UPLOAD status & write audit log
@@ -109,7 +109,7 @@ export class GenerateUploadUrlUseCase {
             documentType: command.documentType,
             sizeBytes: command.sizeBytes,
           },
-        })
+        }),
       );
     });
 

@@ -35,10 +35,7 @@ export const CompanyReadinessCard: React.FC = () => {
 
   useEffect(() => {
     let isMounted = true;
-    Promise.all([
-      getCompanyProfile(),
-      getExpiringCertificates(90),
-    ])
+    Promise.all([getCompanyProfile(), getExpiringCertificates(90)])
       .then(([profRes, expRes]) => {
         if (!isMounted) return;
         if (profRes.ok && profRes.data) {
@@ -95,10 +92,15 @@ export const CompanyReadinessCard: React.FC = () => {
             </CardTitle>
           </div>
           {activeVersion && (
-            <Link to="/company-profile" className="flex items-center gap-2 group hover:opacity-80 transition-opacity">
-              <Badge variant="outline" className="bg-muted text-foreground border-border text-[11px] font-medium flex items-center gap-1 cursor-pointer">
-                <CheckCircle2 className="h-3 w-3" />
-                v{activeVersion.version} Active
+            <Link
+              to="/company-profile"
+              className="flex items-center gap-2 group hover:opacity-80 transition-opacity"
+            >
+              <Badge
+                variant="outline"
+                className="bg-muted text-foreground border-border text-[11px] font-medium flex items-center gap-1 cursor-pointer"
+              >
+                <CheckCircle2 className="h-3 w-3" />v{activeVersion.version} Active
               </Badge>
               <span className="text-[11px] text-muted-foreground group-hover:text-foreground transition-colors hidden sm:inline font-mono">
                 {activePayload?.company_name}
@@ -107,7 +109,8 @@ export const CompanyReadinessCard: React.FC = () => {
           )}
         </div>
         <CardDescription className="text-xs text-muted-foreground">
-          Persistent enterprise credentials &amp; audited financial track record evaluated against tender requirements
+          Persistent enterprise credentials &amp; audited financial track record evaluated against
+          tender requirements
         </CardDescription>
       </CardHeader>
 
@@ -131,12 +134,17 @@ export const CompanyReadinessCard: React.FC = () => {
               {/* Pillar 1: Registrations */}
               <div className="p-3.5 rounded-lg border border-border/60 bg-muted/20 flex flex-col justify-between">
                 <div className="flex items-center justify-between text-muted-foreground mb-1.5">
-                  <span className="text-[11px] font-medium tracking-wide uppercase">Registrations</span>
+                  <span className="text-[11px] font-medium tracking-wide uppercase">
+                    Registrations
+                  </span>
                   <ShieldCheck className="h-4 w-4 text-primary/80" />
                 </div>
                 <div>
                   <div className="text-lg font-bold text-foreground font-mono">
-                    {regCount} <span className="text-xs font-normal text-muted-foreground font-sans">Active</span>
+                    {regCount}{' '}
+                    <span className="text-xs font-normal text-muted-foreground font-sans">
+                      Active
+                    </span>
                   </div>
                   <div className="text-[11px] text-foreground/80 font-medium mt-0.5 flex items-center gap-1">
                     <CheckCircle2 className="h-3 w-3" />
@@ -148,12 +156,15 @@ export const CompanyReadinessCard: React.FC = () => {
               {/* Pillar 2: 3-Year Avg Turnover */}
               <div className="p-3.5 rounded-lg border border-border/60 bg-muted/20 flex flex-col justify-between">
                 <div className="flex items-center justify-between text-muted-foreground mb-1.5">
-                  <span className="text-[11px] font-medium tracking-wide uppercase">3-Yr Avg Turnover</span>
+                  <span className="text-[11px] font-medium tracking-wide uppercase">
+                    3-Yr Avg Turnover
+                  </span>
                   <TrendingUp className="h-4 w-4 text-primary/80" />
                 </div>
                 <div>
                   <div className="text-lg font-bold text-foreground font-mono">
-                    ₹{avgTurnover.toFixed(1)} <span className="text-xs font-normal text-muted-foreground font-sans">Cr</span>
+                    ₹{avgTurnover.toFixed(1)}{' '}
+                    <span className="text-xs font-normal text-muted-foreground font-sans">Cr</span>
                   </div>
                   <div className="text-[11px] text-muted-foreground mt-0.5">
                     {turnoverRecords.length} FYs CA Audited (UDIN)
@@ -164,12 +175,17 @@ export const CompanyReadinessCard: React.FC = () => {
               {/* Pillar 3: Past Qualifying Works */}
               <div className="p-3.5 rounded-lg border border-border/60 bg-muted/20 flex flex-col justify-between">
                 <div className="flex items-center justify-between text-muted-foreground mb-1.5">
-                  <span className="text-[11px] font-medium tracking-wide uppercase">7-Yr Experience</span>
+                  <span className="text-[11px] font-medium tracking-wide uppercase">
+                    7-Yr Experience
+                  </span>
                   <FileCheck2 className="h-4 w-4 text-primary/80" />
                 </div>
                 <div>
                   <div className="text-lg font-bold text-foreground font-mono">
-                    {experienceList.length} <span className="text-xs font-normal text-muted-foreground font-sans">Work Orders</span>
+                    {experienceList.length}{' '}
+                    <span className="text-xs font-normal text-muted-foreground font-sans">
+                      Work Orders
+                    </span>
                   </div>
                   <div className="text-[11px] text-muted-foreground mt-0.5">
                     Max: ₹{largestProject.toFixed(1)} Cr EPC Project
@@ -180,12 +196,17 @@ export const CompanyReadinessCard: React.FC = () => {
               {/* Pillar 4: Certifications & OEMs */}
               <div className="p-3.5 rounded-lg border border-border/60 bg-muted/20 flex flex-col justify-between">
                 <div className="flex items-center justify-between text-muted-foreground mb-1.5">
-                  <span className="text-[11px] font-medium tracking-wide uppercase">ISO &amp; OEM Authorizations</span>
+                  <span className="text-[11px] font-medium tracking-wide uppercase">
+                    ISO &amp; OEM Authorizations
+                  </span>
                   <Award className="h-4 w-4 text-primary/80" />
                 </div>
                 <div>
                   <div className="text-lg font-bold text-foreground font-mono">
-                    {certCount + oemCount} <span className="text-xs font-normal text-muted-foreground font-sans">Credentials</span>
+                    {certCount + oemCount}{' '}
+                    <span className="text-xs font-normal text-muted-foreground font-sans">
+                      Credentials
+                    </span>
                   </div>
                   <div className="text-[11px] text-muted-foreground mt-0.5">
                     {certCount} ISO/CMMI • {oemCount} OEM MAFs
@@ -200,11 +221,15 @@ export const CompanyReadinessCard: React.FC = () => {
                 <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
                 <div className="flex flex-col gap-1 text-xs">
                   <span className="font-semibold text-amber-200">
-                    Certificate Expiry Watch ({urgentExpiring.length} item{urgentExpiring.length > 1 ? 's' : ''})
+                    Certificate Expiry Watch ({urgentExpiring.length} item
+                    {urgentExpiring.length > 1 ? 's' : ''})
                   </span>
                   <div className="flex flex-col gap-1 mt-0.5">
                     {urgentExpiring.map((cert) => (
-                      <div key={cert.entryId} className="flex items-center justify-between gap-2 text-[11px]">
+                      <div
+                        key={cert.entryId}
+                        className="flex items-center justify-between gap-2 text-[11px]"
+                      >
                         <span className="text-amber-300 font-medium">{cert.name}</span>
                         <span className="text-amber-400 font-mono">
                           {cert.isExpired ? 'EXPIRED' : `Expires in ${cert.daysRemaining} days`}

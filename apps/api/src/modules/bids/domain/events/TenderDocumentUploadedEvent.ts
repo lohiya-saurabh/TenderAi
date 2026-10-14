@@ -21,7 +21,7 @@ export class TenderDocumentUploadedEvent extends DomainEvent<TenderDocumentUploa
     payload: TenderDocumentUploadedPayload,
     version = 1,
     eventId?: string,
-    occurredAt?: Date
+    occurredAt?: Date,
   ) {
     super(
       TenderDocumentUploadedEvent.EVENT_TYPE,
@@ -31,7 +31,7 @@ export class TenderDocumentUploadedEvent extends DomainEvent<TenderDocumentUploa
       payload,
       version,
       eventId,
-      occurredAt
+      occurredAt,
     );
   }
 }

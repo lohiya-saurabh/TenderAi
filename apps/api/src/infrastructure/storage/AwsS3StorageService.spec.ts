@@ -27,10 +27,12 @@ describe('AwsS3StorageService', () => {
       const url = await storageService.generatePresignedUploadUrl(
         'tenants/org_1/bids/bid_1/doc.pdf',
         'application/pdf',
-        900
+        900,
       );
 
-      expect(url).toContain('https://s3.ap-south-1.amazonaws.com/test-bucket/tenants/org_1/bids/bid_1/doc.pdf');
+      expect(url).toContain(
+        'https://s3.ap-south-1.amazonaws.com/test-bucket/tenants/org_1/bids/bid_1/doc.pdf',
+      );
       expect(url).toContain('expires=900');
     });
   });
@@ -40,10 +42,12 @@ describe('AwsS3StorageService', () => {
       const url = await storageService.generatePresignedDownloadUrl(
         'tenants/org_1/bids/bid_1/doc.pdf',
         'downloaded_doc.pdf',
-        300
+        300,
       );
 
-      expect(url).toContain('https://s3.ap-south-1.amazonaws.com/test-bucket/tenants/org_1/bids/bid_1/doc.pdf');
+      expect(url).toContain(
+        'https://s3.ap-south-1.amazonaws.com/test-bucket/tenants/org_1/bids/bid_1/doc.pdf',
+      );
       expect(url).toContain('expires=300');
     });
   });

@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 from abc import ABC, abstractmethod
@@ -124,7 +125,7 @@ class GcpPubSubCompletionPublisher(CompletionPublisher):
             logger.warning("GCP completion topic is not configured; skipping Pub/Sub publish.")
             return False
         try:
-            from google.cloud import pubsub_v1  # type: ignore
+            from google.cloud import pubsub_v1
 
             publisher = pubsub_v1.PublisherClient()
             data = json.dumps(event.to_camel_case_dict()).encode("utf-8")
@@ -132,9 +133,10 @@ class GcpPubSubCompletionPublisher(CompletionPublisher):
             future.result(timeout=10)
             logger.info("Published completion event to Pub/Sub topic %s", self.topic_name)
             return True
-        except ImportError:
-            logger.warning("google-cloud-pubsub library not installed; falling back.")
-            return False
+        except ImportError as err:
+            raise RuntimeError(
+                "google-cloud-pubsub library is required for GcpPubSubCompletionPublisher."
+            ) from err
         except Exception as exc:  # noqa: BLE001
             logger.error("Failed to publish to GCP Pub/Sub topic %s: %s", self.topic_name, exc)
             return False
@@ -143,26 +145,26 @@ class GcpPubSubCompletionPublisher(CompletionPublisher):
 class AwsSqsCompletionPublisher(CompletionPublisher):
     """AWS SQS completion publisher for AWS deployments."""
 
-    def __init__(self, queue_url: str | None = None):
+    def __init__(self, queue_url: str | None = None, region_name: str | None = None):
         self.queue_url = queue_url or settings.aws_completion_queue_url
+        self.region_name = region_name or settings.aws_region or "ap-south-1"
 
     async def publish_completion(self, event: DocumentExtractionCompletedEvent) -> bool:
         if not self.queue_url:
-            logger.warning("AWS completion queue URL is not configured; skipping SQS publish.")
-            return False
+            raise ValueError("AWS completion queue URL is not configured (settings.aws_completion_queue_url).")
         try:
             import boto3  # type: ignore
 
-            sqs = boto3.client("sqs")
-            sqs.send_message(
+            sqs = boto3.client("sqs", region_name=self.region_name)
+            await asyncio.to_thread(
+                sqs.send_message,
                 QueueUrl=self.queue_url,
                 MessageBody=json.dumps(event.to_camel_case_dict()),
             )
             logger.info("Published completion event to SQS queue %s", self.queue_url)
             return True
-        except ImportError:
-            logger.warning("boto3 library not installed; falling back.")
-            return False
+        except ImportError as err:
+            raise RuntimeError("boto3 library is required for AwsSqsCompletionPublisher.") from err
         except Exception as exc:  # noqa: BLE001
             logger.error("Failed to publish to AWS SQS queue %s: %s", self.queue_url, exc)
             return False
@@ -180,12 +182,18 @@ class MockCompletionPublisher(CompletionPublisher):
 
 
 def get_completion_publisher(provider: str | None = None) -> CompletionPublisher:
-    """Factory resolving the active completion publisher from configuration."""
-    resolved_provider = (provider or settings.completion_queue_provider or "http").lower()
-    if resolved_provider in ("mock", "memory", "test", "none"):
+    """Factory resolving the active completion publisher from configuration without silent fallbacks."""
+    resolved_provider = (provider or settings.completion_queue_provider or "mock").lower()
+    if resolved_provider in ("mock", "memory", "test"):
         return MockCompletionPublisher()
-    if resolved_provider in ("pubsub", "gcp") and settings.gcp_completion_topic:
+    if resolved_provider in ("pubsub", "gcp"):
+        if not settings.gcp_completion_topic:
+            raise ValueError("GCP completion topic is not configured (settings.gcp_completion_topic).")
         return GcpPubSubCompletionPublisher()
-    if resolved_provider in ("sqs", "aws") and settings.aws_completion_queue_url:
+    if resolved_provider in ("sqs", "aws"):
+        if not settings.aws_completion_queue_url:
+            raise ValueError("AWS completion queue URL is not configured (settings.aws_completion_queue_url).")
         return AwsSqsCompletionPublisher()
-    return HttpCallbackCompletionPublisher()
+    if resolved_provider == "http":
+        return HttpCallbackCompletionPublisher()
+    raise ValueError(f"Unsupported completion queue provider: {resolved_provider}")

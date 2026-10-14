@@ -32,10 +32,21 @@ class SecretSanitizer:
         (re.compile(r"\b[2-9][0-9]{3}\s?[0-9]{4}\s?[0-9]{4}\b"), "[REDACTED_AADHAAR]"),
     ]
 
+    CONTENT_PATTERNS_TO_TRUNCATE: ClassVar[list[tuple[re.Pattern, int]]] = [
+        # Truncate prompt and document text fields in JSON payloads
+        (
+            re.compile(
+                r'("(?:prompt|full_prompt|system_prompt|user_prompt|document_content|raw_page_text|raw_text|page_text|extracted_text)"\s*:\s*")([^"\\]*(?:\\.[^"\\]*)*)(")',
+                re.IGNORECASE,
+            ),
+            250,
+        ),
+    ]
+
     @classmethod
     def scrub(cls, text: str) -> tuple[str, bool]:
         """
-        Scrubs known secrets from text.
+        Scrubs known secrets and truncates oversized prompts/document contents from text.
         Returns (scrubbed_text, was_scrubbed_flag).
         """
         scrubbed = text
@@ -45,6 +56,20 @@ class SecretSanitizer:
             if pattern.search(scrubbed):
                 found_any = True
                 scrubbed = pattern.sub(replacement, scrubbed)
+
+        for pattern, max_len in cls.CONTENT_PATTERNS_TO_TRUNCATE:
+            def _truncate_match(m: re.Match) -> str:
+                nonlocal found_any
+                prefix = m.group(1)
+                content = m.group(2)
+                suffix = m.group(3)
+                if len(content) > max_len:
+                    found_any = True
+                    omitted = len(content) - max_len
+                    return f"{prefix}{content[:max_len]}... [TRUNCATED: {omitted} chars omitted for log safety]{suffix}"
+                return m.group(0)
+
+            scrubbed = pattern.sub(_truncate_match, scrubbed)
 
         return scrubbed, found_any
 

@@ -36,13 +36,13 @@ describe('BidProject Domain Aggregate & Value Objects', () => {
 
     it('should throw ValidationException if organizationId is missing', () => {
       expect(() => new BidProject({ ...validProps, organizationId: '' })).toThrow(
-        ValidationException
+        ValidationException,
       );
     });
 
     it('should throw ValidationException if tenderNumber is empty', () => {
       expect(() => new BidProject({ ...validProps, tenderNumber: '' })).toThrow(
-        ValidationException
+        ValidationException,
       );
     });
   });

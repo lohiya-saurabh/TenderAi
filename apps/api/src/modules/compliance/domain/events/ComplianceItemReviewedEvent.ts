@@ -18,7 +18,7 @@ export class ComplianceItemReviewedEvent extends DomainEvent<ComplianceItemRevie
     payload: ComplianceItemReviewedPayload,
     version = 1,
     eventId?: string,
-    occurredAt?: Date
+    occurredAt?: Date,
   ) {
     super(
       ComplianceItemReviewedEvent.EVENT_TYPE,
@@ -28,7 +28,7 @@ export class ComplianceItemReviewedEvent extends DomainEvent<ComplianceItemRevie
       payload,
       version,
       eventId,
-      occurredAt
+      occurredAt,
     );
   }
 }

@@ -46,28 +46,74 @@ function deriveEvidenceType(item: ComplianceItem): string {
   const combinedText = `${item.requirement ?? ''} ${item.description ?? ''}`;
   const reqLower = combinedText.toLowerCase();
 
-  if (reqLower.includes('iso') || reqLower.includes('certification') || reqLower.includes('standard')) {
+  if (
+    reqLower.includes('iso') ||
+    reqLower.includes('certification') ||
+    reqLower.includes('standard')
+  ) {
     return 'ISO / Quality Standard Certificate';
   }
-  if (reqLower.includes('turnover') || reqLower.includes('net worth') || reqLower.includes('financial') || reqLower.includes('balance sheet') || reqLower.includes('solvency')) {
+  if (
+    reqLower.includes('turnover') ||
+    reqLower.includes('net worth') ||
+    reqLower.includes('financial') ||
+    reqLower.includes('balance sheet') ||
+    reqLower.includes('solvency')
+  ) {
     return 'CA-Audited Balance Sheet & UDIN Certificate';
   }
-  if (reqLower.includes('similar') || reqLower.includes('experience') || reqLower.includes('completed') || reqLower.includes('past work') || reqLower.includes('track record')) {
+  if (
+    reqLower.includes('similar') ||
+    reqLower.includes('experience') ||
+    reqLower.includes('completed') ||
+    reqLower.includes('past work') ||
+    reqLower.includes('track record')
+  ) {
     return 'Client Completion Certificate & Work Order';
   }
-  if (reqLower.includes('personnel') || reqLower.includes('engineer') || reqLower.includes('staff') || reqLower.includes('curriculum vitae') || reqLower.includes('cv')) {
+  if (
+    reqLower.includes('personnel') ||
+    reqLower.includes('engineer') ||
+    reqLower.includes('staff') ||
+    reqLower.includes('curriculum vitae') ||
+    reqLower.includes('cv')
+  ) {
     return 'Key Personnel CV & Statutory EPF Records';
   }
-  if (reqLower.includes('equipment') || reqLower.includes('machinery') || reqLower.includes('plant') || reqLower.includes('crane') || reqLower.includes('vehicle')) {
+  if (
+    reqLower.includes('equipment') ||
+    reqLower.includes('machinery') ||
+    reqLower.includes('plant') ||
+    reqLower.includes('crane') ||
+    reqLower.includes('vehicle')
+  ) {
     return 'Machinery RC / Ownership Proof & Lease Deeds';
   }
-  if (reqLower.includes('bid security') || reqLower.includes('earnest money') || reqLower.includes('emd') || reqLower.includes('bank guarantee') || reqLower.includes('pbg')) {
+  if (
+    reqLower.includes('bid security') ||
+    reqLower.includes('earnest money') ||
+    reqLower.includes('emd') ||
+    reqLower.includes('bank guarantee') ||
+    reqLower.includes('pbg')
+  ) {
     return 'Bank Guarantee (MT760) / EMD Challan';
   }
-  if (reqLower.includes('gst') || reqLower.includes('pan') || reqLower.includes('epf') || reqLower.includes('esi') || reqLower.includes('incorporation') || reqLower.includes('statutory')) {
+  if (
+    reqLower.includes('gst') ||
+    reqLower.includes('pan') ||
+    reqLower.includes('epf') ||
+    reqLower.includes('esi') ||
+    reqLower.includes('incorporation') ||
+    reqLower.includes('statutory')
+  ) {
     return 'Statutory Incorporation & Tax Registration';
   }
-  if (reqLower.includes('affidavit') || reqLower.includes('undertaking') || reqLower.includes('non-blacklisting') || reqLower.includes('litigation')) {
+  if (
+    reqLower.includes('affidavit') ||
+    reqLower.includes('undertaking') ||
+    reqLower.includes('non-blacklisting') ||
+    reqLower.includes('litigation')
+  ) {
     return 'Notarized Non-Blacklisting Affidavit';
   }
 
@@ -80,7 +126,9 @@ function deriveAdditionalInfo(item: ComplianceItem): string {
     parts.push('CA UDIN required');
   }
   if (item.executionRules?.stampPaperRequired) {
-    const denom = item.executionRules.stampPaperDenominationInr ? `₹${item.executionRules.stampPaperDenominationInr}` : '₹100';
+    const denom = item.executionRules.stampPaperDenominationInr
+      ? `₹${item.executionRules.stampPaperDenominationInr}`
+      : '₹100';
     parts.push(`Non-judicial stamp paper (${denom})`);
   }
   if (item.executionRules?.notarizationRequired) {
@@ -143,7 +191,9 @@ export const CompanyDocumentChecklist: React.FC<CompanyDocumentChecklistProps> =
 
     const citationRef =
       item.provenance?.sectionOrClause ||
-      (item.provenance?.pageNumber ? `Clause on Page ${item.provenance.pageNumber}` : 'Tender Document');
+      (item.provenance?.pageNumber
+        ? `Clause on Page ${item.provenance.pageNumber}`
+        : 'Tender Document');
 
     return {
       id: item.id,
@@ -164,9 +214,7 @@ export const CompanyDocumentChecklist: React.FC<CompanyDocumentChecklistProps> =
 
   return (
     <Card className="border-border bg-card overflow-hidden">
-      <CardHeader
-        className="px-5 py-4 border-b border-border bg-muted/20 flex flex-row items-center justify-between flex-wrap gap-3"
-      >
+      <CardHeader className="px-5 py-4 border-b border-border bg-muted/20 flex flex-row items-center justify-between flex-wrap gap-3">
         <div>
           <div className="flex items-center gap-2">
             <ShieldAlert size={18} className="text-amber-500" />
@@ -178,7 +226,8 @@ export const CompanyDocumentChecklist: React.FC<CompanyDocumentChecklistProps> =
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            Required evidence derived directly from this tender's extracted clauses. Upload missing records to enable automated bid qualification evaluation.
+            Required evidence derived directly from this tender's extracted clauses. Upload missing
+            records to enable automated bid qualification evaluation.
           </p>
         </div>
 
@@ -201,9 +250,13 @@ export const CompanyDocumentChecklist: React.FC<CompanyDocumentChecklistProps> =
               <thead>
                 <tr className="border-b border-border bg-muted/30 text-muted-foreground font-semibold">
                   <th className="py-2.5 px-4 min-w-[260px] max-w-[340px]">Tender Requirement</th>
-                  <th className="py-2.5 px-4 min-w-[200px] max-w-[260px]">Required Evidence Type</th>
+                  <th className="py-2.5 px-4 min-w-[200px] max-w-[260px]">
+                    Required Evidence Type
+                  </th>
                   <th className="py-2.5 px-4 min-w-[160px] whitespace-nowrap">Evidence Status</th>
-                  <th className="py-2.5 px-4 min-w-[200px] max-w-[280px]">Execution &amp; Validity Rules</th>
+                  <th className="py-2.5 px-4 min-w-[200px] max-w-[280px]">
+                    Execution &amp; Validity Rules
+                  </th>
                   <th className="py-2.5 px-4 min-w-[220px] max-w-[320px]">Source Citation</th>
                 </tr>
               </thead>
@@ -217,7 +270,10 @@ export const CompanyDocumentChecklist: React.FC<CompanyDocumentChecklistProps> =
                           {row.category}
                         </Badge>
                       </div>
-                      <p className="font-medium text-foreground line-clamp-2 leading-relaxed break-words" title={row.requirement}>
+                      <p
+                        className="font-medium text-foreground line-clamp-2 leading-relaxed break-words"
+                        title={row.requirement}
+                      >
                         {row.requirement}
                       </p>
                     </td>
@@ -252,7 +308,9 @@ export const CompanyDocumentChecklist: React.FC<CompanyDocumentChecklistProps> =
 
                     {/* Additional Requirements */}
                     <td className="py-3 px-4 text-muted-foreground min-w-[200px] max-w-[280px]">
-                      <span className="leading-relaxed break-words">{row.additionalRequirements}</span>
+                      <span className="leading-relaxed break-words">
+                        {row.additionalRequirements}
+                      </span>
                     </td>
 
                     {/* Source Citation */}
@@ -268,7 +326,8 @@ export const CompanyDocumentChecklist: React.FC<CompanyDocumentChecklistProps> =
 
         <div className="px-5 py-3 border-t border-border bg-muted/10 flex items-center justify-between text-xs text-muted-foreground flex-wrap gap-2">
           <span>
-            Completion: <strong>{uploadedCount}</strong> of <strong>{rows.length}</strong> required evidence items uploaded
+            Completion: <strong>{uploadedCount}</strong> of <strong>{rows.length}</strong> required
+            evidence items uploaded
           </span>
           <Link
             to="/company-profile"

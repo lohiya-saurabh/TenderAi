@@ -45,14 +45,16 @@ describe('Requirement / Compliance Matrix Data & Logic', () => {
         documentName: 'NIT_Civil_Works_2026.pdf',
         pageNumber: 14,
         sectionOrClause: 'Section III - Qualification Criteria, Clause 4.2',
-        verbatimQuote: 'The minimum average annual turnover of the bidder during the last 3 financial years shall not be less than Rs 25.00 Crores.',
+        verbatimQuote:
+          'The minimum average annual turnover of the bidder during the last 3 financial years shall not be less than Rs 25.00 Crores.',
         confidenceScore: 0.96,
       },
       sourceCitation: {
         document: 'NIT_Civil_Works_2026.pdf',
         page: 14,
         section: 'Section III - 4.2',
-        verbatimQuote: 'The minimum average annual turnover of the bidder during the last 3 financial years shall not be less than Rs 25.00 Crores.',
+        verbatimQuote:
+          'The minimum average annual turnover of the bidder during the last 3 financial years shall not be less than Rs 25.00 Crores.',
         confidenceScore: 0.96,
       },
       humanReviewRequired: false,
@@ -82,7 +84,8 @@ describe('Requirement / Compliance Matrix Data & Logic', () => {
         summary: 'Mandatory non-blacklisting affidavit on ₹100 stamp paper missing.',
       },
       rationale: {
-        ruleApplied: 'Non-blacklisting affidavit on Non-Judicial Stamp Paper of ₹100 attested by Notary Public',
+        ruleApplied:
+          'Non-blacklisting affidavit on Non-Judicial Stamp Paper of ₹100 attested by Notary Public',
         tenderRequirement: 'Original affidavit on ₹100 stamp paper notarized within last 30 days',
         companyCapability: 'No active non-blacklisting affidavit uploaded in vault',
         comparisonResult: 'NOT_MET',
@@ -97,14 +100,16 @@ describe('Requirement / Compliance Matrix Data & Logic', () => {
         documentName: 'NIT_Civil_Works_2026.pdf',
         pageNumber: 8,
         sectionOrClause: 'Section I - Instructions to Bidders, Clause 2.1.8',
-        verbatimQuote: 'The bidder shall submit an affidavit on Non-Judicial Stamp Paper of Rs 100/- duly notarized declaring that the firm has not been blacklisted by any Government department.',
+        verbatimQuote:
+          'The bidder shall submit an affidavit on Non-Judicial Stamp Paper of Rs 100/- duly notarized declaring that the firm has not been blacklisted by any Government department.',
         confidenceScore: 0.95,
       },
       sourceCitation: {
         document: 'NIT_Civil_Works_2026.pdf',
         page: 8,
         section: 'Section I - 2.1.8',
-        verbatimQuote: 'The bidder shall submit an affidavit on Non-Judicial Stamp Paper of Rs 100/- duly notarized declaring that the firm has not been blacklisted by any Government department.',
+        verbatimQuote:
+          'The bidder shall submit an affidavit on Non-Judicial Stamp Paper of Rs 100/- duly notarized declaring that the firm has not been blacklisted by any Government department.',
         confidenceScore: 0.95,
       },
       humanReviewRequired: true,
@@ -158,15 +163,17 @@ describe('Requirement / Compliance Matrix Data & Logic', () => {
         documentName: 'NIT_Civil_Works_2026.pdf',
         pageNumber: 22,
         sectionOrClause: 'Section IV - Technical Specifications, Clause 5.1',
-        verbatimQuote: 'Bidder should possess valid ISO 9001:2015 certificate at the time of submission and maintain validity throughout execution.',
-        confidenceScore: 0.90,
+        verbatimQuote:
+          'Bidder should possess valid ISO 9001:2015 certificate at the time of submission and maintain validity throughout execution.',
+        confidenceScore: 0.9,
       },
       sourceCitation: {
         document: 'NIT_Civil_Works_2026.pdf',
         page: 22,
         section: 'Section IV - 5.1',
-        verbatimQuote: 'Bidder should possess valid ISO 9001:2015 certificate at the time of submission and maintain validity throughout execution.',
-        confidenceScore: 0.90,
+        verbatimQuote:
+          'Bidder should possess valid ISO 9001:2015 certificate at the time of submission and maintain validity throughout execution.',
+        confidenceScore: 0.9,
       },
       humanReviewRequired: true,
       version: 2,

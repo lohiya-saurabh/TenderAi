@@ -45,11 +45,19 @@ async function bootstrap() {
 
   // Global CORS — configured for secure credentials & cookie handling
   const allowedOrigins = process.env.APP_BASE_URL
-    ? [process.env.APP_BASE_URL, 'http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173']
+    ? [
+        process.env.APP_BASE_URL,
+        'http://localhost:5173',
+        'http://localhost:3000',
+        'http://127.0.0.1:5173',
+      ]
     : ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'];
 
   app.enableCors({
-    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
       // Allow non-browser requests or allowed frontend origins
       if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
         callback(null, true);
@@ -59,7 +67,8 @@ async function bootstrap() {
     },
     credentials: true,
     methods: 'GET,POST,PATCH,PUT,DELETE,OPTIONS',
-    allowedHeaders: 'Content-Type,Authorization,X-Requested-With,X-Trace-Id,X-Correlation-Id,X-Request-Id',
+    allowedHeaders:
+      'Content-Type,Authorization,X-Requested-With,X-Trace-Id,X-Correlation-Id,X-Request-Id',
   });
 
   // Global exception filter — maps our HttpError subclasses to proper responses
@@ -72,11 +81,15 @@ async function bootstrap() {
   const port = Number(process.env.PORT) || 3000;
   await app.listen(port);
 
-  logger.info('server.started', `🚀 TenderPulse AI API Server running at http://localhost:${port}`, {
-    port,
-    persistence: 'PostgreSQL 16 (PGlite in ./data/postgres)',
-    logLevels: resolveLogLevels().join(', '),
-  });
+  logger.info(
+    'server.started',
+    `🚀 TenderPulse AI API Server running at http://localhost:${port}`,
+    {
+      port,
+      persistence: 'PostgreSQL 16 (PGlite in ./data/postgres)',
+      logLevels: resolveLogLevels().join(', '),
+    },
+  );
 }
 
 bootstrap();

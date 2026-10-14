@@ -14,12 +14,8 @@ describe('Public Landing & Pricing Pages Link Verification', () => {
       React.createElement(
         MemoryRouter,
         { initialEntries: ['/'] },
-        React.createElement(
-          AuthProvider,
-          null,
-          React.createElement(LandingPage)
-        )
-      )
+        React.createElement(AuthProvider, null, React.createElement(LandingPage)),
+      ),
     );
 
     // 1. Navigation header links
@@ -60,12 +56,8 @@ describe('Public Landing & Pricing Pages Link Verification', () => {
       React.createElement(
         MemoryRouter,
         { initialEntries: ['/pricing'] },
-        React.createElement(
-          AuthProvider,
-          null,
-          React.createElement(PricingPage)
-        )
-      )
+        React.createElement(AuthProvider, null, React.createElement(PricingPage)),
+      ),
     );
 
     // 1. Header brand & navigation
@@ -92,12 +84,8 @@ describe('Public Landing & Pricing Pages Link Verification', () => {
       React.createElement(
         MemoryRouter,
         { initialEntries: ['/'] },
-        React.createElement(
-          AuthProvider,
-          null,
-          React.createElement(PublicNav)
-        )
-      )
+        React.createElement(AuthProvider, null, React.createElement(PublicNav)),
+      ),
     );
 
     expect(html).toContain('href="/"');
@@ -114,8 +102,8 @@ describe('Public Landing & Pricing Pages Link Verification', () => {
       React.createElement(
         MemoryRouter,
         { initialEntries: ['/'] },
-        React.createElement(PublicFooter)
-      )
+        React.createElement(PublicFooter),
+      ),
     );
 
     expect(html).toContain('href="/#features"');

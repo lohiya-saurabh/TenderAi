@@ -133,7 +133,7 @@ export class ComplianceItem extends AggregateRoot {
   public updateReview(
     newStatus: ComplianceStatus,
     notes?: string | null,
-    assignedUserId?: string | null
+    assignedUserId?: string | null,
   ): void {
     // If flagging or waiving, notes are mandatory to explain why
     if (
@@ -141,7 +141,7 @@ export class ComplianceItem extends AggregateRoot {
       (!notes || notes.trim() === '')
     ) {
       throw new ValidationException(
-        `A note is mandatory when changing compliance status to '${newStatus.value}'.`
+        `A note is mandatory when changing compliance status to '${newStatus.value}'.`,
       );
     }
 
@@ -168,8 +168,8 @@ export class ComplianceItem extends AggregateRoot {
           newStatus: this._status.value,
           reviewedAt: this._reviewedAt.toISOString(),
         },
-        this.version
-      )
+        this.version,
+      ),
     );
   }
 }

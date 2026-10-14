@@ -110,7 +110,9 @@ export function getCompanyProfile(): Promise<ApiResult<CompanyProfileView>> {
 export function getExpiringCertificates(
   withinDays = 90,
 ): Promise<ApiResult<ExpiringCertificatesResponse>> {
-  return apiGet<ExpiringCertificatesResponse>(`/api/v1/company-profile/expiring-certificates?withinDays=${withinDays}`);
+  return apiGet<ExpiringCertificatesResponse>(
+    `/api/v1/company-profile/expiring-certificates?withinDays=${withinDays}`,
+  );
 }
 
 /** Pin a new immutable profile version and make it active (ADMIN only) */

@@ -87,7 +87,10 @@ async function main() {
 
   // 6. Real Bid Detail Page
   try {
-    await page.goto('http://localhost:5173/bids/bid-nhai-44-001', { waitUntil: 'networkidle', timeout: 15000 });
+    await page.goto('http://localhost:5173/bids/bid-nhai-44-001', {
+      waitUntil: 'networkidle',
+      timeout: 15000,
+    });
     await page.waitForTimeout(2000);
     await page.screenshot({ path: path.join(outDir, '06_bid_detail.png') });
     await page.screenshot({ path: path.join(outDir, '06_bid_detail_full.png'), fullPage: true });
@@ -98,7 +101,9 @@ async function main() {
     if (complianceSection) {
       await complianceSection.scrollIntoViewIfNeeded();
       await page.waitForTimeout(500);
-      await complianceSection.screenshot({ path: path.join(outDir, '06_section5_compliance_matrix.png') });
+      await complianceSection.screenshot({
+        path: path.join(outDir, '06_section5_compliance_matrix.png'),
+      });
       console.log('Saved 06_section5_compliance_matrix.png');
 
       // Click the first row expand button
@@ -106,7 +111,9 @@ async function main() {
       if (expandBtn) {
         await expandBtn.click();
         await page.waitForTimeout(600);
-        await complianceSection.screenshot({ path: path.join(outDir, '06_section5_compliance_matrix_expanded.png') });
+        await complianceSection.screenshot({
+          path: path.join(outDir, '06_section5_compliance_matrix_expanded.png'),
+        });
         console.log('Saved 06_section5_compliance_matrix_expanded.png');
       }
     }
@@ -116,10 +123,16 @@ async function main() {
 
   // 7. Compliance Review Page
   try {
-    await page.goto('http://localhost:5173/bids/bid-nhai-44-001/compliance/comp-nhai-001', { waitUntil: 'networkidle', timeout: 15000 });
+    await page.goto('http://localhost:5173/bids/bid-nhai-44-001/compliance/comp-nhai-001', {
+      waitUntil: 'networkidle',
+      timeout: 15000,
+    });
     await page.waitForTimeout(2000);
     await page.screenshot({ path: path.join(outDir, '07_compliance_review.png') });
-    await page.screenshot({ path: path.join(outDir, '07_compliance_review_full.png'), fullPage: true });
+    await page.screenshot({
+      path: path.join(outDir, '07_compliance_review_full.png'),
+      fullPage: true,
+    });
     console.log('Saved 07_compliance_review.png and full page');
   } catch (e) {
     console.error('Error on compliance review:', e.message);
@@ -127,7 +140,10 @@ async function main() {
 
   // 8. Audit History Page
   try {
-    await page.goto('http://localhost:5173/bids/bid-nhai-44-001/audit', { waitUntil: 'networkidle', timeout: 15000 });
+    await page.goto('http://localhost:5173/bids/bid-nhai-44-001/audit', {
+      waitUntil: 'networkidle',
+      timeout: 15000,
+    });
     await page.waitForTimeout(1500);
     await page.screenshot({ path: path.join(outDir, '08_audit_history.png') });
     await page.screenshot({ path: path.join(outDir, '08_audit_history_full.png'), fullPage: true });
@@ -138,10 +154,16 @@ async function main() {
 
   // 9. Company Profile Page
   try {
-    await page.goto('http://localhost:5173/company-profile', { waitUntil: 'networkidle', timeout: 15000 });
+    await page.goto('http://localhost:5173/company-profile', {
+      waitUntil: 'networkidle',
+      timeout: 15000,
+    });
     await page.waitForTimeout(2000);
     await page.screenshot({ path: path.join(outDir, '09_company_profile.png') });
-    await page.screenshot({ path: path.join(outDir, '09_company_profile_full.png'), fullPage: true });
+    await page.screenshot({
+      path: path.join(outDir, '09_company_profile_full.png'),
+      fullPage: true,
+    });
     console.log('Saved 09_company_profile.png and full page');
   } catch (e) {
     console.error('Error on company profile:', e.message);

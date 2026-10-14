@@ -33,11 +33,7 @@ export type WorkflowStageId =
   | 'submission-prep';
 
 export type WorkflowMilestoneId =
-  | 'basics'
-  | 'eligibility'
-  | 'compliance'
-  | 'risks-review'
-  | 'submission';
+  'basics' | 'eligibility' | 'compliance' | 'risks-review' | 'submission';
 
 export interface WorkflowStageMeta {
   id: WorkflowStageId;
@@ -230,17 +226,9 @@ export interface MissingEvidenceItem {
 // 11. Human Review (HITL)
 // -------------------------------------------------------------
 export type ReviewerRoleType =
-  | 'BID_MANAGER'
-  | 'LEGAL_COUNSEL'
-  | 'FINANCIAL_CONTROLLER'
-  | 'TECHNICAL_LEAD'
-  | 'BID_DIRECTOR';
+  'BID_MANAGER' | 'LEGAL_COUNSEL' | 'FINANCIAL_CONTROLLER' | 'TECHNICAL_LEAD' | 'BID_DIRECTOR';
 
-export type ReviewTaskStatusType =
-  | 'PENDING'
-  | 'IN_REVIEW'
-  | 'ESCALATED'
-  | 'COMPLETED';
+export type ReviewTaskStatusType = 'PENDING' | 'IN_REVIEW' | 'ESCALATED' | 'COMPLETED';
 
 export interface ReviewCommentItem {
   id: string;

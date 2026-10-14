@@ -30,9 +30,7 @@ export const AuditTimeline: React.FC<AuditTimelineProps> = ({ events }) => {
               <div className="w-1.5 h-1.5 rounded-full bg-orange-600" />
             </div>
             {/* Connecting Vertical Track between consecutive events */}
-            {idx < events.length - 1 && (
-              <div className="w-[2px] bg-border flex-1 mt-2 -mb-6" />
-            )}
+            {idx < events.length - 1 && <div className="w-[2px] bg-border flex-1 mt-2 -mb-6" />}
           </div>
 
           {/* Event Card */}
@@ -46,7 +44,8 @@ export const AuditTimeline: React.FC<AuditTimelineProps> = ({ events }) => {
                 </span>
                 <span className="inline-flex items-center gap-1 text-[11px] font-mono text-muted-foreground">
                   <Database className="w-3 h-3" />
-                  {event.aggregateType} <span className="text-foreground/80">#{event.aggregateId}</span>
+                  {event.aggregateType}{' '}
+                  <span className="text-foreground/80">#{event.aggregateId}</span>
                 </span>
               </div>
               <span className="font-mono text-xs text-muted-foreground">
@@ -58,7 +57,10 @@ export const AuditTimeline: React.FC<AuditTimelineProps> = ({ events }) => {
             <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
               <User className="w-3.5 h-3.5 text-muted-foreground/80" />
               <span>
-                Initiated by <strong className="text-foreground font-semibold">{event.userName || event.userId}</strong>
+                Initiated by{' '}
+                <strong className="text-foreground font-semibold">
+                  {event.userName || event.userId}
+                </strong>
               </span>
             </div>
 

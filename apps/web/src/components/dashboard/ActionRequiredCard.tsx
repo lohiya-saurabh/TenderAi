@@ -14,11 +14,7 @@ import {
   ReviewRequiredIcon,
   MissingIcon,
 } from '../common/Icons.js';
-import {
-  buildActionItems,
-  type ActionItem,
-  type ActionItemType,
-} from './dashboardData.js';
+import { buildActionItems, type ActionItem, type ActionItemType } from './dashboardData.js';
 import { cn } from '../../lib/utils.js';
 
 export interface ActionRequiredCardProps {
@@ -29,7 +25,10 @@ export interface ActionRequiredCardProps {
 
 const MAX_VISIBLE_ITEMS = 5;
 
-const CATEGORY_BADGE_VARIANT: Record<ComplianceItem['category'], 'info' | 'default' | 'warning' | 'destructive' | 'secondary'> = {
+const CATEGORY_BADGE_VARIANT: Record<
+  ComplianceItem['category'],
+  'info' | 'default' | 'warning' | 'destructive' | 'secondary'
+> = {
   FINANCIAL: 'secondary',
   TECHNICAL: 'secondary',
   LEGAL: 'warning',
@@ -82,10 +81,7 @@ export const ActionRequiredCard: React.FC<ActionRequiredCardProps> = ({
             Flagged clauses, reviews, in-flight extraction, and imminent deadlines
           </p>
         </div>
-        <Badge
-          variant={actionItems.length > 0 ? 'warning' : 'success'}
-          className="font-medium"
-        >
+        <Badge variant={actionItems.length > 0 ? 'warning' : 'success'} className="font-medium">
           {actionItems.length} {actionItems.length === 1 ? 'Action' : 'Actions'}
         </Badge>
       </CardHeader>
@@ -103,9 +99,7 @@ export const ActionRequiredCard: React.FC<ActionRequiredCardProps> = ({
               <CheckIcon size={16} />
             </span>
             <div>
-              <div className="text-sm font-semibold text-foreground">
-                No Urgent Blockers
-              </div>
+              <div className="text-sm font-semibold text-foreground">No Urgent Blockers</div>
               <div className="text-xs text-muted-foreground">
                 All active tenders are on schedule with zero unreviewed critical flags.
               </div>
@@ -116,7 +110,7 @@ export const ActionRequiredCard: React.FC<ActionRequiredCardProps> = ({
             <div
               className={cn(
                 'flex flex-col gap-2.5 transition-all',
-                isExpanded && 'max-h-[380px] overflow-y-auto pr-1'
+                isExpanded && 'max-h-[380px] overflow-y-auto pr-1',
               )}
             >
               {displayedItems.map((item) => (
@@ -125,7 +119,7 @@ export const ActionRequiredCard: React.FC<ActionRequiredCardProps> = ({
                   to={item.actionUrl}
                   className={cn(
                     'flex items-start justify-between p-4 rounded-lg bg-card/60 border transition-colors hover:bg-accent/50',
-                    urgencyBorderClass(item.urgency)
+                    urgencyBorderClass(item.urgency),
                   )}
                 >
                   <div className="flex items-start gap-3 min-w-0">
@@ -139,7 +133,10 @@ export const ActionRequiredCard: React.FC<ActionRequiredCardProps> = ({
                           {item.headline}
                         </span>
                         {item.category && (
-                          <Badge variant={CATEGORY_BADGE_VARIANT[item.category]} className="text-[10px] px-1.5 py-0">
+                          <Badge
+                            variant={CATEGORY_BADGE_VARIANT[item.category]}
+                            className="text-[10px] px-1.5 py-0"
+                          >
                             {item.category}
                           </Badge>
                         )}

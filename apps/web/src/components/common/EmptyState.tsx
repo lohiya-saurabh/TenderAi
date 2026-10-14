@@ -76,7 +76,15 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         {description}
       </p>
       {(action || secondaryAction) && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap', justifyContent: 'center' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-3)',
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+          }}
+        >
           {action}
           {secondaryAction}
         </div>

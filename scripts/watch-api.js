@@ -69,7 +69,9 @@ function launchApiServer() {
       // Previous instance exited cleanly; boot the new instance now
       launchApiServer();
     } else if (!isShuttingDown && code !== 0 && signal !== 'SIGTERM' && signal !== 'SIGKILL') {
-      console.warn(`[WatchAPI] API process exited with code ${code}. Waiting for next TypeScript compilation...`);
+      console.warn(
+        `[WatchAPI] API process exited with code ${code}. Waiting for next TypeScript compilation...`,
+      );
     }
   });
 }
@@ -113,7 +115,9 @@ if (fs.existsSync(distDir)) {
     }
 
     restartDebounceTimer = setTimeout(() => {
-      console.log(`\n🔄 [WatchAPI] Recompilation detected in ${filename}. Restarting API server...`);
+      console.log(
+        `\n🔄 [WatchAPI] Recompilation detected in ${filename}. Restarting API server...`,
+      );
       restartApiServer();
     }, 350);
   });
@@ -122,7 +126,9 @@ if (fs.existsSync(distDir)) {
     console.error('[WatchAPI] Watcher error:', err);
   });
 } else {
-  console.warn(`[WatchAPI] Directory ${distDir} does not exist yet. Ensure tsc has compiled the project.`);
+  console.warn(
+    `[WatchAPI] Directory ${distDir} does not exist yet. Ensure tsc has compiled the project.`,
+  );
 }
 
 function cleanup() {

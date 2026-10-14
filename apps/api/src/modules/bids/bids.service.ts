@@ -4,7 +4,11 @@
 import { Injectable, Inject, Optional } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
 import { eq, and, desc, asc, inArray } from 'drizzle-orm';
-import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '../../common/database/database.module.js';
+import {
+  DRIZZLE_TOKEN,
+  type DrizzleDb,
+  createDrizzle,
+} from '../../common/database/database.module.js';
 import { STORAGE_TOKEN } from '../../infrastructure/storage/storage.module.js';
 import type { IStorageService } from './application/IStorageService.js';
 import * as schema from '../../common/database/schema.js';
@@ -68,7 +72,12 @@ export interface TenderAmendmentItem {
   documentId: string;
   documentName: string;
   publishedAt: string;
-  amendmentType: 'DEADLINE_EXTENSION' | 'TECHNICAL_SPEC_CHANGE' | 'EMD_AMENDMENT' | 'ELIGIBILITY_REVISION' | 'GENERAL_CLARIFICATION';
+  amendmentType:
+    | 'DEADLINE_EXTENSION'
+    | 'TECHNICAL_SPEC_CHANGE'
+    | 'EMD_AMENDMENT'
+    | 'ELIGIBILITY_REVISION'
+    | 'GENERAL_CLARIFICATION';
   summary: string;
   impact: {
     deadlineChanged: boolean;
@@ -99,9 +108,7 @@ export class BidsService {
     this.db = 'select' in db ? (db as DrizzleDb) : createDrizzle(db as PGlite);
   }
 
-  public async listBids(
-    query?: ListBidsQuery,
-  ): Promise<PaginatedBidsResult | BidWithDecision[]> {
+  public async listBids(query?: ListBidsQuery): Promise<PaginatedBidsResult | BidWithDecision[]> {
     const orgId = TenantContextHolder.get()?.organizationId;
     if (!orgId) {
       if (query?.page && query?.limit) {
@@ -126,7 +133,12 @@ export class BidsService {
       allBids = allBids.filter((b) => b.companyId === targetCompanyId);
     }
 
-    if (query?.status && typeof query.status === 'string' && query.status.trim() && query.status !== 'ALL') {
+    if (
+      query?.status &&
+      typeof query.status === 'string' &&
+      query.status.trim() &&
+      query.status !== 'ALL'
+    ) {
       const targetStatus = query.status.trim().toUpperCase();
       allBids = allBids.filter((b) => b.status.toUpperCase() === targetStatus);
     }
@@ -156,8 +168,10 @@ export class BidsService {
         const db = b.submissionDeadline ? new Date(b.submissionDeadline).getTime() : 0;
         comp = da - db;
       } else {
-        const da = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
-        const db = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
+        const da =
+          a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
+        const db =
+          b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
         comp = da - db;
       }
       return isAsc ? comp : -comp;
@@ -165,8 +179,16 @@ export class BidsService {
 
     const total = allBids.length;
     const isPaginated = query?.page !== undefined || query?.limit !== undefined;
-    const page = Math.max(1, typeof query?.page === 'number' ? query.page : parseInt(String(query?.page || 1), 10) || 1);
-    const limit = Math.max(1, typeof query?.limit === 'number' ? query.limit : parseInt(String(query?.limit || 10), 10) || 10);
+    const page = Math.max(
+      1,
+      typeof query?.page === 'number' ? query.page : parseInt(String(query?.page || 1), 10) || 1,
+    );
+    const limit = Math.max(
+      1,
+      typeof query?.limit === 'number'
+        ? query.limit
+        : parseInt(String(query?.limit || 10), 10) || 10,
+    );
     const totalPages = Math.ceil(total / limit) || 1;
 
     const pageBids = isPaginated ? allBids.slice((page - 1) * limit, page * limit) : allBids;
@@ -197,7 +219,8 @@ export class BidsService {
         mimeType: doc.mimeType,
         documentType: doc.documentType,
         status: doc.status,
-        uploadedAt: doc.uploadedAt instanceof Date ? doc.uploadedAt.toISOString() : String(doc.uploadedAt),
+        uploadedAt:
+          doc.uploadedAt instanceof Date ? doc.uploadedAt.toISOString() : String(doc.uploadedAt),
       });
     }
 
@@ -223,7 +246,8 @@ export class BidsService {
           verdict: d.verdict as BidDecisionProjection['verdict'],
           state: d.state as BidDecisionProjection['state'],
           readinessScore: Number(d.readinessScore),
-          evaluatedAt: d.createdAt instanceof Date ? d.createdAt.toISOString() : String(d.createdAt),
+          evaluatedAt:
+            d.createdAt instanceof Date ? d.createdAt.toISOString() : String(d.createdAt),
         });
       }
     }
@@ -254,7 +278,11 @@ export class BidsService {
     const [bidRecord] = await this.db
       .select()
       .from(schema.bids)
-      .where(orgId ? and(eq(schema.bids.id, bidId), eq(schema.bids.organizationId, orgId)) : eq(schema.bids.id, bidId))
+      .where(
+        orgId
+          ? and(eq(schema.bids.id, bidId), eq(schema.bids.organizationId, orgId))
+          : eq(schema.bids.id, bidId),
+      )
       .limit(1);
 
     if (!bidRecord) {
@@ -265,7 +293,12 @@ export class BidsService {
     const docs = await this.db
       .select()
       .from(schema.tenderDocuments)
-      .where(and(eq(schema.tenderDocuments.bidId, bidId), eq(schema.tenderDocuments.organizationId, finalOrgId)))
+      .where(
+        and(
+          eq(schema.tenderDocuments.bidId, bidId),
+          eq(schema.tenderDocuments.organizationId, finalOrgId),
+        ),
+      )
       .orderBy(asc(schema.tenderDocuments.uploadedAt));
 
     const documents: DemoDocument[] = [];
@@ -281,11 +314,17 @@ export class BidsService {
         try {
           if (
             fileName === 'Uploaded_Tender_Document.pdf' &&
-            typeof (this.storageService as unknown as { findFilesByPrefix?: (p: string) => Promise<string[]> }).findFilesByPrefix === 'function'
+            typeof (
+              this.storageService as unknown as {
+                findFilesByPrefix?: (p: string) => Promise<string[]>;
+              }
+            ).findFilesByPrefix === 'function'
           ) {
-            const matched = await (this.storageService as unknown as { findFilesByPrefix: (p: string) => Promise<string[]> }).findFilesByPrefix(
-              `tenants/${orgId}/bids/${bidId}/${d.id}/`,
-            );
+            const matched = await (
+              this.storageService as unknown as {
+                findFilesByPrefix: (p: string) => Promise<string[]>;
+              }
+            ).findFilesByPrefix(`tenants/${orgId}/bids/${bidId}/${d.id}/`);
             if (matched && matched.length > 0) {
               storagePath = matched[0]!;
               fileName = storagePath.split('/').pop() || fileName;
@@ -313,7 +352,8 @@ export class BidsService {
         mimeType: d.mimeType,
         documentType: d.documentType,
         status: d.status,
-        uploadedAt: d.uploadedAt instanceof Date ? d.uploadedAt.toISOString() : String(d.uploadedAt),
+        uploadedAt:
+          d.uploadedAt instanceof Date ? d.uploadedAt.toISOString() : String(d.uploadedAt),
       });
     }
 
@@ -327,7 +367,8 @@ export class BidsService {
     }
     const userId = TenantContextHolder.get()?.userId || 'usr_admin';
     const newBidId = `bid-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-    const title = typeof dto.title === 'string' && dto.title.trim() ? dto.title.trim() : 'Untitled Tender';
+    const title =
+      typeof dto.title === 'string' && dto.title.trim() ? dto.title.trim() : 'Untitled Tender';
     const tenderNumber =
       typeof dto.tenderNumber === 'string' && dto.tenderNumber.trim()
         ? dto.tenderNumber.trim()
@@ -340,7 +381,8 @@ export class BidsService {
       typeof dto.estimatedValueRupees === 'number'
         ? dto.estimatedValueRupees
         : Number(dto.estimatedValueRupees) || 0;
-    const submissionDeadline = typeof dto.submissionDeadline === 'string' ? dto.submissionDeadline : null;
+    const submissionDeadline =
+      typeof dto.submissionDeadline === 'string' ? dto.submissionDeadline : null;
     const locationState =
       typeof dto.locationState === 'string' && dto.locationState.trim()
         ? dto.locationState.trim()
@@ -351,12 +393,7 @@ export class BidsService {
       const [comp] = await this.db
         .select()
         .from(schema.companies)
-        .where(
-          and(
-            eq(schema.companies.id, companyId),
-            eq(schema.companies.organizationId, orgId),
-          ),
-        )
+        .where(and(eq(schema.companies.id, companyId), eq(schema.companies.organizationId, orgId)))
         .limit(1);
 
       if (!comp) {
@@ -370,7 +407,9 @@ export class BidsService {
         .limit(1);
 
       if (!defaultComp) {
-        throw new BadRequestError('No company entity found for this organization. Every organization must have at least one company.');
+        throw new BadRequestError(
+          'No company entity found for this organization. Every organization must have at least one company.',
+        );
       }
       companyId = defaultComp.id;
     }
@@ -437,7 +476,11 @@ export class BidsService {
     const [bid] = await this.db
       .select()
       .from(schema.bids)
-      .where(organizationId ? and(eq(schema.bids.id, bidId), eq(schema.bids.organizationId, organizationId)) : eq(schema.bids.id, bidId))
+      .where(
+        organizationId
+          ? and(eq(schema.bids.id, bidId), eq(schema.bids.organizationId, organizationId))
+          : eq(schema.bids.id, bidId),
+      )
       .limit(1);
 
     if (!bid) {
@@ -448,7 +491,12 @@ export class BidsService {
     const docs = await this.db
       .select()
       .from(schema.tenderDocuments)
-      .where(and(eq(schema.tenderDocuments.bidId, bidId), eq(schema.tenderDocuments.organizationId, organizationId)));
+      .where(
+        and(
+          eq(schema.tenderDocuments.bidId, bidId),
+          eq(schema.tenderDocuments.organizationId, organizationId),
+        ),
+      );
 
     // 3. Record audit log before deletion
     const now = new Date();
@@ -500,7 +548,11 @@ export class BidsService {
     const [bid] = await this.db
       .select()
       .from(schema.bids)
-      .where(orgId ? and(eq(schema.bids.id, bidId), eq(schema.bids.organizationId, orgId)) : eq(schema.bids.id, bidId))
+      .where(
+        orgId
+          ? and(eq(schema.bids.id, bidId), eq(schema.bids.organizationId, orgId))
+          : eq(schema.bids.id, bidId),
+      )
       .limit(1);
 
     if (!bid) {
@@ -522,7 +574,9 @@ export class BidsService {
       return target.toISOString().split('T')[0] ?? null;
     };
 
-    const getMilestoneStatus = (dateStr: string | null): 'UPCOMING' | 'IMMINENT' | 'OVERDUE' | 'NOT_SET' => {
+    const getMilestoneStatus = (
+      dateStr: string | null,
+    ): 'UPCOMING' | 'IMMINENT' | 'OVERDUE' | 'NOT_SET' => {
       if (!dateStr) return 'NOT_SET';
       const d = new Date(dateStr);
       if (Number.isNaN(d.getTime())) return 'NOT_SET';
@@ -540,9 +594,15 @@ export class BidsService {
     };
 
     const preBidDate = isValidSubmissionDate ? formatMilestoneDate(submissionDate, -15) : null;
-    const clarificationDate = isValidSubmissionDate ? formatMilestoneDate(submissionDate, -10) : null;
-    const technicalOpeningDate = isValidSubmissionDate ? formatMilestoneDate(submissionDate, 1) : null;
-    const financialOpeningDate = isValidSubmissionDate ? formatMilestoneDate(submissionDate, 8) : null;
+    const clarificationDate = isValidSubmissionDate
+      ? formatMilestoneDate(submissionDate, -10)
+      : null;
+    const technicalOpeningDate = isValidSubmissionDate
+      ? formatMilestoneDate(submissionDate, 1)
+      : null;
+    const financialOpeningDate = isValidSubmissionDate
+      ? formatMilestoneDate(submissionDate, 8)
+      : null;
 
     const milestones = [
       {
@@ -726,20 +786,29 @@ export class BidsService {
 
     const amendments: TenderAmendmentItem[] = filteredDocs.map((doc, idx) => {
       const parentBid = bidsMap.get(doc.bidId);
-      const corrNum = doc.fileName.toLowerCase().includes('02') ? 'Corrigendum-02' : 'Corrigendum-01';
-      const publishedAt = doc.uploadedAt instanceof Date ? doc.uploadedAt.toISOString() : String(doc.uploadedAt);
+      const corrNum = doc.fileName.toLowerCase().includes('02')
+        ? 'Corrigendum-02'
+        : 'Corrigendum-01';
+      const publishedAt =
+        doc.uploadedAt instanceof Date ? doc.uploadedAt.toISOString() : String(doc.uploadedAt);
 
       const affectedItems = allCompliance.filter((item) => {
         if (item.bidId !== doc.bidId) return false;
         try {
-          const prov = typeof item.provenance === 'string' ? JSON.parse(item.provenance) : (item.provenance as Record<string, unknown>);
+          const prov =
+            typeof item.provenance === 'string'
+              ? JSON.parse(item.provenance)
+              : (item.provenance as Record<string, unknown>);
           return prov?.documentId === doc.id || prov?.documentName === doc.fileName;
         } catch {
           return false;
         }
       });
 
-      const isDeadlineExt = doc.fileName.toLowerCase().includes('date') || doc.fileName.toLowerCase().includes('ext') || idx === 0;
+      const isDeadlineExt =
+        doc.fileName.toLowerCase().includes('date') ||
+        doc.fileName.toLowerCase().includes('ext') ||
+        idx === 0;
 
       return {
         id: `amend-${doc.id}`,

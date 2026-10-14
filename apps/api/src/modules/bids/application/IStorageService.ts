@@ -8,24 +8,20 @@ export interface IStorageService {
   generatePresignedUploadUrl(
     storagePath: string,
     contentType: string,
-    expiresInSeconds?: number
+    expiresInSeconds?: number,
   ): Promise<string>;
 
   generatePresignedDownloadUrl(
     storagePath: string,
     downloadFileName: string,
-    expiresInSeconds?: number
+    expiresInSeconds?: number,
   ): Promise<string>;
 
   headObject(storagePath: string): Promise<HeadObjectResult>;
 
   getObject(storagePath: string): Promise<string | Buffer | null>;
 
-  putObject?(
-    storagePath: string,
-    content: Buffer,
-    contentType?: string
-  ): Promise<void>;
+  putObject?(storagePath: string, content: Buffer, contentType?: string): Promise<void>;
 
   findFilesByPrefix(prefix: string): Promise<string[]>;
 
@@ -33,4 +29,3 @@ export interface IStorageService {
 
   deletePrefix(prefix: string): Promise<void>;
 }
-

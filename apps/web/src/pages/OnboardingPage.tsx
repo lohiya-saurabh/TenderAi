@@ -5,7 +5,13 @@ import { useCompany } from '../context/CompanyContext.js';
 import { Button } from '../components/ui/button.js';
 import { Label } from '../components/ui/label.js';
 import { Badge } from '../components/ui/badge.js';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card.js';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '../components/ui/card.js';
 import {
   Building2,
   CheckCircle2,
@@ -32,7 +38,9 @@ export const OnboardingPage: React.FC = () => {
   const navigate = useNavigate();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [selectedSectors, setSelectedSectors] = useState<string[]>(['Civil Infrastructure & Highways']);
+  const [selectedSectors, setSelectedSectors] = useState<string[]>([
+    'Civil Infrastructure & Highways',
+  ]);
   const [turnoverRange, setTurnoverRange] = useState<string>('50_to_250_cr');
   const [isFinishing, setIsFinishing] = useState(false);
 
@@ -51,7 +59,9 @@ export const OnboardingPage: React.FC = () => {
     const res = await verifyGstin(targetCompId, gstinInput.trim().toUpperCase());
     setIsVerifyingGstin(false);
     if (res.ok) {
-      setGstinVerifySuccess(`Verified with IRIS IRP: ${(res.data.data.legalName as string) || 'Taxpayer Active'}`);
+      setGstinVerifySuccess(
+        `Verified with IRIS IRP: ${(res.data.data.legalName as string) || 'Taxpayer Active'}`,
+      );
       await reloadCompanies();
     } else {
       setGstinVerifyError(res.error.message);
@@ -104,22 +114,34 @@ export const OnboardingPage: React.FC = () => {
 
           {/* Stepper Indicator */}
           <div className="pt-4 flex items-center justify-center gap-3">
-            <div className={`flex items-center gap-1.5 text-xs font-semibold ${step >= 1 ? 'text-primary' : 'text-muted-foreground'}`}>
-              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${step >= 1 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+            <div
+              className={`flex items-center gap-1.5 text-xs font-semibold ${step >= 1 ? 'text-primary' : 'text-muted-foreground'}`}
+            >
+              <span
+                className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${step >= 1 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+              >
                 1
               </span>
               <span>Workspace</span>
             </div>
             <div className="w-8 h-[1px] bg-border" />
-            <div className={`flex items-center gap-1.5 text-xs font-semibold ${step >= 2 ? 'text-primary' : 'text-muted-foreground'}`}>
-              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${step >= 2 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+            <div
+              className={`flex items-center gap-1.5 text-xs font-semibold ${step >= 2 ? 'text-primary' : 'text-muted-foreground'}`}
+            >
+              <span
+                className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${step >= 2 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+              >
                 2
               </span>
               <span>Capabilities</span>
             </div>
             <div className="w-8 h-[1px] bg-border" />
-            <div className={`flex items-center gap-1.5 text-xs font-semibold ${step >= 3 ? 'text-primary' : 'text-muted-foreground'}`}>
-              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${step >= 3 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+            <div
+              className={`flex items-center gap-1.5 text-xs font-semibold ${step >= 3 ? 'text-primary' : 'text-muted-foreground'}`}
+            >
+              <span
+                className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${step >= 3 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+              >
                 3
               </span>
               <span>Launch</span>
@@ -133,20 +155,31 @@ export const OnboardingPage: React.FC = () => {
           {step === 1 && (
             <>
               <CardHeader>
-                <CardTitle className="text-base font-bold">Step 1: Workspace &amp; Tenant Boundary</CardTitle>
+                <CardTitle className="text-base font-bold">
+                  Step 1: Workspace &amp; Tenant Boundary
+                </CardTitle>
                 <CardDescription className="text-xs">
-                  Your tenant isolation workspace has been initialized with the following parameters.
+                  Your tenant isolation workspace has been initialized with the following
+                  parameters.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-5">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                   <div className="p-3 rounded-lg bg-muted/40 border border-border space-y-1">
-                    <span className="text-[10px] text-muted-foreground uppercase font-semibold">Workspace Name</span>
-                    <p className="font-semibold text-foreground">{user?.organizationName || 'My Workspace'}</p>
-                    <p className="text-[10px] text-muted-foreground font-mono">Tenant: {user?.organizationId}</p>
+                    <span className="text-[10px] text-muted-foreground uppercase font-semibold">
+                      Workspace Name
+                    </span>
+                    <p className="font-semibold text-foreground">
+                      {user?.organizationName || 'My Workspace'}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground font-mono">
+                      Tenant: {user?.organizationId}
+                    </p>
                   </div>
                   <div className="p-3 rounded-lg bg-muted/40 border border-border space-y-1">
-                    <span className="text-[10px] text-muted-foreground uppercase font-semibold">Admin Account</span>
+                    <span className="text-[10px] text-muted-foreground uppercase font-semibold">
+                      Admin Account
+                    </span>
                     <p className="font-semibold text-foreground">{user?.name}</p>
                     <p className="text-[10px] text-muted-foreground">{user?.email}</p>
                   </div>
@@ -164,14 +197,25 @@ export const OnboardingPage: React.FC = () => {
                           <Building2 className="h-4 w-4 text-primary shrink-0" />
                           <div>
                             <p className="font-semibold text-xs text-foreground">{c.legalName}</p>
-                            {c.gstin && <p className="text-[10px] font-mono text-muted-foreground">GSTIN: {c.gstin}</p>}
+                            {c.gstin && (
+                              <p className="text-[10px] font-mono text-muted-foreground">
+                                GSTIN: {c.gstin}
+                              </p>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-1.5">
                           {c.gstinVerifiedAt ? (
-                            <Badge variant="default" className="text-[10px] bg-foreground text-background">IRIS Verified</Badge>
+                            <Badge
+                              variant="default"
+                              className="text-[10px] bg-foreground text-background"
+                            >
+                              IRIS Verified
+                            </Badge>
                           ) : (
-                            <Badge variant="outline" className="text-[10px]">Active Entity</Badge>
+                            <Badge variant="outline" className="text-[10px]">
+                              Active Entity
+                            </Badge>
                           )}
                         </div>
                       </div>
@@ -184,9 +228,13 @@ export const OnboardingPage: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
                       <ShieldCheck className="h-4 w-4 text-primary" />
-                      <span className="text-xs font-semibold text-foreground">Verify Identity via IRIS IRP GSP</span>
+                      <span className="text-xs font-semibold text-foreground">
+                        Verify Identity via IRIS IRP GSP
+                      </span>
                     </div>
-                    <span className="text-[10px] text-muted-foreground">Auto-imports official name &amp; PAN</span>
+                    <span className="text-[10px] text-muted-foreground">
+                      Auto-imports official name &amp; PAN
+                    </span>
                   </div>
 
                   <div className="flex gap-2">
@@ -224,9 +272,7 @@ export const OnboardingPage: React.FC = () => {
                   )}
 
                   {gstinVerifyError && (
-                    <div className="text-[11px] text-red-500">
-                      {gstinVerifyError}
-                    </div>
+                    <div className="text-[11px] text-red-500">{gstinVerifyError}</div>
                   )}
                 </div>
 
@@ -244,9 +290,12 @@ export const OnboardingPage: React.FC = () => {
           {step === 2 && (
             <>
               <CardHeader>
-                <CardTitle className="text-base font-bold">Step 2: Core Sectors &amp; Financial Turnover</CardTitle>
+                <CardTitle className="text-base font-bold">
+                  Step 2: Core Sectors &amp; Financial Turnover
+                </CardTitle>
                 <CardDescription className="text-xs">
-                  Helps our deterministic engine evaluate financial qualification formulas accurately.
+                  Helps our deterministic engine evaluate financial qualification formulas
+                  accurately.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-5">
@@ -267,7 +316,9 @@ export const OnboardingPage: React.FC = () => {
                           }`}
                         >
                           <span className="truncate">{sec}</span>
-                          {isSelected && <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0 ml-1" />}
+                          {isSelected && (
+                            <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0 ml-1" />
+                          )}
                         </button>
                       );
                     })}
@@ -287,7 +338,9 @@ export const OnboardingPage: React.FC = () => {
                     <option value="under_10_cr">Under ₹10 Crores (MSME Micro / Small)</option>
                     <option value="10_to_50_cr">₹10 Crores - ₹50 Crores (Medium Enterprise)</option>
                     <option value="50_to_250_cr">₹50 Crores - ₹250 Crores (Mid-tier EPC)</option>
-                    <option value="above_250_cr">Above ₹250 Crores (Major Infrastructure Contractor)</option>
+                    <option value="above_250_cr">
+                      Above ₹250 Crores (Major Infrastructure Contractor)
+                    </option>
                   </select>
                 </div>
 
@@ -308,7 +361,9 @@ export const OnboardingPage: React.FC = () => {
           {step === 3 && (
             <>
               <CardHeader>
-                <CardTitle className="text-base font-bold">Step 3: Setup Complete &amp; Ready</CardTitle>
+                <CardTitle className="text-base font-bold">
+                  Step 3: Setup Complete &amp; Ready
+                </CardTitle>
                 <CardDescription className="text-xs">
                   Your tenant profile is active and ready to ingest public tenders.
                 </CardDescription>
@@ -320,7 +375,8 @@ export const OnboardingPage: React.FC = () => {
                     <span>Workspace &amp; Company Dossier Initialized</span>
                   </div>
                   <p className="text-muted-foreground text-[11px] leading-relaxed">
-                    You can now upload NIT PDFs or evaluate sample tenders to test clause extraction, missing evidence detection, and compliance scoring.
+                    You can now upload NIT PDFs or evaluate sample tenders to test clause
+                    extraction, missing evidence detection, and compliance scoring.
                   </p>
                 </div>
 
@@ -331,7 +387,7 @@ export const OnboardingPage: React.FC = () => {
                       <span>Create New Bid</span>
                     </div>
                     <p className="text-muted-foreground text-[11px]">
-                       Upload your tender NIT or GeM bid document to start analysis.
+                      Upload your tender NIT or GeM bid document to start analysis.
                     </p>
                   </div>
 

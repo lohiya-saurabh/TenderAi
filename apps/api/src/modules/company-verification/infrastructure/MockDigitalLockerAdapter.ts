@@ -17,7 +17,8 @@ import { BadRequestError } from '../../../common/errors/errors.js';
 
 @Injectable()
 export class MockDigitalLockerAdapter implements IDigitalLockerPort {
-  private readonly hmacSecret = process.env.DIGILOCKER_STATE_SECRET || 'tenderpulse-digilocker-mock-secret';
+  private readonly hmacSecret =
+    process.env.DIGILOCKER_STATE_SECRET || 'tenderpulse-digilocker-mock-secret';
 
   public async generateAuthUrl(
     tenantId: string,
@@ -55,7 +56,10 @@ export class MockDigitalLockerAdapter implements IDigitalLockerPort {
         payload: string;
         hmac: string;
       };
-      const expectedHmac = crypto.createHmac('sha256', this.hmacSecret).update(decoded.payload).digest('hex');
+      const expectedHmac = crypto
+        .createHmac('sha256', this.hmacSecret)
+        .update(decoded.payload)
+        .digest('hex');
       if (expectedHmac !== decoded.hmac) {
         throw new BadRequestError('Invalid or forged DigiLocker state token (HMAC mismatch).');
       }
@@ -63,7 +67,9 @@ export class MockDigitalLockerAdapter implements IDigitalLockerPort {
       const [, , , timestampStr] = decoded.payload.split(':');
       const timestamp = parseInt(timestampStr || '0', 10);
       if (Date.now() - timestamp > 15 * 60 * 1000) {
-        throw new BadRequestError('DigiLocker OAuth session expired. Please restart the authorization.');
+        throw new BadRequestError(
+          'DigiLocker OAuth session expired. Please restart the authorization.',
+        );
       }
     } catch (err: unknown) {
       if (err instanceof BadRequestError) throw err;
@@ -86,9 +92,18 @@ export class MockDigitalLockerAdapter implements IDigitalLockerPort {
       return { buffer, sha256Hash };
     };
 
-    const incDoc = makePdf('Ministry of Corporate Affairs - Certificate of Incorporation', 'U72900MH2018PTC123456');
-    const gstDoc = makePdf('GSTN - Goods & Services Tax Registration Certificate', '27AABCU9603R1ZM');
-    const udyamDoc = makePdf('Ministry of MSME - Udyam Registration Certificate', 'UDYAM-MH-01-0012345');
+    const incDoc = makePdf(
+      'Ministry of Corporate Affairs - Certificate of Incorporation',
+      'U72900MH2018PTC123456',
+    );
+    const gstDoc = makePdf(
+      'GSTN - Goods & Services Tax Registration Certificate',
+      '27AABCU9603R1ZM',
+    );
+    const udyamDoc = makePdf(
+      'Ministry of MSME - Udyam Registration Certificate',
+      'UDYAM-MH-01-0012345',
+    );
 
     return [
       {

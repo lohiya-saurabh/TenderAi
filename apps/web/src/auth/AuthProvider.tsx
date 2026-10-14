@@ -1,6 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { AuthContext, type AuthContextValue } from './AuthContext.js';
-import { login as apiLogin, register as apiRegister, logout as apiLogout, type AuthUser, type RegisterRequest } from '../api/auth.js';
+import {
+  login as apiLogin,
+  register as apiRegister,
+  logout as apiLogout,
+  type AuthUser,
+  type RegisterRequest,
+} from '../api/auth.js';
 import { setTokens, setOnAuthExpired, coordinatedRefresh } from '../api/client.js';
 
 interface AuthProviderProps {
@@ -82,7 +88,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Registration handler
   const handleRegister = useCallback(
-    async (data: RegisterRequest): Promise<{ success: boolean; error?: string; companyId?: string }> => {
+    async (
+      data: RegisterRequest,
+    ): Promise<{ success: boolean; error?: string; companyId?: string }> => {
       try {
         const result = await apiRegister(data);
         if (!result.ok) {
@@ -146,7 +154,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       hasAnyPermission,
       hasAllPermissions,
     }),
-    [user, isLoading, handleLogin, handleRegister, handleLogout, hasPermission, hasAnyPermission, hasAllPermissions],
+    [
+      user,
+      isLoading,
+      handleLogin,
+      handleRegister,
+      handleLogout,
+      hasPermission,
+      hasAnyPermission,
+      hasAllPermissions,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

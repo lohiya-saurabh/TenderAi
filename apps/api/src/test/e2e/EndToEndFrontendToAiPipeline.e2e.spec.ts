@@ -84,7 +84,11 @@ startxref
   beforeEach(async () => {
     // 1. Initialize embedded PostgreSQL
     pglite = new PGlite();
-    await initDatabase(pglite, { seedUsers: true, seedFullProfile: true, seedBidsAndCompliance: true });
+    await initDatabase(pglite, {
+      seedUsers: true,
+      seedFullProfile: true,
+      seedBidsAndCompliance: true,
+    });
     db = createDrizzle(pglite);
 
     // 2. Initialize S3 Storage and SQS Queue
@@ -143,7 +147,8 @@ startxref
               {
                 category: 'FINANCIAL',
                 title: 'Annual Financial Turnover & UDIN Certification',
-                description: 'Minimum turnover of INR 50 Crores with CA certificate bearing valid UDIN',
+                description:
+                  'Minimum turnover of INR 50 Crores with CA certificate bearing valid UDIN',
                 executionRules: {
                   stampPaperRequired: false,
                   notarizationRequired: false,
@@ -175,22 +180,25 @@ startxref
       aiExtractor,
       300,
       'worker-integration-e2e',
-      eventBus
+      eventBus,
     );
 
     // Pre-seed company entities
-    await db.insert(schema.companies).values([
-      {
-        id: 'comp_tata_infra_001',
-        organizationId: tenantA,
-        legalName: 'Tata Projects Ltd',
-      },
-      {
-        id: 'comp_lnt_infra_002',
-        organizationId: tenantB,
-        legalName: 'Larsen & Toubro Ltd',
-      },
-    ]);
+    await db
+      .insert(schema.companies)
+      .values([
+        {
+          id: 'comp_tata_infra_001',
+          organizationId: tenantA,
+          legalName: 'Tata Projects Ltd',
+        },
+        {
+          id: 'comp_lnt_infra_002',
+          organizationId: tenantB,
+          legalName: 'Larsen & Toubro Ltd',
+        },
+      ])
+      .onConflictDoNothing();
 
     // 6. Pre-seed the bid in PostgreSQL and in-memory domain repo
     await db.insert(schema.bids).values({
@@ -241,8 +249,8 @@ startxref
             sizeBytes: samplePdfContent.length,
             documentType: 'NIT',
           },
-          'api.tenderpulse.local'
-        )
+          'api.tenderpulse.local',
+        ),
     );
 
     expect(uploadSession.documentId).toBeDefined();
@@ -263,7 +271,7 @@ startxref
       storagePath,
       samplePdfContent.length,
       validChecksum,
-      samplePdfContent
+      samplePdfContent,
     );
 
     const headResult = await storageService.headObject(storagePath);
@@ -292,7 +300,7 @@ startxref
       () =>
         documentsController.confirmUpload(testBidId, {
           documentId: docId,
-        })
+        }),
     );
 
     expect(confirmResult.documentId).toBe(docId);
@@ -302,7 +310,12 @@ startxref
     const [persistedDoc] = await db
       .select()
       .from(schema.tenderDocuments)
-      .where(and(eq(schema.tenderDocuments.id, docId), eq(schema.tenderDocuments.organizationId, tenantA)))
+      .where(
+        and(
+          eq(schema.tenderDocuments.id, docId),
+          eq(schema.tenderDocuments.organizationId, tenantA),
+        ),
+      )
       .limit(1);
 
     expect(persistedDoc).toBeDefined();
@@ -318,7 +331,8 @@ startxref
       .where(eq(schema.documentProcessingOutbox.documentId, docId))
       .limit(1);
     expect(outboxRecord?.status).toBe('PENDING');
-    if (!outboxRecord) throw new Error('Upload confirmation did not create a durable outbox record.');
+    if (!outboxRecord)
+      throw new Error('Upload confirmation did not create a durable outbox record.');
     await jobQueue.enqueue(outboxRecord.payload as IngestionJobMessage);
 
     // Verify the queue received the message published from the durable outbox
@@ -368,12 +382,16 @@ startxref
     expect(emdItem).toBeDefined();
     expect(emdItem?.executionRules.stampPaperRequired).toBe(true);
     expect(emdItem?.executionRules.stampPaperDenominationInr).toBe(100);
-    expect(emdItem?.provenance.verbatimQuote).toContain('Bidder must furnish Earnest Money Deposit');
+    expect(emdItem?.provenance.verbatimQuote).toContain(
+      'Bidder must furnish Earnest Money Deposit',
+    );
 
     const turnoverItem = complianceItems.find((i) => i.title.includes('Turnover'));
     expect(turnoverItem).toBeDefined();
     expect(turnoverItem?.executionRules.udinRequired).toBe(true);
-    expect(turnoverItem?.provenance.verbatimQuote).toContain('Minimum average annual financial turnover');
+    expect(turnoverItem?.provenance.verbatimQuote).toContain(
+      'Minimum average annual financial turnover',
+    );
 
     // Verify bid status updated to REVIEW_READY
     const updatedBid = await bidRepo.findById(testBidId, tenantA);
@@ -398,8 +416,8 @@ startxref
     await expect(
       TenantContextHolder.run(
         { organizationId: tenantB, userId: 'rogue-user', role: 'BID_MANAGER' },
-        () => documentsController.confirmUpload(testBidId, { documentId: 'doc-rogue-1' })
-      )
+        () => documentsController.confirmUpload(testBidId, { documentId: 'doc-rogue-1' }),
+      ),
     ).rejects.toThrow();
   });
 
@@ -448,7 +466,7 @@ startxref
       documentsController.streamExtractionProgress(
         testBidId,
         mockReq as unknown as Request,
-        mockRes as unknown as Response
+        mockRes as unknown as Response,
       );
     });
 
@@ -478,7 +496,7 @@ startxref
       documentsController.streamExtractionProgress(
         testBidId,
         mockReq as unknown as Request,
-        mockRes as unknown as Response
+        mockRes as unknown as Response,
       );
     });
 

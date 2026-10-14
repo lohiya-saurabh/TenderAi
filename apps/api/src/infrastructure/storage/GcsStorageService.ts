@@ -44,7 +44,7 @@ export class GcsStorageService implements IStorageService {
   public async generatePresignedUploadUrl(
     storagePath: string,
     contentType: string,
-    expiresInSeconds = 900
+    expiresInSeconds = 900,
   ): Promise<string> {
     const bucket = this.storage.bucket(this.bucketName);
     const file = bucket.file(storagePath);
@@ -69,7 +69,7 @@ export class GcsStorageService implements IStorageService {
   public async generatePresignedDownloadUrl(
     storagePath: string,
     downloadFileName: string,
-    expiresInSeconds = 300
+    expiresInSeconds = 300,
   ): Promise<string> {
     const bucket = this.storage.bucket(this.bucketName);
     const file = bucket.file(storagePath);
@@ -98,11 +98,12 @@ export class GcsStorageService implements IStorageService {
       const file = bucket.file(storagePath);
       const [metadata] = await file.getMetadata();
 
-      const sizeBytes = typeof metadata.size === 'number'
-        ? metadata.size
-        : typeof metadata.size === 'string'
-          ? parseInt(metadata.size, 10)
-          : 0;
+      const sizeBytes =
+        typeof metadata.size === 'number'
+          ? metadata.size
+          : typeof metadata.size === 'string'
+            ? parseInt(metadata.size, 10)
+            : 0;
 
       const customMetadata = metadata.metadata as Record<string, string> | undefined;
 
@@ -113,8 +114,14 @@ export class GcsStorageService implements IStorageService {
       };
     } catch (error: unknown) {
       if (
-        (typeof error === 'object' && error !== null && 'code' in error && (error as { code: number }).code === 404) ||
-        (typeof error === 'object' && error !== null && 'message' in error && String((error as { message: string }).message).includes('Not Found'))
+        (typeof error === 'object' &&
+          error !== null &&
+          'code' in error &&
+          (error as { code: number }).code === 404) ||
+        (typeof error === 'object' &&
+          error !== null &&
+          'message' in error &&
+          String((error as { message: string }).message).includes('Not Found'))
       ) {
         return { exists: false, sizeBytes: 0 };
       }
@@ -130,8 +137,14 @@ export class GcsStorageService implements IStorageService {
       return contents;
     } catch (error: unknown) {
       if (
-        (typeof error === 'object' && error !== null && 'code' in error && (error as { code: number }).code === 404) ||
-        (typeof error === 'object' && error !== null && 'message' in error && String((error as { message: string }).message).includes('Not Found'))
+        (typeof error === 'object' &&
+          error !== null &&
+          'code' in error &&
+          (error as { code: number }).code === 404) ||
+        (typeof error === 'object' &&
+          error !== null &&
+          'message' in error &&
+          String((error as { message: string }).message).includes('Not Found'))
       ) {
         return null;
       }
@@ -174,7 +187,10 @@ export class GcsStorageService implements IStorageService {
       await file.delete({ ignoreNotFound: true });
       this.logger.info('storage.delete.completed', 'Deleted object from storage', { storagePath });
     } catch (err) {
-      this.logger.warn('storage.delete.failed', `Failed to delete object ${storagePath}`, { storagePath, error: err });
+      this.logger.warn('storage.delete.failed', `Failed to delete object ${storagePath}`, {
+        storagePath,
+        error: err,
+      });
     }
   }
 
@@ -182,9 +198,14 @@ export class GcsStorageService implements IStorageService {
     try {
       const bucket = this.storage.bucket(this.bucketName);
       await bucket.deleteFiles({ prefix, force: true });
-      this.logger.info('storage.delete_prefix.completed', `Deleted objects with prefix ${prefix}`, { prefix });
+      this.logger.info('storage.delete_prefix.completed', `Deleted objects with prefix ${prefix}`, {
+        prefix,
+      });
     } catch (err) {
-      this.logger.warn('storage.delete_prefix.failed', `Failed to delete prefix ${prefix}`, { prefix, error: err });
+      this.logger.warn('storage.delete_prefix.failed', `Failed to delete prefix ${prefix}`, {
+        prefix,
+        error: err,
+      });
     }
   }
 }

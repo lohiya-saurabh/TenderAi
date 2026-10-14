@@ -5,7 +5,11 @@ import { Injectable, Inject } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcrypt';
-import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '../../common/database/database.module.js';
+import {
+  DRIZZLE_TOKEN,
+  type DrizzleDb,
+  createDrizzle,
+} from '../../common/database/database.module.js';
 import * as schema from '../../common/database/schema.js';
 import { NotFoundError, BadRequestError, UnauthorizedError } from '../../common/errors/errors.js';
 import { TenantContextHolder } from '../../common/security/TenantContext.js';
@@ -88,7 +92,9 @@ export class UsersService {
   /**
    * Change user password with cryptographic bcrypt verification.
    */
-  public async changePassword(dto: ChangePasswordDto): Promise<{ success: boolean; message: string }> {
+  public async changePassword(
+    dto: ChangePasswordDto,
+  ): Promise<{ success: boolean; message: string }> {
     const userId = this.requireUserId();
 
     if (!dto.currentPassword) {

@@ -41,7 +41,8 @@ export const IngestedDocumentsSection: React.FC<IngestedDocumentsSectionProps> =
             2. Ingested Tender Documents
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Extracted via Docling Document Intelligence Pipeline with cryptographic SHA-256 integrity
+            Extracted via Docling Document Intelligence Pipeline with cryptographic SHA-256
+            integrity
           </p>
         </div>
 
@@ -80,7 +81,8 @@ export const IngestedDocumentsSection: React.FC<IngestedDocumentsSectionProps> =
       {documents.length === 0 ? (
         <div className="border border-dashed border-border rounded-lg p-8 bg-card text-center space-y-2">
           <p className="text-xs text-muted-foreground">
-            No tender documents uploaded yet. Upload a Notice Inviting Tender (NIT) or RFP PDF to start extraction.
+            No tender documents uploaded yet. Upload a Notice Inviting Tender (NIT) or RFP PDF to
+            start extraction.
           </p>
           {canUploadDoc && !showUploader && (
             <Button
@@ -100,8 +102,12 @@ export const IngestedDocumentsSection: React.FC<IngestedDocumentsSectionProps> =
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
           {documents.map((doc, idx) => {
             const isCompleted = doc.status === 'COMPLETED';
-            const isProcessing = doc.status === 'PROCESSING' || doc.status === 'QUEUED_FOR_EXTRACTION';
-            const clauseEstimate = Math.max(9, Math.round((totalClauses || 27) / (documents.length || 1)) + (idx === 0 ? 5 : -4));
+            const isProcessing =
+              doc.status === 'PROCESSING' || doc.status === 'QUEUED_FOR_EXTRACTION';
+            const clauseEstimate = Math.max(
+              9,
+              Math.round((totalClauses || 27) / (documents.length || 1)) + (idx === 0 ? 5 : -4),
+            );
 
             return (
               <div
@@ -114,7 +120,10 @@ export const IngestedDocumentsSection: React.FC<IngestedDocumentsSectionProps> =
                       PDF
                     </div>
                     <div className="min-w-0">
-                      <div className="font-bold text-xs text-foreground truncate" title={doc.fileName}>
+                      <div
+                        className="font-bold text-xs text-foreground truncate"
+                        title={doc.fileName}
+                      >
                         {doc.fileName}
                       </div>
                       <div className="text-[11px] text-muted-foreground truncate">
@@ -168,7 +177,9 @@ export const IngestedDocumentsSection: React.FC<IngestedDocumentsSectionProps> =
                         className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded hover:bg-accent cursor-pointer disabled:opacity-50"
                         title="Reprocess with Docling"
                       >
-                        <RefreshCw className={`h-3 w-3 ${reprocessingDocId === doc.id ? 'animate-spin' : ''}`} />
+                        <RefreshCw
+                          className={`h-3 w-3 ${reprocessingDocId === doc.id ? 'animate-spin' : ''}`}
+                        />
                       </button>
                     )}
 

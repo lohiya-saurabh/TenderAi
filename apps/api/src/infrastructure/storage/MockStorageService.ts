@@ -12,7 +12,7 @@ export class MockStorageService implements IStorageService {
   public async generatePresignedUploadUrl(
     s3Key: string,
     _contentType: string,
-    _expiresInSeconds = 900
+    _expiresInSeconds = 900,
   ): Promise<string> {
     return `https://mock-s3.tenderpulse.local/${s3Key}?X-Amz-Signature=mock-sig`;
   }
@@ -20,7 +20,7 @@ export class MockStorageService implements IStorageService {
   public async generatePresignedDownloadUrl(
     s3Key: string,
     downloadFileName: string,
-    expiresInSeconds = 300
+    expiresInSeconds = 300,
   ): Promise<string> {
     const encodedFileName = encodeURIComponent(downloadFileName);
     return `https://mock-s3.tenderpulse.local/${s3Key}?response-content-disposition=attachment%3B%20filename%3D%22${encodedFileName}%22&expires=${expiresInSeconds}&X-Amz-Signature=mock-get-sig`;
@@ -58,7 +58,7 @@ export class MockStorageService implements IStorageService {
     s3Key: string,
     sizeBytes: number,
     checksumSha256?: string,
-    content?: string | Buffer
+    content?: string | Buffer,
   ): void {
     this.objects.set(s3Key, { sizeBytes, checksumSha256, content });
   }

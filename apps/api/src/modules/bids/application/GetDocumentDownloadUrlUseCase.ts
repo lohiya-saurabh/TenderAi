@@ -31,11 +31,11 @@ export class GetDocumentDownloadUrlUseCase {
     private readonly bidRepository: IBidRepository,
     private readonly documentRepository: ITenderDocumentRepository,
     private readonly storageService: IStorageService,
-    private readonly auditRepository: IAuditRepository
+    private readonly auditRepository: IAuditRepository,
   ) {}
 
   public async execute(
-    command: GetDocumentDownloadUrlCommand
+    command: GetDocumentDownloadUrlCommand,
   ): Promise<GetDocumentDownloadUrlResult> {
     // 1. RBAC Authorization check
     TenantContextHolder.requirePermission(Permissions.DOCUMENTS_READ);
@@ -49,7 +49,7 @@ export class GetDocumentDownloadUrlUseCase {
     // 3. Anti-IDOR: Scoped lookup of TenderDocument
     const document = await this.documentRepository.findById(
       command.documentId,
-      command.organizationId
+      command.organizationId,
     );
     if (!document) {
       throw new EntityNotFoundException('TenderDocument', command.documentId);
@@ -63,7 +63,7 @@ export class GetDocumentDownloadUrlUseCase {
     // 5. Invariant: Only verified documents may be downloaded
     if (!document.status.equals(DocumentStatus.VERIFIED)) {
       throw new ValidationException(
-        `Cannot generate download URL: Document is in '${document.status.value}' state. Must be VERIFIED.`
+        `Cannot generate download URL: Document is in '${document.status.value}' state. Must be VERIFIED.`,
       );
     }
 
@@ -72,7 +72,7 @@ export class GetDocumentDownloadUrlUseCase {
     const downloadUrl = await this.storageService.generatePresignedDownloadUrl(
       document.s3Key,
       document.fileName,
-      expiresInSeconds
+      expiresInSeconds,
     );
 
     // 7. Audit log event
@@ -90,7 +90,7 @@ export class GetDocumentDownloadUrlUseCase {
           s3Key: document.s3Key,
           expiresInSeconds,
         },
-      })
+      }),
     );
 
     return {

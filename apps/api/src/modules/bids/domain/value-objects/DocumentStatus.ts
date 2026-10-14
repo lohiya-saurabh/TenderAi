@@ -27,7 +27,7 @@ export class DocumentStatus {
       throw new InvalidStateTransitionException(
         'UNKNOWN',
         upper,
-        `Invalid document status '${value}'`
+        `Invalid document status '${value}'`,
       );
     }
     return new DocumentStatus(upper);
@@ -47,7 +47,7 @@ export class DocumentStatus {
       throw new InvalidStateTransitionException(
         this._value,
         target.value,
-        `Allowed document transitions from '${this._value}' are: [${DocumentStatus.VALID_TRANSITIONS[this._value].join(', ')}]`
+        `Allowed document transitions from '${this._value}' are: [${DocumentStatus.VALID_TRANSITIONS[this._value].join(', ')}]`,
       );
     }
     return target;

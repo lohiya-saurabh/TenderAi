@@ -5,9 +5,7 @@ import {
   type RequirementSourceItem,
 } from './RequirementMapper.js';
 
-const baseItem = (
-  overrides: Partial<RequirementSourceItem> = {},
-): RequirementSourceItem => ({
+const baseItem = (overrides: Partial<RequirementSourceItem> = {}): RequirementSourceItem => ({
   category: 'FINANCIAL',
   title: 'Minimum Turnover Requirement',
   description: 'Bidder must have annual turnover of ₹50 Crores',
@@ -35,9 +33,7 @@ describe('RequirementMapper — ComplianceItem → AI RequirementCandidate', () 
 
     expect(candidate.category).toBe('FINANCIAL');
     expect(candidate.title).toBe('Minimum Turnover Requirement');
-    expect(candidate.description).toBe(
-      'Bidder must have annual turnover of ₹50 Crores',
-    );
+    expect(candidate.description).toBe('Bidder must have annual turnover of ₹50 Crores');
     expect(candidate.execution_rules).toEqual({
       stamp_paper_required: true,
       stamp_paper_denomination_inr: 5000,
@@ -76,12 +72,10 @@ describe('RequirementMapper — ComplianceItem → AI RequirementCandidate', () 
   });
 
   it('maps LEGAL → DECLARATION and EXECUTION → COMMERCIAL_TERM kinds', () => {
-    expect(toRequirementCandidate(baseItem({ category: 'LEGAL' })).kind).toBe(
-      'DECLARATION',
+    expect(toRequirementCandidate(baseItem({ category: 'LEGAL' })).kind).toBe('DECLARATION');
+    expect(toRequirementCandidate(baseItem({ category: 'EXECUTION' })).kind).toBe(
+      'COMMERCIAL_TERM',
     );
-    expect(
-      toRequirementCandidate(baseItem({ category: 'EXECUTION' })).kind,
-    ).toBe('COMMERCIAL_TERM');
   });
 
   it('defaults unknown categories to DECLARATION kind (never crashes)', () => {
@@ -103,9 +97,7 @@ describe('RequirementMapper — ComplianceItem → AI RequirementCandidate', () 
       }),
     );
     expect(candidate.execution_rules.stamp_paper_denomination_inr).toBeNull();
-    expect(candidate.execution_rules.signing_authority_rank).toBe(
-      'Authorized Signatory',
-    );
+    expect(candidate.execution_rules.signing_authority_rank).toBe('Authorized Signatory');
   });
 
   it('always sends an empty ambiguity_flags list (extraction pipeline does not persist flags)', () => {
@@ -113,10 +105,7 @@ describe('RequirementMapper — ComplianceItem → AI RequirementCandidate', () 
   });
 
   it('maps batches in order', () => {
-    const items = [
-      baseItem({ title: 'First' }),
-      baseItem({ title: 'Second' }),
-    ];
+    const items = [baseItem({ title: 'First' }), baseItem({ title: 'Second' })];
     const candidates = toRequirementCandidates(items);
     expect(candidates).toHaveLength(2);
     expect(candidates[0].title).toBe('First');

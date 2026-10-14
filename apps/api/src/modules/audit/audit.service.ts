@@ -4,7 +4,11 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
 import { eq, and, desc } from 'drizzle-orm';
-import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '../../common/database/database.module.js';
+import {
+  DRIZZLE_TOKEN,
+  type DrizzleDb,
+  createDrizzle,
+} from '../../common/database/database.module.js';
 import * as schema from '../../common/database/schema.js';
 import type { DemoAuditEvent } from '../../seed/data.js';
 import { TenantContextHolder } from '../../common/security/TenantContext.js';
@@ -24,10 +28,7 @@ export class AuditService {
       .from(schema.auditLogs)
       .where(
         orgId
-          ? and(
-              eq(schema.auditLogs.bidId, bidId),
-              eq(schema.auditLogs.organizationId, orgId),
-            )
+          ? and(eq(schema.auditLogs.bidId, bidId), eq(schema.auditLogs.organizationId, orgId))
           : eq(schema.auditLogs.bidId, bidId),
       )
       .orderBy(desc(schema.auditLogs.timestamp));
@@ -40,8 +41,12 @@ export class AuditService {
       userId: row.userId,
       userName: row.userName,
       organizationId: row.organizationId,
-      payload: (typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload) as Record<string, unknown>,
-      timestamp: row.timestamp instanceof Date ? row.timestamp.toISOString() : String(row.timestamp),
+      payload: (typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload) as Record<
+        string,
+        unknown
+      >,
+      timestamp:
+        row.timestamp instanceof Date ? row.timestamp.toISOString() : String(row.timestamp),
     }));
   }
 }

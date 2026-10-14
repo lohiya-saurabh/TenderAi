@@ -11,7 +11,11 @@ import type {
   MsmeClassification,
   MsmeMajorActivity,
 } from '../domain/ports/IMsmeVerificationPort.js';
-import { BadRequestError, NotFoundError, InternalServerError } from '../../../common/errors/errors.js';
+import {
+  BadRequestError,
+  NotFoundError,
+  InternalServerError,
+} from '../../../common/errors/errors.js';
 
 interface RawUdyamResponse {
   udyamRegistrationNumber?: string;
@@ -36,7 +40,9 @@ export class UdyamVerificationAdapter implements IMsmeVerificationPort {
   private readonly timeoutMs: number;
 
   constructor() {
-    this.baseUrl = (process.env.UDYAM_API_BASE_URL || 'https://udyamregistration.gov.in/api/v1').replace(/\/$/, '');
+    this.baseUrl = (
+      process.env.UDYAM_API_BASE_URL || 'https://udyamregistration.gov.in/api/v1'
+    ).replace(/\/$/, '');
     this.apiKey = process.env.UDYAM_API_KEY;
     this.clientId = process.env.UDYAM_CLIENT_ID;
     this.timeoutMs = parseInt(process.env.UDYAM_TIMEOUT_MS || '10000', 10);
@@ -55,7 +61,7 @@ export class UdyamVerificationAdapter implements IMsmeVerificationPort {
 
     try {
       const headers: Record<string, string> = {
-        'Accept': 'application/json',
+        Accept: 'application/json',
         'Content-Type': 'application/json',
       };
       if (this.apiKey) headers['x-api-key'] = this.apiKey;
@@ -74,7 +80,9 @@ export class UdyamVerificationAdapter implements IMsmeVerificationPort {
       }
 
       if (!response.ok) {
-        throw new InternalServerError(`Udyam verification gateway returned status ${response.status}.`);
+        throw new InternalServerError(
+          `Udyam verification gateway returned status ${response.status}.`,
+        );
       }
 
       const body = (await response.json()) as RawUdyamResponse;
@@ -85,13 +93,19 @@ export class UdyamVerificationAdapter implements IMsmeVerificationPort {
       return this.mapUdyamResponse(normalized, body);
     } catch (err: unknown) {
       clearTimeout(timer);
-      if (err instanceof BadRequestError || err instanceof NotFoundError || err instanceof InternalServerError) {
+      if (
+        err instanceof BadRequestError ||
+        err instanceof NotFoundError ||
+        err instanceof InternalServerError
+      ) {
         throw err;
       }
       if (err instanceof Error && err.name === 'AbortError') {
         throw new InternalServerError(`Udyam API request timed out after ${this.timeoutMs}ms.`);
       }
-      this.logger.error(`Failed to connect to Udyam service: ${err instanceof Error ? err.message : String(err)}`);
+      this.logger.error(
+        `Failed to connect to Udyam service: ${err instanceof Error ? err.message : String(err)}`,
+      );
       throw new InternalServerError('Unable to reach MSME Udyam verification service.');
     }
   }

@@ -12,12 +12,7 @@ import React, { useState } from 'react';
 import { Button } from '../common/Button.js';
 import { Badge } from '../common/Badge.js';
 import { Modal } from '../common/Modal.js';
-import {
-  ShieldCheck,
-  CloudDownload,
-  AlertTriangle,
-  CheckCircle2,
-} from 'lucide-react';
+import { ShieldCheck, CloudDownload, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import {
   verifyGstin,
   verifyMca,
@@ -38,7 +33,9 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
   company,
   onRefresh,
 }) => {
-  const [activeModal, setActiveModal] = useState<'GSTIN' | 'MCA' | 'UDYAM' | 'DIGILOCKER' | 'CLOUD_IMPORT' | null>(null);
+  const [activeModal, setActiveModal] = useState<
+    'GSTIN' | 'MCA' | 'UDYAM' | 'DIGILOCKER' | 'CLOUD_IMPORT' | null
+  >(null);
   const [inputVal, setInputVal] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -147,8 +144,12 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
     setLoading(true);
     setErrorMsg(null);
     try {
-      const fileId = cloudProvider === 'google-drive' ? 'gdrive_file_audited_fy24' : 'onedrive_file_ca_networth';
-      const fileName = cloudProvider === 'google-drive' ? 'Audited_Balance_Sheet_FY24.pdf' : 'Networth_Certificate_UDIN.pdf';
+      const fileId =
+        cloudProvider === 'google-drive' ? 'gdrive_file_audited_fy24' : 'onedrive_file_ca_networth';
+      const fileName =
+        cloudProvider === 'google-drive'
+          ? 'Audited_Balance_Sheet_FY24.pdf'
+          : 'Networth_Certificate_UDIN.pdf';
 
       const res = await importCloudEvidence(company.id, {
         provider: cloudProvider,
@@ -176,9 +177,7 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
 
   return (
     <>
-      <div
-        className="border border-border rounded-xl p-5 sm:p-6 bg-card shadow-xs flex flex-col gap-4 transition-colors"
-      >
+      <div className="border border-border rounded-xl p-5 sm:p-6 bg-card shadow-xs flex flex-col gap-4 transition-colors">
         <div className="flex justify-between items-center flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <ShieldCheck size={18} className="text-foreground" />
@@ -202,9 +201,16 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
               </Badge>
             </div>
             <p className="text-[11px] mono text-muted-foreground m-0 truncate">
-              {company.gstin ? `ID: ${company.gstin}` : 'Validate legal business name & tax standing'}
+              {company.gstin
+                ? `ID: ${company.gstin}`
+                : 'Validate legal business name & tax standing'}
             </p>
-            <Button variant="outline" size="sm" onClick={handleOpenGstin} className="self-start mt-auto text-xs h-7 border-border">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleOpenGstin}
+              className="self-start mt-auto text-xs h-7 border-border"
+            >
               {isGstVerified ? 'Re-verify GST' : 'Verify via IRIS IRP'}
             </Button>
           </div>
@@ -220,7 +226,12 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
             <p className="text-[11px] mono text-muted-foreground m-0 truncate">
               {company.cin ? `CIN: ${company.cin}` : 'Cross-check RoC jurisdiction & incorporation'}
             </p>
-            <Button variant="outline" size="sm" onClick={handleOpenMca} className="self-start mt-auto text-xs h-7 border-border">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleOpenMca}
+              className="self-start mt-auto text-xs h-7 border-border"
+            >
               {isMcaVerified ? 'Re-check MCA' : 'Verify MCA CIN'}
             </Button>
           </div>
@@ -234,9 +245,16 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
               </Badge>
             </div>
             <p className="text-[11px] mono text-muted-foreground m-0 truncate">
-              {company.udyamId ? `Udyam: ${company.udyamId}` : 'Unlock statutory EMD exemption & fee waiver'}
+              {company.udyamId
+                ? `Udyam: ${company.udyamId}`
+                : 'Unlock statutory EMD exemption & fee waiver'}
             </p>
-            <Button variant="outline" size="sm" onClick={handleOpenUdyam} className="self-start mt-auto text-xs h-7 border-border">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleOpenUdyam}
+              className="self-start mt-auto text-xs h-7 border-border"
+            >
               {isUdyamVerified ? 'Re-check Udyam' : 'Verify MSME Udyam'}
             </Button>
           </div>
@@ -250,9 +268,16 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
               </Badge>
             </div>
             <p className="text-[11px] mono text-muted-foreground m-0 truncate">
-              {isDigiLockerLinked ? 'Pulling official signed certificates' : 'Import digitally signed government docs'}
+              {isDigiLockerLinked
+                ? 'Pulling official signed certificates'
+                : 'Import digitally signed government docs'}
             </p>
-            <Button variant="outline" size="sm" onClick={handleOpenDigiLocker} className="self-start mt-auto text-xs h-7 border-border">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleOpenDigiLocker}
+              className="self-start mt-auto text-xs h-7 border-border"
+            >
               {isDigiLockerLinked ? 'Sync DigiLocker' : 'Connect DigiLocker'}
             </Button>
           </div>
@@ -261,12 +286,20 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
           <div className="p-4 rounded-lg border border-border bg-card shadow-2xs flex flex-col justify-between gap-3 hover:border-border-strong transition-colors">
             <div className="flex justify-between items-center">
               <span className="text-xs font-bold text-foreground">Cloud Storage Import</span>
-              <Badge variant="primary" size="sm">Drive / 365</Badge>
+              <Badge variant="primary" size="sm">
+                Drive / 365
+              </Badge>
             </div>
             <p className="text-[11px] text-muted-foreground m-0 truncate">
               Import folders from Google Drive or Microsoft OneDrive
             </p>
-            <Button variant="secondary" size="sm" onClick={handleOpenCloudImport} className="self-start mt-auto text-xs h-7" icon={<CloudDownload size={13} />}>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleOpenCloudImport}
+              className="self-start mt-auto text-xs h-7"
+              icon={<CloudDownload size={13} />}
+            >
               Import Evidence
             </Button>
           </div>
@@ -284,7 +317,11 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
               <Button variant="ghost" onClick={() => setActiveModal(null)} disabled={loading}>
                 Cancel
               </Button>
-              <Button variant="primary" onClick={handleExecuteVerification} disabled={loading || !inputVal.trim()}>
+              <Button
+                variant="primary"
+                onClick={handleExecuteVerification}
+                disabled={loading || !inputVal.trim()}
+              >
                 {loading ? 'Verifying...' : `Verify ${activeModal}`}
               </Button>
             </>
@@ -292,7 +329,19 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {errorMsg && (
-              <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '0.75rem', borderRadius: 'var(--radius-md)', color: 'var(--color-danger)', fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div
+                style={{
+                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  padding: '0.75rem',
+                  borderRadius: 'var(--radius-md)',
+                  color: 'var(--color-danger)',
+                  fontSize: 'var(--text-xs)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                }}
+              >
                 <AlertTriangle size={16} /> {errorMsg}
               </div>
             )}
@@ -300,23 +349,46 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
             {successResult && (
               <div className="p-3 rounded-md border border-border bg-muted/40 text-xs">
                 <div className="flex items-center gap-2 font-bold text-foreground mb-1">
-                  <CheckCircle2 size={16} /> {successResult.verificationStatus === 'SOURCE_VERIFIED' ? 'Verification Successful & Profile Synced!' : 'Discrepancy Detected — Flagged for Review'}
+                  <CheckCircle2 size={16} />{' '}
+                  {successResult.verificationStatus === 'SOURCE_VERIFIED'
+                    ? 'Verification Successful & Profile Synced!'
+                    : 'Discrepancy Detected — Flagged for Review'}
                 </div>
                 {successResult.discrepancies.map((d, i) => (
-                  <p key={i} className="text-orange-600 dark:text-orange-400 my-0.5">• {d}</p>
+                  <p key={i} className="text-orange-600 dark:text-orange-400 my-0.5">
+                    • {d}
+                  </p>
                 ))}
               </div>
             )}
 
             <div>
-              <label style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-surface-text)', display: 'block', marginBottom: '0.35rem' }}>
-                {activeModal === 'GSTIN' ? '15-Character GSTIN Number' : activeModal === 'MCA' ? '21-Character CIN or LLPIN' : 'Udyam Registration Number'}
+              <label
+                style={{
+                  fontSize: 'var(--text-xs)',
+                  fontWeight: 600,
+                  color: 'var(--color-surface-text)',
+                  display: 'block',
+                  marginBottom: '0.35rem',
+                }}
+              >
+                {activeModal === 'GSTIN'
+                  ? '15-Character GSTIN Number'
+                  : activeModal === 'MCA'
+                    ? '21-Character CIN or LLPIN'
+                    : 'Udyam Registration Number'}
               </label>
               <input
                 type="text"
                 value={inputVal}
                 onChange={(e) => setInputVal(e.target.value.toUpperCase())}
-                placeholder={activeModal === 'GSTIN' ? 'e.g. 27AABCU9603R1ZM' : activeModal === 'MCA' ? 'e.g. U72900MH2018PTC123456' : 'e.g. UDYAM-MH-01-0012345'}
+                placeholder={
+                  activeModal === 'GSTIN'
+                    ? 'e.g. 27AABCU9603R1ZM'
+                    : activeModal === 'MCA'
+                      ? 'e.g. U72900MH2018PTC123456'
+                      : 'e.g. UDYAM-MH-01-0012345'
+                }
                 style={{
                   width: '100%',
                   padding: '0.55rem 0.75rem',
@@ -331,20 +403,61 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
               />
             </div>
 
-            <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <div
+              style={{
+                fontSize: 'var(--text-2xs)',
+                color: 'var(--color-surface-muted)',
+                display: 'flex',
+                gap: '0.5rem',
+                alignItems: 'center',
+              }}
+            >
               <span>Quick auto-fill samples:</span>
               {activeModal === 'GSTIN' && (
-                <button type="button" onClick={() => setInputVal('27AABCU9603R1ZM')} style={{ background: 'none', border: 'none', color: 'var(--color-primary-300)', textDecoration: 'underline', cursor: 'pointer', fontSize: 'inherit' }}>
+                <button
+                  type="button"
+                  onClick={() => setInputVal('27AABCU9603R1ZM')}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--color-primary-300)',
+                    textDecoration: 'underline',
+                    cursor: 'pointer',
+                    fontSize: 'inherit',
+                  }}
+                >
                   ACME Infra (27AABCU9603R1ZM)
                 </button>
               )}
               {activeModal === 'MCA' && (
-                <button type="button" onClick={() => setInputVal('U72900MH2018PTC123456')} style={{ background: 'none', border: 'none', color: 'var(--color-primary-300)', textDecoration: 'underline', cursor: 'pointer', fontSize: 'inherit' }}>
+                <button
+                  type="button"
+                  onClick={() => setInputVal('U72900MH2018PTC123456')}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--color-primary-300)',
+                    textDecoration: 'underline',
+                    cursor: 'pointer',
+                    fontSize: 'inherit',
+                  }}
+                >
                   RoC-Mumbai (U72900MH2018PTC123456)
                 </button>
               )}
               {activeModal === 'UDYAM' && (
-                <button type="button" onClick={() => setInputVal('UDYAM-MH-01-0012345')} style={{ background: 'none', border: 'none', color: 'var(--color-primary-300)', textDecoration: 'underline', cursor: 'pointer', fontSize: 'inherit' }}>
+                <button
+                  type="button"
+                  onClick={() => setInputVal('UDYAM-MH-01-0012345')}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--color-primary-300)',
+                    textDecoration: 'underline',
+                    cursor: 'pointer',
+                    fontSize: 'inherit',
+                  }}
+                >
                   MSME Small (UDYAM-MH-01-0012345)
                 </button>
               )}
@@ -370,22 +483,41 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
             </>
           }
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: 'var(--text-xs)' }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem',
+              fontSize: 'var(--text-xs)',
+            }}
+          >
             <p style={{ color: 'var(--color-surface-text)', margin: 0 }}>
-              Connecting to DigiLocker allows TenderPulse AI to pull digitally signed government certificates
-              directly from the Ministry of Corporate Affairs, GSTN, and Ministry of MSME without manual document tampering risk.
+              Connecting to DigiLocker allows TenderPulse AI to pull digitally signed government
+              certificates directly from the Ministry of Corporate Affairs, GSTN, and Ministry of
+              MSME without manual document tampering risk.
             </p>
-            <div style={{ padding: '0.75rem', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-surface-card-subtle)', border: '1px solid var(--color-surface-border)' }}>
+            <div
+              style={{
+                padding: '0.75rem',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: 'var(--color-surface-card-subtle)',
+                border: '1px solid var(--color-surface-border)',
+              }}
+            >
               <strong>Certificates automatically pulled into Evidence Vault:</strong>
-              <ul style={{ margin: '0.4rem 0 0 1.25rem', color: 'var(--color-surface-muted)', fontSize: 'var(--text-2xs)' }}>
+              <ul
+                style={{
+                  margin: '0.4rem 0 0 1.25rem',
+                  color: 'var(--color-surface-muted)',
+                  fontSize: 'var(--text-2xs)',
+                }}
+              >
                 <li>MCA Certificate of Incorporation (with CIN verification)</li>
                 <li>GST Registration Certificate (Form REG-06)</li>
                 <li>MSME Udyam Registration Certificate</li>
               </ul>
             </div>
-            {errorMsg && (
-              <div style={{ color: 'var(--color-danger)' }}>{errorMsg}</div>
-            )}
+            {errorMsg && <div style={{ color: 'var(--color-danger)' }}>{errorMsg}</div>}
           </div>
         </Modal>
       )}
@@ -407,11 +539,27 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
             </>
           }
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: 'var(--text-xs)' }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem',
+              fontSize: 'var(--text-xs)',
+            }}
+          >
             <div>
-              <label style={{ fontWeight: 600, display: 'block', marginBottom: '0.35rem' }}>Cloud Provider</label>
+              <label style={{ fontWeight: 600, display: 'block', marginBottom: '0.35rem' }}>
+                Cloud Provider
+              </label>
               <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer' }}>
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    cursor: 'pointer',
+                  }}
+                >
                   <input
                     type="radio"
                     name="provider"
@@ -420,7 +568,14 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
                   />
                   Google Drive
                 </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer' }}>
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    cursor: 'pointer',
+                  }}
+                >
                   <input
                     type="radio"
                     name="provider"
@@ -433,7 +588,9 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
             </div>
 
             <div>
-              <label style={{ fontWeight: 600, display: 'block', marginBottom: '0.35rem' }}>Evidence Classification</label>
+              <label style={{ fontWeight: 600, display: 'block', marginBottom: '0.35rem' }}>
+                Evidence Classification
+              </label>
               <select
                 value={cloudDocType}
                 onChange={(e) => setCloudDocType(e.target.value)}
@@ -456,7 +613,8 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
             </div>
 
             <p style={{ color: 'var(--color-surface-muted)', fontSize: 'var(--text-2xs)' }}>
-              Selected file will be transferred into isolated tenant object storage and cataloged with a cryptographic SHA-256 hash.
+              Selected file will be transferred into isolated tenant object storage and cataloged
+              with a cryptographic SHA-256 hash.
             </p>
           </div>
         </Modal>

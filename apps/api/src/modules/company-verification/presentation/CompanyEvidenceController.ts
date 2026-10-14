@@ -3,16 +3,7 @@
  *
  * Enforces Zero-Trust TenantContextHolder isolation and Anti-IDOR boundary validation.
  */
-import {
-  Controller,
-  Get,
-  Post,
-  Delete,
-  Param,
-  Body,
-  Query,
-  HttpCode,
-} from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Body, Query, HttpCode } from '@nestjs/common';
 import { CompanyEvidenceService } from '../application/CompanyEvidenceService.js';
 import { GoogleDriveConnector } from '../infrastructure/GoogleDriveConnector.js';
 import { OneDriveConnector } from '../infrastructure/OneDriveConnector.js';
@@ -89,8 +80,7 @@ export class CompanyEvidenceController {
     @Query('provider') provider: 'google-drive' | 'onedrive',
     @Query('folderId') folderId?: string,
   ) {
-    const connector =
-      provider === 'onedrive' ? this.oneDriveConnector : this.googleDriveConnector;
+    const connector = provider === 'onedrive' ? this.oneDriveConnector : this.googleDriveConnector;
     return connector.listFiles(undefined, folderId);
   }
 

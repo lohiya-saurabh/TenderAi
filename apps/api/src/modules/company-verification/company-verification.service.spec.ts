@@ -46,7 +46,11 @@ describe('Company Evidence & Third-Party Verification Layer', () => {
   beforeEach(async () => {
     pglite = new PGlite();
     await pglite.waitReady;
-    await initDatabase(pglite, { seedUsers: false, seedFullProfile: false, seedBidsAndCompliance: false });
+    await initDatabase(pglite, {
+      seedUsers: false,
+      seedFullProfile: false,
+      seedBidsAndCompliance: false,
+    });
     db = createDrizzle(pglite);
 
     storageService = new MockStorageService();
@@ -136,7 +140,9 @@ describe('Company Evidence & Third-Party Verification Layer', () => {
       expect(uploaded.sha256Hash).toBe(expectedHash);
       expect(uploaded.verificationStatus).toBe('IMPORTED');
       expect(uploaded.sourceProvider).toBe('LOCAL_UPLOAD');
-      expect(uploaded.storagePath).toContain(`tenants/${TEST_ORG_ID}/companies/${TEST_COMPANY_ID}/evidence/`);
+      expect(uploaded.storagePath).toContain(
+        `tenants/${TEST_ORG_ID}/companies/${TEST_COMPANY_ID}/evidence/`,
+      );
 
       // Verify file was written to storage
       const existsInStorage = await storageService.headObject(uploaded.storagePath);
@@ -244,9 +250,9 @@ describe('Company Evidence & Third-Party Verification Layer', () => {
     });
 
     it('should reject invalid CIN length or pattern', async () => {
-      await expect(
-        verificationService.verifyMca(TEST_COMPANY_ID, 'U12345'),
-      ).rejects.toThrow(BadRequestError);
+      await expect(verificationService.verifyMca(TEST_COMPANY_ID, 'U12345')).rejects.toThrow(
+        BadRequestError,
+      );
     });
   });
 

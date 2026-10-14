@@ -42,14 +42,16 @@ const SECTION_TABS: readonly SectionTabDef[] = [
     label: 'Registrations',
     icon: FileText,
     count: (p) => p.registrations.length,
-    hasWarning: (p) => p.registrations.some((r) => r.status === 'EXPIRING_SOON' || r.status === 'EXPIRED'),
+    hasWarning: (p) =>
+      p.registrations.some((r) => r.status === 'EXPIRING_SOON' || r.status === 'EXPIRED'),
   },
   {
     id: 'certifications',
     label: 'Certifications',
     icon: Award,
     count: (p) => p.certifications.length,
-    hasWarning: (p) => p.certifications.some((c) => c.status === 'EXPIRING_SOON' || c.status === 'EXPIRED'),
+    hasWarning: (p) =>
+      p.certifications.some((c) => c.status === 'EXPIRING_SOON' || c.status === 'EXPIRED'),
   },
   {
     id: 'financials',
@@ -129,7 +131,10 @@ export const CapabilityNavTabs: React.FC<CapabilityNavTabsProps> = ({
                 : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/40'
             }`}
           >
-            <IconComponent size={14} className={isActive ? 'text-primary' : 'text-muted-foreground'} />
+            <IconComponent
+              size={14}
+              className={isActive ? 'text-primary' : 'text-muted-foreground'}
+            />
             <span>{tab.label}</span>
             <span
               className={`inline-flex items-center gap-1 text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded-full border ${
@@ -141,7 +146,12 @@ export const CapabilityNavTabs: React.FC<CapabilityNavTabsProps> = ({
               }`}
             >
               {itemCount}
-              {warn && <AlertTriangle size={10} className="text-orange-600 dark:text-orange-400 shrink-0" />}
+              {warn && (
+                <AlertTriangle
+                  size={10}
+                  className="text-orange-600 dark:text-orange-400 shrink-0"
+                />
+              )}
             </span>
           </button>
         );

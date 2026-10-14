@@ -130,9 +130,7 @@ export class AiDecisionClient {
   /**
    * Calls the deterministic bid-decision agent with fallback to in-process deterministic evaluation.
    */
-  public async evaluate(
-    request: AiBidDecisionRequest,
-  ): Promise<AiBidDecisionResponse> {
+  public async evaluate(request: AiBidDecisionRequest): Promise<AiBidDecisionResponse> {
     const fetchFn = this.customFetch ?? globalThis.fetch;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
@@ -189,13 +187,20 @@ export class AiDecisionClient {
         state: 'AI_PROPOSED',
         readiness_score: 0.0,
         reasons_to_pursue: [],
-        reasons_not_to_pursue: [{ title: 'Active Debarment', detail: 'Statutory disqualifier — blacklisted in corporate registry.' }],
+        reasons_not_to_pursue: [
+          {
+            title: 'Active Debarment',
+            detail: 'Statutory disqualifier — blacklisted in corporate registry.',
+          },
+        ],
         hard_disqualifiers: hardDisqualifiers,
         missing_information: [],
         uncertain_areas: [],
         commercial_risks: [],
         evidence_citations: [],
-        review_triggers: [{ trigger: 'STATUTORY_DEBARMENT', detail: 'Company carries active blacklisting flag' }],
+        review_triggers: [
+          { trigger: 'STATUTORY_DEBARMENT', detail: 'Company carries active blacklisting flag' },
+        ],
       };
     }
 
@@ -208,7 +213,8 @@ export class AiDecisionClient {
     const turnovers = profile.turnover_records ?? [];
     const avgTurnover =
       turnovers.length > 0
-        ? turnovers.reduce((acc, t) => acc + (Number(t.turnover_inr_crores) || 0), 0) / turnovers.length
+        ? turnovers.reduce((acc, t) => acc + (Number(t.turnover_inr_crores) || 0), 0) /
+          turnovers.length
         : 0;
 
     let hasFinancialMatch = false;
@@ -244,7 +250,15 @@ export class AiDecisionClient {
     const reqExperienceValue = tenderValue > 0 ? Number((tenderValue * 0.35).toFixed(2)) : 0;
     const experience = profile.experience ?? [];
     const maxProjectValue = experience.reduce(
-      (max, e) => Math.max(max, Number(e.contract_value_inr_crores || (e as { project_value_inr_crores?: number }).project_value_inr_crores || 0)),
+      (max, e) =>
+        Math.max(
+          max,
+          Number(
+            e.contract_value_inr_crores ||
+              (e as { project_value_inr_crores?: number }).project_value_inr_crores ||
+              0,
+          ),
+        ),
       0,
     );
 
@@ -291,7 +305,11 @@ export class AiDecisionClient {
     const targetState = request.project_location_state?.trim().toLowerCase();
     if (targetState && targetState !== 'unspecified') {
       const regions = (profile.operating_regions ?? []).map((r) => r.trim().toLowerCase());
-      if (regions.includes(targetState) || regions.includes('all india') || regions.includes('pan india')) {
+      if (
+        regions.includes(targetState) ||
+        regions.includes('all india') ||
+        regions.includes('pan india')
+      ) {
         reasonsToPursue.push({
           category: 'STATUTORY',
           title: 'Regional Operating Presence',
@@ -334,20 +352,32 @@ export class AiDecisionClient {
       const dLower = req.description.toLowerCase();
 
       // Check for EMD requirement
-      if (/earnest money|emd|bid security/i.test(tLower) || /earnest money|emd|bid security/i.test(dLower)) {
+      if (
+        /earnest money|emd|bid security/i.test(tLower) ||
+        /earnest money|emd|bid security/i.test(dLower)
+      ) {
         uncertainAreas.push({
           category: 'FINANCIAL',
           title: req.title || 'EMD Bank Guarantee Submission',
-          detail: req.provenance?.verbatim_quote || req.description || `Ensure EMD instrument is prepared before submission deadline.`,
+          detail:
+            req.provenance?.verbatim_quote ||
+            req.description ||
+            `Ensure EMD instrument is prepared before submission deadline.`,
         });
       }
 
       // Check for Delay / Liquidated Damages requirement
-      if (/liquidated damages|delay damages/i.test(tLower) || /liquidated damages|delay damages/i.test(dLower)) {
+      if (
+        /liquidated damages|delay damages/i.test(tLower) ||
+        /liquidated damages|delay damages/i.test(dLower)
+      ) {
         commercialRisks.push({
           category: 'LIQUIDATED_DAMAGES',
           level: 'MEDIUM',
-          summary: req.provenance?.verbatim_quote || req.description || 'Standard delay damages clause stipulated in contract conditions.',
+          summary:
+            req.provenance?.verbatim_quote ||
+            req.description ||
+            'Standard delay damages clause stipulated in contract conditions.',
         });
       }
     }
@@ -367,7 +397,7 @@ export class AiDecisionClient {
 
     if (!hasFinancialMatch && !hasTechnicalMatch) {
       verdict = 'NO_GO';
-      readinessScore = Math.max(0.20, Math.round(rawScore * 100) / 100);
+      readinessScore = Math.max(0.2, Math.round(rawScore * 100) / 100);
     } else if (hasFinancialMatch && hasTechnicalMatch) {
       verdict = uncertainAreas.length > 0 ? 'CONDITIONAL_GO' : 'GO';
       readinessScore = Math.min(0.95, Math.max(0.75, Math.round(rawScore * 100) / 100));

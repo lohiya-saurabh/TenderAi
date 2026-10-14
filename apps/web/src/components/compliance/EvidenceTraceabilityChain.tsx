@@ -19,13 +19,19 @@ export const EvidenceTraceabilityChain: React.FC<EvidenceTraceabilityChainProps>
   onInspectAssessment,
   compact = false,
 }) => {
-  const tenderDoc = item.sourceCitation?.document || item.provenance?.documentName || 'NIT Document';
+  const tenderDoc =
+    item.sourceCitation?.document || item.provenance?.documentName || 'NIT Document';
   const tenderPage = item.sourceCitation?.page || item.provenance?.pageNumber || 1;
-  const tenderClause = item.sourceCitation?.section || item.provenance?.sectionOrClause || item.tenderClauseRef || 'Clause';
+  const tenderClause =
+    item.sourceCitation?.section ||
+    item.provenance?.sectionOrClause ||
+    item.tenderClauseRef ||
+    'Clause';
 
   const companyDoc = item.companyEvidence?.documentName || item.companyEvidence?.title;
   const udin = item.companyEvidence?.udinNumber;
-  const evidenceStatus = item.companyEvidence?.status || (item.status === 'MISSING' ? 'MISSING' : 'VERIFIED');
+  const evidenceStatus =
+    item.companyEvidence?.status || (item.status === 'MISSING' ? 'MISSING' : 'VERIFIED');
   const expiryDate = item.companyEvidence?.expiryDate;
 
   return (
@@ -34,9 +40,7 @@ export const EvidenceTraceabilityChain: React.FC<EvidenceTraceabilityChainProps>
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: compact
-            ? 'repeat(auto-fit, minmax(180px, 1fr))'
-            : 'repeat(4, 1fr)',
+          gridTemplateColumns: compact ? 'repeat(auto-fit, minmax(180px, 1fr))' : 'repeat(4, 1fr)',
           gap: '0.6rem',
           alignItems: 'stretch',
         }}
@@ -55,10 +59,19 @@ export const EvidenceTraceabilityChain: React.FC<EvidenceTraceabilityChainProps>
             flexDirection: 'column',
             justifyContent: 'space-between',
             gap: '0.35rem',
+            height: '100%',
+            boxSizing: 'border-box',
           }}
         >
           <div>
-            <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
+            <span
+              style={{
+                fontSize: 'var(--text-2xs)',
+                color: 'var(--color-surface-muted)',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+              }}
+            >
               1. Tender Mandate
             </span>
             <div
@@ -73,7 +86,15 @@ export const EvidenceTraceabilityChain: React.FC<EvidenceTraceabilityChainProps>
               {item.requirement}
             </div>
           </div>
-          <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-primary-400)', fontFamily: 'var(--font-mono)' }}>
+          <div
+            style={{
+              fontSize: 'var(--text-2xs)',
+              color: 'var(--color-primary-400)',
+              fontFamily: 'var(--font-mono)',
+              marginTop: 'auto',
+              paddingTop: '0.25rem',
+            }}
+          >
             {tenderDoc} (p. {tenderPage}, {tenderClause})
           </div>
         </div>
@@ -90,17 +111,33 @@ export const EvidenceTraceabilityChain: React.FC<EvidenceTraceabilityChainProps>
             flexDirection: 'column',
             justifyContent: 'space-between',
             gap: '0.35rem',
+            height: '100%',
+            boxSizing: 'border-box',
           }}
         >
           <div>
-            <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
+            <span
+              style={{
+                fontSize: 'var(--text-2xs)',
+                color: 'var(--color-surface-muted)',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+              }}
+            >
               2. Required Evidence
             </span>
-            <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-surface-text)', marginTop: '0.15rem' }}>
+            <div
+              style={{
+                fontSize: 'var(--text-xs)',
+                fontWeight: 600,
+                color: 'var(--color-surface-text)',
+                marginTop: '0.15rem',
+              }}
+            >
               {item.category} Credential
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginTop: 'auto', paddingTop: '0.25rem' }}>
             <Badge variant={item.isMandatory ? 'danger' : 'neutral'} size="sm">
               {item.isMandatory ? 'Mandatory' : 'Optional'}
             </Badge>
@@ -137,11 +174,20 @@ export const EvidenceTraceabilityChain: React.FC<EvidenceTraceabilityChainProps>
             flexDirection: 'column',
             justifyContent: 'space-between',
             gap: '0.35rem',
+            height: '100%',
+            boxSizing: 'border-box',
           }}
         >
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
+              <span
+                style={{
+                  fontSize: 'var(--text-2xs)',
+                  color: 'var(--color-surface-muted)',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                }}
+              >
                 3. Company Evidence
               </span>
               <StatusBadge status={evidenceStatus} size="sm" />
@@ -158,9 +204,37 @@ export const EvidenceTraceabilityChain: React.FC<EvidenceTraceabilityChainProps>
             </div>
           </div>
 
-          <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-            {udin && <span>UDIN: <strong style={{ color: 'var(--color-primary-300)', fontFamily: 'var(--font-mono)' }}>{udin}</strong></span>}
-            {expiryDate && <span>Exp: <strong>{expiryDate}</strong></span>}
+          <div
+            style={{
+              fontSize: 'var(--text-2xs)',
+              color: 'var(--color-surface-muted)',
+              display: 'flex',
+              gap: '0.5rem',
+              flexWrap: 'wrap',
+              marginTop: 'auto',
+              paddingTop: '0.25rem',
+            }}
+          >
+            {udin ? (
+              <span>
+                UDIN:{' '}
+                <strong
+                  style={{ color: 'var(--color-primary-300)', fontFamily: 'var(--font-mono)' }}
+                >
+                  {udin}
+                </strong>
+              </span>
+            ) : null}
+            {expiryDate ? (
+              <span>
+                Exp: <strong>{expiryDate}</strong>
+              </span>
+            ) : null}
+            {!udin && !expiryDate && (
+              <span style={{ fontStyle: 'italic', opacity: 0.75 }}>
+                {item.companyEvidence ? 'UDIN not applicable' : 'No credential attached'}
+              </span>
+            )}
           </div>
         </div>
 
@@ -184,22 +258,45 @@ export const EvidenceTraceabilityChain: React.FC<EvidenceTraceabilityChainProps>
             flexDirection: 'column',
             justifyContent: 'space-between',
             gap: '0.35rem',
+            height: '100%',
+            boxSizing: 'border-box',
           }}
         >
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
+              <span
+                style={{
+                  fontSize: 'var(--text-2xs)',
+                  color: 'var(--color-surface-muted)',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                }}
+              >
                 4. Assessment
               </span>
               <StatusBadge status={item.status} size="sm" />
             </div>
-            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-text)', marginTop: '0.15rem' }}>
-              {item.rationale?.ruleApplied || 'Automated Rule Comparison'}
+            <div
+              style={{
+                fontSize: 'var(--text-xs)',
+                color: 'var(--color-surface-text)',
+                marginTop: '0.15rem',
+              }}
+            >
+              {item.rationale?.ruleApplied?.trim() || 'Automated Rule Comparison'}
             </div>
           </div>
 
-          <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)' }}>
-            Grounding Score: <strong style={{ color: 'var(--color-success)', fontFamily: 'var(--font-mono)' }}>
+          <div
+            style={{
+              fontSize: 'var(--text-2xs)',
+              color: 'var(--color-surface-muted)',
+              marginTop: 'auto',
+              paddingTop: '0.25rem',
+            }}
+          >
+            Grounding Score:{' '}
+            <strong style={{ color: 'var(--color-success)', fontFamily: 'var(--font-mono)' }}>
               {deriveGroundingMatch(item).matchPct}%
             </strong>
           </div>

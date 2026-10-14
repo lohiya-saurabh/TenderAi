@@ -15,7 +15,12 @@ export interface ComplianceRowProps {
   item: ComplianceItem;
   isExpanded: boolean;
   onToggleExpand: (id: string) => void;
-  onReview: (itemId: string, status: ComplianceItem['status'], notes?: string, expectedVersion?: number) => Promise<void>;
+  onReview: (
+    itemId: string,
+    status: ComplianceItem['status'],
+    notes?: string,
+    expectedVersion?: number,
+  ) => Promise<void>;
   onInspectEvidence?: (item: ComplianceItem) => void;
   onInspectCitation?: (item: ComplianceItem) => void;
   onInspectAssessment?: (item: ComplianceItem) => void;
@@ -112,9 +117,7 @@ export const ComplianceRow: React.FC<ComplianceRowProps> = ({
               Mandatory
             </Badge>
           ) : (
-            <span className="text-xs text-muted-foreground font-medium">
-              Optional
-            </span>
+            <span className="text-xs text-muted-foreground font-medium">Optional</span>
           )}
         </div>
 
@@ -135,9 +138,7 @@ export const ComplianceRow: React.FC<ComplianceRowProps> = ({
               </span>
             </div>
           ) : (
-            <span className="text-xs text-muted-foreground italic">
-              No evidence linked
-            </span>
+            <span className="text-xs text-muted-foreground italic">No evidence linked</span>
           )}
         </div>
 
@@ -185,138 +186,142 @@ export const ComplianceRow: React.FC<ComplianceRowProps> = ({
               <h5 className="text-[11px] font-bold text-foreground uppercase tracking-wider">
                 1. What does the tender require?
               </h5>
-              {item.isMandatory && <Badge variant="danger" size="sm">Mandatory Qualification Criterion</Badge>}
+              {item.isMandatory && (
+                <Badge variant="danger" size="sm">
+                  Mandatory Qualification Criterion
+                </Badge>
+              )}
             </div>
             <p className="text-xs sm:text-sm text-foreground leading-relaxed mb-3">
               {item.requirement}
             </p>
 
             {/* Execution / Statutory Rules Card */}
-            {item.executionRules && (
-              <ExecutionRulesCard executionRules={item.executionRules} />
-            )}
+            {item.executionRules && <ExecutionRulesCard executionRules={item.executionRules} />}
           </Card>
 
           {/* Grid for Questions 2, 3, and 4 */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 items-stretch">
             {/* Question 2: Do we have evidence? */}
-            <Card padding="md">
-              <div className="flex justify-between items-center mb-2.5">
-                <h5 className="text-[11px] font-bold text-foreground uppercase tracking-wider">
-                  2. Do we have evidence?
-                </h5>
-                {item.companyEvidence && (
-                  <StatusBadge status={item.companyEvidence.status} size="sm" />
-                )}
+            <Card padding="md" className="flex flex-col justify-between h-full">
+              <div className="flex flex-col flex-1">
+                <div className="flex justify-between items-center mb-2.5 min-h-[24px]">
+                  <h5 className="text-[11px] font-bold text-foreground uppercase tracking-wider">
+                    2. Do we have evidence?
+                  </h5>
+                  {item.companyEvidence && (
+                    <StatusBadge status={item.companyEvidence.status} size="sm" />
+                  )}
+                </div>
+
+                <div className="flex-1 flex flex-col justify-center">
+                  {item.companyEvidence ? (
+                    <div className="p-2.5 rounded bg-muted/30 border border-border/60 flex flex-col gap-1 text-xs min-h-[72px] justify-center">
+                      <div className="font-semibold text-foreground truncate">{item.companyEvidence.title}</div>
+                      <div className="text-muted-foreground text-[11px]">
+                        Type: <span className="text-foreground">{item.companyEvidence.docType}</span>
+                        {item.companyEvidence.udinNumber && (
+                          <span>
+                            {' '}
+                            • UDIN:{' '}
+                            <code className="text-foreground font-mono">
+                              {item.companyEvidence.udinNumber}
+                            </code>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-2.5 rounded bg-muted/15 border border-dashed border-border/70 text-xs text-muted-foreground leading-relaxed min-h-[72px] flex items-center">
+                      No company evidence attached to satisfy this clause.
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {item.companyEvidence ? (
-                <div className="flex flex-col gap-2 text-xs">
-                  <div className="font-semibold text-foreground">
-                    {item.companyEvidence.title}
-                  </div>
-                  <div className="text-muted-foreground">
-                    Type: <span className="text-foreground">{item.companyEvidence.docType}</span>
-                    {item.companyEvidence.udinNumber && (
-                      <span> • UDIN: <code className="text-foreground font-mono">{item.companyEvidence.udinNumber}</code></span>
-                    )}
-                  </div>
-                  <div className="mt-2">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => onInspectEvidence?.(item)}
-                    >
-                      Inspect Evidence Details
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-xs text-muted-foreground flex flex-col gap-2">
-                  <span>No company evidence attached to satisfy this clause.</span>
-                  <div className="mt-1">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => onInspectEvidence?.(item)}
-                    >
-                      Map / Upload Evidence
-                    </Button>
-                  </div>
-                </div>
-              )}
+              <div className="pt-3 mt-auto">
+                <Button variant="secondary" size="sm" fullWidth onClick={() => onInspectEvidence?.(item)}>
+                  {item.companyEvidence ? 'Inspect Evidence Details' : 'Map / Upload Evidence'}
+                </Button>
+              </div>
             </Card>
 
             {/* Question 3: Why did the system reach this result? */}
-            <Card padding="md">
-              <div className="flex justify-between items-center mb-2.5">
-                <h5 className="text-[11px] font-bold text-foreground uppercase tracking-wider">
-                  3. Why did the system reach this result?
-                </h5>
-                <StatusBadge status={item.status} size="sm" />
+            <Card padding="md" className="flex flex-col justify-between h-full">
+              <div className="flex flex-col flex-1">
+                <div className="flex justify-between items-center mb-2.5 min-h-[24px]">
+                  <h5 className="text-[11px] font-bold text-foreground uppercase tracking-wider">
+                    3. Why did the system reach this result?
+                  </h5>
+                  <StatusBadge status={item.status} size="sm" />
+                </div>
+
+                <div className="flex-1 flex flex-col justify-center">
+                  {item.rationale ? (
+                    <div className="p-2.5 rounded bg-muted/30 border border-border/60 flex flex-col gap-1 text-xs min-h-[72px] justify-center">
+                      <div className="text-foreground leading-relaxed line-clamp-2">
+                        <strong>Rule:</strong> {item.rationale.ruleApplied}
+                      </div>
+                      <div className="text-muted-foreground text-[11px] mt-0.5">
+                        Confidence:{' '}
+                        <span className="font-semibold text-foreground">
+                          {Math.round((item.rationale.confidenceScore || 0) * 100)}%
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-2.5 rounded bg-muted/15 border border-dashed border-border/70 text-xs text-muted-foreground leading-relaxed min-h-[72px] flex items-center">
+                      Automated rationale not computed yet.
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {item.rationale ? (
-                <div className="flex flex-col gap-2 text-xs">
-                  <div className="text-foreground leading-relaxed">
-                    <strong>Rule:</strong> {item.rationale.ruleApplied}
-                  </div>
-                  <div className="text-muted-foreground">
-                    Confidence: <span className="font-semibold text-foreground">{Math.round((item.rationale.confidenceScore || 0) * 100)}%</span>
-                  </div>
-                  <div className="mt-2">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => onInspectAssessment?.(item)}
-                    >
-                      View Full Rationale Breakdown
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-xs text-muted-foreground flex flex-col gap-2">
-                  <span>Automated rationale not computed yet.</span>
-                  <div className="mt-1">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => onInspectAssessment?.(item)}
-                    >
-                      Inspect Assessment
-                    </Button>
-                  </div>
-                </div>
-              )}
+              <div className="pt-3 mt-auto">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  fullWidth
+                  onClick={() => onInspectAssessment?.(item)}
+                >
+                  {item.rationale ? 'View Full Rationale Breakdown' : 'Inspect Assessment'}
+                </Button>
+              </div>
             </Card>
 
             {/* Question 4: Where did this requirement come from? */}
-            <Card padding="md">
-              <div className="flex justify-between items-center mb-2.5">
-                <h5 className="text-[11px] font-bold text-foreground uppercase tracking-wider">
-                  4. Where did this come from?
-                </h5>
-                <Badge variant="neutral" size="sm">
-                  Page {sourcePage}
-                </Badge>
+            <Card padding="md" className="flex flex-col justify-between h-full">
+              <div className="flex flex-col flex-1">
+                <div className="flex justify-between items-center mb-2.5 min-h-[24px]">
+                  <h5 className="text-[11px] font-bold text-foreground uppercase tracking-wider">
+                    4. Where did this come from?
+                  </h5>
+                  <Badge variant="neutral" size="sm">
+                    Page {sourcePage}
+                  </Badge>
+                </div>
+
+                <div className="flex-1 flex flex-col justify-center">
+                  <div className="flex flex-col gap-1.5 text-xs min-h-[72px] justify-center">
+                    <div className="text-foreground font-medium truncate">
+                      {sourceDocName}{' '}
+                      {item.sourceCitation?.section ? `• ${item.sourceCitation.section}` : ''}
+                    </div>
+                    <div className="bg-muted/40 border-l-2 border-orange-500 p-2 rounded-r text-xs italic text-muted-foreground leading-relaxed line-clamp-2">
+                      "
+                      {item.sourceCitation?.verbatimQuote ||
+                        item.provenance?.verbatimQuote ||
+                        'Verbatim quote available in citation drawer.'}
+                      "
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div className="flex flex-col gap-2 text-xs">
-                <div className="text-foreground font-medium">
-                  {sourceDocName} {item.sourceCitation?.section ? `• ${item.sourceCitation.section}` : ''}
-                </div>
-                <div className="bg-muted/40 border-l-2 border-orange-500 p-2.5 rounded-r text-xs italic text-muted-foreground leading-relaxed line-clamp-3">
-                  "{item.sourceCitation?.verbatimQuote || item.provenance?.verbatimQuote || 'Verbatim quote available in citation drawer.'}"
-                </div>
-                <div className="mt-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => onInspectCitation?.(item)}
-                  >
-                    View Source Citation & Quote
-                  </Button>
-                </div>
+              <div className="pt-3 mt-auto">
+                <Button variant="secondary" size="sm" fullWidth onClick={() => onInspectCitation?.(item)}>
+                  View Source Citation & Quote
+                </Button>
               </div>
             </Card>
           </div>
@@ -334,10 +339,13 @@ export const ComplianceRow: React.FC<ComplianceRowProps> = ({
           {/* Footer with Human Review Actions */}
           <div className="flex justify-between items-center pt-3.5 border-t border-border flex-wrap gap-3">
             <div className="text-xs text-muted-foreground">
-              Version {item.version} • {item.reviewedAt ? `Reviewed on ${item.reviewedAt}` : 'Pending Human Review'}
+              Version {item.version} •{' '}
+              {item.reviewedAt ? `Reviewed on ${item.reviewedAt}` : 'Pending Human Review'}
               {item.humanReviewRequired && (
                 <span className="ml-2">
-                  <Badge variant="warning" size="sm">Human Review Required</Badge>
+                  <Badge variant="warning" size="sm">
+                    Human Review Required
+                  </Badge>
                 </span>
               )}
             </div>

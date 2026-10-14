@@ -141,7 +141,7 @@ export const TenderListSection: React.FC<TenderListSectionProps> = ({
                 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors border cursor-pointer whitespace-nowrap',
                 isSelected
                   ? 'bg-accent text-accent-foreground border-border font-semibold shadow-xs'
-                  : 'border-transparent text-muted-foreground hover:bg-accent/50 hover:text-foreground'
+                  : 'border-transparent text-muted-foreground hover:bg-accent/50 hover:text-foreground',
               )}
             >
               <span>{tab.label}</span>
@@ -150,7 +150,7 @@ export const TenderListSection: React.FC<TenderListSectionProps> = ({
                   'text-[10px] px-1.5 py-0.5 rounded-full font-semibold',
                   isSelected
                     ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground'
+                    : 'bg-muted text-muted-foreground',
                 )}
               >
                 {count}

@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  NestInterceptor,
-  ExecutionContext,
-  CallHandler,
-} from '@nestjs/common';
+import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
 import { randomUUID } from 'node:crypto';
@@ -30,8 +25,7 @@ export class HttpLoggingInterceptor implements NestInterceptor {
       (req.headers['x-correlation-id'] as string) ||
       `trc_${randomUUID().replace(/-/g, '').slice(0, 16)}`;
 
-    const correlationId =
-      (req.headers['x-correlation-id'] as string) || traceId;
+    const correlationId = (req.headers['x-correlation-id'] as string) || traceId;
 
     const requestId =
       (req.headers['x-request-id'] as string) ||
@@ -49,9 +43,7 @@ export class HttpLoggingInterceptor implements NestInterceptor {
       (req.headers['x-tenant-id'] as string) ||
       undefined;
 
-    const userId =
-      (req as unknown as { user?: { sub?: string } }).user?.sub ||
-      undefined;
+    const userId = (req as unknown as { user?: { sub?: string } }).user?.sub || undefined;
 
     const getParamString = (val: unknown): string | undefined => {
       if (Array.isArray(val)) return typeof val[0] === 'string' ? val[0] : undefined;
@@ -63,11 +55,9 @@ export class HttpLoggingInterceptor implements NestInterceptor {
     const rawId = getParamString(req.params?.id);
     const rawDocId = getParamString(req.params?.documentId);
 
-    const tenderId =
-      rawBidId || rawTenderId || (rawId?.startsWith('bid-') ? rawId : undefined);
+    const tenderId = rawBidId || rawTenderId || (rawId?.startsWith('bid-') ? rawId : undefined);
 
-    const documentId =
-      rawDocId || (rawId?.startsWith('doc-') ? rawId : undefined);
+    const documentId = rawDocId || (rawId?.startsWith('doc-') ? rawId : undefined);
 
     const startTime = performance.now();
     const method = req.method;

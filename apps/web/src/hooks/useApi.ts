@@ -85,7 +85,10 @@ export function useApi<T>(
   const setData = (updater: React.SetStateAction<T | null>) => {
     setState((prev) => ({
       ...prev,
-      data: typeof updater === 'function' ? (updater as (prev: T | null) => T | null)(prev.data) : updater,
+      data:
+        typeof updater === 'function'
+          ? (updater as (prev: T | null) => T | null)(prev.data)
+          : updater,
     }));
   };
 

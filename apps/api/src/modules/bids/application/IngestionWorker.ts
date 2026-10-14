@@ -36,14 +36,14 @@ export interface ExtractedComplianceItem {
 export interface IDocumentExtractor {
   extract(
     document: TenderDocument,
-    securityContext?: SecurityContextDto
+    securityContext?: SecurityContextDto,
   ): Promise<ExtractedComplianceItem[]>;
 }
 
 export class DefaultDocumentExtractor implements IDocumentExtractor {
   public async extract(
     _document: TenderDocument,
-    _securityContext?: SecurityContextDto
+    _securityContext?: SecurityContextDto,
   ): Promise<ExtractedComplianceItem[]> {
     return [
       {
@@ -109,7 +109,7 @@ export class IngestionWorker {
     private readonly extractor: IDocumentExtractor = new DefaultDocumentExtractor(),
     private readonly visibilityTimeoutSeconds = 300,
     private readonly workerId = 'worker-ingestion-1',
-    private readonly eventBus?: IEventBus
+    private readonly eventBus?: IEventBus,
   ) {}
 
   public async pollAndProcess(): Promise<WorkerProcessResult> {
@@ -123,7 +123,7 @@ export class IngestionWorker {
   }
 
   public async processMessage(
-    message: QueueMessage<IngestionJobMessage>
+    message: QueueMessage<IngestionJobMessage>,
   ): Promise<WorkerProcessResult> {
     const { receiptHandle, body, receiveCount } = message;
 
@@ -135,7 +135,7 @@ export class IngestionWorker {
       await this.jobQueue.moveToDeadLetter(
         body,
         `SECURITY_VIOLATION: IngestionJob '${body.jobId}' not found for tenant '${body.organizationId}'`,
-        receiveCount
+        receiveCount,
       );
       await this.jobQueue.deleteMessage(receiptHandle);
       return {
@@ -149,7 +149,7 @@ export class IngestionWorker {
       await this.jobQueue.moveToDeadLetter(
         body,
         `SECURITY_VIOLATION: Message references mismatch database job references`,
-        receiveCount
+        receiveCount,
       );
       await this.jobQueue.deleteMessage(receiptHandle);
       return {
@@ -183,7 +183,7 @@ export class IngestionWorker {
       await this.jobQueue.moveToDeadLetter(
         body,
         `SECURITY_VIOLATION: Unauthorized document '${body.documentId}' for tenant '${body.organizationId}'`,
-        receiveCount
+        receiveCount,
       );
       await this.jobQueue.deleteMessage(receiptHandle);
       return {
@@ -199,7 +199,7 @@ export class IngestionWorker {
       await this.jobQueue.moveToDeadLetter(
         body,
         `SECURITY_VIOLATION: Unauthorized bid '${body.bidId}' for tenant '${body.organizationId}'`,
-        receiveCount
+        receiveCount,
       );
       await this.jobQueue.deleteMessage(receiptHandle);
       return {
@@ -255,17 +255,17 @@ export class IngestionWorker {
             item.executionRules.stampPaperDenominationInr <= 0)
         ) {
           throw new Error(
-            `Deterministic validation failed: invalid stamp paper denomination for '${item.title}'.`
+            `Deterministic validation failed: invalid stamp paper denomination for '${item.title}'.`,
           );
         }
         if (item.provenance.pageNumber < 1) {
           throw new Error(
-            `Deterministic validation failed: page number must be >= 1 for '${item.title}'.`
+            `Deterministic validation failed: page number must be >= 1 for '${item.title}'.`,
           );
         }
         if (!item.provenance.verbatimQuote || item.provenance.verbatimQuote.trim() === '') {
           throw new Error(
-            `Deterministic validation failed: verbatim quote cannot be empty for '${item.title}'.`
+            `Deterministic validation failed: verbatim quote cannot be empty for '${item.title}'.`,
           );
         }
       }
@@ -315,7 +315,7 @@ export class IngestionWorker {
               bidStatus: bid.status.value,
               jobStatus: job.status,
             },
-          })
+          }),
         );
       });
 
@@ -336,8 +336,8 @@ export class IngestionWorker {
               newBidStatus: bid.status.value,
               completedAt: new Date().toISOString(),
             },
-            job.version
-          )
+            job.version,
+          ),
         );
       }
 

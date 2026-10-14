@@ -11,7 +11,7 @@ describe('ActionRequiredCard Suite', () => {
     const el = React.createElement(
       MemoryRouter,
       null,
-      React.createElement(ActionRequiredCard, { bids: [], complianceByBid: {} })
+      React.createElement(ActionRequiredCard, { bids: [], complianceByBid: {} }),
     );
     expect(el).toBeDefined();
   });
@@ -80,7 +80,7 @@ describe('ActionRequiredCard Suite', () => {
     const el = React.createElement(
       MemoryRouter,
       null,
-      React.createElement(ActionRequiredCard, { bids, complianceByBid })
+      React.createElement(ActionRequiredCard, { bids, complianceByBid }),
     );
     expect(el).toBeDefined();
   });

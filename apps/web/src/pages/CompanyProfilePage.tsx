@@ -142,7 +142,9 @@ export const CompanyProfilePage: React.FC = () => {
         <CardContent className="flex flex-col items-center gap-2">
           <Building2 className="h-8 w-8 text-muted-foreground" />
           <h3 className="font-semibold text-foreground">No Company Selected</h3>
-          <p className="text-xs text-muted-foreground">Please select or register a company entity to view its capability profile.</p>
+          <p className="text-xs text-muted-foreground">
+            Please select or register a company entity to view its capability profile.
+          </p>
         </CardContent>
       </Card>
     );
@@ -158,10 +160,7 @@ export const CompanyProfilePage: React.FC = () => {
       />
 
       {/* Third-Party Verification Hub (IRIS IRP, MCA, Udyam, DigiLocker, Cloud Drive) */}
-      <CompanyVerificationBar
-        company={selectedCompany}
-        onRefresh={handleRefreshAll}
-      />
+      <CompanyVerificationBar company={selectedCompany} onRefresh={handleRefreshAll} />
 
       {/* 11-Section Tab Navigation */}
       <CapabilityNavTabs
@@ -171,11 +170,7 @@ export const CompanyProfilePage: React.FC = () => {
       />
 
       {/* Active Section Content */}
-      <CompanyProfileView
-        profile={profile}
-        activeSection={activeSection}
-      />
+      <CompanyProfileView profile={profile} activeSection={activeSection} />
     </div>
   );
 };
-

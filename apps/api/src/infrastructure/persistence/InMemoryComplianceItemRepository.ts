@@ -56,7 +56,7 @@ export class InMemoryComplianceItemRepository implements IComplianceItemReposito
         'ComplianceItem',
         item.id,
         expectedVersion,
-        record.persistedVersion
+        record.persistedVersion,
       );
     }
 

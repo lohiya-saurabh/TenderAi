@@ -120,8 +120,7 @@ describe('Security & RBAC Hardening Suite', () => {
         role: 'ADMIN',
         organizationId: 'org_victim_999',
       };
-      const forgedPayload = Buffer.from(JSON.stringify(forgedPayloadObj))
-        .toString('base64url');
+      const forgedPayload = Buffer.from(JSON.stringify(forgedPayloadObj)).toString('base64url');
       const forgedToken = `${header}.${forgedPayload}.${signature}`;
 
       expect(() => tokenService.verifyAccessToken(forgedToken)).toThrow(UnauthorizedError);
@@ -143,7 +142,7 @@ describe('Security & RBAC Hardening Suite', () => {
             organizationId: 'org_01',
             organizationName: 'Org',
           },
-          10 // 10 seconds TTL
+          10, // 10 seconds TTL
         );
 
         // Advance time by 1 hour
@@ -177,14 +176,18 @@ describe('Security & RBAC Hardening Suite', () => {
 
   describe('2. JwtAuthGuard — Global API Authentication Gating', () => {
     it('should reject unauthenticated request with 401 Unauthorized', () => {
-      vi.spyOn(reflector, 'getAllAndOverride').mockImplementation((key) => key === 'isPublic' ? false : undefined);
+      vi.spyOn(reflector, 'getAllAndOverride').mockImplementation((key) =>
+        key === 'isPublic' ? false : undefined,
+      );
       const { context } = createMockContext({ headers: {} });
 
       expect(() => authGuard.canActivate(context)).toThrow(UnauthorizedError);
     });
 
     it('should allow @Public() routes without token', () => {
-      vi.spyOn(reflector, 'getAllAndOverride').mockImplementation((key) => key === 'isPublic' ? true : undefined);
+      vi.spyOn(reflector, 'getAllAndOverride').mockImplementation((key) =>
+        key === 'isPublic' ? true : undefined,
+      );
       const { context } = createMockContext({ headers: {} });
 
       const canActivate = authGuard.canActivate(context);
@@ -192,7 +195,9 @@ describe('Security & RBAC Hardening Suite', () => {
     });
 
     it('should authenticate request with valid Bearer token and attach user to request', () => {
-      vi.spyOn(reflector, 'getAllAndOverride').mockImplementation((key) => key === 'isPublic' ? false : undefined);
+      vi.spyOn(reflector, 'getAllAndOverride').mockImplementation((key) =>
+        key === 'isPublic' ? false : undefined,
+      );
       const token = tokenService.signAccessToken({
         sub: 'usr_mgr_01',
         email: 'mgr@acme.com',
@@ -214,7 +219,9 @@ describe('Security & RBAC Hardening Suite', () => {
     });
 
     it('should authenticate SSE stream using ?token= query parameter', () => {
-      vi.spyOn(reflector, 'getAllAndOverride').mockImplementation((key) => key === 'isPublic' ? false : undefined);
+      vi.spyOn(reflector, 'getAllAndOverride').mockImplementation((key) =>
+        key === 'isPublic' ? false : undefined,
+      );
       const token = tokenService.signAccessToken({
         sub: 'usr_mgr_01',
         email: 'mgr@acme.com',
@@ -236,7 +243,9 @@ describe('Security & RBAC Hardening Suite', () => {
     });
 
     it('should authenticate request with valid tp_access_token cookie', () => {
-      vi.spyOn(reflector, 'getAllAndOverride').mockImplementation((key) => key === 'isPublic' ? false : undefined);
+      vi.spyOn(reflector, 'getAllAndOverride').mockImplementation((key) =>
+        key === 'isPublic' ? false : undefined,
+      );
       const token = tokenService.signAccessToken({
         sub: 'usr_mgr_01',
         email: 'mgr@acme.com',
@@ -258,7 +267,9 @@ describe('Security & RBAC Hardening Suite', () => {
     });
 
     it('should reject malformed or forged Bearer token', () => {
-      vi.spyOn(reflector, 'getAllAndOverride').mockImplementation((key) => key === 'isPublic' ? false : undefined);
+      vi.spyOn(reflector, 'getAllAndOverride').mockImplementation((key) =>
+        key === 'isPublic' ? false : undefined,
+      );
       const { context } = createMockContext({
         headers: { authorization: 'Bearer invalid.forged.token' },
       });
@@ -306,7 +317,8 @@ describe('Security & RBAC Hardening Suite', () => {
     it('should allow BID_MANAGER for BIDS_CREATE and COMPLIANCE_REVIEW', () => {
       vi.spyOn(reflector, 'getAllAndOverride').mockImplementation((key) => {
         if (key === 'isPublic') return false;
-        if (key === 'requiredPermissions') return [Permissions.BIDS_CREATE, Permissions.COMPLIANCE_REVIEW];
+        if (key === 'requiredPermissions')
+          return [Permissions.BIDS_CREATE, Permissions.COMPLIANCE_REVIEW];
         return undefined;
       });
       const { context } = createMockContext({
@@ -393,7 +405,7 @@ describe('Security & RBAC Hardening Suite', () => {
       const fakeUserRefreshToken = tokenService.signRefreshToken('usr_ghost_nonexistent');
 
       await expect(authService.refresh(fakeUserRefreshToken)).rejects.toThrow(
-        'User account associated with this refresh token no longer exists.'
+        'User account associated with this refresh token no longer exists.',
       );
     });
 
@@ -406,7 +418,7 @@ describe('Security & RBAC Hardening Suite', () => {
 
       // Subsequent refresh must be rejected
       await expect(authService.refresh(loginRes.refreshToken)).rejects.toThrow(
-        'Refresh token has been revoked.'
+        'Refresh token has been revoked.',
       );
     });
   });

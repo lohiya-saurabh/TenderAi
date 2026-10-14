@@ -1,8 +1,5 @@
 import React from 'react';
-import {
-  FailIcon,
-  InfoIcon,
-} from '../../common/Icons.js';
+import { FailIcon, InfoIcon } from '../../common/Icons.js';
 import type { BidDetail } from '../../../api/bids.js';
 import type { ComplianceItem } from '../../../api/compliance.js';
 import {
@@ -63,10 +60,15 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
 
   // Derive score number
   const scoreNum = decision?.readinessScore
-    ? Math.round(Number(decision.readinessScore) > 1 ? Number(decision.readinessScore) : Number(decision.readinessScore) * 100)
+    ? Math.round(
+        Number(decision.readinessScore) > 1
+          ? Number(decision.readinessScore)
+          : Number(decision.readinessScore) * 100,
+      )
     : 84;
 
-  const verdict = decision?.verdict || (bid.status === 'REVIEW_READY' ? 'PURSUE' : 'REVIEW_REQUIRED');
+  const verdict =
+    decision?.verdict || (bid.status === 'REVIEW_READY' ? 'PURSUE' : 'REVIEW_REQUIRED');
 
   const verdictTextColor =
     verdict === 'PURSUE'
@@ -116,7 +118,7 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
           <span className="text-muted-foreground">Earnest Money Deposit (EMD)</span>
           <span className="text-foreground mono font-semibold">
             {bid.estimatedValueRupees
-              ? `₹${(Number(bid.estimatedValueRupees) * 0.01 / 10000000).toFixed(2)} Cr (Bank Guarantee)`
+              ? `₹${((Number(bid.estimatedValueRupees) * 0.01) / 10000000).toFixed(2)} Cr (Bank Guarantee)`
               : '₹12.50 Cr (Bank Guarantee)'}
           </span>
         </div>
@@ -168,23 +170,25 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
           )}
 
           {/* Commercial & Contractual Risks */}
-          {decision.commercialRisks && decision.commercialRisks.length > 0 && decision.verdict !== 'DO_NOT_PURSUE' && (
-            <div className="space-y-1.5">
-              <div className="text-xs font-semibold text-foreground uppercase tracking-wider">
-                Commercial &amp; Contractual Risks
+          {decision.commercialRisks &&
+            decision.commercialRisks.length > 0 &&
+            decision.verdict !== 'DO_NOT_PURSUE' && (
+              <div className="space-y-1.5">
+                <div className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                  Commercial &amp; Contractual Risks
+                </div>
+                <ul className="list-disc pl-5 space-y-1 text-xs text-muted-foreground">
+                  {decision.commercialRisks.map((risk, index) => {
+                    const formatted = formatCommercialRiskItem(risk);
+                    return formatted ? (
+                      <li key={index} className="leading-relaxed">
+                        {formatted}
+                      </li>
+                    ) : null;
+                  })}
+                </ul>
               </div>
-              <ul className="list-disc pl-5 space-y-1 text-xs text-muted-foreground">
-                {decision.commercialRisks.map((risk, index) => {
-                  const formatted = formatCommercialRiskItem(risk);
-                  return formatted ? (
-                    <li key={index} className="leading-relaxed">
-                      {formatted}
-                    </li>
-                  ) : null;
-                })}
-              </ul>
-            </div>
-          )}
+            )}
 
           {/* Hard Disqualifiers callout */}
           {decision.hardDisqualifiers && decision.hardDisqualifiers.length > 0 && (
@@ -231,62 +235,86 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
           </div>
         </div>
       ) : (
-            /* Factual state: recommendation unavailable due to missing company evidence */
-            <>
-              <div
+        /* Factual state: recommendation unavailable due to missing company evidence */
+        <>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '0.65rem',
+              padding: 'var(--space-3)',
+              backgroundColor: 'var(--color-surface-card-subtle)',
+              borderRadius: 'var(--radius-md)',
+              border: '1px dashed var(--color-surface-border)',
+            }}
+          >
+            <span
+              style={{
+                color: 'var(--color-warning)',
+                flexShrink: 0,
+                marginTop: '0.1rem',
+                display: 'inline-flex',
+              }}
+            >
+              <InfoIcon size={16} />
+            </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+              <span
                 style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '0.65rem',
-                  padding: 'var(--space-3)',
-                  backgroundColor: 'var(--color-surface-card-subtle)',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px dashed var(--color-surface-border)',
+                  fontSize: 'var(--text-sm)',
+                  fontWeight: 600,
+                  color: 'var(--color-surface-text)',
                 }}
               >
-                <span style={{ color: 'var(--color-warning)', flexShrink: 0, marginTop: '0.1rem', display: 'inline-flex' }}>
-                  <InfoIcon size={16} />
-                </span>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                  <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-surface-text)' }}>
-                    Recommendation unavailable
-                  </span>
-                  <p style={{ margin: 0, fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)', lineHeight: 'var(--leading-normal)' }}>
-                    A trustworthy bid / no-bid recommendation cannot be determined because required company capability information and supporting evidence have not been uploaded for this tender's criteria. The Company Profile API is available, but sufficient factual evidence is required before the deterministic eligibility engine can produce an evaluation.
-                  </p>
-                </div>
-              </div>
+                Recommendation unavailable
+              </span>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 'var(--text-xs)',
+                  color: 'var(--color-surface-muted)',
+                  lineHeight: 'var(--leading-normal)',
+                }}
+              >
+                A trustworthy bid / no-bid recommendation cannot be determined because required
+                company capability information and supporting evidence have not been uploaded for
+                this tender's criteria. The Company Profile API is available, but sufficient factual
+                evidence is required before the deterministic eligibility engine can produce an
+                evaluation.
+              </p>
+            </div>
+          </div>
 
-              {/* Dynamic Company Document Checklist derived from tender requirements */}
-              <div className="mt-3">
-                <CompanyDocumentChecklist complianceItems={complianceItems} />
-              </div>
+          {/* Dynamic Company Document Checklist derived from tender requirements */}
+          <div className="mt-3">
+            <CompanyDocumentChecklist complianceItems={complianceItems} />
+          </div>
 
-              {/* Signals available today */}
-              <div className="mt-3">
-                <div className="text-xs font-semibold text-foreground uppercase tracking-wider mb-2">
-                  Signals available today
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <Signal label="Requirements extracted" value={String(rollup.total)} />
-                  <Signal
-                    label="Flagged for review"
-                    value={String(rollup.flagged)}
-                    tone={rollup.flagged > 0 ? 'var(--color-danger)' : undefined}
-                  />
-                  <Signal
-                    label="Awaiting human review"
-                    value={String(rollup.reviewNeeded)}
-                    tone={rollup.reviewNeeded > 0 ? 'var(--color-warning)' : undefined}
-                  />
-                  <Signal
-                    label="Deadline buffer"
-                    value={deadlineBufferDays === null ? '—' : `${deadlineBufferDays} days`}
-                  />
-                </div>
-              </div>
-            </>
-          )}
+          {/* Signals available today */}
+          <div className="mt-3">
+            <div className="text-xs font-semibold text-foreground uppercase tracking-wider mb-2">
+              Signals available today
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <Signal label="Requirements extracted" value={String(rollup.total)} />
+              <Signal
+                label="Flagged for review"
+                value={String(rollup.flagged)}
+                tone={rollup.flagged > 0 ? 'var(--color-danger)' : undefined}
+              />
+              <Signal
+                label="Awaiting human review"
+                value={String(rollup.reviewNeeded)}
+                tone={rollup.reviewNeeded > 0 ? 'var(--color-warning)' : undefined}
+              />
+              <Signal
+                label="Deadline buffer"
+                value={deadlineBufferDays === null ? '—' : `${deadlineBufferDays} days`}
+              />
+            </div>
+          </div>
+        </>
+      )}
     </section>
   );
 };
@@ -301,10 +329,25 @@ function Signal({ label, value, tone }: { label: string; value: string; tone?: s
         border: '1px solid var(--color-surface-border)',
       }}
     >
-      <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+      <div
+        style={{
+          fontSize: 'var(--text-2xs)',
+          color: 'var(--color-surface-muted)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.04em',
+        }}
+      >
         {label}
       </div>
-      <div style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: tone || 'var(--color-surface-text)', marginTop: '0.2rem', lineHeight: 1.2 }}>
+      <div
+        style={{
+          fontSize: 'var(--text-lg)',
+          fontWeight: 700,
+          color: tone || 'var(--color-surface-text)',
+          marginTop: '0.2rem',
+          lineHeight: 1.2,
+        }}
+      >
         {value}
       </div>
     </div>

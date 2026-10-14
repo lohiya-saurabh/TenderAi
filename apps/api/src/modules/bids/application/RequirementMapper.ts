@@ -56,11 +56,7 @@ const CATEGORY_TO_KIND: Record<string, string> = {
  * Categories whose shortfall is a hard eligibility
  * disqualifier rather than a submission condition.
  */
-const HARD_ELIGIBILITY_CATEGORIES = new Set([
-  'FINANCIAL',
-  'STATUTORY',
-  'TECHNICAL',
-]);
+const HARD_ELIGIBILITY_CATEGORIES = new Set(['FINANCIAL', 'STATUTORY', 'TECHNICAL']);
 
 interface NormalizedExecutionRules {
   stampPaperRequired: boolean;
@@ -95,14 +91,10 @@ function toExecutionRules(value: unknown): NormalizedExecutionRules {
   return {
     stampPaperRequired: Boolean(rules.stampPaperRequired),
     stampPaperDenominationInr:
-      typeof rules.stampPaperDenominationInr === 'number'
-        ? rules.stampPaperDenominationInr
-        : null,
+      typeof rules.stampPaperDenominationInr === 'number' ? rules.stampPaperDenominationInr : null,
     notarizationRequired: Boolean(rules.notarizationRequired),
     signingAuthorityRank:
-      typeof rules.signingAuthorityRank === 'string'
-        ? rules.signingAuthorityRank
-        : null,
+      typeof rules.signingAuthorityRank === 'string' ? rules.signingAuthorityRank : null,
     udinRequired: Boolean(rules.udinRequired),
   };
 }
@@ -141,26 +133,17 @@ function toProvenance(value: unknown): NormalizedProvenance {
   const provenance = parsed as Partial<NormalizedProvenance>;
   return {
     documentId: typeof provenance.documentId === 'string' ? provenance.documentId : '',
-    documentName:
-      typeof provenance.documentName === 'string' ? provenance.documentName : '',
-    pageNumber:
-      typeof provenance.pageNumber === 'number' ? provenance.pageNumber : 0,
+    documentName: typeof provenance.documentName === 'string' ? provenance.documentName : '',
+    pageNumber: typeof provenance.pageNumber === 'number' ? provenance.pageNumber : 0,
     sectionOrClause:
-      typeof provenance.sectionOrClause === 'string'
-        ? provenance.sectionOrClause
-        : '',
-    verbatimQuote:
-      typeof provenance.verbatimQuote === 'string' ? provenance.verbatimQuote : '',
+      typeof provenance.sectionOrClause === 'string' ? provenance.sectionOrClause : '',
+    verbatimQuote: typeof provenance.verbatimQuote === 'string' ? provenance.verbatimQuote : '',
     confidenceScore:
-      typeof provenance.confidenceScore === 'number'
-        ? provenance.confidenceScore
-        : 0,
+      typeof provenance.confidenceScore === 'number' ? provenance.confidenceScore : 0,
   };
 }
 
-export function toRequirementCandidate(
-  item: RequirementSourceItem,
-): AiRequirementCandidate {
+export function toRequirementCandidate(item: RequirementSourceItem): AiRequirementCandidate {
   const category = item.category;
   const kind = CATEGORY_TO_KIND[category] ?? 'DECLARATION';
   const criticality = HARD_ELIGIBILITY_CATEGORIES.has(category)
@@ -181,8 +164,7 @@ export function toRequirementCandidate(
       stamp_paper_required: executionRules.stampPaperRequired,
       stamp_paper_denomination_inr: executionRules.stampPaperDenominationInr,
       notarization_required: executionRules.notarizationRequired,
-      signing_authority_rank:
-        executionRules.signingAuthorityRank ?? 'Authorized Signatory',
+      signing_authority_rank: executionRules.signingAuthorityRank ?? 'Authorized Signatory',
       udin_required: executionRules.udinRequired,
     },
     provenance: {
@@ -197,8 +179,6 @@ export function toRequirementCandidate(
   };
 }
 
-export function toRequirementCandidates(
-  items: RequirementSourceItem[],
-): AiRequirementCandidate[] {
+export function toRequirementCandidates(items: RequirementSourceItem[]): AiRequirementCandidate[] {
   return items.map(toRequirementCandidate);
 }

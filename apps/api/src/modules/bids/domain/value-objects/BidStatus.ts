@@ -62,7 +62,7 @@ export class BidStatus {
       throw new InvalidStateTransitionException(
         this._value,
         target.value,
-        `Allowed transitions from '${this._value}' are: [${BidStatus.VALID_TRANSITIONS[this._value].join(', ')}]`
+        `Allowed transitions from '${this._value}' are: [${BidStatus.VALID_TRANSITIONS[this._value].join(', ')}]`,
       );
     }
     return target;

@@ -11,9 +11,7 @@ export interface TenderInfoHeaderProps {
 
 export const TenderInfoHeader: React.FC<TenderInfoHeaderProps> = ({ bid, decision }) => {
   const nowMs = Date.now();
-  const deadline = bid.submissionDeadline
-    ? getDeadlineInfo(bid.submissionDeadline, nowMs)
-    : null;
+  const deadline = bid.submissionDeadline ? getDeadlineInfo(bid.submissionDeadline, nowMs) : null;
 
   const deadlineLabel =
     deadline === null
@@ -22,7 +20,8 @@ export const TenderInfoHeader: React.FC<TenderInfoHeaderProps> = ({ bid, decisio
         ? `Closed: ${formatDate(bid.submissionDeadline!)}`
         : `Due: ${formatDate(bid.submissionDeadline!)} (${deadline.daysLeft}d left)`;
 
-  const verdict = decision?.verdict || (bid.status === 'REVIEW_READY' ? 'PURSUE' : 'REVIEW_REQUIRED');
+  const verdict =
+    decision?.verdict || (bid.status === 'REVIEW_READY' ? 'PURSUE' : 'REVIEW_REQUIRED');
 
   const verdictStyles =
     verdict === 'PURSUE'
@@ -70,9 +69,7 @@ export const TenderInfoHeader: React.FC<TenderInfoHeaderProps> = ({ bid, decisio
           <span className="text-xs mono font-medium text-muted-foreground">
             NIT No. {bid.tenderNumber || '—'}
           </span>
-          <span className="text-xs mono font-medium text-muted-foreground">
-            · {deadlineLabel}
-          </span>
+          <span className="text-xs mono font-medium text-muted-foreground">· {deadlineLabel}</span>
         </div>
       </div>
 
@@ -84,7 +81,8 @@ export const TenderInfoHeader: React.FC<TenderInfoHeaderProps> = ({ bid, decisio
       {/* Subtitle & Status Row */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs mono text-muted-foreground">
-          Prepared for Executive Board · Tender Evaluation Committee · Prepared on {formatDate(bid.createdAt)}
+          Prepared for Executive Board · Tender Evaluation Committee · Prepared on{' '}
+          {formatDate(bid.createdAt)}
         </p>
 
         <span className="inline-flex items-center gap-1.5 text-xs mono font-bold px-2.5 py-0.5 rounded border border-border bg-card text-foreground">

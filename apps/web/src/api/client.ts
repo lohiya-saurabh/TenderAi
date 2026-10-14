@@ -32,7 +32,11 @@ function getStorage(): Storage | null {
   if (typeof window !== 'undefined' && window.localStorage) {
     return window.localStorage;
   }
-  if (typeof globalThis !== 'undefined' && 'localStorage' in globalThis && globalThis.localStorage) {
+  if (
+    typeof globalThis !== 'undefined' &&
+    'localStorage' in globalThis &&
+    globalThis.localStorage
+  ) {
     return globalThis.localStorage as Storage;
   }
   return null;
@@ -70,6 +74,7 @@ export function getAccessToken(): string | null {
 export function clearTokens(): void {
   accessToken = null;
   fallbackRefreshToken = null;
+  inFlightGetRequests.clear();
   const storage = getStorage();
   if (storage) {
     storage.removeItem(REFRESH_TOKEN_KEY);
@@ -124,84 +129,103 @@ export async function coordinatedRefresh(): Promise<boolean> {
   return refreshPromise;
 }
 
+// In-flight GET request coalescing map to eliminate duplicate concurrent requests (e.g. StrictMode mounts)
+const inFlightGetRequests = new Map<string, Promise<ApiResult<any>>>();
+
 /**
- * Core fetch wrapper with JWT injection and 401 retry.
+ * Core fetch wrapper with JWT injection, 401 retry, and in-flight GET coalescing.
  */
-export async function apiFetch<T>(
-  path: string,
-  options: RequestInit = {},
-): Promise<ApiResult<T>> {
-  // Proactive refresh on cold start / page reload:
-  // If accessToken is missing in memory, but a refresh token exists in storage,
-  // coordinate a refresh BEFORE firing the request so we never trigger an avoidable 401.
-  if (!accessToken && getRefreshToken() && !path.startsWith('/api/v1/auth/')) {
-    await coordinatedRefresh();
+export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<ApiResult<T>> {
+  const isGet = (!options.method || options.method.toUpperCase() === 'GET') && !options.body;
+
+  if (isGet && inFlightGetRequests.has(path)) {
+    return inFlightGetRequests.get(path) as Promise<ApiResult<T>>;
   }
 
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(options.headers as Record<string, string> || {}),
-  };
+  const execution = (async (): Promise<ApiResult<T>> => {
+    // Proactive refresh on cold start / page reload:
+    // If accessToken is missing in memory, but a refresh token exists in storage,
+    // coordinate a refresh BEFORE firing the request so we never trigger an avoidable 401.
+    if (!accessToken && getRefreshToken() && !path.startsWith('/api/v1/auth/')) {
+      await coordinatedRefresh();
+    }
 
-  if (accessToken) {
-    headers['Authorization'] = `Bearer ${accessToken}`;
-  }
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...((options.headers as Record<string, string>) || {}),
+    };
 
-  try {
-    let response = await fetch(path, { ...options, headers, credentials: 'include' });
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+    }
 
-    // On 401, attempt silent refresh and retry once (except on auth endpoints)
-    if (response.status === 401 && !path.startsWith('/api/v1/auth/')) {
-      const refreshed = await coordinatedRefresh();
-      if (refreshed) {
-        headers['Authorization'] = `Bearer ${accessToken}`;
-        response = await fetch(path, { ...options, headers, credentials: 'include' });
-      } else {
-        // Refresh failed — session expired
-        clearTokens();
-        onAuthExpired?.();
+    try {
+      let response = await fetch(path, { ...options, headers, credentials: 'include' });
+
+      // On 401, attempt silent refresh and retry once (except on auth endpoints)
+      if (response.status === 401 && !path.startsWith('/api/v1/auth/')) {
+        const refreshed = await coordinatedRefresh();
+        if (refreshed) {
+          headers['Authorization'] = `Bearer ${accessToken}`;
+          response = await fetch(path, { ...options, headers, credentials: 'include' });
+        } else {
+          // Refresh failed — session expired
+          clearTokens();
+          onAuthExpired?.();
+          return {
+            ok: false,
+            error: { status: 401, message: 'Session expired. Please log in again.' },
+          };
+        }
+      }
+
+      if (!response.ok) {
+        let errorBody: unknown;
+        try {
+          errorBody = await response.json();
+        } catch {
+          errorBody = undefined;
+        }
+
+        const message =
+          (errorBody && typeof errorBody === 'object' && 'message' in errorBody
+            ? String((errorBody as { message: string }).message)
+            : undefined) ?? `Request failed with status ${response.status}`;
+
         return {
           ok: false,
-          error: { status: 401, message: 'Session expired. Please log in again.' },
+          error: { status: response.status, message, details: errorBody },
         };
       }
-    }
 
-    if (!response.ok) {
-      let errorBody: unknown;
-      try {
-        errorBody = await response.json();
-      } catch {
-        errorBody = undefined;
+      // Handle 204 No Content
+      if (response.status === 204) {
+        return { ok: true, data: undefined as unknown as T };
       }
 
-      const message =
-        (errorBody && typeof errorBody === 'object' && 'message' in errorBody
-          ? String((errorBody as { message: string }).message)
-          : undefined) ?? `Request failed with status ${response.status}`;
-
+      const data = (await response.json()) as T;
+      return { ok: true, data };
+    } catch (err) {
       return {
         ok: false,
-        error: { status: response.status, message, details: errorBody },
+        error: {
+          status: 0,
+          message:
+            err instanceof Error ? err.message : 'Network error. Please check your connection.',
+        },
       };
     }
-
-    // Handle 204 No Content
-    if (response.status === 204) {
-      return { ok: true, data: undefined as unknown as T };
+  })().finally(() => {
+    if (isGet) {
+      inFlightGetRequests.delete(path);
     }
+  });
 
-    const data = (await response.json()) as T;
-    return { ok: true, data };
-  } catch (err) {
-    return {
-      ok: false,
-      error: {
-        status: 0,
-        message: err instanceof Error ? err.message : 'Network error. Please check your connection.',
-      },
-    };
+  if (isGet) {
+    inFlightGetRequests.set(path, execution as Promise<ApiResult<any>>);
   }
+
+  return execution;
 }
 
 /** Convenience: GET request */

@@ -39,5 +39,4 @@ export function createDrizzle(db: PGlite): DrizzleDb {
   ],
   exports: [DATABASE_TOKEN, DRIZZLE_TOKEN],
 })
-export class DatabaseModule { }
-
+export class DatabaseModule {}

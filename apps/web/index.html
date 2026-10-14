@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -11,10 +11,15 @@
       rel="stylesheet"
     />
     <script>
-      (function() {
+      (function () {
         try {
           var saved = localStorage.getItem('tenderpulse_theme');
-          var isDark = saved === 'dark' || (!saved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) || !saved;
+          var isDark =
+            saved === 'dark' ||
+            (!saved &&
+              window.matchMedia &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches) ||
+            !saved;
           if (isDark) {
             document.documentElement.classList.add('dark');
             document.documentElement.classList.remove('light');
@@ -28,7 +33,7 @@
       })();
     </script>
   </head>
-  <body style="margin: 0;">
+  <body style="margin: 0">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

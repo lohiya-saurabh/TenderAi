@@ -28,12 +28,7 @@ export const DEADLINE_URGENT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 // ---------------------------------------------------------------------------
 
 /** Workflow stages shown in the pipeline funnel. ARCHIVED is terminal history, excluded. */
-export const PIPELINE_STAGE_ORDER = [
-  'DRAFT',
-  'ANALYZING',
-  'REVIEW_READY',
-  'SUBMITTED',
-] as const;
+export const PIPELINE_STAGE_ORDER = ['DRAFT', 'ANALYZING', 'REVIEW_READY', 'SUBMITTED'] as const;
 
 export type PipelineStageStatus = (typeof PIPELINE_STAGE_ORDER)[number];
 
@@ -226,7 +221,8 @@ export function buildActionItems(
         tenderNumber: bid.tenderNumber,
         type: 'DRAFT_INCOMPLETE',
         headline: 'Tender intake incomplete',
-        description: 'Upload the NIT and technical specifications to generate the requirement matrix.',
+        description:
+          'Upload the NIT and technical specifications to generate the requirement matrix.',
         urgency: 'medium',
         actionUrl: `/bids/${bid.id}`,
       });

@@ -101,7 +101,7 @@ describe('ReviewComplianceItemUseCase', () => {
         status: 'FLAGGED',
         notes: 'Trying to flag',
         expectedVersion: 1, // Stale version!
-      })
+      }),
     ).rejects.toThrow(ConcurrencyConflictException);
   });
 
@@ -114,7 +114,7 @@ describe('ReviewComplianceItemUseCase', () => {
         itemId: item.id,
         status: 'READY',
         expectedVersion: 1,
-      })
+      }),
     ).rejects.toThrow(EntityNotFoundException);
   });
 
@@ -128,7 +128,7 @@ describe('ReviewComplianceItemUseCase', () => {
         status: 'FLAGGED',
         notes: '', // Empty notes!
         expectedVersion: 1,
-      })
+      }),
     ).rejects.toThrow(ValidationException);
   });
 });

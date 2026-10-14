@@ -114,7 +114,8 @@ export interface OemAuthorizationItem extends BaseCapabilityItem {
 export interface EmployeeItem extends BaseCapabilityItem {
   name: string;
   designation: string;
-  role: 'PROJECT_MANAGER' | 'LEAD_ENGINEER' | 'SAFETY_OFFICER' | 'QUALITY_AUDITOR' | 'COMMERCIAL_LEAD';
+  role:
+    'PROJECT_MANAGER' | 'LEAD_ENGINEER' | 'SAFETY_OFFICER' | 'QUALITY_AUDITOR' | 'COMMERCIAL_LEAD';
   qualification: string; // e.g. "B.Tech (Civil) + PMP", "M.Tech (Structures)"
   experienceYears: number;
   epfoUan?: string;
@@ -133,7 +134,8 @@ export interface EquipmentItem extends BaseCapabilityItem {
 }
 
 export interface GeographicCoverageItem extends BaseCapabilityItem {
-  facilityType: 'HEADQUARTERS' | 'REGIONAL_OFFICE' | 'BRANCH_OFFICE' | 'WAREHOUSE' | 'SERVICE_CENTER';
+  facilityType:
+    'HEADQUARTERS' | 'REGIONAL_OFFICE' | 'BRANCH_OFFICE' | 'WAREHOUSE' | 'SERVICE_CENTER';
   state: string;
   city: string;
   address: string;
@@ -232,8 +234,7 @@ export function computeProfileHealth(profile: FullCompanyProfile): ProfileHealth
   const needsReviewCount = allStatuses.filter((s) => s === 'NEEDS_REVIEW').length;
 
   // Weight: Verified = 1.0, Expiring Soon = 0.7, Needs Review = 0.5, Missing/Expired = 0
-  const weightedScore =
-    verifiedCount * 1.0 + expiringSoonCount * 0.7 + needsReviewCount * 0.5;
+  const weightedScore = verifiedCount * 1.0 + expiringSoonCount * 0.7 + needsReviewCount * 0.5;
   const healthScorePct = Math.round((weightedScore / totalItems) * 100);
 
   return {
@@ -361,7 +362,8 @@ export const ENTERPRISE_COMPANY_PROFILE: FullCompanyProfile = {
       certificateNumber: 'BVQI-IND-9001-44192',
       validFrom: '2024-11-15',
       validUntil: '2027-11-14',
-      scopeSummary: 'Execution of Civil Structures, Flyovers, Rail Over Bridges & High-Speed Highway Works.',
+      scopeSummary:
+        'Execution of Civil Structures, Flyovers, Rail Over Bridges & High-Speed Highway Works.',
       status: 'VERIFIED',
       evidenceDocName: 'ISO_9001_Quality_Certificate.pdf',
       evidenceDocSize: '2.4 MB',
@@ -375,7 +377,8 @@ export const ENTERPRISE_COMPANY_PROFILE: FullCompanyProfile = {
       certificateNumber: 'TUV-IND-14001-88912',
       validFrom: '2023-12-11',
       validUntil: '2026-12-10',
-      scopeSummary: 'Environmental Compliance and Waste Mitigation for Highway & Bridge Construction.',
+      scopeSummary:
+        'Environmental Compliance and Waste Mitigation for Highway & Bridge Construction.',
       status: 'EXPIRING_SOON',
       evidenceDocName: 'ISO_14001_Environment_Certificate.pdf',
       evidenceDocSize: '1.9 MB',

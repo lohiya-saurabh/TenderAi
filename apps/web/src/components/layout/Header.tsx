@@ -1,11 +1,7 @@
 import React from 'react';
 import { Breadcrumbs } from './Breadcrumbs.js';
 import { UserAccountMenu } from './UserAccountMenu.js';
-import {
-  MenuIcon,
-  SidebarCollapseIcon,
-  SidebarExpandIcon,
-} from '../common/Icons.js';
+import { MenuIcon, SidebarCollapseIcon, SidebarExpandIcon } from '../common/Icons.js';
 import { Button } from '../ui/button.js';
 
 import { CompanySelector } from './CompanySelector.js';

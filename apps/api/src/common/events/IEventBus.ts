@@ -7,10 +7,10 @@ export interface IEventBus {
   publishBatch(events: IDomainEvent[]): Promise<void>;
   subscribe<T extends IDomainEvent = IDomainEvent>(
     eventType: string,
-    handler: DomainEventHandler<T>
+    handler: DomainEventHandler<T>,
   ): void;
   unsubscribe<T extends IDomainEvent = IDomainEvent>(
     eventType: string,
-    handler: DomainEventHandler<T>
+    handler: DomainEventHandler<T>,
   ): void;
 }

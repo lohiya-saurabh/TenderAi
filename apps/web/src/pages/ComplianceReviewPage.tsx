@@ -46,9 +46,19 @@ export const ComplianceReviewPage: React.FC = () => {
   const [isAssessmentPanelOpen, setIsAssessmentPanelOpen] = useState(false);
 
   const fetchItem = useCallback(() => getComplianceItem(bidId, itemId), [bidId, itemId]);
-  const { data: item, isLoading, error, refetch, setData: setItem } = useApi<ComplianceItem>(fetchItem, [bidId, itemId]);
+  const {
+    data: item,
+    isLoading,
+    error,
+    refetch,
+    setData: setItem,
+  } = useApi<ComplianceItem>(fetchItem, [bidId, itemId]);
 
-  const handleReview = async (status: ComplianceItem['status'], notes?: string, expectedVersion?: number) => {
+  const handleReview = async (
+    status: ComplianceItem['status'],
+    notes?: string,
+    expectedVersion?: number,
+  ) => {
     if (!item) return;
     setActionError(null);
     setActionSuccess(null);
@@ -102,7 +112,10 @@ export const ComplianceReviewPage: React.FC = () => {
   if (error || !item) {
     return (
       <div className="max-w-5xl mx-auto py-8">
-        <ErrorBanner message={error?.message || 'Compliance requirement not found'} onRetry={refetch} />
+        <ErrorBanner
+          message={error?.message || 'Compliance requirement not found'}
+          onRetry={refetch}
+        />
         <div className="mt-4">
           <Link to={`/bids/${bidId}`} className="text-primary hover:underline text-sm font-medium">
             ← Return to Bid Dossier
@@ -113,29 +126,42 @@ export const ComplianceReviewPage: React.FC = () => {
   }
 
   const grounding = deriveGroundingMatch(item);
-  const confidenceScore = item.provenance?.confidenceScore ?? item.sourceCitation?.confidenceScore ?? 0;
+  const confidenceScore =
+    item.provenance?.confidenceScore ?? item.sourceCitation?.confidenceScore ?? 0;
   const confidencePct = Math.round(confidenceScore * 100);
 
   // Compute Review Trigger Reason
   const reviewTriggers: string[] = [];
   if (item.humanReviewRequired) {
-    reviewTriggers.push('Triggered by System: Mandatory human sign-off required for this clause category.');
+    reviewTriggers.push(
+      'Triggered by System: Mandatory human sign-off required for this clause category.',
+    );
   }
   if (!grounding.isExactVerbatim) {
-    reviewTriggers.push(`Incomplete Citation Anchors (${grounding.matchPct}%): Source document coordinates or verbatim text partially unverified.`);
+    reviewTriggers.push(
+      `Incomplete Citation Anchors (${grounding.matchPct}%): Source document coordinates or verbatim text partially unverified.`,
+    );
   } else if (confidenceScore < 0.8 && confidenceScore > 0) {
-    reviewTriggers.push(`Extraction Model Flag (${confidencePct}%): Extraction model flagged potential text ambiguity.`);
+    reviewTriggers.push(
+      `Extraction Model Flag (${confidencePct}%): Extraction model flagged potential text ambiguity.`,
+    );
   }
   if (!item.companyEvidence || item.companyEvidence.status === 'MISSING') {
-    reviewTriggers.push('Evidence Gap: No verified company credential currently matches this requirement.');
+    reviewTriggers.push(
+      'Evidence Gap: No verified company credential currently matches this requirement.',
+    );
   } else if (item.companyEvidence.status === 'EXPIRED') {
-    reviewTriggers.push(`Expired Evidence: Attached document expired on ${item.companyEvidence.expiryDate || 'unknown date'}.`);
+    reviewTriggers.push(
+      `Expired Evidence: Attached document expired on ${item.companyEvidence.expiryDate || 'unknown date'}.`,
+    );
   }
   if (item.risk && (item.risk.level === 'HIGH' || item.risk.level === 'CRITICAL')) {
     reviewTriggers.push(`High Commercial/Legal Risk: ${item.risk.summary}`);
   }
   if (reviewTriggers.length === 0) {
-    reviewTriggers.push('Standard Verification: Human confirmation needed to lock compliance matrix.');
+    reviewTriggers.push(
+      'Standard Verification: Human confirmation needed to lock compliance matrix.',
+    );
   }
 
   return (
@@ -189,7 +215,9 @@ export const ComplianceReviewPage: React.FC = () => {
         <span className="text-muted-foreground/40">→</span>
         <span className="font-semibold text-primary">4. AI Assessment</span>
         <span className="text-muted-foreground/40">→</span>
-        <span className="font-semibold text-orange-600 dark:text-orange-400">5. Trigger Reason</span>
+        <span className="font-semibold text-orange-600 dark:text-orange-400">
+          5. Trigger Reason
+        </span>
         <span className="text-muted-foreground/40">→</span>
         <span className="font-bold text-foreground">6. Human Decision</span>
       </div>
@@ -226,9 +254,7 @@ export const ComplianceReviewPage: React.FC = () => {
           {item.requirement}
         </h1>
 
-        <p className="text-sm text-foreground/90 leading-relaxed">
-          {item.description}
-        </p>
+        <p className="text-sm text-foreground/90 leading-relaxed">{item.description}</p>
 
         {/* Execution & Statutory Rules Pillbox if applicable */}
         {item.executionRules && (
@@ -263,7 +289,12 @@ export const ComplianceReviewPage: React.FC = () => {
             >
               {grounding.badgeLabel}
             </span>
-            <Button variant="ghost" size="sm" onClick={() => setIsCitationDrawerOpen(true)} className="text-xs gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsCitationDrawerOpen(true)}
+              className="text-xs gap-1"
+            >
               Full Citation <ExternalLink className="w-3 h-3" />
             </Button>
           </div>
@@ -273,7 +304,11 @@ export const ComplianceReviewPage: React.FC = () => {
         <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap font-mono">
           <div>
             <strong className="text-foreground">Document:</strong>{' '}
-            <span>{item.sourceCitation?.document || item.provenance?.documentName || 'NIT Tender Document'}</span>
+            <span>
+              {item.sourceCitation?.document ||
+                item.provenance?.documentName ||
+                'NIT Tender Document'}
+            </span>
           </div>
           <div>
             <strong className="text-foreground">Page:</strong>{' '}
@@ -293,19 +328,29 @@ export const ComplianceReviewPage: React.FC = () => {
         <div className="bg-background border border-border border-l-4 border-l-primary rounded-r-lg p-4">
           <div className="flex justify-between items-start gap-4">
             <p className="font-mono text-xs sm:text-sm text-foreground/90 leading-relaxed italic m-0">
-              "{item.provenance?.verbatimQuote || item.sourceCitation?.verbatimQuote || item.description}"
+              "
+              {item.provenance?.verbatimQuote ||
+                item.sourceCitation?.verbatimQuote ||
+                item.description}
+              "
             </p>
             <Button
               variant="ghost"
               size="sm"
               onClick={() =>
                 handleCopyQuote(
-                  item.provenance?.verbatimQuote || item.sourceCitation?.verbatimQuote || item.description,
+                  item.provenance?.verbatimQuote ||
+                    item.sourceCitation?.verbatimQuote ||
+                    item.description,
                 )
               }
               className="shrink-0 text-xs gap-1"
             >
-              {copiedQuote ? <CheckCheck className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}
+              {copiedQuote ? (
+                <CheckCheck className="w-3.5 h-3.5 text-primary" />
+              ) : (
+                <Copy className="w-3.5 h-3.5" />
+              )}
               {copiedQuote ? 'Copied' : 'Copy'}
             </Button>
           </div>
@@ -327,7 +372,12 @@ export const ComplianceReviewPage: React.FC = () => {
           </div>
 
           {item.companyEvidence && (
-            <Button variant="ghost" size="sm" onClick={() => setIsEvidenceDrawerOpen(true)} className="text-xs gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsEvidenceDrawerOpen(true)}
+              className="text-xs gap-1"
+            >
               Inspect Evidence <ExternalLink className="w-3 h-3" />
             </Button>
           )}
@@ -354,7 +404,8 @@ export const ComplianceReviewPage: React.FC = () => {
                 </Badge>
               </div>
               <span className="text-xs text-muted-foreground font-mono">
-                Doc Type: <strong className="text-foreground">{item.companyEvidence.docType}</strong>
+                Doc Type:{' '}
+                <strong className="text-foreground">{item.companyEvidence.docType}</strong>
               </span>
             </div>
 
@@ -362,7 +413,9 @@ export const ComplianceReviewPage: React.FC = () => {
               {item.companyEvidence.udinNumber && (
                 <div>
                   <strong className="text-foreground">UDIN:</strong>{' '}
-                  <span className="text-primary font-semibold">{item.companyEvidence.udinNumber}</span>
+                  <span className="text-primary font-semibold">
+                    {item.companyEvidence.udinNumber}
+                  </span>
                 </div>
               )}
               {item.companyEvidence.expiryDate && (
@@ -391,7 +444,8 @@ export const ComplianceReviewPage: React.FC = () => {
               <FileWarning className="w-4 h-4" /> No Matching Company Evidence Linked
             </div>
             <p className="text-xs text-muted-foreground mb-3">
-              The system could not find an uploaded credential matching this requirement in your Company Profile.
+              The system could not find an uploaded credential matching this requirement in your
+              Company Profile.
             </p>
             <Button
               variant="outline"
@@ -420,7 +474,12 @@ export const ComplianceReviewPage: React.FC = () => {
           </div>
 
           {item.rationale && (
-            <Button variant="ghost" size="sm" onClick={() => setIsAssessmentPanelOpen(true)} className="text-xs gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsAssessmentPanelOpen(true)}
+              className="text-xs gap-1"
+            >
               Full Comparison Breakdown <ExternalLink className="w-3 h-3" />
             </Button>
           )}
@@ -500,7 +559,12 @@ export const ComplianceReviewPage: React.FC = () => {
         {item.reviewNotes && (
           <div className="mt-2 pt-2.5 border-t border-dashed border-amber-500/20 text-xs text-muted-foreground font-mono">
             <strong>Previous Reviewer Note:</strong> {item.reviewNotes}
-            {item.reviewedBy && <span> (by {item.reviewedBy} at {item.reviewedAt})</span>}
+            {item.reviewedBy && (
+              <span>
+                {' '}
+                (by {item.reviewedBy} at {item.reviewedAt})
+              </span>
+            )}
           </div>
         )}
       </div>
@@ -515,7 +579,8 @@ export const ComplianceReviewPage: React.FC = () => {
               Stage 6 • Human Decision Console
             </h3>
             <p className="text-xs text-muted-foreground m-0 mt-0.5">
-              Select your binding verdict. The human decision overrides any AI pre-assessment and is committed to the immutable audit log.
+              Select your binding verdict. The human decision overrides any AI pre-assessment and is
+              committed to the immutable audit log.
             </p>
           </div>
 

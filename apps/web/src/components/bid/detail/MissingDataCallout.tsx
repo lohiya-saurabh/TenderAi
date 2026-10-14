@@ -20,58 +20,67 @@ const LIVE_ENDPOINTS: LiveEndpoint[] = [
   {
     method: 'GET',
     path: '/api/v1/bids/:id/bid-decision',
-    purpose: 'Deterministic bid / no-bid verdict (PURSUE / DO_NOT_PURSUE / REVIEW_REQUIRED) with evidence-backed reasons.',
+    purpose:
+      'Deterministic bid / no-bid verdict (PURSUE / DO_NOT_PURSUE / REVIEW_REQUIRED) with evidence-backed reasons.',
     status: 'LIVE',
-    description: 'Evaluated deterministically against pinned Company Capability Profile; human-in-the-loop state audit preserved.',
+    description:
+      'Evaluated deterministically against pinned Company Capability Profile; human-in-the-loop state audit preserved.',
   },
   {
     method: 'GET',
     path: '/api/v1/bids/:id/evidence-matches',
     purpose: 'Company-side evidence cross-referencing and coverage rollup.',
     status: 'LIVE',
-    description: 'Maps tender clauses to audited financials, past work orders, and ISO certificates with UDIN/verification status.',
+    description:
+      'Maps tender clauses to audited financials, past work orders, and ISO certificates with UDIN/verification status.',
   },
   {
     method: 'GET',
     path: '/api/v1/bids/:id/risk-findings',
     purpose: 'Consolidated statutory, execution, and commercial risk radar.',
     status: 'LIVE',
-    description: 'Aggregates stamp paper requirements, CA UDIN constraints, penalty exposure, and qualification thresholds.',
+    description:
+      'Aggregates stamp paper requirements, CA UDIN constraints, penalty exposure, and qualification thresholds.',
   },
   {
     method: 'GET',
     path: '/api/v1/bids/:id/deadlines',
     purpose: 'Tender lifecycle milestone countdowns and portal cutoff schedule.',
     status: 'LIVE',
-    description: 'Calculates pre-bid query window, EMD submission, and bid freeze dates with real-time countdown status.',
+    description:
+      'Calculates pre-bid query window, EMD submission, and bid freeze dates with real-time countdown status.',
   },
   {
     method: 'GET',
     path: '/api/v1/bids/:id/review-tasks',
     purpose: 'Dedicated human-in-the-loop review queue for flagged and pending clauses.',
     status: 'LIVE',
-    description: 'Real-time requirement review queue supporting optimistic concurrency control (OCC) versioning.',
+    description:
+      'Real-time requirement review queue supporting optimistic concurrency control (OCC) versioning.',
   },
   {
     method: 'GET',
     path: '/api/v1/bids/:id/readiness',
     purpose: '4-pillar bid readiness rollup and requirement verification metrics.',
     status: 'LIVE',
-    description: 'Computes verified percentage, flagged exceptions, and pending reviews directly from PostgreSQL state.',
+    description:
+      'Computes verified percentage, flagged exceptions, and pending reviews directly from PostgreSQL state.',
   },
   {
     method: 'GET',
     path: '/api/v1/company-profile',
     purpose: 'Company Capability Profile aggregate (11 structured domains).',
     status: 'LIVE',
-    description: 'Immutable, versioned corporate credentials, audited balance sheets, and active work orders.',
+    description:
+      'Immutable, versioned corporate credentials, audited balance sheets, and active work orders.',
   },
   {
     method: 'GET',
     path: '/api/v1/company-profile/expiring-certificates',
     purpose: '30/60/90-day certificate & OEM authorization expiry radar.',
     status: 'LIVE',
-    description: 'Monitors ISO certifications and OEM credentials approaching expiration relative to tender deadlines.',
+    description:
+      'Monitors ISO certifications and OEM credentials approaching expiration relative to tender deadlines.',
   },
 ];
 
@@ -79,11 +88,7 @@ export const MissingDataCallout: React.FC = () => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <Card
-      variant="flat"
-      padding="sm"
-      style={{ border: '1px solid var(--color-surface-border)' }}
-    >
+    <Card variant="flat" padding="sm" style={{ border: '1px solid var(--color-surface-border)' }}>
       <button
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
@@ -130,24 +135,31 @@ export const MissingDataCallout: React.FC = () => {
         >
           <p style={{ marginBottom: '0.5rem' }}>
             This page renders exclusively from live endpoints:{' '}
-            <code style={{ color: 'var(--color-primary-300)' }}>
-              GET /api/v1/bids/:id
-            </code>
-            ,{' '}
+            <code style={{ color: 'var(--color-primary-300)' }}>GET /api/v1/bids/:id</code>,{' '}
             <code style={{ color: 'var(--color-primary-300)' }}>
               GET /api/v1/bids/:id/compliance-items
             </code>
-            , document upload/download/delete, and the compliance review
-            PATCH. Signals the backend does not expose yet are listed below
-            — not simulated.
+            , document upload/download/delete, and the compliance review PATCH. Signals the backend
+            does not expose yet are listed below — not simulated.
           </p>
-          <div style={{ fontWeight: 600, color: 'var(--color-surface-text)', marginBottom: '0.35rem' }}>
+          <div
+            style={{ fontWeight: 600, color: 'var(--color-surface-text)', marginBottom: '0.35rem' }}
+          >
             Active Live Endpoints ({LIVE_ENDPOINTS.length}):
           </div>
-          <ul style={{ paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <ul
+            style={{
+              paddingLeft: '1.25rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.5rem',
+            }}
+          >
             {LIVE_ENDPOINTS.map((endpoint) => (
               <li key={endpoint.path}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <div
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}
+                >
                   <code style={{ color: 'var(--color-primary-300)' }}>
                     {endpoint.method} {endpoint.path}
                   </code>
@@ -167,7 +179,13 @@ export const MissingDataCallout: React.FC = () => {
                   </span>
                 </div>
                 <span style={{ display: 'block', marginTop: '0.15rem' }}>{endpoint.purpose}</span>
-                <span style={{ display: 'block', color: 'var(--color-surface-subtle)', fontSize: 'var(--text-2xs)' }}>
+                <span
+                  style={{
+                    display: 'block',
+                    color: 'var(--color-surface-subtle)',
+                    fontSize: 'var(--text-2xs)',
+                  }}
+                >
                   {endpoint.description}
                 </span>
               </li>

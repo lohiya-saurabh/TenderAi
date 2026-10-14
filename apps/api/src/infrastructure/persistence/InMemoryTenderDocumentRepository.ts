@@ -14,18 +14,19 @@ export class InMemoryTenderDocumentRepository implements ITenderDocumentReposito
 
   public async findByBidId(bidId: string, organizationId: string): Promise<TenderDocument[]> {
     return Array.from(this.documents.values()).filter(
-      (doc) => doc.bidId === bidId && doc.organizationId === organizationId
+      (doc) => doc.bidId === bidId && doc.organizationId === organizationId,
     );
   }
 
   public async findByChecksum(
     bidId: string,
     checksumSha256: string,
-    organizationId: string
+    organizationId: string,
   ): Promise<TenderDocument | null> {
     const target = checksumSha256.toLowerCase();
     const doc = Array.from(this.documents.values()).find(
-      (d) => d.bidId === bidId && d.organizationId === organizationId && d.checksumSha256 === target
+      (d) =>
+        d.bidId === bidId && d.organizationId === organizationId && d.checksumSha256 === target,
     );
     return doc ?? null;
   }

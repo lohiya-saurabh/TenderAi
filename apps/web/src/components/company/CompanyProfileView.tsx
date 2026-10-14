@@ -51,7 +51,10 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1">
           {/* Search */}
           <div className="relative w-full sm:w-80">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <Search
+              size={14}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+            />
             <input
               type="text"
               placeholder="Search credentials, UDINs, standards..."
@@ -76,20 +79,22 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
             <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mr-1">
               Filter:
             </span>
-            {(['ALL', 'VERIFIED', 'EXPIRING_SOON', 'EXPIRED', 'NEEDS_REVIEW'] as const).map((st) => (
-              <button
-                key={st}
-                type="button"
-                onClick={() => setFilterStatus(st)}
-                className={`px-2.5 py-1 text-xs rounded-full border transition-colors cursor-pointer ${
-                  filterStatus === st
-                    ? 'bg-foreground text-background border-foreground font-semibold shadow-xs'
-                    : 'bg-background text-muted-foreground border-border hover:text-foreground hover:bg-muted/50 font-medium'
-                }`}
-              >
-                {st === 'ALL' ? 'All' : st.replace('_', ' ')}
-              </button>
-            ))}
+            {(['ALL', 'VERIFIED', 'EXPIRING_SOON', 'EXPIRED', 'NEEDS_REVIEW'] as const).map(
+              (st) => (
+                <button
+                  key={st}
+                  type="button"
+                  onClick={() => setFilterStatus(st)}
+                  className={`px-2.5 py-1 text-xs rounded-full border transition-colors cursor-pointer ${
+                    filterStatus === st
+                      ? 'bg-foreground text-background border-foreground font-semibold shadow-xs'
+                      : 'bg-background text-muted-foreground border-border hover:text-foreground hover:bg-muted/50 font-medium'
+                  }`}
+                >
+                  {st === 'ALL' ? 'All' : st.replace('_', ' ')}
+                </button>
+              ),
+            )}
           </div>
         </div>
       )}
@@ -107,7 +112,8 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                   Statutory Business Profile
                 </h2>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Authoritative enterprise credentials verified against MCA, GSTN, MSME, and public procurement registers.
+                  Authoritative enterprise credentials verified against MCA, GSTN, MSME, and public
+                  procurement registers.
                 </p>
               </div>
               <Badge variant="neutral" size="sm" className="font-mono self-start sm:self-auto">
@@ -190,17 +196,29 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
           {/* Quick Stats Grid - Computed from Profile Data */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {(() => {
-              const auditedTurnovers = profile.turnoverRecords.filter(t => t.audited && t.isUdinValidated);
-              const avgTurnover = auditedTurnovers.length > 0
-                ? (auditedTurnovers.reduce((sum, t) => sum + t.turnoverInrCrores, 0) / auditedTurnovers.length).toFixed(2)
-                : '0.00';
-              const allVerified = auditedTurnovers.length > 0 && auditedTurnovers.every(t => t.isUdinValidated);
+              const auditedTurnovers = profile.turnoverRecords.filter(
+                (t) => t.audited && t.isUdinValidated,
+              );
+              const avgTurnover =
+                auditedTurnovers.length > 0
+                  ? (
+                      auditedTurnovers.reduce((sum, t) => sum + t.turnoverInrCrores, 0) /
+                      auditedTurnovers.length
+                    ).toFixed(2)
+                  : '0.00';
+              const allVerified =
+                auditedTurnovers.length > 0 && auditedTurnovers.every((t) => t.isUdinValidated);
 
-              const highestContract = profile.pastExperience.length > 0
-                ? profile.pastExperience.reduce((max, e) => e.contractValueInrCrores > max.contractValueInrCrores ? e : max)
-                : null;
+              const highestContract =
+                profile.pastExperience.length > 0
+                  ? profile.pastExperience.reduce((max, e) =>
+                      e.contractValueInrCrores > max.contractValueInrCrores ? e : max,
+                    )
+                  : null;
 
-              const activeSolvency = profile.solvencyRecords.find(s => s.status === 'VERIFIED' && new Date(s.validUntil) > new Date());
+              const activeSolvency = profile.solvencyRecords.find(
+                (s) => s.status === 'VERIFIED' && new Date(s.validUntil) > new Date(),
+              );
 
               return (
                 <>
@@ -214,8 +232,16 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                       </div>
                     </div>
                     <span className="text-[11px] text-muted-foreground flex items-center gap-1.5">
-                      {allVerified ? <Check size={13} className="text-foreground shrink-0" /> : <FileText size={13} className="shrink-0" />}
-                      <span>{allVerified ? 'All audited with ICAI UDIN' : 'Some records pending validation'}</span>
+                      {allVerified ? (
+                        <Check size={13} className="text-foreground shrink-0" />
+                      ) : (
+                        <FileText size={13} className="shrink-0" />
+                      )}
+                      <span>
+                        {allVerified
+                          ? 'All audited with ICAI UDIN'
+                          : 'Some records pending validation'}
+                      </span>
                     </span>
                   </div>
 
@@ -225,7 +251,9 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                         Highest Single Contract
                       </span>
                       <div className="text-2xl font-bold font-heading text-foreground mt-1">
-                        {highestContract ? `₹${highestContract.contractValueInrCrores.toFixed(2)} Cr` : '—'}
+                        {highestContract
+                          ? `₹${highestContract.contractValueInrCrores.toFixed(2)} Cr`
+                          : '—'}
                       </div>
                     </div>
                     <span className="text-[11px] text-muted-foreground truncate">
@@ -239,7 +267,9 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                         Active Bank Solvency
                       </span>
                       <div className="text-2xl font-bold font-heading text-foreground mt-1">
-                        {activeSolvency ? `₹${activeSolvency.solvencyLimitInrCrores.toFixed(2)} Cr` : '—'}
+                        {activeSolvency
+                          ? `₹${activeSolvency.solvencyLimitInrCrores.toFixed(2)} Cr`
+                          : '—'}
                       </div>
                     </div>
                     <span className="text-[11px] text-muted-foreground truncate">
@@ -275,7 +305,12 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
           {profile.registrations
             .filter((r) => filterStatus === 'ALL' || r.status === filterStatus)
-            .filter((r) => !searchQuery || r.title.toLowerCase().includes(searchQuery.toLowerCase()) || r.regNumber.toLowerCase().includes(searchQuery.toLowerCase()))
+            .filter(
+              (r) =>
+                !searchQuery ||
+                r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                r.regNumber.toLowerCase().includes(searchQuery.toLowerCase()),
+            )
             .map((reg) => (
               <CapabilityItemCard
                 key={reg.id}
@@ -284,7 +319,12 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                 expiryDate={reg.validUntil}
                 onViewEvidence={(doc) => setSelectedDocPreview(doc)}
                 fields={[
-                  { label: 'Registration / License №', value: reg.regNumber, isMono: true, highlight: true },
+                  {
+                    label: 'Registration / License №',
+                    value: reg.regNumber,
+                    isMono: true,
+                    highlight: true,
+                  },
                   { label: 'Issuing Authority', value: reg.issuingAuthority },
                   { label: 'Jurisdiction / State', value: reg.stateOrJurisdiction || 'National' },
                   { label: 'Last Verified', value: reg.lastVerifiedAt || '2026-09-01' },
@@ -301,7 +341,12 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
           {profile.certifications
             .filter((c) => filterStatus === 'ALL' || c.status === filterStatus)
-            .filter((c) => !searchQuery || c.title.toLowerCase().includes(searchQuery.toLowerCase()) || c.certificateNumber.toLowerCase().includes(searchQuery.toLowerCase()))
+            .filter(
+              (c) =>
+                !searchQuery ||
+                c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                c.certificateNumber.toLowerCase().includes(searchQuery.toLowerCase()),
+            )
             .map((cert) => (
               <CapabilityItemCard
                 key={cert.id}
@@ -310,7 +355,12 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                 expiryDate={cert.validUntil}
                 onViewEvidence={(doc) => setSelectedDocPreview(doc)}
                 fields={[
-                  { label: 'Certificate Number', value: cert.certificateNumber, isMono: true, highlight: true },
+                  {
+                    label: 'Certificate Number',
+                    value: cert.certificateNumber,
+                    isMono: true,
+                    highlight: true,
+                  },
                   { label: 'Accredited Registrar', value: cert.issuingBody },
                   { label: 'Valid From', value: cert.validFrom },
                   { label: 'Certified Scope', value: cert.scopeSummary },
@@ -325,12 +375,24 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
       {/* ======================================================================= */}
       {activeSection === 'financials' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-surface-text)', margin: '0' }}>
+          <h3
+            style={{
+              fontSize: 'var(--text-sm)',
+              fontWeight: 700,
+              color: 'var(--color-surface-text)',
+              margin: '0',
+            }}
+          >
             Audited Annual Financial Statements (with ICAI UDIN)
           </h3>
           {profile.turnoverRecords
             .filter((t) => filterStatus === 'ALL' || t.status === filterStatus)
-            .filter((t) => !searchQuery || t.financialYear.toLowerCase().includes(searchQuery.toLowerCase()) || t.caUdin.toLowerCase().includes(searchQuery.toLowerCase()))
+            .filter(
+              (t) =>
+                !searchQuery ||
+                t.financialYear.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                t.caUdin.toLowerCase().includes(searchQuery.toLowerCase()),
+            )
             .map((to) => (
               <CapabilityItemCard
                 key={to.id}
@@ -338,16 +400,43 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                 typeBadge={to.financialYear}
                 onViewEvidence={(doc) => setSelectedDocPreview(doc)}
                 fields={[
-                  { label: 'Audited Annual Turnover', value: `₹${to.turnoverInrCrores.toFixed(2)} Crores`, highlight: true },
-                  { label: 'Computed Net Worth', value: `₹${to.netWorthInrCrores.toFixed(2)} Crores` },
-                  { label: 'Profit After Tax (PAT)', value: to.profitAfterTaxCrores ? `₹${to.profitAfterTaxCrores.toFixed(2)} Crores` : 'N/A' },
-                  { label: 'ICAI CA UDIN', value: `${to.caUdin} ${to.isUdinValidated ? '(Validated)' : ''}`, isMono: true, highlight: true },
-                  { label: 'Chartered Accountant Firm', value: `${to.caFirmName} (Mem #${to.caMembershipNo})` },
+                  {
+                    label: 'Audited Annual Turnover',
+                    value: `₹${to.turnoverInrCrores.toFixed(2)} Crores`,
+                    highlight: true,
+                  },
+                  {
+                    label: 'Computed Net Worth',
+                    value: `₹${to.netWorthInrCrores.toFixed(2)} Crores`,
+                  },
+                  {
+                    label: 'Profit After Tax (PAT)',
+                    value: to.profitAfterTaxCrores
+                      ? `₹${to.profitAfterTaxCrores.toFixed(2)} Crores`
+                      : 'N/A',
+                  },
+                  {
+                    label: 'ICAI CA UDIN',
+                    value: `${to.caUdin} ${to.isUdinValidated ? '(Validated)' : ''}`,
+                    isMono: true,
+                    highlight: true,
+                  },
+                  {
+                    label: 'Chartered Accountant Firm',
+                    value: `${to.caFirmName} (Mem #${to.caMembershipNo})`,
+                  },
                 ]}
               />
             ))}
 
-          <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-surface-text)', margin: '0.75rem 0 0' }}>
+          <h3
+            style={{
+              fontSize: 'var(--text-sm)',
+              fontWeight: 700,
+              color: 'var(--color-surface-text)',
+              margin: '0.75rem 0 0',
+            }}
+          >
             Bank Working Capital & Solvency Certificates
           </h3>
           {profile.solvencyRecords.map((solv) => (
@@ -358,7 +447,11 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
               expiryDate={solv.validUntil}
               onViewEvidence={(doc) => setSelectedDocPreview(doc)}
               fields={[
-                { label: 'Solvency Certificate Limit', value: `₹${solv.solvencyLimitInrCrores.toFixed(2)} Crores`, highlight: true },
+                {
+                  label: 'Solvency Certificate Limit',
+                  value: `₹${solv.solvencyLimitInrCrores.toFixed(2)} Crores`,
+                  highlight: true,
+                },
                 { label: 'Issuing Bank & Branch', value: solv.bankName },
                 { label: 'Account Reference', value: solv.accountNumberMasked, isMono: true },
                 { label: 'Sanction Date', value: solv.sanctionDate },
@@ -375,7 +468,12 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
           {profile.pastExperience
             .filter((e) => filterStatus === 'ALL' || e.status === filterStatus)
-            .filter((e) => !searchQuery || e.title.toLowerCase().includes(searchQuery.toLowerCase()) || e.clientName.toLowerCase().includes(searchQuery.toLowerCase()))
+            .filter(
+              (e) =>
+                !searchQuery ||
+                e.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                e.clientName.toLowerCase().includes(searchQuery.toLowerCase()),
+            )
             .map((exp) => (
               <CapabilityItemCard
                 key={exp.id}
@@ -383,7 +481,11 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                 typeBadge={exp.clientType}
                 onViewEvidence={(doc) => setSelectedDocPreview(doc)}
                 fields={[
-                  { label: 'Executed Contract Value', value: `₹${exp.contractValueInrCrores.toFixed(2)} Crores`, highlight: true },
+                  {
+                    label: 'Executed Contract Value',
+                    value: `₹${exp.contractValueInrCrores.toFixed(2)} Crores`,
+                    highlight: true,
+                  },
                   { label: 'Procuring Client', value: exp.clientName },
                   { label: 'Completion Date', value: exp.completionDate },
                   { label: 'State / Location', value: exp.locationState },
@@ -417,7 +519,11 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
               fields={[
                 { label: 'Project Name', value: proj.projectName, highlight: true },
                 { label: 'Client / Authority', value: proj.clientName },
-                { label: 'Contract Value', value: `₹${proj.contractValueInrCrores.toFixed(2)} Crores`, highlight: true },
+                {
+                  label: 'Contract Value',
+                  value: `₹${proj.contractValueInrCrores.toFixed(2)} Crores`,
+                  highlight: true,
+                },
                 { label: 'Execution Period', value: `${proj.startDate} to ${proj.endDate}` },
                 { label: 'Key Deliverables', value: proj.keyDeliverables },
               ]}
@@ -461,11 +567,18 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
               typeBadge={emp.role.replace('_', ' ')}
               onViewEvidence={(doc) => setSelectedDocPreview(doc)}
               fields={[
-                { label: 'Full Name & Designation', value: `${emp.name} — ${emp.designation}`, highlight: true },
+                {
+                  label: 'Full Name & Designation',
+                  value: `${emp.name} — ${emp.designation}`,
+                  highlight: true,
+                },
                 { label: 'Technical Qualification', value: emp.qualification },
                 { label: 'Experience in Sector', value: `${emp.experienceYears} Years` },
                 { label: 'EPFO UAN Reference', value: emp.epfoUan || 'N/A', isMono: true },
-                { label: 'Key Personnel Status', value: emp.isKeyPersonnel ? 'Designated Key Personnel' : 'Supporting Staff' },
+                {
+                  label: 'Key Personnel Status',
+                  value: emp.isKeyPersonnel ? 'Designated Key Personnel' : 'Supporting Staff',
+                },
               ]}
             />
           ))}
@@ -507,9 +620,16 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
               typeBadge={geo.facilityType.replace('_', ' ')}
               onViewEvidence={(doc) => setSelectedDocPreview(doc)}
               fields={[
-                { label: 'Facility Address', value: `${geo.address}, ${geo.city}, ${geo.state}`, highlight: true },
+                {
+                  label: 'Facility Address',
+                  value: `${geo.address}, ${geo.city}, ${geo.state}`,
+                  highlight: true,
+                },
                 { label: 'Committed SLA Response', value: `< ${geo.slaResponseHours} Hours` },
-                { label: 'Resident Staff Strength', value: `${geo.serviceStaffCount} Technical Personnel` },
+                {
+                  label: 'Resident Staff Strength',
+                  value: `${geo.serviceStaffCount} Technical Personnel`,
+                },
               ]}
             />
           ))}
@@ -536,29 +656,77 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
           >
             <Lock size={16} className="text-primary shrink-0" />
             <div>
-              <strong>Tamper-Proof Evidence Vault</strong>: All source documents are verified with SHA-256 cryptographic hashes and automatically attached to qualifying tender bids.
+              <strong>Tamper-Proof Evidence Vault</strong>: All source documents are verified with
+              SHA-256 cryptographic hashes and automatically attached to qualifying tender bids.
             </div>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {profile.evidenceVault.map((doc) => (
               <Card key={doc.id} padding="md">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '0.5rem',
+                  }}
+                >
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        marginBottom: '0.25rem',
+                      }}
+                    >
                       <FileText size={16} className="text-muted-foreground" />
-                      <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-surface-text)', fontFamily: 'var(--font-mono)' }}>
+                      <strong
+                        style={{
+                          fontSize: 'var(--text-sm)',
+                          color: 'var(--color-surface-text)',
+                          fontFamily: 'var(--font-mono)',
+                        }}
+                      >
                         {doc.fileName}
                       </strong>
                       <CapabilityStatusBadge status={doc.verificationStatus} size="sm" />
                     </div>
-                    <div style={{ display: 'flex', gap: '1.25rem', fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)', flexWrap: 'wrap' }}>
-                      <span>Type: <strong>{doc.docType}</strong></span>
-                      <span>Size: <strong>{(doc.fileSizeBytes / (1024 * 1024)).toFixed(2)} MB</strong></span>
-                      <span>Uploaded: <strong>{new Date(doc.uploadedAt).toLocaleDateString()}</strong></span>
-                      <span>Reused across: <strong style={{ color: 'var(--color-surface-text)' }}>{doc.linkedCapabilitiesCount} Capabilities</strong></span>
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: '1.25rem',
+                        fontSize: 'var(--text-2xs)',
+                        color: 'var(--color-surface-muted)',
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <span>
+                        Type: <strong>{doc.docType}</strong>
+                      </span>
+                      <span>
+                        Size: <strong>{(doc.fileSizeBytes / (1024 * 1024)).toFixed(2)} MB</strong>
+                      </span>
+                      <span>
+                        Uploaded: <strong>{new Date(doc.uploadedAt).toLocaleDateString()}</strong>
+                      </span>
+                      <span>
+                        Reused across:{' '}
+                        <strong style={{ color: 'var(--color-surface-text)' }}>
+                          {doc.linkedCapabilitiesCount} Capabilities
+                        </strong>
+                      </span>
                     </div>
-                    <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)', fontFamily: 'var(--font-mono)', marginTop: '0.35rem' }}>
+                    <div
+                      style={{
+                        fontSize: 'var(--text-2xs)',
+                        color: 'var(--color-surface-muted)',
+                        fontFamily: 'var(--font-mono)',
+                        marginTop: '0.35rem',
+                      }}
+                    >
                       SHA-256: {doc.sha256Hash}
                     </div>
                   </div>
@@ -604,9 +772,22 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                 fontSize: 'var(--text-xs)',
               }}
             >
-              <div><strong>File Name:</strong> <span style={{ fontFamily: 'var(--font-mono)' }}>{selectedDocPreview}</span></div>
-              <div><strong>Verification Tier:</strong> <span style={{ color: 'var(--status-pass-text)', fontWeight: 700 }}>VERIFIED (Original Scanned PDF)</span></div>
-              <div><strong>Cryptographic Hash:</strong> <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-2xs)' }}>e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</span></div>
+              <div>
+                <strong>File Name:</strong>{' '}
+                <span style={{ fontFamily: 'var(--font-mono)' }}>{selectedDocPreview}</span>
+              </div>
+              <div>
+                <strong>Verification Tier:</strong>{' '}
+                <span style={{ color: 'var(--status-pass-text)', fontWeight: 700 }}>
+                  VERIFIED (Original Scanned PDF)
+                </span>
+              </div>
+              <div>
+                <strong>Cryptographic Hash:</strong>{' '}
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-2xs)' }}>
+                  e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+                </span>
+              </div>
             </div>
 
             {/* Document Viewer Mock Canvas */}
@@ -654,13 +835,35 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
           }
         >
           {addSuccess ? (
-            <div style={{ color: 'var(--color-success)', textAlign: 'center', padding: '1.5rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+            <div
+              style={{
+                color: 'var(--color-success)',
+                textAlign: 'center',
+                padding: '1.5rem',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+              }}
+            >
               <CheckCircle2 size={18} /> Capability added to persistent dossier!
             </div>
           ) : (
-            <form onSubmit={handleAddSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <form
+              onSubmit={handleAddSubmit}
+              style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
+            >
               <div>
-                <label style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-surface-text)', display: 'block', marginBottom: '0.35rem' }}>
+                <label
+                  style={{
+                    fontSize: 'var(--text-xs)',
+                    fontWeight: 600,
+                    color: 'var(--color-surface-text)',
+                    display: 'block',
+                    marginBottom: '0.35rem',
+                  }}
+                >
                   Capability Title / Description *
                 </label>
                 <input
@@ -683,7 +886,15 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
               </div>
 
               <div>
-                <label style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-surface-text)', display: 'block', marginBottom: '0.35rem' }}>
+                <label
+                  style={{
+                    fontSize: 'var(--text-xs)',
+                    fontWeight: 600,
+                    color: 'var(--color-surface-text)',
+                    display: 'block',
+                    marginBottom: '0.35rem',
+                  }}
+                >
                   CA UDIN / Certificate Number (If applicable)
                 </label>
                 <input
@@ -706,7 +917,15 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
               </div>
 
               <div>
-                <label style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-surface-text)', display: 'block', marginBottom: '0.35rem' }}>
+                <label
+                  style={{
+                    fontSize: 'var(--text-xs)',
+                    fontWeight: 600,
+                    color: 'var(--color-surface-text)',
+                    display: 'block',
+                    marginBottom: '0.35rem',
+                  }}
+                >
                   Evidence Document Name / Upload *
                 </label>
                 <input

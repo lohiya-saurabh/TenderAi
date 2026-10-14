@@ -3,15 +3,7 @@
  *
  * All endpoints enforce TenantContextHolder isolation and anti-IDOR checks.
  */
-import {
-  Controller,
-  Get,
-  Post,
-  Param,
-  Query,
-  Body,
-  HttpCode,
-} from '@nestjs/common';
+import { Controller, Get, Post, Param, Query, Body, HttpCode } from '@nestjs/common';
 import { CompaniesService, type CreateCompanyDto } from './companies.service.js';
 import { RequirePermission } from '../../common/security/decorators/permissions.decorator.js';
 import { Permissions } from '../../common/security/permissions.js';
@@ -57,11 +49,7 @@ export class CompaniesController {
     if (!body.payload) {
       throw new BadRequestError('Request body must include a "payload" object.');
     }
-    return this.companiesService.createCompanyProfileVersion(
-      id,
-      body.name ?? '',
-      body.payload,
-    );
+    return this.companiesService.createCompanyProfileVersion(id, body.name ?? '', body.payload);
   }
 
   @Get(':id/expiring-certificates')

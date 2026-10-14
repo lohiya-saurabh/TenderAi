@@ -89,7 +89,7 @@ async function wipeCloudS3() {
           Bucket: bucket,
           ContinuationToken: continuationToken,
           MaxKeys: 1000,
-        })
+        }),
       );
 
       const contents = listRes.Contents || [];
@@ -99,7 +99,7 @@ async function wipeCloudS3() {
           new DeleteObjectsCommand({
             Bucket: bucket,
             Delete: { Objects: objectsToDelete },
-          })
+          }),
         );
         totalDeleted += contents.length;
         contents.forEach((c) => console.log(`   - Deleted S3 Object: ${c.Key}`));
@@ -108,7 +108,9 @@ async function wipeCloudS3() {
       continuationToken = listRes.NextContinuationToken;
     } while (continuationToken);
 
-    console.log(`   ✅ Cloud S3 wipe complete: Deleted ${totalDeleted} objects from bucket '${bucket}'.`);
+    console.log(
+      `   ✅ Cloud S3 wipe complete: Deleted ${totalDeleted} objects from bucket '${bucket}'.`,
+    );
   } catch (err) {
     console.error('   ❌ Cloud S3 wipe error:', err.message);
   }
@@ -164,7 +166,9 @@ async function main() {
     await wipeCloudSQS();
 
     console.log('\n==============================================================');
-    console.log('✨ Full wipe finished successfully! Environment is ready for clean happy-path testing.');
+    console.log(
+      '✨ Full wipe finished successfully! Environment is ready for clean happy-path testing.',
+    );
     console.log('==============================================================\n');
   } catch (err) {
     console.error('\n❌ Fatal wipe failure:', err);
