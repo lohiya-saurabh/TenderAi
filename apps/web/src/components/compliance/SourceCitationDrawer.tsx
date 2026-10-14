@@ -22,7 +22,9 @@ export const SourceCitationDrawer: React.FC<SourceCitationDrawerProps> = ({
   onClose,
 }) => {
   const [copied, setCopied] = useState(false);
-  const confidencePercent = Math.round(((citation?.confidenceScore ?? provenance?.confidenceScore) || 0) * 100);
+  const confidencePercent = Math.round(
+    ((citation?.confidenceScore ?? provenance?.confidenceScore) || 0) * 100,
+  );
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -60,8 +62,9 @@ export const SourceCitationDrawer: React.FC<SourceCitationDrawerProps> = ({
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: '0.75rem 1rem',
-            backgroundColor: confidencePercent >= 85 ? 'rgba(16, 185, 129, 0.08)' : 'rgba(245, 158, 11, 0.08)',
-            border: `1px solid ${confidencePercent >= 85 ? 'rgba(16, 185, 129, 0.25)' : 'rgba(245, 158, 11, 0.25)'}`,
+            backgroundColor:
+              confidencePercent >= 85 ? 'var(--status-pass-bg)' : 'rgba(234, 88, 12, 0.08)',
+            border: `1px solid ${confidencePercent >= 85 ? 'var(--status-pass-border)' : 'rgba(234, 88, 12, 0.25)'}`,
             borderRadius: 'var(--radius-md)',
           }}
         >
@@ -71,12 +74,18 @@ export const SourceCitationDrawer: React.FC<SourceCitationDrawerProps> = ({
                 fontSize: 'var(--text-sm)',
                 fontWeight: 700,
                 fontFamily: 'var(--font-mono)',
-                color: confidencePercent >= 85 ? 'var(--color-success)' : 'var(--color-warning)',
+                color: confidencePercent >= 85 ? 'var(--status-pass-text)' : '#ea580c',
               }}
             >
               {confidencePercent}%
             </span>
-            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-text)', fontWeight: 500 }}>
+            <span
+              style={{
+                fontSize: 'var(--text-xs)',
+                color: 'var(--color-surface-text)',
+                fontWeight: 500,
+              }}
+            >
               AI Grounding Confidence
             </span>
           </div>
@@ -87,12 +96,34 @@ export const SourceCitationDrawer: React.FC<SourceCitationDrawerProps> = ({
 
         {/* Source Coordinates */}
         <Card padding="md">
-          <h5 style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--font-semibold)' as unknown as number, color: 'var(--color-surface-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.75rem' }}>
+          <h5
+            style={{
+              fontSize: 'var(--text-xs)',
+              fontWeight: 'var(--font-semibold)' as unknown as number,
+              color: 'var(--color-surface-muted)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              margin: '0 0 0.75rem',
+            }}
+          >
             Tender Source Location
           </h5>
-          <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '0.75rem 1rem', fontSize: 'var(--text-sm)' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '120px 1fr',
+              gap: '0.75rem 1rem',
+              fontSize: 'var(--text-sm)',
+            }}
+          >
             <span style={{ color: 'var(--color-surface-muted)' }}>Document:</span>
-            <span style={{ color: 'var(--color-surface-text)', fontWeight: 600, wordBreak: 'break-word' }}>
+            <span
+              style={{
+                color: 'var(--color-surface-text)',
+                fontWeight: 600,
+                wordBreak: 'break-word',
+              }}
+            >
               {documentTitle}
             </span>
 
@@ -102,14 +133,26 @@ export const SourceCitationDrawer: React.FC<SourceCitationDrawerProps> = ({
             </span>
 
             <span style={{ color: 'var(--color-surface-muted)' }}>Section / Clause:</span>
-            <span style={{ color: 'var(--color-primary-400)', fontWeight: 500, fontFamily: 'var(--font-mono)' }}>
+            <span
+              style={{
+                color: 'var(--color-primary-400)',
+                fontWeight: 500,
+                fontFamily: 'var(--font-mono)',
+              }}
+            >
               {sectionName}
             </span>
 
             {provenance.documentId && (
               <>
                 <span style={{ color: 'var(--color-surface-muted)' }}>Doc Reference ID:</span>
-                <span style={{ color: 'var(--color-surface-subtle)', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>
+                <span
+                  style={{
+                    color: 'var(--color-surface-subtle)',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 'var(--text-xs)',
+                  }}
+                >
                   {provenance.documentId}
                 </span>
               </>
@@ -119,15 +162,37 @@ export const SourceCitationDrawer: React.FC<SourceCitationDrawerProps> = ({
 
         {/* Verbatim Quote Card */}
         <Card padding="md">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-            <h5 style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--font-semibold)' as unknown as number, color: 'var(--color-surface-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '0.75rem',
+            }}
+          >
+            <h5
+              style={{
+                fontSize: 'var(--text-xs)',
+                fontWeight: 'var(--font-semibold)' as unknown as number,
+                color: 'var(--color-surface-muted)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                margin: 0,
+              }}
+            >
               Verbatim Tender Clause
             </h5>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => copyToClipboard(quoteText)}
-              icon={copied ? <CheckIcon size={14} color="var(--color-success)" /> : <CopyIcon size={14} />}
+              icon={
+                copied ? (
+                  <CheckIcon size={14} color="var(--color-success)" />
+                ) : (
+                  <CopyIcon size={14} />
+                )
+              }
             >
               {copied ? 'Copied' : 'Copy Text'}
             </Button>
@@ -153,11 +218,27 @@ export const SourceCitationDrawer: React.FC<SourceCitationDrawerProps> = ({
 
         {/* Grounding Explanation */}
         <Card padding="md" variant="subtle">
-          <h5 style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--font-semibold)' as unknown as number, color: 'var(--color-surface-text)', margin: '0 0 0.5rem' }}>
+          <h5
+            style={{
+              fontSize: 'var(--text-xs)',
+              fontWeight: 'var(--font-semibold)' as unknown as number,
+              color: 'var(--color-surface-text)',
+              margin: '0 0 0.5rem',
+            }}
+          >
             Clause Traceability & Integrity
           </h5>
-          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)', lineHeight: 1.6, margin: 0 }}>
-            This verbatim quote is extracted directly from the parsed tender document. It provides mathematical citation integrity for legal review, qualification checklists, and pre-bid clarification letters.
+          <p
+            style={{
+              fontSize: 'var(--text-xs)',
+              color: 'var(--color-surface-muted)',
+              lineHeight: 1.6,
+              margin: 0,
+            }}
+          >
+            This verbatim quote is extracted directly from the parsed tender document. It provides
+            mathematical citation integrity for legal review, qualification checklists, and pre-bid
+            clarification letters.
           </p>
         </Card>
       </div>

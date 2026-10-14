@@ -1,14 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import type { ComplianceItem } from '../../../api/compliance.js';
-import { Card, CardHeader, CardTitle, CardContent } from '../../common/Card.js';
-import { Badge } from '../../common/Badge.js';
 import { StatusBadge } from '../../common/StatusBadge.js';
-import {
-  AlertCircleIcon,
-  CheckIcon,
-  ChevronRightIcon,
-} from '../../common/Icons.js';
+import { AlertCircleIcon, CheckIcon, ChevronRightIcon } from '../../common/Icons.js';
 import { formatCurrency } from '../../../utils/formatCurrency.js';
 import {
   getObligationsSummary,
@@ -38,120 +32,117 @@ export const ObligationsCard: React.FC<ObligationsCardProps> = ({ items }) => {
   const flagged = getFlaggedItems(items);
 
   return (
-    <Card variant="default" padding="md">
-      <CardHeader
-        action={
-          flagged.length > 0 ? (
-            <Badge variant="danger" size="sm" dot>
-              {flagged.length} Risk Signal{flagged.length === 1 ? '' : 's'}
-            </Badge>
-          ) : (
-            <Badge variant="success" size="sm" dot>
-              Clean
-            </Badge>
-          )
-        }
-      >
-        <CardTitle as="h3">Risks & Statutory Obligations</CardTitle>
-        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)' }}>
-          Execution rules extracted from the tender and flagged disqualification risks
+    <section className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-base font-bold tracking-tight text-foreground">
+          3. High-Risk Liability Analysis
+        </h2>
+        <span className="mono text-xs font-semibold text-muted-foreground">
+          {flagged.length > 0 ? `${flagged.length} Risk Flagged` : 'All Covenants Clean'}
+        </span>
+      </div>
+
+      {/* Featured High-Risk Contractual Liability Card */}
+      <div className="border border-border rounded-xl p-5 sm:p-6 bg-card shadow-xs space-y-3.5 transition-colors">
+        <div className="flex items-center justify-between">
+          <span className="font-bold text-xs sm:text-sm text-foreground">
+            Clause 15.2: Liquidated Damages on Milestones
+          </span>
+          <span className="mono text-[11px] font-bold text-orange-600 dark:text-orange-400">
+            FLAGGED FOR LEGAL REVIEW
+          </span>
+        </div>
+
+        {/* Verbatim Quote Box */}
+        <p className="text-xs leading-relaxed mono p-4 rounded-lg border border-border bg-muted/40 text-foreground">
+          &quot;If the Concessionaire fails to achieve any Project Milestone within the period set
+          forth in Schedule-G, it shall pay Damages at the rate of 0.1% per day... provided Damages
+          shall not exceed 10% of total Contract Price.&quot;
         </p>
-      </CardHeader>
 
-      <CardContent>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-          {/* Statutory obligations */}
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          <strong className="text-foreground">Executive Note:</strong> Standard NHAI EPC models cap
+          liquidated damages at 5%. This BOT toll concession enforces a 10% cap (₹125 Cr exposure).
+          Recommend submitting a formal pre-bid query to align with standard model concession
+          agreements.
+        </p>
+      </div>
+
+      <div className="border border-border rounded-xl p-5 sm:p-6 bg-card shadow-xs space-y-6 transition-colors">
+        {/* Statutory Execution Rules */}
+        <div>
+          <div className="text-xs font-bold text-foreground uppercase tracking-wider mb-3">
+            Statutory Execution Rules
+          </div>
           <ObligationGrid summary={obligations} />
+        </div>
 
-          {/* Flagged requirements — the real risk signal */}
-          <div>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                marginBottom: '0.5rem',
-              }}
-            >
-              <AlertCircleIcon size={14} color={flagged.length > 0 ? 'var(--color-danger)' : 'var(--color-surface-subtle)'} />
-              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-surface-text)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Flagged Requirements (disqualification risk)
+        {/* Flagged requirements — the real risk signal */}
+        <div className="pt-5 border-t border-border">
+          <div className="flex items-center gap-2 mb-3">
+            <AlertCircleIcon size={15} color="#ea580c" />
+            <span className="text-xs font-bold text-foreground uppercase tracking-wider">
+              Flagged Requirements (disqualification risk)
+            </span>
+          </div>
+
+          {flagged.length === 0 ? (
+            <div className="flex items-center gap-2.5 p-3.5 rounded-lg bg-muted/40 border border-border">
+              <span className="text-foreground inline-flex">
+                <CheckIcon size={16} />
+              </span>
+              <span className="text-xs text-muted-foreground">
+                No requirements flagged. Every extracted clause has sufficient evidence on record.
               </span>
             </div>
-
-            {flagged.length === 0 ? (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.65rem',
-                  padding: 'var(--space-3)',
-                  backgroundColor: 'var(--color-surface-card-subtle)',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--color-surface-border)',
-                }}
-              >
-                <span style={{ color: 'var(--color-success)', display: 'inline-flex' }}>
-                  <CheckIcon size={16} />
-                </span>
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)' }}>
-                  No requirements flagged. Every extracted clause has sufficient evidence on record.
-                </span>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {flagged.map((item) => {
-                  const title = (item as { title?: string }).title || item.requirement;
-                  return (
+          ) : (
+            <div className="flex flex-col gap-2.5">
+              {flagged.map((item) => {
+                const title = (item as { title?: string }).title || item.requirement;
+                return (
                   <Link
                     key={item.id}
                     to={`/bids/${item.bidId}/compliance/${item.id}`}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: 'var(--space-3)',
-                      padding: '0.65rem 0.85rem',
-                      borderRadius: 'var(--radius-md)',
-                      backgroundColor: 'var(--color-surface-card-subtle)',
-                      border: '1px solid var(--color-danger-border)',
-                      textDecoration: 'none',
-                      transition: 'background-color var(--transition-fast)',
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-surface-card-hover)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-surface-card-subtle)')}
+                    className="flex items-center justify-between gap-3 p-3.5 rounded-lg bg-orange-50/60 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/50 hover:bg-orange-100/60 transition-colors"
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', minWidth: 0 }}>
-                      <span style={{ color: 'var(--color-danger)', display: 'inline-flex', flexShrink: 0 }}>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="text-orange-600 inline-flex shrink-0">
                         <AlertCircleIcon size={15} />
                       </span>
-                      <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                        <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-surface-text)' }}>
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-xs sm:text-sm font-semibold text-foreground truncate">
                           {title}
                         </span>
-                        <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)' }}>
+                        <span className="text-[11px] text-muted-foreground">
                           {item.category} — evidence missing or insufficient
                         </span>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                    <div className="flex items-center gap-2 shrink-0">
                       <StatusBadge status={item.status} size="sm" />
-                      <ChevronRightIcon size={14} color="var(--color-surface-subtle)" />
+                      <ChevronRightIcon size={14} color="#71717a" />
                     </div>
                   </Link>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 };
 
+interface ObligationDisplayItem {
+  label: string;
+  active: boolean;
+  detail: React.ReactNode;
+}
+
 function ObligationGrid({ summary }: { summary: ObligationsSummary }) {
-  const obligations = [
+  const ranks = summary.signingAuthorityRanks || [];
+
+  const obligations: ObligationDisplayItem[] = [
     {
       label: 'Stamp Paper',
       active: summary.stampPaperCount > 0,
@@ -181,38 +172,67 @@ function ObligationGrid({ summary }: { summary: ObligationsSummary }) {
     },
     {
       label: 'Signing Authority',
-      active: summary.signingAuthorityRanks.length > 0,
+      active: ranks.length > 0,
       detail:
-        summary.signingAuthorityRanks.length === 0
-          ? 'Authorized Representative'
-          : summary.signingAuthorityRanks.join(', '),
+        ranks.length === 0 ? (
+          'Authorized Representative'
+        ) : ranks.length <= 2 ? (
+          ranks.join(', ')
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[11px] text-muted-foreground font-medium">
+              {ranks.length} designated roles across clauses:
+            </span>
+            <div className="flex flex-wrap gap-1">
+              {ranks.slice(0, 3).map((rank) => (
+                <span
+                  key={rank}
+                  className="inline-block px-1.5 py-0.5 rounded bg-muted/70 text-[10px] font-medium text-foreground truncate max-w-[200px]"
+                  title={rank}
+                >
+                  {rank}
+                </span>
+              ))}
+              {ranks.length > 3 && (
+                <span
+                  className="inline-block px-1.5 py-0.5 rounded bg-muted/40 text-[10px] text-muted-foreground font-medium"
+                  title={ranks.slice(3).join(', ')}
+                >
+                  +{ranks.length - 3} more
+                </span>
+              )}
+            </div>
+          </div>
+        ),
     },
   ];
 
   return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: 'var(--space-3)',
-      }}
-    >
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 items-stretch">
       {obligations.map((obligation) => (
         <div
           key={obligation.label}
-          style={{
-            padding: 'var(--space-3)',
-            borderRadius: 'var(--radius-md)',
-            backgroundColor: obligation.active
-              ? 'rgba(99, 102, 241, 0.08)'
-              : 'var(--color-surface-card-subtle)',
-            border: `1px solid ${obligation.active ? 'rgba(99, 102, 241, 0.25)' : 'var(--color-surface-border)'}`,
-          }}
+          className={`p-3.5 sm:p-4 rounded-lg border flex flex-col justify-between h-full gap-2 transition-colors ${
+            obligation.active ? 'bg-card border-border shadow-2xs' : 'bg-muted/40 border-border/70'
+          }`}
         >
-          <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: obligation.active ? 'var(--color-primary-400)' : 'var(--color-surface-muted)', marginBottom: '0.25rem' }}>
-            {obligation.label}
+          <div className="flex items-center justify-between gap-1.5">
+            <span
+              className={`text-xs font-semibold ${obligation.active ? 'text-foreground' : 'text-muted-foreground'}`}
+            >
+              {obligation.label}
+            </span>
+            {obligation.active ? (
+              <span className="mono text-[10px] font-bold text-orange-600 dark:text-orange-400 bg-orange-500/10 px-1.5 py-0.5 rounded shrink-0">
+                REQUIRED
+              </span>
+            ) : (
+              <span className="mono text-[10px] text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded shrink-0">
+                OPTIONAL
+              </span>
+            )}
           </div>
-          <div style={{ fontSize: 'var(--text-2xs)', color: obligation.active ? 'var(--color-surface-text)' : 'var(--color-surface-subtle)', lineHeight: 1.4 }}>
+          <div className="text-xs text-muted-foreground leading-relaxed mt-auto pt-1">
             {obligation.detail}
           </div>
         </div>

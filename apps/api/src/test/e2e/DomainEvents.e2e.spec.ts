@@ -57,7 +57,7 @@ describe('E2E: Domain Events Architecture & Event-Driven Decoupling', () => {
       documentRepo,
       storageService,
       auditRepo,
-      unitOfWork
+      unitOfWork,
     );
     confirmUploadUseCase = new ConfirmDocumentUploadUseCase(
       bidRepo,
@@ -67,13 +67,13 @@ describe('E2E: Domain Events Architecture & Event-Driven Decoupling', () => {
       unitOfWork,
       jobRepo,
       jobQueue,
-      eventBus
+      eventBus,
     );
     reviewComplianceItemUseCase = new ReviewComplianceItemUseCase(
       complianceRepo,
       auditRepo,
       unitOfWork,
-      eventBus
+      eventBus,
     );
     worker = new IngestionWorker(
       jobQueue,
@@ -86,7 +86,7 @@ describe('E2E: Domain Events Architecture & Event-Driven Decoupling', () => {
       undefined,
       300,
       'worker-ingestion-1',
-      eventBus
+      eventBus,
     );
   });
 
@@ -108,7 +108,7 @@ describe('E2E: Domain Events Architecture & Event-Driven Decoupling', () => {
           estimatedValueRupees: 95000000,
           submissionDeadline: new Date(Date.now() + 86400000 * 30),
         });
-      }
+      },
     );
 
     expect(receivedEvents).toHaveLength(1);
@@ -132,7 +132,7 @@ describe('E2E: Domain Events Architecture & Event-Driven Decoupling', () => {
       TenderDocumentUploadedEvent.EVENT_TYPE,
       async (event) => {
         receivedEvents.push(event);
-      }
+      },
     );
 
     await TenantContextHolder.run(
@@ -167,7 +167,7 @@ describe('E2E: Domain Events Architecture & Event-Driven Decoupling', () => {
           bidId: bid.id,
           documentId: uploadSession.documentId,
         });
-      }
+      },
     );
 
     expect(receivedEvents).toHaveLength(1);
@@ -193,7 +193,7 @@ describe('E2E: Domain Events Architecture & Event-Driven Decoupling', () => {
       ComplianceIngestionCompletedEvent.EVENT_TYPE,
       async (event) => {
         receivedEvents.push(event);
-      }
+      },
     );
 
     let bidId = '';
@@ -233,7 +233,7 @@ describe('E2E: Domain Events Architecture & Event-Driven Decoupling', () => {
           documentId: uploadSession.documentId,
         });
         jobId = confirmResult.jobId;
-      }
+      },
     );
 
     // Worker polls SQS and processes the document
@@ -262,7 +262,7 @@ describe('E2E: Domain Events Architecture & Event-Driven Decoupling', () => {
       ComplianceItemReviewedEvent.EVENT_TYPE,
       async (event) => {
         receivedEvents.push(event);
-      }
+      },
     );
 
     let bidId = '';
@@ -300,7 +300,7 @@ describe('E2E: Domain Events Architecture & Event-Driven Decoupling', () => {
           bidId: bid.id,
           documentId: uploadSession.documentId,
         });
-      }
+      },
     );
 
     // Ingest compliance items
@@ -356,14 +356,14 @@ describe('E2E: Domain Events Architecture & Event-Driven Decoupling', () => {
           estimatedValueRupees: 20000000,
           submissionDeadline: new Date(Date.now() + 86400000 * 30),
         });
-      }
+      },
     );
 
     expect(executionCount).toBe(1);
 
     // Simulate event bus at-least-once redelivery of the EXACT same event
     const publishedEvents = eventBus.getEventsByType<BidProjectCreatedEvent>(
-      BidProjectCreatedEvent.EVENT_TYPE
+      BidProjectCreatedEvent.EVENT_TYPE,
     );
     expect(publishedEvents).toHaveLength(1);
 
@@ -400,7 +400,7 @@ describe('E2E: Domain Events Architecture & Event-Driven Decoupling', () => {
           estimatedValueRupees: 30000000,
           submissionDeadline: new Date(Date.now() + 86400000 * 30),
         });
-      }
+      },
     );
 
     // Healthy subscriber still executed despite the other subscriber failing

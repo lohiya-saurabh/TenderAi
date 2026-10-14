@@ -84,7 +84,9 @@ export const Tabs: React.FC<TabsProps> = ({
             return {
               backgroundColor: 'transparent',
               color: isActive ? 'var(--color-primary-400)' : 'var(--color-surface-muted)',
-              borderBottom: isActive ? '2px solid var(--color-primary-500)' : '2px solid transparent',
+              borderBottom: isActive
+                ? '2px solid var(--color-primary-500)'
+                : '2px solid transparent',
               marginBottom: '-1px',
               borderRadius: '0',
               padding: size === 'sm' ? '0.4rem 0.75rem' : '0.65rem 1rem',

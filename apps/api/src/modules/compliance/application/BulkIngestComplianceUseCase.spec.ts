@@ -139,7 +139,7 @@ describe('BulkIngestComplianceUseCase', () => {
             },
           },
         ],
-      })
+      }),
     ).rejects.toThrow(EntityNotFoundException);
   });
 
@@ -169,7 +169,7 @@ describe('BulkIngestComplianceUseCase', () => {
             },
           },
         ],
-      })
+      }),
     ).rejects.toThrow(InvalidProvenanceException);
   });
 });

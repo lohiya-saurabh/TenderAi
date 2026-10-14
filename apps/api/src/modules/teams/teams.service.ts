@@ -6,7 +6,11 @@ import { PGlite } from '@electric-sql/pglite';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcrypt';
 import { Optional } from '@nestjs/common';
-import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '../../common/database/database.module.js';
+import {
+  DRIZZLE_TOKEN,
+  type DrizzleDb,
+  createDrizzle,
+} from '../../common/database/database.module.js';
 import * as schema from '../../common/database/schema.js';
 import { BadRequestError } from '../../common/errors/errors.js';
 import { TenantContextHolder } from '../../common/security/TenantContext.js';
@@ -36,7 +40,9 @@ export class TeamsService {
 
   constructor(
     @Inject(DRIZZLE_TOKEN) db: DrizzleDb | PGlite,
-    @Optional() @Inject(EntitlementService) private readonly entitlementService?: EntitlementService,
+    @Optional()
+    @Inject(EntitlementService)
+    private readonly entitlementService?: EntitlementService,
   ) {
     this.db = 'select' in db ? (db as DrizzleDb) : createDrizzle(db as PGlite);
   }

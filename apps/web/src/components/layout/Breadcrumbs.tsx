@@ -74,7 +74,10 @@ export const Breadcrumbs: React.FC = () => {
           return (
             <li key={idx} className="inline-flex items-center gap-1.5">
               {idx > 0 && (
-                <ChevronRight className="h-3 w-3 text-muted-foreground/60 shrink-0" aria-hidden="true" />
+                <ChevronRight
+                  className="h-3 w-3 text-muted-foreground/60 shrink-0"
+                  aria-hidden="true"
+                />
               )}
               {isLast || !crumb.to ? (
                 <span
@@ -84,10 +87,7 @@ export const Breadcrumbs: React.FC = () => {
                   {crumb.label}
                 </span>
               ) : (
-                <Link
-                  to={crumb.to}
-                  className="hover:text-foreground transition-colors font-medium"
-                >
+                <Link to={crumb.to} className="hover:text-foreground transition-colors font-medium">
                   {crumb.label}
                 </Link>
               )}

@@ -59,23 +59,32 @@ export const MissingIcon: React.FC<IconProps> = ({ size = 16, color, className, 
 );
 
 /** REVIEW_REQUIRED: Lucide Clock */
-export const ReviewRequiredIcon: React.FC<IconProps> = ({ size = 16, color, className, ...props }) => (
-  <Clock size={size} color={color} className={className} aria-hidden="true" {...props} />
-);
+export const ReviewRequiredIcon: React.FC<IconProps> = ({
+  size = 16,
+  color,
+  className,
+  ...props
+}) => <Clock size={size} color={color} className={className} aria-hidden="true" {...props} />;
 
 /** NOT_APPLICABLE: Lucide Ban */
-export const NotApplicableIcon: React.FC<IconProps> = ({ size = 16, color, className, ...props }) => (
-  <Ban size={size} color={color} className={className} aria-hidden="true" {...props} />
-);
+export const NotApplicableIcon: React.FC<IconProps> = ({
+  size = 16,
+  color,
+  className,
+  ...props
+}) => <Ban size={size} color={color} className={className} aria-hidden="true" {...props} />;
 
 // -------------------------------------------------------------
 // Semantic Risk Level Icons (Lucide-based)
 // -------------------------------------------------------------
 
 /** CRITICAL RISK: Lucide ShieldAlert */
-export const CriticalRiskIcon: React.FC<IconProps> = ({ size = 16, color, className, ...props }) => (
-  <ShieldAlert size={size} color={color} className={className} aria-hidden="true" {...props} />
-);
+export const CriticalRiskIcon: React.FC<IconProps> = ({
+  size = 16,
+  color,
+  className,
+  ...props
+}) => <ShieldAlert size={size} color={color} className={className} aria-hidden="true" {...props} />;
 
 /** HIGH RISK: Lucide TriangleAlert */
 export const HighRiskIcon: React.FC<IconProps> = ({ size = 16, color, className, ...props }) => (
@@ -96,7 +105,12 @@ export const LowRiskIcon: React.FC<IconProps> = ({ size = 16, color, className, 
 // Common Navigation & UI Control Icons (Lucide-based)
 // -------------------------------------------------------------
 
-export const ChevronRightIcon: React.FC<IconProps> = ({ size = 16, color, className, ...props }) => (
+export const ChevronRightIcon: React.FC<IconProps> = ({
+  size = 16,
+  color,
+  className,
+  ...props
+}) => (
   <ChevronRight size={size} color={color} className={className} aria-hidden="true" {...props} />
 );
 
@@ -150,12 +164,28 @@ export const CopyIcon: React.FC<IconProps> = ({ size = 16, color, className, ...
   <Copy size={size} color={color} className={className} aria-hidden="true" {...props} />
 );
 
-export const ExternalLinkIcon: React.FC<IconProps> = ({ size = 16, color, className, ...props }) => (
+export const ExternalLinkIcon: React.FC<IconProps> = ({
+  size = 16,
+  color,
+  className,
+  ...props
+}) => (
   <ExternalLink size={size} color={color} className={className} aria-hidden="true" {...props} />
 );
 
-export const SpinnerIcon: React.FC<IconProps> = ({ size = 16, color, className = '', ...props }) => (
-  <Loader2 size={size} color={color} className={`animate-spin ${className}`} aria-hidden="true" {...props} />
+export const SpinnerIcon: React.FC<IconProps> = ({
+  size = 16,
+  color,
+  className = '',
+  ...props
+}) => (
+  <Loader2
+    size={size}
+    color={color}
+    className={`animate-spin ${className}`}
+    aria-hidden="true"
+    {...props}
+  />
 );
 
 export const MenuIcon: React.FC<IconProps> = ({ size = 20, color, className, ...props }) => (
@@ -170,9 +200,12 @@ export const PlusCircleIcon: React.FC<IconProps> = ({ size = 18, color, classNam
   <PlusCircle size={size} color={color} className={className} aria-hidden="true" {...props} />
 );
 
-export const BuildingOfficeIcon: React.FC<IconProps> = ({ size = 18, color, className, ...props }) => (
-  <Building2 size={size} color={color} className={className} aria-hidden="true" {...props} />
-);
+export const BuildingOfficeIcon: React.FC<IconProps> = ({
+  size = 18,
+  color,
+  className,
+  ...props
+}) => <Building2 size={size} color={color} className={className} aria-hidden="true" {...props} />;
 
 export const UserIcon: React.FC<IconProps> = ({ size = 18, color, className, ...props }) => (
   <User size={size} color={color} className={className} aria-hidden="true" {...props} />
@@ -182,11 +215,21 @@ export const LogoutIcon: React.FC<IconProps> = ({ size = 18, color, className, .
   <LogOut size={size} color={color} className={className} aria-hidden="true" {...props} />
 );
 
-export const SidebarCollapseIcon: React.FC<IconProps> = ({ size = 18, color, className, ...props }) => (
+export const SidebarCollapseIcon: React.FC<IconProps> = ({
+  size = 18,
+  color,
+  className,
+  ...props
+}) => (
   <PanelLeftClose size={size} color={color} className={className} aria-hidden="true" {...props} />
 );
 
-export const SidebarExpandIcon: React.FC<IconProps> = ({ size = 18, color, className, ...props }) => (
+export const SidebarExpandIcon: React.FC<IconProps> = ({
+  size = 18,
+  color,
+  className,
+  ...props
+}) => (
   <PanelLeftOpen size={size} color={color} className={className} aria-hidden="true" {...props} />
 );
 

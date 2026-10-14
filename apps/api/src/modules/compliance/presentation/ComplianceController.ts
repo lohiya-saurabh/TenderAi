@@ -14,7 +14,7 @@ import {
 export class ComplianceController {
   constructor(
     private readonly listComplianceItemsUseCase: ListComplianceItemsUseCase,
-    private readonly reviewComplianceItemUseCase: ReviewComplianceItemUseCase
+    private readonly reviewComplianceItemUseCase: ReviewComplianceItemUseCase,
   ) {}
 
   public async listItems(organizationId: string, bidId: string): Promise<ComplianceItemViewDto[]> {
@@ -29,7 +29,7 @@ export class ComplianceController {
     userId: string,
     bidId: string,
     itemId: string,
-    rawPayload: UpdateComplianceItemPayload
+    rawPayload: UpdateComplianceItemPayload,
   ): Promise<ReviewComplianceItemResult> {
     const dto = new UpdateComplianceItemDto(rawPayload);
 

@@ -19,7 +19,7 @@ export class BidProjectCreatedEvent extends DomainEvent<BidProjectCreatedPayload
     payload: BidProjectCreatedPayload,
     version = 1,
     eventId?: string,
-    occurredAt?: Date
+    occurredAt?: Date,
   ) {
     super(
       BidProjectCreatedEvent.EVENT_TYPE,
@@ -29,7 +29,7 @@ export class BidProjectCreatedEvent extends DomainEvent<BidProjectCreatedPayload
       payload,
       version,
       eventId,
-      occurredAt
+      occurredAt,
     );
   }
 }

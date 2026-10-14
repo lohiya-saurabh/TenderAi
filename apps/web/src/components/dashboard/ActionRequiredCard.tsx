@@ -14,11 +14,7 @@ import {
   ReviewRequiredIcon,
   MissingIcon,
 } from '../common/Icons.js';
-import {
-  buildActionItems,
-  type ActionItem,
-  type ActionItemType,
-} from './dashboardData.js';
+import { buildActionItems, type ActionItem, type ActionItemType } from './dashboardData.js';
 import { cn } from '../../lib/utils.js';
 
 export interface ActionRequiredCardProps {
@@ -29,9 +25,12 @@ export interface ActionRequiredCardProps {
 
 const MAX_VISIBLE_ITEMS = 5;
 
-const CATEGORY_BADGE_VARIANT: Record<ComplianceItem['category'], 'info' | 'default' | 'warning' | 'destructive' | 'secondary'> = {
-  FINANCIAL: 'info',
-  TECHNICAL: 'default',
+const CATEGORY_BADGE_VARIANT: Record<
+  ComplianceItem['category'],
+  'info' | 'default' | 'warning' | 'destructive' | 'secondary'
+> = {
+  FINANCIAL: 'secondary',
+  TECHNICAL: 'secondary',
   LEGAL: 'warning',
   STATUTORY: 'destructive',
   EXECUTION: 'secondary',
@@ -43,14 +42,14 @@ function ActionIcon({ item }: { item: ActionItem }) {
     case 'FLAGGED_REQUIREMENT':
       return <AlertCircleIcon size={16} className="text-destructive" />;
     case 'REVIEW_REQUIRED':
-      return <ReviewRequiredIcon size={16} className="text-amber-400" />;
+      return <ReviewRequiredIcon size={16} className="text-orange-500" />;
     case 'EXTRACTION_IN_PROGRESS':
-      return <SpinnerIcon size={16} className="text-blue-400" />;
+      return <SpinnerIcon size={16} className="text-foreground animate-spin" />;
     case 'IMMINENT_DEADLINE':
-      return <WarningIcon size={16} className="text-amber-400" />;
+      return <WarningIcon size={16} className="text-orange-500" />;
     case 'DRAFT_INCOMPLETE':
     default:
-      return <MissingIcon size={16} className="text-blue-400" />;
+      return <MissingIcon size={16} className="text-muted-foreground" />;
   }
 }
 
@@ -82,10 +81,7 @@ export const ActionRequiredCard: React.FC<ActionRequiredCardProps> = ({
             Flagged clauses, reviews, in-flight extraction, and imminent deadlines
           </p>
         </div>
-        <Badge
-          variant={actionItems.length > 0 ? 'warning' : 'success'}
-          className="font-medium"
-        >
+        <Badge variant={actionItems.length > 0 ? 'warning' : 'success'} className="font-medium">
           {actionItems.length} {actionItems.length === 1 ? 'Action' : 'Actions'}
         </Badge>
       </CardHeader>
@@ -99,24 +95,22 @@ export const ActionRequiredCard: React.FC<ActionRequiredCardProps> = ({
           </div>
         ) : actionItems.length === 0 ? (
           <div className="p-4 rounded-lg bg-card/60 border border-border flex items-center gap-3">
-            <span className="w-8 h-8 rounded-full bg-emerald-500/15 text-emerald-400 flex items-center justify-center shrink-0">
+            <span className="w-8 h-8 rounded-full bg-muted text-foreground flex items-center justify-center shrink-0">
               <CheckIcon size={16} />
             </span>
             <div>
-              <div className="text-sm font-semibold text-foreground">
-                No Urgent Blockers
-              </div>
+              <div className="text-sm font-semibold text-foreground">No Urgent Blockers</div>
               <div className="text-xs text-muted-foreground">
                 All active tenders are on schedule with zero unreviewed critical flags.
               </div>
             </div>
           </div>
         ) : (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2.5">
             <div
               className={cn(
-                'flex flex-col gap-2 transition-all',
-                isExpanded && 'max-h-[380px] overflow-y-auto pr-1'
+                'flex flex-col gap-2.5 transition-all',
+                isExpanded && 'max-h-[380px] overflow-y-auto pr-1',
               )}
             >
               {displayedItems.map((item) => (
@@ -124,11 +118,11 @@ export const ActionRequiredCard: React.FC<ActionRequiredCardProps> = ({
                   key={item.id}
                   to={item.actionUrl}
                   className={cn(
-                    'flex items-start justify-between p-3 rounded-lg bg-card/60 border transition-colors hover:bg-accent/50',
-                    urgencyBorderClass(item.urgency)
+                    'flex items-start justify-between p-4 rounded-lg bg-card/60 border transition-colors hover:bg-accent/50',
+                    urgencyBorderClass(item.urgency),
                   )}
                 >
-                  <div className="flex items-start gap-2.5 min-w-0">
+                  <div className="flex items-start gap-3 min-w-0">
                     <span className="mt-0.5 shrink-0 inline-flex">
                       <ActionIcon item={item} />
                     </span>
@@ -139,7 +133,10 @@ export const ActionRequiredCard: React.FC<ActionRequiredCardProps> = ({
                           {item.headline}
                         </span>
                         {item.category && (
-                          <Badge variant={CATEGORY_BADGE_VARIANT[item.category]} className="text-[10px] px-1.5 py-0">
+                          <Badge
+                            variant={CATEGORY_BADGE_VARIANT[item.category]}
+                            className="text-[10px] px-1.5 py-0"
+                          >
                             {item.category}
                           </Badge>
                         )}

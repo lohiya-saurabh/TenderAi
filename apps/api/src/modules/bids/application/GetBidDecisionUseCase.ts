@@ -25,7 +25,11 @@
 import { Injectable, Inject, Optional } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
 import { eq, and, desc } from 'drizzle-orm';
-import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '../../../common/database/database.module.js';
+import {
+  DRIZZLE_TOKEN,
+  type DrizzleDb,
+  createDrizzle,
+} from '../../../common/database/database.module.js';
 import * as schema from '../../../common/database/schema.js';
 import { NotFoundError, ConflictError, BadRequestError } from '../../../common/errors/errors.js';
 import { TenantContextHolder } from '../../../common/security/TenantContext.js';
@@ -35,10 +39,7 @@ import {
   type AiBidDecisionResponse,
   type AiCompanyProfileSnapshot,
 } from './AiDecisionClient.js';
-import {
-  toRequirementCandidates,
-  type RequirementSourceItem,
-} from './RequirementMapper.js';
+import { toRequirementCandidates, type RequirementSourceItem } from './RequirementMapper.js';
 
 export interface BidDecisionEvaluationResult {
   decisionId: string;
@@ -67,9 +68,7 @@ export class GetBidDecisionUseCase {
   }
 
   /** Latest persisted decision for the bid, or null. */
-  public async getLatestDecision(
-    bidId: string,
-  ): Promise<BidDecisionEvaluationResult | null> {
+  public async getLatestDecision(bidId: string): Promise<BidDecisionEvaluationResult | null> {
     const orgId = this.requireOrg();
 
     await this.requireBid(bidId, orgId);
@@ -78,10 +77,7 @@ export class GetBidDecisionUseCase {
       .select()
       .from(schema.bidDecisions)
       .where(
-        and(
-          eq(schema.bidDecisions.bidId, bidId),
-          eq(schema.bidDecisions.organizationId, orgId),
-        ),
+        and(eq(schema.bidDecisions.bidId, bidId), eq(schema.bidDecisions.organizationId, orgId)),
       )
       .orderBy(desc(schema.bidDecisions.createdAt))
       .limit(1);
@@ -248,19 +244,11 @@ export class GetBidDecisionUseCase {
     };
   }
 
-  private async requireBid(
-    bidId: string,
-    orgId: string,
-  ): Promise<schema.Bid> {
+  private async requireBid(bidId: string, orgId: string): Promise<schema.Bid> {
     const [bid] = await this.db
       .select()
       .from(schema.bids)
-      .where(
-        and(
-          eq(schema.bids.id, bidId),
-          eq(schema.bids.organizationId, orgId),
-        ),
-      )
+      .where(and(eq(schema.bids.id, bidId), eq(schema.bids.organizationId, orgId)))
       .limit(1);
 
     if (!bid) {
@@ -269,13 +257,9 @@ export class GetBidDecisionUseCase {
     return bid;
   }
 
-  private mapDecisionRecord(
-    record: schema.BidDecision,
-  ): BidDecisionEvaluationResult {
+  private mapDecisionRecord(record: schema.BidDecision): BidDecisionEvaluationResult {
     const response =
-      typeof record.response === 'string'
-        ? JSON.parse(record.response)
-        : record.response;
+      typeof record.response === 'string' ? JSON.parse(record.response) : record.response;
     return {
       decisionId: record.id,
       bidId: record.bidId,

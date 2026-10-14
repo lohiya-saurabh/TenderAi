@@ -10,4 +10,4 @@ import { ComplianceService } from './compliance.service.js';
   providers: [ComplianceService],
   exports: [ComplianceService],
 })
-export class ComplianceModule { }
+export class ComplianceModule {}

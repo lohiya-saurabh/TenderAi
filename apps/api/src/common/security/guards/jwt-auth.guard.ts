@@ -5,7 +5,7 @@
  * Supports Authorization header ("Bearer <token>") and query param ("?token=<token>" for EventSource SSE).
  */
 
-import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, Inject } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { TokenService } from '../TokenService.js';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator.js';
@@ -14,7 +14,9 @@ import { UnauthorizedError } from '../../errors/errors.js';
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
   constructor(
+    @Inject(Reflector)
     private readonly reflector: Reflector,
+    @Inject(TokenService)
     private readonly tokenService: TokenService,
   ) {}
 
@@ -39,7 +41,15 @@ export class JwtAuthGuard implements CanActivate {
       }
     }
 
-    // Support browser EventSource SSE connections passing token via query param
+    // Support httpOnly access token cookie
+    if (!token && request.headers?.cookie) {
+      const match = request.headers.cookie.match(/(?:^|;\s*)tp_access_token=([^;]+)/);
+      if (match && match[1]) {
+        token = decodeURIComponent(match[1]);
+      }
+    }
+
+    // Support browser EventSource SSE connections passing token via query param as fallback
     if (!token && request.query?.token && typeof request.query.token === 'string') {
       token = request.query.token.trim();
     }

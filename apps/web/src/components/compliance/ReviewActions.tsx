@@ -16,7 +16,11 @@ import type { ComplianceItem } from '../../api/compliance.js';
 
 export interface ReviewActionsProps {
   currentStatus: ComplianceItem['status'];
-  onReview: (status: ComplianceItem['status'], notes?: string, expectedVersion?: number) => Promise<void>;
+  onReview: (
+    status: ComplianceItem['status'],
+    notes?: string,
+    expectedVersion?: number,
+  ) => Promise<void>;
   isLoading?: boolean;
   expectedVersion?: number;
   layout?: 'row' | 'card';
@@ -26,7 +30,7 @@ export interface ReviewActionOption {
   value: ComplianceItem['status'];
   actionLabel: string;
   statusLabel: string;
-  variant: 'success' | 'danger' | 'secondary' | 'primary' | 'outline';
+  variant: 'success' | 'danger' | 'warning' | 'secondary' | 'primary' | 'outline';
   description: string;
   impact: string;
   requiresRationale: boolean;
@@ -68,7 +72,7 @@ export const REVIEW_ACTION_OPTIONS: readonly ReviewActionOption[] = [
     value: 'REVIEW_REQUIRED',
     actionLabel: 'Mark Uncertain',
     statusLabel: 'Needs Clarification',
-    variant: 'primary',
+    variant: 'warning',
     description: 'Ambiguous wording or requires legal / technical lead escalation.',
     impact: 'Keeps clause flagged for cross-functional review and pre-bid inquiry.',
     requiresRationale: true,
@@ -229,16 +233,30 @@ export const ReviewActions: React.FC<ReviewActionsProps> = ({
               }}
             >
               <div>
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)', display: 'block' }}>
+                <span
+                  style={{
+                    fontSize: 'var(--text-xs)',
+                    color: 'var(--color-surface-muted)',
+                    display: 'block',
+                  }}
+                >
                   Current Status
                 </span>
                 <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-surface-text)' }}>
                   {currentStatus}
                 </strong>
               </div>
-              <span style={{ fontSize: 'var(--text-lg)', color: 'var(--color-surface-muted)' }}>→</span>
+              <span style={{ fontSize: 'var(--text-lg)', color: 'var(--color-surface-muted)' }}>
+                →
+              </span>
               <div>
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)', display: 'block' }}>
+                <span
+                  style={{
+                    fontSize: 'var(--text-xs)',
+                    color: 'var(--color-surface-muted)',
+                    display: 'block',
+                  }}
+                >
                   New Human Verdict
                 </span>
                 <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-primary-300)' }}>
@@ -256,7 +274,13 @@ export const ReviewActions: React.FC<ReviewActionsProps> = ({
               }}
             >
               <p style={{ margin: '0 0 0.5rem' }}>{selectedAction.description}</p>
-              <p style={{ margin: 0, fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)' }}>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 'var(--text-xs)',
+                  color: 'var(--color-surface-muted)',
+                }}
+              >
                 <strong>Impact:</strong> {selectedAction.impact}
               </p>
             </div>
@@ -334,7 +358,8 @@ export const ReviewActions: React.FC<ReviewActionsProps> = ({
             >
               <Info size={14} className="text-primary shrink-0" />
               <span>
-                This adjudication is recorded immutably in the compliance audit ledger with your user credentials and timestamp.
+                This adjudication is recorded immutably in the compliance audit ledger with your
+                user credentials and timestamp.
               </span>
             </div>
           </div>

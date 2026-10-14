@@ -53,7 +53,10 @@ export class DocumentContentNormalizer {
           }
         }
       } catch (err) {
-        console.warn('[DocumentContentNormalizer] Failed to parse PDF buffer with PDFParse, falling back:', err);
+        console.warn(
+          '[DocumentContentNormalizer] Failed to parse PDF buffer with PDFParse, falling back:',
+          err,
+        );
       }
     }
 

@@ -6,17 +6,17 @@ When testing a production-ready SaaS like **TenderPulse AI**, deploying the enti
 
 For testing, evaluation, and MVP demonstrations, you can run a **Hybrid Architecture** that exercises real AWS cloud services (S3 and SQS) while running compute and database containers locally on your laptop:
 
-| Resource | Full AWS Production ($350+/mo) | Hybrid Testing Setup (<$0.50/mo) |
-| :--- | :--- | :--- |
-| **Document Storage** | AWS S3 + KMS CMK ($1/key + storage) | **Real AWS S3** (AES-256 SSE, $0 KMS fee) |
-| **Async Message Queue** | AWS SQS + DLQ + KMS CMK | **Real AWS SQS + DLQ** (Managed SSE, $0 KMS fee) |
-| **Direct Browser Uploads** | Real S3 Presigned PUT URLs | **Real S3 Presigned PUT URLs** (CORS enabled for localhost) |
-| **AI Inference** | AWS Bedrock Claude 3.5 Sonnet | **AWS Bedrock** (Pay-per-token inference) |
-| **Database** | Multi-AZ Amazon RDS PostgreSQL 16 ($78/mo) | **Local PostgreSQL 16** in Docker ($0/mo) |
-| **NAT Gateways** | 1–2 NAT Gateways ($35–$70/mo) | **Zero** (Local network) ($0/mo) |
-| **Compute Containers** | ECS Fargate Tasks ($73/mo) | **Local Docker / Node.js & Python** ($0/mo) |
-| **Load Balancer** | AWS ALB ($22/mo) | **Vite Dev Server / Direct Port 3000** ($0/mo) |
-| **TOTAL ESTIMATED COST** | **~$320 – $420 / month** | **<$0.50 / month** (Storage & Queue pennies) |
+| Resource                   | Full AWS Production ($350+/mo)             | Hybrid Testing Setup (<$0.50/mo)                            |
+| :------------------------- | :----------------------------------------- | :---------------------------------------------------------- |
+| **Document Storage**       | AWS S3 + KMS CMK ($1/key + storage)        | **Real AWS S3** (AES-256 SSE, $0 KMS fee)                   |
+| **Async Message Queue**    | AWS SQS + DLQ + KMS CMK                    | **Real AWS SQS + DLQ** (Managed SSE, $0 KMS fee)            |
+| **Direct Browser Uploads** | Real S3 Presigned PUT URLs                 | **Real S3 Presigned PUT URLs** (CORS enabled for localhost) |
+| **AI Inference**           | AWS Bedrock Claude 3.5 Sonnet              | **AWS Bedrock** (Pay-per-token inference)                   |
+| **Database**               | Multi-AZ Amazon RDS PostgreSQL 16 ($78/mo) | **Local PostgreSQL 16** in Docker ($0/mo)                   |
+| **NAT Gateways**           | 1–2 NAT Gateways ($35–$70/mo)              | **Zero** (Local network) ($0/mo)                            |
+| **Compute Containers**     | ECS Fargate Tasks ($73/mo)                 | **Local Docker / Node.js & Python** ($0/mo)                 |
+| **Load Balancer**          | AWS ALB ($22/mo)                           | **Vite Dev Server / Direct Port 3000** ($0/mo)              |
+| **TOTAL ESTIMATED COST**   | **~$320 – $420 / month**                   | **<$0.50 / month** (Storage & Queue pennies)                |
 
 ---
 
@@ -25,6 +25,7 @@ For testing, evaluation, and MVP demonstrations, you can run a **Hybrid Architec
 We provide a dedicated, minimal Terraform environment located at [infrastructure/terraform/environments/local/](file:///Users/belikesaurabh/main/TenderAi/infrastructure/terraform/environments/local/).
 
 ### What It Provisions:
+
 1. **Amazon S3 Document Vault**:
    - Bucket: `tenderpulse-vault-local-{random_suffix}`
    - Encryption: AWS-managed `AES256` ($0 KMS key cost).

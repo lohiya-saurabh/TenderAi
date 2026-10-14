@@ -18,7 +18,15 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   return (
     <div style={{ width: '100%' }}>
       {showLabel && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: '0.75rem', color: 'var(--color-surface-muted)', marginBottom: '0.25rem' }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            fontSize: '0.75rem',
+            color: 'var(--color-surface-muted)',
+            marginBottom: '0.25rem',
+          }}
+        >
           {clamped}%
         </div>
       )}

@@ -99,7 +99,15 @@ export interface DemoCompanyEvidence {
 
 export interface DemoRequirementRisk {
   level: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  category: 'LIQUIDATED_DAMAGES' | 'WORKING_CAPITAL' | 'TIMELINE' | 'PAYMENT_TERMS' | 'LEGAL' | 'STATUTORY' | 'TECHNICAL' | 'FINANCIAL';
+  category:
+    | 'LIQUIDATED_DAMAGES'
+    | 'WORKING_CAPITAL'
+    | 'TIMELINE'
+    | 'PAYMENT_TERMS'
+    | 'LEGAL'
+    | 'STATUTORY'
+    | 'TECHNICAL'
+    | 'FINANCIAL';
   summary: string;
   financialImpactRupees?: number;
   mitigation?: string;
@@ -121,7 +129,16 @@ export interface DemoComplianceItem {
   title: string;
   requirement?: string;
   description: string;
-  status: 'PASS' | 'FAIL' | 'MISSING' | 'REVIEW_REQUIRED' | 'NOT_APPLICABLE' | 'PENDING' | 'READY' | 'FLAGGED' | 'WAIVED';
+  status:
+    | 'PASS'
+    | 'FAIL'
+    | 'MISSING'
+    | 'REVIEW_REQUIRED'
+    | 'NOT_APPLICABLE'
+    | 'PENDING'
+    | 'READY'
+    | 'FLAGGED'
+    | 'WAIVED';
   humanReviewRequired: boolean;
   reviewNotes: string | null;
   reviewedBy: string | null;
@@ -129,6 +146,13 @@ export interface DemoComplianceItem {
   version: number;
   executionRules: DemoExecutionRules;
   provenance: DemoProvenance;
+  sourceCitation?: {
+    document: string;
+    page: number;
+    section: string;
+    verbatimQuote: string;
+    confidenceScore: number;
+  };
   companyEvidence?: DemoCompanyEvidence | null;
   risk?: DemoRequirementRisk | null;
   rationale?: DemoAssessmentRationale | null;
@@ -206,12 +230,7 @@ export const DEMO_USERS: DemoUser[] = [
     password: 'Password123!',
     name: 'Priya Narayanan',
     role: 'compliance_officer',
-    permissions: [
-      'bids:read',
-      'compliance:read',
-      'compliance:review',
-      'audit:read',
-    ],
+    permissions: ['bids:read', 'compliance:read', 'compliance:review', 'audit:read'],
     organizationId: 'org_acme_infra_001',
     organizationName: 'Acme Infrastructure Solutions Ltd.',
   },
@@ -560,7 +579,8 @@ export const DEMO_COMPLIANCE_ITEMS: DemoComplianceItem[] = [
       'The bidder must have achieved a minimum Average Annual Turnover of INR 150 Crores in the last 3 financial years (FY 2022-23, FY 2023-24, FY 2024-25), certified by a Chartered Accountant with valid ICAI UDIN.',
     status: 'PASS',
     humanReviewRequired: false,
-    reviewNotes: 'CA Certificate verified against UDIN 25089745AAAAAA1234. 3-Year average turnover is ₹281.90 Cr, exceeding the ₹150 Cr threshold by 87.9%.',
+    reviewNotes:
+      'CA Certificate verified against UDIN 25089745AAAAAA1234. 3-Year average turnover is ₹281.90 Cr, exceeding the ₹150 Cr threshold by 87.9%.',
     reviewedBy: 'Vikramaditya Sharma',
     reviewedAt: '2026-10-02T10:00:00.000Z',
     version: 2,
@@ -575,7 +595,8 @@ export const DEMO_COMPLIANCE_ITEMS: DemoComplianceItem[] = [
       documentId: 'doc-nit-01',
       documentName: 'Notice_Inviting_Tender_Vol_I.pdf',
       pageNumber: 14,
-      sectionOrClause: 'Section II — Instructions to Bidders (ITB) Clause 2.2.2.2 (Financial Capacity)',
+      sectionOrClause:
+        'Section II — Instructions to Bidders (ITB) Clause 2.2.2.2 (Financial Capacity)',
       verbatimQuote:
         'The Bidder shall have achieved a minimum Average Annual Construction Turnover of not less than Rs. 150.00 Crores (Rupees One Hundred Fifty Crores) during the last three financial years (2022-23 to 2024-25). This turnover must be certified by a practicing Chartered Accountant with a valid Unique Document Identification Number (UDIN).',
       confidenceScore: 0.98,
@@ -588,14 +609,17 @@ export const DEMO_COMPLIANCE_ITEMS: DemoComplianceItem[] = [
       status: 'VERIFIED',
       udinNumber: '25089745AAAAAA1234',
       expiryDate: null,
-      notes: 'Certified by M/s S.R. Batliboi & Associates, Chartered Accountants. 3-Year Avg: ₹281.90 Cr.',
+      notes:
+        'Certified by M/s S.R. Batliboi & Associates, Chartered Accountants. 3-Year Avg: ₹281.90 Cr.',
     },
     risk: {
       level: 'LOW',
       category: 'FINANCIAL',
-      summary: 'Company turnover (₹281.90 Cr average) provides substantial 1.88x financial headroom.',
+      summary:
+        'Company turnover (₹281.90 Cr average) provides substantial 1.88x financial headroom.',
       financialImpactRupees: 0,
-      mitigation: 'Attach audited balance sheets and P&L schedules along with UDIN verification letter.',
+      mitigation:
+        'Attach audited balance sheets and P&L schedules along with UDIN verification letter.',
     },
     rationale: {
       ruleApplied: 'THRESHOLD: TURNOVER_3YR_AVERAGE >= 150_000_000_INR',
@@ -623,7 +647,8 @@ export const DEMO_COMPLIANCE_ITEMS: DemoComplianceItem[] = [
       'The bidder must have successfully completed at least one similar EPC work of 4-laning/6-laning of National/State Highway of minimum value INR 120 Crores within the last 7 years.',
     status: 'PASS',
     humanReviewRequired: false,
-    reviewNotes: 'Verified against MSRDC Completion Certificate for Pune-Solapur Highway (₹185.40 Cr, 43.2 Km 4-lane EPC completed March 2024).',
+    reviewNotes:
+      'Verified against MSRDC Completion Certificate for Pune-Solapur Highway (₹185.40 Cr, 43.2 Km 4-lane EPC completed March 2024).',
     reviewedBy: 'Vikramaditya Sharma',
     reviewedAt: '2026-10-02T10:05:00.000Z',
     version: 2,
@@ -651,19 +676,22 @@ export const DEMO_COMPLIANCE_ITEMS: DemoComplianceItem[] = [
       status: 'VERIFIED',
       udinNumber: undefined,
       expiryDate: null,
-      notes: 'Completed in March 2024. Total executed value ₹185.40 Cr. Verified by Chief Engineer MSRDC.',
+      notes:
+        'Completed in March 2024. Total executed value ₹185.40 Cr. Verified by Chief Engineer MSRDC.',
     },
     risk: {
       level: 'LOW',
       category: 'TECHNICAL',
-      summary: 'Pune-Solapur EPC project satisfies the 4-lane Highway threshold with 154% value clearance.',
+      summary:
+        'Pune-Solapur EPC project satisfies the 4-lane Highway threshold with 154% value clearance.',
       financialImpactRupees: 0,
       mitigation: 'Include client completion certificate and final bill summary.',
     },
     rationale: {
       ruleApplied: 'THRESHOLD: COMPLETED_SIMILAR_WORK_VALUE >= 120_000_000_INR within 7 years',
       tenderRequirement: 'One completed 4-lane highway project of minimum value INR 120.00 Crores.',
-      companyCapability: 'Completed Pune-Solapur Highway EPC of value INR 185.40 Crores in March 2024.',
+      companyCapability:
+        'Completed Pune-Solapur Highway EPC of value INR 185.40 Crores in March 2024.',
       comparisonResult: 'MET',
       confidenceScore: 0.98,
       details: [
@@ -714,18 +742,22 @@ export const DEMO_COMPLIANCE_ITEMS: DemoComplianceItem[] = [
       status: 'NEEDS_REVIEW' as unknown as DemoCompanyEvidence['status'],
       udinNumber: undefined,
       expiryDate: '2026-11-15',
-      notes: 'Draft prepared. Needs execution on ₹500 Maharashtra e-Stamp paper and notarization before submission.',
+      notes:
+        'Draft prepared. Needs execution on ₹500 Maharashtra e-Stamp paper and notarization before submission.',
     },
     risk: {
       level: 'HIGH',
       category: 'STATUTORY',
-      summary: 'Mandatory statutory clause. Non-submission or incorrect stamp paper denomination results in outright technical disqualification.',
+      summary:
+        'Mandatory statutory clause. Non-submission or incorrect stamp paper denomination results in outright technical disqualification.',
       financialImpactRupees: 500,
-      mitigation: 'Execute affidavit on ₹500 e-Stamp paper in Mumbai and procure public notary seal 7 days before bid deadline.',
+      mitigation:
+        'Execute affidavit on ₹500 e-Stamp paper in Mumbai and procure public notary seal 7 days before bid deadline.',
     },
     rationale: {
       ruleApplied: 'PRESENCE & EXECUTION_CHECK: NOTARIZED_AFFIDAVIT on INR 500 STAMP_PAPER',
-      tenderRequirement: 'Duly notarized Affidavit on INR 500 Non-Judicial Stamp Paper affirming non-blacklisting status.',
+      tenderRequirement:
+        'Duly notarized Affidavit on INR 500 Non-Judicial Stamp Paper affirming non-blacklisting status.',
       companyCapability: 'Template drafted in legal repository; execution pending on stamp paper.',
       comparisonResult: 'UNCLEAR',
       confidenceScore: 0.85,
@@ -749,7 +781,8 @@ export const DEMO_COMPLIANCE_ITEMS: DemoComplianceItem[] = [
       'Solvency Certificate issued by a Scheduled Commercial Bank for a minimum amount of INR 50 Crores, dated not earlier than 6 months from the bid submission deadline.',
     status: 'PASS',
     humanReviewRequired: false,
-    reviewNotes: 'State Bank of India Solvency Certificate of ₹75.00 Cr (dated 18-Aug-2026) verified and valid.',
+    reviewNotes:
+      'State Bank of India Solvency Certificate of ₹75.00 Cr (dated 18-Aug-2026) verified and valid.',
     reviewedBy: 'Vikramaditya Sharma',
     reviewedAt: '2026-10-02T10:10:00.000Z',
     version: 2,
@@ -782,13 +815,15 @@ export const DEMO_COMPLIANCE_ITEMS: DemoComplianceItem[] = [
     risk: {
       level: 'LOW',
       category: 'FINANCIAL',
-      summary: 'SBI Solvency Certificate of ₹75 Cr exceeds ₹50 Cr requirement and is well within the 6-month validity window.',
+      summary:
+        'SBI Solvency Certificate of ₹75 Cr exceeds ₹50 Cr requirement and is well within the 6-month validity window.',
       financialImpactRupees: 0,
       mitigation: 'Attach bank verification letter and contact details of the issuing AGM.',
     },
     rationale: {
       ruleApplied: 'THRESHOLD: BANK_SOLVENCY >= 500_000_000_INR & ISSUANCE_DATE <= 6_MONTHS',
-      tenderRequirement: 'Bank Solvency Certificate of at least INR 50.00 Crores issued within 6 months.',
+      tenderRequirement:
+        'Bank Solvency Certificate of at least INR 50.00 Crores issued within 6 months.',
       companyCapability: 'SBI Solvency Certificate of INR 75.00 Crores dated 18-August-2026.',
       comparisonResult: 'MET',
       confidenceScore: 0.99,
@@ -811,7 +846,8 @@ export const DEMO_COMPLIANCE_ITEMS: DemoComplianceItem[] = [
       'Minimum ownership/leasehold of 2 units of Hydrostatic Sensor Pavers of minimum 9.0m width, not older than 5 years as on the bid submission date.',
     status: 'FAIL',
     humanReviewRequired: true,
-    reviewNotes: 'Company owns 4 Vögele Super 1800 pavers, but 2 units are deployed on Pune-Solapur maintenance until Jan 2027. Lease agreement needed for 1 additional unit.',
+    reviewNotes:
+      'Company owns 4 Vögele Super 1800 pavers, but 2 units are deployed on Pune-Solapur maintenance until Jan 2027. Lease agreement needed for 1 additional unit.',
     reviewedBy: 'Vikramaditya Sharma',
     reviewedAt: '2026-10-02T10:15:00.000Z',
     version: 2,
@@ -844,14 +880,17 @@ export const DEMO_COMPLIANCE_ITEMS: DemoComplianceItem[] = [
     risk: {
       level: 'HIGH',
       category: 'TECHNICAL',
-      summary: 'Site allocation conflict: only 2 pavers currently free, leaving zero redundancy in case of machine breakdown during paving season.',
+      summary:
+        'Site allocation conflict: only 2 pavers currently free, leaving zero redundancy in case of machine breakdown during paving season.',
       financialImpactRupees: 2500000,
-      mitigation: 'Execute standby equipment hire agreement with Wirtgen authorized rental partner prior to financial bid opening.',
+      mitigation:
+        'Execute standby equipment hire agreement with Wirtgen authorized rental partner prior to financial bid opening.',
     },
     rationale: {
       ruleApplied: 'COUNT & AGE_CHECK: SENSOR_PAVERS >= 2 & MFG_YEAR >= 2021 & UNCOMMITTED',
       tenderRequirement: '2 units of Hydrostatic Sensor Pavers (9m width) manufactured >= 2021.',
-      companyCapability: '4 owned units (2022 model), but 2 currently committed to another project.',
+      companyCapability:
+        '4 owned units (2022 model), but 2 currently committed to another project.',
       comparisonResult: 'PARTIAL',
       confidenceScore: 0.91,
       details: [
@@ -873,7 +912,8 @@ export const DEMO_COMPLIANCE_ITEMS: DemoComplianceItem[] = [
       'Valid certification for ISO 9001 (QMS), ISO 14001 (EMS), and ISO 45001 (OH&S) from an accredited certification agency with validity extending beyond the tender submission date.',
     status: 'PASS',
     humanReviewRequired: false,
-    reviewNotes: 'All 3 ISO certificates verified with Bureau Veritas and TUV SUD. Valid until 31-Dec-2026.',
+    reviewNotes:
+      'All 3 ISO certificates verified with Bureau Veritas and TUV SUD. Valid until 31-Dec-2026.',
     reviewedBy: 'Priya Narayanan',
     reviewedAt: '2026-10-02T09:30:00.000Z',
     version: 2,
@@ -911,7 +951,8 @@ export const DEMO_COMPLIANCE_ITEMS: DemoComplianceItem[] = [
       mitigation: 'Schedule ISO recertification audit in Q3 2026.',
     },
     rationale: {
-      ruleApplied: 'SET_MEMBERSHIP & VALIDITY: [ISO_9001, ISO_14001, ISO_45001] VALID >= SUBMISSION_DATE',
+      ruleApplied:
+        'SET_MEMBERSHIP & VALIDITY: [ISO_9001, ISO_14001, ISO_45001] VALID >= SUBMISSION_DATE',
       tenderRequirement: 'Active ISO 9001, ISO 14001, and ISO 45001 certifications.',
       companyCapability: 'Holds all 3 certifications valid until 31-Dec-2026.',
       comparisonResult: 'MET',
@@ -963,19 +1004,25 @@ export const DEMO_COMPLIANCE_ITEMS: DemoComplianceItem[] = [
       status: 'NEEDS_REVIEW' as unknown as DemoCompanyEvidence['status'],
       udinNumber: undefined,
       expiryDate: '2027-05-15',
-      notes: 'Non-fund credit line approved with HDFC Bank. Draft BG vetted. SFMS message initiation pending.',
+      notes:
+        'Non-fund credit line approved with HDFC Bank. Draft BG vetted. SFMS message initiation pending.',
     },
     risk: {
       level: 'CRITICAL',
       category: 'FINANCIAL',
-      summary: 'SFMS transmission confirmation (MT760) is mandatory. Without the SFMS acknowledgement slip from beneficiary bank, the tender portal automatically rejects the bid during technical opening.',
+      summary:
+        'SFMS transmission confirmation (MT760) is mandatory. Without the SFMS acknowledgement slip from beneficiary bank, the tender portal automatically rejects the bid during technical opening.',
       financialImpactRupees: 24500000,
-      mitigation: 'Authorize HDFC Bank treasury desk to transmit SFMS MT760 to NHAI ICICI IFSC code 3 days before submission deadline and collect bank acknowledgement receipt.',
+      mitigation:
+        'Authorize HDFC Bank treasury desk to transmit SFMS MT760 to NHAI ICICI IFSC code 3 days before submission deadline and collect bank acknowledgement receipt.',
     },
     rationale: {
-      ruleApplied: 'EXACT_MATCH: BANK_GUARANTEE_AMOUNT == 24_500_000_INR & SFMS_CONFIRMATION == TRUE',
-      tenderRequirement: 'Bank Guarantee of INR 2.45 Crores valid for 180 days with SFMS confirmation to ICICI Bank.',
-      companyCapability: 'HDFC Bank credit line sanctioned; draft BG prepared; final SFMS issuance pending.',
+      ruleApplied:
+        'EXACT_MATCH: BANK_GUARANTEE_AMOUNT == 24_500_000_INR & SFMS_CONFIRMATION == TRUE',
+      tenderRequirement:
+        'Bank Guarantee of INR 2.45 Crores valid for 180 days with SFMS confirmation to ICICI Bank.',
+      companyCapability:
+        'HDFC Bank credit line sanctioned; draft BG prepared; final SFMS issuance pending.',
       comparisonResult: 'PARTIAL',
       confidenceScore: 0.92,
       details: [

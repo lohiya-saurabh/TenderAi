@@ -120,9 +120,7 @@ export class PostgresBidRepository implements IBidRepository {
       tenderNumber: row.tenderNumber,
       tenderingAuthority: row.tenderingAuthority,
       estimatedValue: Money.fromRupees(Number(row.estimatedValueRupees)),
-      submissionDeadline: row.submissionDeadline
-        ? new Date(row.submissionDeadline)
-        : new Date(),
+      submissionDeadline: row.submissionDeadline ? new Date(row.submissionDeadline) : new Date(),
       status: BidStatus.fromString(row.status),
       version: Number(row.version),
       createdAt: row.createdAt instanceof Date ? row.createdAt : new Date(row.createdAt),

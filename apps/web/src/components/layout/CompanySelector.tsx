@@ -4,7 +4,8 @@ import { useCompany } from '../../context/CompanyContext.js';
 import { cn } from '../../lib/utils.js';
 
 export const CompanySelector: React.FC = () => {
-  const { companies, selectedCompanyId, selectedCompany, setSelectedCompanyId, createCompany } = useCompany();
+  const { companies, selectedCompanyId, selectedCompany, setSelectedCompanyId, createCompany } =
+    useCompany();
   const [isOpen, setIsOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [newCompanyName, setNewCompanyName] = useState('');
@@ -58,7 +59,7 @@ export const CompanySelector: React.FC = () => {
           'inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all shadow-xs select-none',
           isOpen
             ? 'bg-primary/10 border-primary text-foreground ring-1 ring-primary'
-            : 'bg-card hover:bg-accent border-border text-foreground hover:text-foreground'
+            : 'bg-card hover:bg-accent border-border text-foreground hover:text-foreground',
         )}
         aria-expanded={isOpen}
         aria-haspopup="true"
@@ -81,7 +82,7 @@ export const CompanySelector: React.FC = () => {
           size={13}
           className={cn(
             'text-muted-foreground transition-transform duration-200 shrink-0 ml-1',
-            isOpen && 'rotate-180 text-foreground'
+            isOpen && 'rotate-180 text-foreground',
           )}
         />
       </button>
@@ -119,11 +120,16 @@ export const CompanySelector: React.FC = () => {
                     'w-full flex items-start justify-between p-2 rounded-lg text-left transition-colors border',
                     isSelected
                       ? 'bg-primary/10 border-primary/40 text-foreground font-medium'
-                      : 'border-transparent hover:bg-accent/80 text-muted-foreground hover:text-foreground'
+                      : 'border-transparent hover:bg-accent/80 text-muted-foreground hover:text-foreground',
                   )}
                 >
                   <div className="min-w-0 pr-2">
-                    <div className={cn('text-xs font-semibold truncate', isSelected ? 'text-primary' : 'text-foreground')}>
+                    <div
+                      className={cn(
+                        'text-xs font-semibold truncate',
+                        isSelected ? 'text-primary' : 'text-foreground',
+                      )}
+                    >
                       {company.legalName}
                     </div>
                     <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
@@ -133,7 +139,9 @@ export const CompanySelector: React.FC = () => {
                         </span>
                       )}
                       {company.constitution && (
-                        <span className="capitalize">{company.constitution.replace('_', ' ').toLowerCase()}</span>
+                        <span className="capitalize">
+                          {company.constitution.replace('_', ' ').toLowerCase()}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -151,10 +159,17 @@ export const CompanySelector: React.FC = () => {
           {/* Add Company Section */}
           <div className="border-t border-border/80 pt-1.5 mt-1">
             {isCreating ? (
-              <form onSubmit={handleCreate} className="p-2 bg-muted/40 rounded-lg space-y-2 border border-border">
-                <div className="text-[11px] font-semibold text-foreground">Register New Legal Entity</div>
+              <form
+                onSubmit={handleCreate}
+                className="p-2 bg-muted/40 rounded-lg space-y-2 border border-border"
+              >
+                <div className="text-[11px] font-semibold text-foreground">
+                  Register New Legal Entity
+                </div>
                 <div>
-                  <label className="text-[10px] text-muted-foreground block mb-0.5 font-medium">Company Legal Name *</label>
+                  <label className="text-[10px] text-muted-foreground block mb-0.5 font-medium">
+                    Company Legal Name *
+                  </label>
                   <input
                     type="text"
                     placeholder="e.g. Acme Solar Solutions Pvt Ltd"
@@ -166,7 +181,9 @@ export const CompanySelector: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] text-muted-foreground block mb-0.5 font-medium">GSTIN (Optional)</label>
+                  <label className="text-[10px] text-muted-foreground block mb-0.5 font-medium">
+                    GSTIN (Optional)
+                  </label>
                   <input
                     type="text"
                     placeholder="e.g. 27AAKCA9999F1Z9"

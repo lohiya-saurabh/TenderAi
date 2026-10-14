@@ -14,10 +14,10 @@ export class InMemoryIngestionJobRepository implements IIngestionJobRepository {
 
   public async findByDocumentId(
     documentId: string,
-    organizationId: string
+    organizationId: string,
   ): Promise<IngestionJob | null> {
     const job = Array.from(this.jobs.values()).find(
-      (j) => j.documentId === documentId && j.organizationId === organizationId
+      (j) => j.documentId === documentId && j.organizationId === organizationId,
     );
     return job ?? null;
   }

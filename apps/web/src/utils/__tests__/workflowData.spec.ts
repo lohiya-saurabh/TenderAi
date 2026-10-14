@@ -128,7 +128,8 @@ describe('Workflow Domain Data & 13-Stage Journey', () => {
           documentName: 'NIT_Civil_Works.pdf',
           pageNumber: 12,
           sectionOrClause: 'Section III Clause 2.1',
-          verbatimQuote: 'Average turnover of the tenderer must not be less than 50% of the advertised value.',
+          verbatimQuote:
+            'Average turnover of the tenderer must not be less than 50% of the advertised value.',
           confidenceScore: 0.98,
         },
         createdAt: '2026-10-01T00:00:00.000Z',
@@ -136,7 +137,11 @@ describe('Workflow Domain Data & 13-Stage Journey', () => {
       },
     ];
 
-    const citations = deriveEvidenceCitations(mockBid, mockComplianceItems, DEFAULT_COMPANY_PROFILE);
+    const citations = deriveEvidenceCitations(
+      mockBid,
+      mockComplianceItems,
+      DEFAULT_COMPANY_PROFILE,
+    );
     expect(citations.length).toBe(1);
     expect(citations[0]?.tenderClauseRef).toBe('Section III Clause 2.1');
     expect(citations[0]?.companyEvidenceDocType).toBe('FINANCIAL_AUDIT');

@@ -61,10 +61,7 @@ export const ReadinessCard: React.FC<ReadinessCardProps> = ({ bid, items }) => {
               Pending intake
             </Badge>
           ) : (
-            <Badge
-              variant={pct >= 80 ? 'success' : pct >= 50 ? 'warning' : 'primary'}
-              size="sm"
-            >
+            <Badge variant={pct >= 80 ? 'success' : pct >= 50 ? 'warning' : 'primary'} size="sm">
               {pct}% ready
             </Badge>
           )
@@ -89,7 +86,9 @@ export const ReadinessCard: React.FC<ReadinessCardProps> = ({ bid, items }) => {
               }}
             >
               <span style={{ fontWeight: 600, color: 'var(--color-surface-text)' }}>
-                {pct === null ? 'No requirements extracted yet' : `${pct}% of requirements approved`}
+                {pct === null
+                  ? 'No requirements extracted yet'
+                  : `${pct}% of requirements approved`}
               </span>
               <span style={{ color: 'var(--color-surface-muted)' }}>
                 {readiness.approved}/{readiness.total}
@@ -134,10 +133,17 @@ export const ReadinessCard: React.FC<ReadinessCardProps> = ({ bid, items }) => {
             <DistributionStat label="Waived" count={rollup.waived} status="WAIVED" />
           </div>
 
-          <p style={{ margin: 0, fontSize: 'var(--text-2xs)', color: 'var(--color-surface-subtle)', lineHeight: 'var(--leading-normal)' }}>
-            The full readiness model — evidence completeness, risk clearance, deadline
-            buffer, and EMD affordability — evaluates the Company Capability Profile
-            and has no backend API yet (see missing endpoints below).
+          <p
+            style={{
+              margin: 0,
+              fontSize: 'var(--text-2xs)',
+              color: 'var(--color-surface-subtle)',
+              lineHeight: 'var(--leading-normal)',
+            }}
+          >
+            The full readiness model — evidence completeness, risk clearance, deadline buffer, and
+            EMD affordability — evaluates the Company Capability Profile and has no backend API yet
+            (see missing endpoints below).
           </p>
         </div>
       </CardContent>
@@ -145,7 +151,15 @@ export const ReadinessCard: React.FC<ReadinessCardProps> = ({ bid, items }) => {
   );
 };
 
-function DistributionStat({ label, count, status }: { label: string; count: number; status: string }) {
+function DistributionStat({
+  label,
+  count,
+  status,
+}: {
+  label: string;
+  count: number;
+  status: string;
+}) {
   return (
     <div
       style={{
@@ -160,7 +174,14 @@ function DistributionStat({ label, count, status }: { label: string; count: numb
     >
       <StatusBadge status={status} size="sm" />
       <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.3rem' }}>
-        <span style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--color-surface-text)', lineHeight: 1 }}>
+        <span
+          style={{
+            fontSize: 'var(--text-lg)',
+            fontWeight: 700,
+            color: 'var(--color-surface-text)',
+            lineHeight: 1,
+          }}
+        >
           {count}
         </span>
         <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)' }}>

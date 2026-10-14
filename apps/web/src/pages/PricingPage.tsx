@@ -22,7 +22,8 @@ export const PricingPage: React.FC = () => {
           </h1>
 
           <p className="text-sm sm:text-base text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Scale seamlessly from single-contractor eligibility checks to multi-entity enterprise consortiums. Upgrade or downgrade anytime.
+            Scale seamlessly from single-contractor eligibility checks to multi-entity enterprise
+            consortiums. Upgrade or downgrade anytime.
           </p>
         </div>
       </section>
@@ -65,7 +66,7 @@ export const PricingPage: React.FC = () => {
                   <td className="p-4 text-center font-mono text-muted-foreground">1</td>
                   <td className="p-4 text-center font-mono font-bold text-foreground">5</td>
                   <td className="p-4 text-center font-mono text-muted-foreground">15</td>
-                  <td className="p-4 text-center font-mono text-emerald-400 font-bold">Unlimited</td>
+                  <td className="p-4 text-center font-mono text-foreground font-bold">Unlimited</td>
                 </tr>
                 <tr>
                   <td className="p-4 font-medium text-foreground">Team Member Seats (RBAC)</td>
@@ -73,7 +74,7 @@ export const PricingPage: React.FC = () => {
                   <td className="p-4 text-center font-mono text-muted-foreground">3</td>
                   <td className="p-4 text-center font-mono font-bold text-foreground">10</td>
                   <td className="p-4 text-center font-mono text-muted-foreground">25</td>
-                  <td className="p-4 text-center font-mono text-emerald-400 font-bold">Unlimited</td>
+                  <td className="p-4 text-center font-mono text-foreground font-bold">Unlimited</td>
                 </tr>
                 <tr>
                   <td className="p-4 font-medium text-foreground">Monthly Tender Ingestions</td>
@@ -81,7 +82,7 @@ export const PricingPage: React.FC = () => {
                   <td className="p-4 text-center font-mono text-muted-foreground">15</td>
                   <td className="p-4 text-center font-mono font-bold text-foreground">50</td>
                   <td className="p-4 text-center font-mono text-muted-foreground">150</td>
-                  <td className="p-4 text-center font-mono text-emerald-400 font-bold">Unlimited</td>
+                  <td className="p-4 text-center font-mono text-foreground font-bold">Unlimited</td>
                 </tr>
                 <tr>
                   <td className="p-4 font-medium text-foreground">Evidence Document Storage</td>
@@ -89,39 +90,85 @@ export const PricingPage: React.FC = () => {
                   <td className="p-4 text-center font-mono text-muted-foreground">1 GB</td>
                   <td className="p-4 text-center font-mono font-bold text-foreground">5 GB</td>
                   <td className="p-4 text-center font-mono text-muted-foreground">20 GB</td>
-                  <td className="p-4 text-center font-mono text-emerald-400 font-bold">100+ GB VPC</td>
+                  <td className="p-4 text-center font-mono text-foreground font-bold">
+                    100+ GB VPC
+                  </td>
                 </tr>
                 <tr>
-                  <td className="p-4 font-medium text-foreground">Bid / No-Bid Recommendation Engine</td>
-                  <td className="p-4 text-center"><Check className="h-4 w-4 text-emerald-400 mx-auto" /></td>
-                  <td className="p-4 text-center"><Check className="h-4 w-4 text-emerald-400 mx-auto" /></td>
-                  <td className="p-4 text-center"><Check className="h-4 w-4 text-emerald-400 mx-auto" /></td>
-                  <td className="p-4 text-center"><Check className="h-4 w-4 text-emerald-400 mx-auto" /></td>
-                  <td className="p-4 text-center"><Check className="h-4 w-4 text-emerald-400 mx-auto" /></td>
+                  <td className="p-4 font-medium text-foreground">
+                    Bid / No-Bid Recommendation Engine
+                  </td>
+                  <td className="p-4 text-center">
+                    <Check className="h-4 w-4 text-foreground mx-auto" />
+                  </td>
+                  <td className="p-4 text-center">
+                    <Check className="h-4 w-4 text-foreground mx-auto" />
+                  </td>
+                  <td className="p-4 text-center">
+                    <Check className="h-4 w-4 text-foreground mx-auto" />
+                  </td>
+                  <td className="p-4 text-center">
+                    <Check className="h-4 w-4 text-foreground mx-auto" />
+                  </td>
+                  <td className="p-4 text-center">
+                    <Check className="h-4 w-4 text-foreground mx-auto" />
+                  </td>
                 </tr>
                 <tr>
                   <td className="p-4 font-medium text-foreground">Disqualification Risk Alerts</td>
-                  <td className="p-4 text-center"><X className="h-4 w-4 text-muted-foreground/40 mx-auto" /></td>
-                  <td className="p-4 text-center"><Check className="h-4 w-4 text-emerald-400 mx-auto" /></td>
-                  <td className="p-4 text-center"><Check className="h-4 w-4 text-emerald-400 mx-auto" /></td>
-                  <td className="p-4 text-center"><Check className="h-4 w-4 text-emerald-400 mx-auto" /></td>
-                  <td className="p-4 text-center"><Check className="h-4 w-4 text-emerald-400 mx-auto" /></td>
+                  <td className="p-4 text-center">
+                    <X className="h-4 w-4 text-muted-foreground/40 mx-auto" />
+                  </td>
+                  <td className="p-4 text-center">
+                    <Check className="h-4 w-4 text-foreground mx-auto" />
+                  </td>
+                  <td className="p-4 text-center">
+                    <Check className="h-4 w-4 text-foreground mx-auto" />
+                  </td>
+                  <td className="p-4 text-center">
+                    <Check className="h-4 w-4 text-foreground mx-auto" />
+                  </td>
+                  <td className="p-4 text-center">
+                    <Check className="h-4 w-4 text-foreground mx-auto" />
+                  </td>
                 </tr>
                 <tr>
-                  <td className="p-4 font-medium text-foreground">Human-in-the-Loop Sign-off Workflow</td>
-                  <td className="p-4 text-center"><X className="h-4 w-4 text-muted-foreground/40 mx-auto" /></td>
-                  <td className="p-4 text-center"><X className="h-4 w-4 text-muted-foreground/40 mx-auto" /></td>
-                  <td className="p-4 text-center"><Check className="h-4 w-4 text-emerald-400 mx-auto" /></td>
-                  <td className="p-4 text-center"><Check className="h-4 w-4 text-emerald-400 mx-auto" /></td>
-                  <td className="p-4 text-center"><Check className="h-4 w-4 text-emerald-400 mx-auto" /></td>
+                  <td className="p-4 font-medium text-foreground">
+                    Human-in-the-Loop Sign-off Workflow
+                  </td>
+                  <td className="p-4 text-center">
+                    <X className="h-4 w-4 text-muted-foreground/40 mx-auto" />
+                  </td>
+                  <td className="p-4 text-center">
+                    <X className="h-4 w-4 text-muted-foreground/40 mx-auto" />
+                  </td>
+                  <td className="p-4 text-center">
+                    <Check className="h-4 w-4 text-foreground mx-auto" />
+                  </td>
+                  <td className="p-4 text-center">
+                    <Check className="h-4 w-4 text-foreground mx-auto" />
+                  </td>
+                  <td className="p-4 text-center">
+                    <Check className="h-4 w-4 text-foreground mx-auto" />
+                  </td>
                 </tr>
                 <tr>
                   <td className="p-4 font-medium text-foreground">PDF Compliance Dossier Export</td>
-                  <td className="p-4 text-center"><X className="h-4 w-4 text-muted-foreground/40 mx-auto" /></td>
-                  <td className="p-4 text-center"><Check className="h-4 w-4 text-emerald-400 mx-auto" /></td>
-                  <td className="p-4 text-center"><Check className="h-4 w-4 text-emerald-400 mx-auto" /></td>
-                  <td className="p-4 text-center"><Check className="h-4 w-4 text-emerald-400 mx-auto" /></td>
-                  <td className="p-4 text-center"><Check className="h-4 w-4 text-emerald-400 mx-auto" /></td>
+                  <td className="p-4 text-center">
+                    <X className="h-4 w-4 text-muted-foreground/40 mx-auto" />
+                  </td>
+                  <td className="p-4 text-center">
+                    <Check className="h-4 w-4 text-foreground mx-auto" />
+                  </td>
+                  <td className="p-4 text-center">
+                    <Check className="h-4 w-4 text-foreground mx-auto" />
+                  </td>
+                  <td className="p-4 text-center">
+                    <Check className="h-4 w-4 text-foreground mx-auto" />
+                  </td>
+                  <td className="p-4 text-center">
+                    <Check className="h-4 w-4 text-foreground mx-auto" />
+                  </td>
                 </tr>
                 <tr>
                   <td className="p-4 font-medium text-foreground">Dedicated Support &amp; SLA</td>
@@ -129,7 +176,7 @@ export const PricingPage: React.FC = () => {
                   <td className="p-4 text-center text-muted-foreground">Standard Email</td>
                   <td className="p-4 text-center text-foreground font-semibold">Priority 24h</td>
                   <td className="p-4 text-center text-foreground font-semibold">Dedicated AM</td>
-                  <td className="p-4 text-center text-emerald-400 font-bold">24/7 Phone SLA</td>
+                  <td className="p-4 text-center text-foreground font-bold">24/7 Phone SLA</td>
                 </tr>
               </tbody>
             </table>

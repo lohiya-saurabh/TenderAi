@@ -31,7 +31,7 @@ export class BulkIngestComplianceDto {
       }
       if (!item.executionRules || typeof item.executionRules !== 'object') {
         throw new ValidationException(
-          `Item at index ${i} must have a valid "executionRules" object.`
+          `Item at index ${i} must have a valid "executionRules" object.`,
         );
       }
     }

@@ -19,7 +19,11 @@ import { CompaniesService } from '../companies/companies.service.js';
 import { CompanyProfileService } from '../company-profile/company-profile.service.js';
 import { BidsService } from '../bids/bids.service.js';
 import { GetBidDecisionUseCase } from '../bids/application/GetBidDecisionUseCase.js';
-import { AiDecisionClient, type AiBidDecisionRequest, type AiBidDecisionResponse } from '../bids/application/AiDecisionClient.js';
+import {
+  AiDecisionClient,
+  type AiBidDecisionRequest,
+  type AiBidDecisionResponse,
+} from '../bids/application/AiDecisionClient.js';
 import { NotFoundError, BadRequestError } from '../../common/errors/errors.js';
 
 describe('Multi-Company Security & Workflow Suite (1 Tenant -> N Companies)', () => {
@@ -65,7 +69,10 @@ describe('Multi-Company Security & Workflow Suite (1 Tenant -> N Companies)', ()
       }),
     };
 
-    getBidDecisionUseCase = new GetBidDecisionUseCase(drizzleDb, fakeAiClient as unknown as AiDecisionClient);
+    getBidDecisionUseCase = new GetBidDecisionUseCase(
+      drizzleDb,
+      fakeAiClient as unknown as AiDecisionClient,
+    );
   });
 
   describe('1. Tenant-scoped Company Management', () => {

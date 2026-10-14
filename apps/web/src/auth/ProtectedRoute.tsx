@@ -8,10 +8,7 @@ interface ProtectedRouteProps {
   requiredPermission?: string;
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
-  children,
-  requiredPermission,
-}) => {
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredPermission }) => {
   const { isAuthenticated, isLoading, hasPermission } = useAuth();
   const location = useLocation();
 
@@ -34,7 +31,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       <div style={{ padding: '3rem', textAlign: 'center' }}>
         <h2 style={{ color: 'var(--color-danger)', marginBottom: '1rem' }}>Access Denied</h2>
         <p style={{ color: 'var(--color-surface-muted)' }}>
-          You do not have the required permission (<code>{requiredPermission}</code>) to view this page.
+          You do not have the required permission (<code>{requiredPermission}</code>) to view this
+          page.
         </p>
       </div>
     );

@@ -95,3 +95,42 @@ class JSONLogFormatter(logging.Formatter):
         # Centralized pre-output secret and PII scrubber
         scrubbed_json, _ = SecretSanitizer.scrub(json_str)
         return scrubbed_json
+
+
+class ConsoleLogFormatter(logging.Formatter):
+    """
+    Concise human-friendly one-line console formatter for developer terminals.
+    Emits timestamp, level, context tags, message, and latency without noisy JSON clutter.
+    """
+
+    def __init__(self, service_name: str = "fastapi") -> None:
+        super().__init__()
+        self.service_name = service_name
+
+    def format(self, record: logging.LogRecord) -> str:
+        time_str = datetime.datetime.fromtimestamp(record.created).strftime("%H:%M:%S")
+        level = record.levelname.upper()
+        if level == "WARNING":
+            level = "WARN"
+        elif level == "CRITICAL":
+            level = "FATAL"
+
+        context = get_logging_context()
+        trace_id = getattr(record, "trace_id", None) or context.get("trace_id")
+        tenant_id = getattr(record, "tenant_id", None) or context.get("tenant_id")
+        duration_ms = getattr(record, "duration_ms", None)
+
+        trace_tag = f" [{trace_id[:12]}]" if trace_id else ""
+        tenant_tag = f" [{tenant_id}]" if tenant_id else ""
+        duration_tag = f" ({duration_ms}ms)" if duration_ms is not None else ""
+
+        message = record.getMessage()
+        scrubbed_msg, _ = SecretSanitizer.scrub(message)
+
+        line = f"[{time_str}] {level:<5} [{self.service_name}]{trace_tag}{tenant_tag} {scrubbed_msg}{duration_tag}"
+
+        if record.exc_info and record.exc_info[1]:
+            exc_str = self.formatException(record.exc_info)
+            line = f"{line}\n{exc_str}"
+
+        return line

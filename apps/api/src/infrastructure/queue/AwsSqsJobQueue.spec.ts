@@ -38,7 +38,9 @@ describe('AwsSqsJobQueue', () => {
 
       expect(mockSend).toHaveBeenCalledWith(expect.any(SendMessageCommand));
       const command = mockSend.mock.calls[0][0] as SendMessageCommand;
-      expect(command.input.QueueUrl).toBe('https://sqs.ap-south-1.amazonaws.com/123456789012/test-queue');
+      expect(command.input.QueueUrl).toBe(
+        'https://sqs.ap-south-1.amazonaws.com/123456789012/test-queue',
+      );
       expect(JSON.parse(command.input.MessageBody!)).toEqual(mockPayload);
     });
   });
@@ -88,7 +90,9 @@ describe('AwsSqsJobQueue', () => {
 
       expect(mockSend).toHaveBeenCalledWith(expect.any(DeleteMessageCommand));
       const command = mockSend.mock.calls[0][0] as DeleteMessageCommand;
-      expect(command.input.QueueUrl).toBe('https://sqs.ap-south-1.amazonaws.com/123456789012/test-queue');
+      expect(command.input.QueueUrl).toBe(
+        'https://sqs.ap-south-1.amazonaws.com/123456789012/test-queue',
+      );
       expect(command.input.ReceiptHandle).toBe('handle-to-delete');
     });
   });
@@ -113,9 +117,9 @@ describe('AwsSqsJobQueue', () => {
         region: 'ap-south-1',
       });
 
-      await expect(queueWithoutDlq.moveToDeadLetter(mockPayload, 'permanent failure', 3)).rejects.toThrow(
-        'AWS_SQS_DLQ_URL is not configured',
-      );
+      await expect(
+        queueWithoutDlq.moveToDeadLetter(mockPayload, 'permanent failure', 3),
+      ).rejects.toThrow('AWS_SQS_DLQ_URL is not configured');
     });
 
     it('should send failure payload to DLQ URL', async () => {
@@ -125,7 +129,9 @@ describe('AwsSqsJobQueue', () => {
 
       expect(mockSend).toHaveBeenCalledWith(expect.any(SendMessageCommand));
       const command = mockSend.mock.calls[0][0] as SendMessageCommand;
-      expect(command.input.QueueUrl).toBe('https://sqs.ap-south-1.amazonaws.com/123456789012/test-dlq');
+      expect(command.input.QueueUrl).toBe(
+        'https://sqs.ap-south-1.amazonaws.com/123456789012/test-dlq',
+      );
       const parsedBody = JSON.parse(command.input.MessageBody!);
       expect(parsedBody.message).toEqual(mockPayload);
       expect(parsedBody.reason).toBe('Parsing timed out after 3 retries');

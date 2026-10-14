@@ -19,7 +19,7 @@ The Company Capability Profile is the product's differentiator, but manual profi
 1. **No generic integration point**: each source has different auth (OAuth, consent artifacts, API keys), different payloads, and different reliability.
 2. **Secret handling risk**: OAuth tokens and API keys are tenant-scoped secrets; mishandling them (or letting them reach the AI context) would be a critical breach.
 3. **Compliance**: DPDP Act 2023 requires purpose limitation, consent records, retention limits, and data residency for personal data.
-4. **Anti-scope integrity**: the product bans portal scraping and DSC automation; connector integrations must be provably *official, user-consented* channels, not scrapers.
+4. **Anti-scope integrity**: the product bans portal scraping and DSC automation; connector integrations must be provably _official, user-consented_ channels, not scrapers.
 
 ## Decision
 

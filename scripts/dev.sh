@@ -13,8 +13,9 @@ echo -e "\n${CYAN}==============================================================
 echo -e "${GREEN}🚀  Starting TenderPulse AI (Backend API + Frontend Web)  🚀${NC}"
 echo -e "${CYAN}==============================================================${NC}\n"
 
-# 1. Ensure packages and API are compiled
+# 1. Ensure packages and API are compiled, and logs directory exists
 echo -e "${BLUE}📦 Building packages and compiling API server...${NC}"
+mkdir -p logs
 npm run build -w @tenderpulse/shared-types
 npm run build -w @tenderpulse/ui
 npm run build -w @tenderpulse/api
@@ -50,7 +51,7 @@ npx tsc -w --preserveWatchOutput -p apps/api/tsconfig.json &
 TSC_PID=$!
 
 echo -e "${GREEN}🌐 Starting Backend API on http://localhost:3000...${NC}"
-SEED_DEMO_DATA=${SEED_DEMO_DATA:-true} node scripts/watch-api.js &
+node scripts/watch-api.js &
 API_PID=$!
 
 # Wait a moment for API to bind to port

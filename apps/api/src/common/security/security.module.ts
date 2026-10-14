@@ -5,7 +5,7 @@
  */
 
 import { Global, Module } from '@nestjs/common';
-import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR, Reflector } from '@nestjs/core';
 import { TokenService } from './TokenService.js';
 import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
 import { RolesGuard } from './guards/roles.guard.js';
@@ -14,6 +14,7 @@ import { TenantContextInterceptor } from './interceptors/tenant-context.intercep
 @Global()
 @Module({
   providers: [
+    Reflector,
     TokenService,
     {
       provide: APP_GUARD,
@@ -28,6 +29,6 @@ import { TenantContextInterceptor } from './interceptors/tenant-context.intercep
       useClass: TenantContextInterceptor,
     },
   ],
-  exports: [TokenService],
+  exports: [Reflector, TokenService],
 })
 export class SecurityModule {}

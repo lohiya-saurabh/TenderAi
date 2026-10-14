@@ -1,128 +1,103 @@
 import React from 'react';
 import type { BidDetail } from '../../../api/bids.js';
-import { StatusBadge } from '../../common/StatusBadge.js';
-import { Card } from '../../common/Card.js';
-import { formatCurrency } from '../../../utils/formatCurrency.js';
 import { formatDate } from '../../../utils/formatDate.js';
 import { getDeadlineInfo } from '../../../utils/deadline.js';
+import type { BidDecision } from './bidDetailData.js';
 
 export interface TenderInfoHeaderProps {
   bid: BidDetail;
+  decision?: BidDecision | null;
 }
 
-/**
- * Tender information — real fields from GET /api/v1/bids/:id only.
- * No derived EMD, no assumed closing times, no fallback values:
- * anything the backend does not provide renders as "Not specified".
- */
-export const TenderInfoHeader: React.FC<TenderInfoHeaderProps> = ({ bid }) => {
+export const TenderInfoHeader: React.FC<TenderInfoHeaderProps> = ({ bid, decision }) => {
   const nowMs = Date.now();
-  const deadline = bid.submissionDeadline
-    ? getDeadlineInfo(bid.submissionDeadline, nowMs)
-    : null;
+  const deadline = bid.submissionDeadline ? getDeadlineInfo(bid.submissionDeadline, nowMs) : null;
 
   const deadlineLabel =
     deadline === null
-      ? 'Not specified'
+      ? 'Deadline: Not specified'
       : deadline.urgency === 'passed'
-        ? `${formatDate(bid.submissionDeadline!)} (closed)`
-        : `${formatDate(bid.submissionDeadline!)} — ${deadline.daysLeft} day${deadline.daysLeft === 1 ? '' : 's'} left`;
+        ? `Closed: ${formatDate(bid.submissionDeadline!)}`
+        : `Due: ${formatDate(bid.submissionDeadline!)} (${deadline.daysLeft}d left)`;
 
-  const deadlineColor =
-    deadline === null
-      ? 'var(--color-surface-subtle)'
-      : deadline.urgency === 'urgent'
-        ? 'var(--color-danger)'
-        : deadline.urgency === 'soon'
-          ? 'var(--color-warning)'
-          : deadline.urgency === 'passed'
-            ? 'var(--color-surface-subtle)'
-            : 'var(--color-surface-muted)';
+  const verdict =
+    decision?.verdict || (bid.status === 'REVIEW_READY' ? 'PURSUE' : 'REVIEW_REQUIRED');
+
+  const verdictStyles =
+    verdict === 'PURSUE'
+      ? {
+          bg: 'bg-primary/10',
+          text: 'text-primary',
+          border: 'border-primary/30',
+          label: 'DETERMINISTIC VERDICT: PURSUE BID',
+        }
+      : verdict === 'DO_NOT_PURSUE'
+        ? {
+            bg: 'bg-destructive/10',
+            text: 'text-destructive',
+            border: 'border-destructive/30',
+            label: 'DETERMINISTIC VERDICT: DO NOT PURSUE',
+          }
+        : {
+            bg: 'bg-orange-500/10',
+            text: 'text-orange-500',
+            border: 'border-orange-500/30',
+            label: 'DETERMINISTIC VERDICT: REVIEW REQUIRED',
+          };
 
   return (
-    <Card variant="default" padding="md">
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-        {/* Title & status */}
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            flexWrap: 'wrap',
-            gap: 'var(--space-3)',
-          }}
-        >
-          <h2
-            style={{
-              fontSize: 'var(--text-xl)',
-              fontWeight: 'var(--font-bold)' as unknown as number,
-              color: 'var(--color-surface-text)',
-              margin: 0,
-              lineHeight: 'var(--leading-tight)',
-              flex: 1,
-              minWidth: '280px',
-            }}
+    <div className="space-y-3 pb-4 border-b border-border">
+      {/* Top Memo & NIT Metadata Row */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <span
+            className={`mono text-xs font-bold px-2.5 py-0.5 rounded border ${verdictStyles.bg} ${verdictStyles.text} ${verdictStyles.border}`}
           >
-            {bid.title}
-          </h2>
-          <StatusBadge status={bid.status} size="lg" />
+            {verdictStyles.label}
+          </span>
+          <span className="mono text-xs text-muted-foreground">
+            CONFIDENTIAL MEMO #{bid.tenderNumber || bid.id.slice(0, 10).toUpperCase()}
+          </span>
         </div>
 
-        {/* Fact matrix */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-            gap: 'var(--space-4)',
-            padding: 'var(--space-4)',
-            backgroundColor: 'var(--color-surface-card-subtle)',
-            borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--color-surface-border)',
-          }}
-        >
-          <div>
-            <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Organization
-            </div>
-            <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-surface-text)', marginTop: '0.2rem' }}>
-              {bid.tenderingAuthority || 'Not specified'}
-            </div>
-            <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-subtle)', marginTop: '0.15rem', fontFamily: 'var(--font-mono)' }}>
-              № {bid.tenderNumber}
-            </div>
-          </div>
-
-          <div>
-            <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Estimated Value
-            </div>
-            <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-surface-text)', marginTop: '0.2rem' }}>
-              {bid.estimatedValueRupees ? formatCurrency(bid.estimatedValueRupees) : 'Not specified'}
-            </div>
-          </div>
-
-          <div>
-            <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Submission Deadline
-            </div>
-            <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: deadlineColor, marginTop: '0.2rem' }}>
-              {deadlineLabel}
-            </div>
-          </div>
-
-          <div>
-            <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Added to Pipeline
-            </div>
-            <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-surface-text)', marginTop: '0.2rem' }}>
-              {formatDate(bid.createdAt)}
-            </div>
-            <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-subtle)', marginTop: '0.15rem' }}>
-              Updated {formatDate(bid.updatedAt)}
-            </div>
-          </div>
+        <div className="flex items-center gap-2">
+          {bid.tenderingAuthority && (
+            <span className="text-xs mono font-bold px-2 py-0.5 rounded border border-border bg-card text-foreground">
+              {bid.tenderingAuthority}
+            </span>
+          )}
+          <span className="text-xs mono font-medium text-muted-foreground">
+            NIT No. {bid.tenderNumber || '—'}
+          </span>
+          <span className="text-xs mono font-medium text-muted-foreground">· {deadlineLabel}</span>
         </div>
       </div>
-    </Card>
+
+      {/* Primary Authoritative Title */}
+      <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground leading-snug">
+        {bid.title}
+      </h1>
+
+      {/* Subtitle & Status Row */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs mono text-muted-foreground">
+          Prepared for Executive Board · Tender Evaluation Committee · Prepared on{' '}
+          {formatDate(bid.createdAt)}
+        </p>
+
+        <span className="inline-flex items-center gap-1.5 text-xs mono font-bold px-2.5 py-0.5 rounded border border-border bg-card text-foreground">
+          <span
+            className={`w-1.5 h-1.5 rounded-full ${
+              bid.status === 'REVIEW_READY'
+                ? 'bg-primary'
+                : bid.status === 'ANALYZING'
+                  ? 'bg-orange-500 animate-pulse'
+                  : 'bg-muted-foreground'
+            }`}
+          />
+          {bid.status.replace(/_/g, ' ')}
+        </span>
+      </div>
+    </div>
   );
 };

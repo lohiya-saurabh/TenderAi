@@ -3,11 +3,7 @@
  */
 
 export type NotificationCategory =
-  | 'DEADLINE'
-  | 'EVIDENCE_EXPIRY'
-  | 'REVIEW_REQUEST'
-  | 'HIGH_RISK_FLAG'
-  | 'SYSTEM';
+  'DEADLINE' | 'EVIDENCE_EXPIRY' | 'REVIEW_REQUEST' | 'HIGH_RISK_FLAG' | 'SYSTEM';
 
 export type NotificationChannel = 'IN_APP' | 'EMAIL' | 'SMS';
 

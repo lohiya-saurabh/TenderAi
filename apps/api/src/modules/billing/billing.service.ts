@@ -4,7 +4,11 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
 import { eq, sql, and } from 'drizzle-orm';
-import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '../../common/database/database.module.js';
+import {
+  DRIZZLE_TOKEN,
+  type DrizzleDb,
+  createDrizzle,
+} from '../../common/database/database.module.js';
 import * as schema from '../../common/database/schema.js';
 import { BadRequestError } from '../../common/errors/errors.js';
 import {
@@ -55,8 +59,14 @@ export class BillingService {
         planName: planDef.name,
         billingInterval: interval,
         status: sub.status as SubscriptionView['status'],
-        currentPeriodStart: sub.currentPeriodStart instanceof Date ? sub.currentPeriodStart.toISOString() : String(sub.currentPeriodStart),
-        currentPeriodEnd: sub.currentPeriodEnd instanceof Date ? sub.currentPeriodEnd.toISOString() : String(sub.currentPeriodEnd),
+        currentPeriodStart:
+          sub.currentPeriodStart instanceof Date
+            ? sub.currentPeriodStart.toISOString()
+            : String(sub.currentPeriodStart),
+        currentPeriodEnd:
+          sub.currentPeriodEnd instanceof Date
+            ? sub.currentPeriodEnd.toISOString()
+            : String(sub.currentPeriodEnd),
         cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
         entitlements: planDef.entitlements,
         priceInr: price,
@@ -153,7 +163,9 @@ export class BillingService {
   public async changePlan(organizationId: string, dto: ChangePlanDto): Promise<SubscriptionView> {
     const targetTier = dto.planTier?.toUpperCase() as PlanTier;
     if (!PLAN_CATALOG[targetTier]) {
-      throw new BadRequestError(`Invalid plan tier "${dto.planTier}". Valid tiers: FREE, STARTER, GROWTH, BUSINESS, ENTERPRISE`);
+      throw new BadRequestError(
+        `Invalid plan tier "${dto.planTier}". Valid tiers: FREE, STARTER, GROWTH, BUSINESS, ENTERPRISE`,
+      );
     }
 
     const interval = (dto.billingInterval?.toUpperCase() || 'MONTHLY') as BillingInterval;
@@ -184,17 +196,15 @@ export class BillingService {
         })
         .where(eq(schema.subscriptions.id, existing.id));
     } else {
-      await this.db
-        .insert(schema.subscriptions)
-        .values({
-          id: `sub_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-          organizationId,
-          planTier: targetTier,
-          billingInterval: interval,
-          status: 'ACTIVE',
-          currentPeriodStart: now,
-          currentPeriodEnd: periodEnd,
-        });
+      await this.db.insert(schema.subscriptions).values({
+        id: `sub_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        organizationId,
+        planTier: targetTier,
+        billingInterval: interval,
+        status: 'ACTIVE',
+        currentPeriodStart: now,
+        currentPeriodEnd: periodEnd,
+      });
     }
 
     return this.getSubscription(organizationId);

@@ -26,25 +26,25 @@ describe('Provenance Value Object', () => {
 
   it('should throw InvalidProvenanceException if verbatim quote is empty', () => {
     expect(() => new Provenance({ ...validProps, verbatimQuote: '   ' })).toThrow(
-      InvalidProvenanceException
+      InvalidProvenanceException,
     );
   });
 
   it('should throw InvalidProvenanceException if page number is less than 1', () => {
     expect(() => new Provenance({ ...validProps, pageNumber: 0 })).toThrow(
-      InvalidProvenanceException
+      InvalidProvenanceException,
     );
     expect(() => new Provenance({ ...validProps, pageNumber: -5 })).toThrow(
-      InvalidProvenanceException
+      InvalidProvenanceException,
     );
   });
 
   it('should throw InvalidProvenanceException if confidence score is out of [0.0, 1.0]', () => {
     expect(() => new Provenance({ ...validProps, confidenceScore: 1.5 })).toThrow(
-      InvalidProvenanceException
+      InvalidProvenanceException,
     );
     expect(() => new Provenance({ ...validProps, confidenceScore: -0.1 })).toThrow(
-      InvalidProvenanceException
+      InvalidProvenanceException,
     );
   });
 });

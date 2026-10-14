@@ -18,7 +18,7 @@ export class ComplianceIngestionCompletedEvent extends DomainEvent<ComplianceIng
     payload: ComplianceIngestionCompletedPayload,
     version = 1,
     eventId?: string,
-    occurredAt?: Date
+    occurredAt?: Date,
   ) {
     super(
       ComplianceIngestionCompletedEvent.EVENT_TYPE,
@@ -28,7 +28,7 @@ export class ComplianceIngestionCompletedEvent extends DomainEvent<ComplianceIng
       payload,
       version,
       eventId,
-      occurredAt
+      occurredAt,
     );
   }
 }

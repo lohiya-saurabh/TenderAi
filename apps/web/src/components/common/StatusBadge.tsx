@@ -10,11 +10,7 @@ import {
 } from './Icons.js';
 
 export type SemanticStatusVariant =
-  | 'PASS'
-  | 'FAIL'
-  | 'MISSING'
-  | 'REVIEW_REQUIRED'
-  | 'NOT_APPLICABLE';
+  'PASS' | 'FAIL' | 'MISSING' | 'REVIEW_REQUIRED' | 'NOT_APPLICABLE';
 
 export type LegacyStatusVariant =
   | 'PENDING'
@@ -130,11 +126,12 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
       case 'QUEUED_FOR_EXTRACTION':
       case 'EXTRACTING':
         return {
-          bg: 'rgba(59, 130, 246, 0.12)',
-          color: '#3b82f6',
-          border: 'rgba(59, 130, 246, 0.3)',
+          bg: 'rgba(234, 88, 12, 0.08)',
+          color: '#ea580c',
+          border: 'rgba(234, 88, 12, 0.25)',
           icon: SpinnerIcon,
-          defaultLabel: normalized === 'QUEUED_FOR_EXTRACTION' ? 'Queued' : normalized.replace(/_/g, ' '),
+          defaultLabel:
+            normalized === 'QUEUED_FOR_EXTRACTION' ? 'Queued' : normalized.replace(/_/g, ' '),
         };
 
       // 5. Canonical NOT_APPLICABLE / Waived / Archived
@@ -148,7 +145,8 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
           color: 'var(--status-na-text)',
           border: 'var(--status-na-border)',
           icon: normalized === 'NOT_APPLICABLE' ? NotApplicableIcon : null,
-          defaultLabel: normalized === 'NOT_APPLICABLE' ? 'N/A' : (normalized || 'Unknown').replace(/_/g, ' '),
+          defaultLabel:
+            normalized === 'NOT_APPLICABLE' ? 'N/A' : (normalized || 'Unknown').replace(/_/g, ' '),
         };
     }
   };

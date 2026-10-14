@@ -5,7 +5,7 @@
  * declared via @RequirePermission(...).
  */
 
-import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, Inject } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { REQUIRED_PERMISSIONS_KEY } from '../decorators/permissions.decorator.js';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator.js';
@@ -15,7 +15,10 @@ import { UnauthorizedError, ForbiddenError } from '../../errors/errors.js';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
-  constructor(private readonly reflector: Reflector) {}
+  constructor(
+    @Inject(Reflector)
+    private readonly reflector: Reflector,
+  ) {}
 
   public canActivate(context: ExecutionContext): boolean {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
@@ -52,9 +55,7 @@ export class RolesGuard implements CanActivate {
         hasPermission(user.role, permission);
 
       if (!hasPerm) {
-        throw new ForbiddenError(
-          `Role '${user.role}' lacks required permission '${permission}'.`,
-        );
+        throw new ForbiddenError(`Role '${user.role}' lacks required permission '${permission}'.`);
       }
     }
 

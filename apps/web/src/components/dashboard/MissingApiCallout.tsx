@@ -15,16 +15,19 @@ const ENDPOINTS_STATUS: EndpointStatus[] = [
   {
     method: 'GET',
     path: '/api/v1/dashboard/metrics',
-    purpose: 'Pre-aggregated tenant KPIs (active volume, total exposure in INR, urgent deadlines, pipeline breakdown).',
+    purpose:
+      'Pre-aggregated tenant KPIs (active volume, total exposure in INR, urgent deadlines, pipeline breakdown).',
     status: 'LIVE',
     notes: 'Backed by PostgreSQL server-side aggregation for high-volume scalability.',
   },
   {
     method: 'GET',
     path: '/api/v1/company-profile',
-    purpose: 'Company Capability Profile aggregate — registrations, certifications, audited financials, past work orders.',
+    purpose:
+      'Company Capability Profile aggregate — registrations, certifications, audited financials, past work orders.',
     status: 'LIVE',
-    notes: 'Pinned, versioned corporate capability snapshots with deterministic eligibility engine mapping.',
+    notes:
+      'Pinned, versioned corporate capability snapshots with deterministic eligibility engine mapping.',
   },
   {
     method: 'GET',
@@ -38,19 +41,23 @@ const ENDPOINTS_STATUS: EndpointStatus[] = [
     path: '/api/v1/bids/:id/deadlines',
     purpose: 'Tender lifecycle milestones (pre-bid, clarification, EMD, online bid freeze).',
     status: 'LIVE',
-    notes: 'Deterministic milestone countdown and status computed against tender submission deadlines.',
+    notes:
+      'Deterministic milestone countdown and status computed against tender submission deadlines.',
   },
   {
     method: 'GET',
     path: '/api/v1/bids?page=&limit=&sort=',
-    purpose: 'Server-side pagination, sorting, and filtering of the tender list with embedded decision projection.',
+    purpose:
+      'Server-side pagination, sorting, and filtering of the tender list with embedded decision projection.',
     status: 'LIVE',
-    notes: 'Server-side offset/limit pagination, keyword search, and embedded latest bid decision projection.',
+    notes:
+      'Server-side offset/limit pagination, keyword search, and embedded latest bid decision projection.',
   },
   {
     method: 'GET',
     path: '/api/v1/tenders/amendments',
-    purpose: 'Corrigendum / amendment notification and impact stream with scope and date change tracking.',
+    purpose:
+      'Corrigendum / amendment notification and impact stream with scope and date change tracking.',
     status: 'LIVE',
     notes: 'Tenant-wide stream tracking published corrigenda documents and requirement impacts.',
   },
@@ -74,19 +81,17 @@ export const MissingApiCallout: React.FC = () => {
           </span>
         </div>
         <ChevronDown
-          className={cn(
-            "h-4 w-4 transition-transform duration-200",
-            isExpanded && "rotate-180"
-          )}
+          className={cn('h-4 w-4 transition-transform duration-200', isExpanded && 'rotate-180')}
         />
       </button>
 
       {isExpanded && (
         <div className="mt-3 pt-3 border-t border-border/60 text-xs text-muted-foreground leading-relaxed">
           <p className="mb-2">
-            To adhere strictly to <em className="font-medium text-foreground">zero invented backend data</em>, every metric,
-            action item, and deadline on this dashboard is grounded in live PostgreSQL data. Multi-tenant RBAC is strictly
-            enforced on all calls.
+            To adhere strictly to{' '}
+            <em className="font-medium text-foreground">zero invented backend data</em>, every
+            metric, action item, and deadline on this dashboard is grounded in live PostgreSQL data.
+            Multi-tenant RBAC is strictly enforced on all calls.
           </p>
           <div className="font-semibold text-foreground mb-1.5 mt-3">
             Endpoint Inventory &amp; Status ({ENDPOINTS_STATUS.length}):
@@ -100,10 +105,10 @@ export const MissingApiCallout: React.FC = () => {
                   </code>
                   <span
                     className={cn(
-                      "px-1.5 py-0.5 text-[10px] font-bold rounded tracking-wider",
+                      'px-1.5 py-0.5 text-[10px] font-bold rounded tracking-wider',
                       endpoint.status === 'LIVE'
-                        ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
-                        : "bg-muted text-muted-foreground"
+                        ? 'bg-muted text-foreground border border-border'
+                        : 'bg-muted text-muted-foreground',
                     )}
                   >
                     {endpoint.status}

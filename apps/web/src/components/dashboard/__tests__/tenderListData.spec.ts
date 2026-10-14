@@ -82,14 +82,7 @@ describe('getVisibleColumns (responsive column density)', () => {
 
   it('also hides Organization and Value on md tablets', () => {
     const columns = getVisibleColumns('md');
-    expect(columns).toEqual([
-      'tender',
-      'deadline',
-      'status',
-      'risk',
-      'readiness',
-      'actions',
-    ]);
+    expect(columns).toEqual(['tender', 'deadline', 'status', 'risk', 'readiness', 'actions']);
   });
 
   it('keeps only the highest-density columns on sm phones', () => {
@@ -112,9 +105,28 @@ describe('getVisibleColumns (responsive column density)', () => {
 
 describe('filterBids', () => {
   const bids = [
-    makeBid({ id: 'a', title: 'NHAI Highway Project', status: 'REVIEW_READY', flaggedRequirements: 3 }),
-    makeBid({ id: 'b', title: 'CPWD Office Complex', status: 'DRAFT', flaggedRequirements: 0, tenderingAuthority: 'CPWD', tenderNumber: 'CPWD/DELHI/2026/CIVIL-0491' }),
-    makeBid({ id: 'c', title: 'Railway Electrification', status: 'ANALYZING', flaggedRequirements: 1, tenderingAuthority: 'Indian Railways', tenderNumber: 'IR/SE/2026/EL-001' }),
+    makeBid({
+      id: 'a',
+      title: 'NHAI Highway Project',
+      status: 'REVIEW_READY',
+      flaggedRequirements: 3,
+    }),
+    makeBid({
+      id: 'b',
+      title: 'CPWD Office Complex',
+      status: 'DRAFT',
+      flaggedRequirements: 0,
+      tenderingAuthority: 'CPWD',
+      tenderNumber: 'CPWD/DELHI/2026/CIVIL-0491',
+    }),
+    makeBid({
+      id: 'c',
+      title: 'Railway Electrification',
+      status: 'ANALYZING',
+      flaggedRequirements: 1,
+      tenderingAuthority: 'Indian Railways',
+      tenderNumber: 'IR/SE/2026/EL-001',
+    }),
   ];
 
   it('returns everything for default filters', () => {
@@ -372,7 +384,7 @@ describe('getFitTier', () => {
     expect(getFitTier(0.44)).toBe('WEAK');
     expect(getFitTier(0.45)).toBe('MODERATE');
     expect(getFitTier(0.69)).toBe('MODERATE');
-    expect(getFitTier(0.70)).toBe('STRONG');
+    expect(getFitTier(0.7)).toBe('STRONG');
     expect(getFitTier(0.95)).toBe('STRONG');
     expect(getFitTier(0.0)).toBe('WEAK');
   });
@@ -467,7 +479,11 @@ describe('describeActiveFilters', () => {
   });
 
   it('combines multiple active filters', () => {
-    const desc = describeActiveFilters({ search: 'highway', status: 'REVIEW_READY', risk: 'CRITICAL' });
+    const desc = describeActiveFilters({
+      search: 'highway',
+      status: 'REVIEW_READY',
+      risk: 'CRITICAL',
+    });
     expect(desc).toContain('search "highway"');
     expect(desc).toContain('status "REVIEW_READY"');
     expect(desc).toContain('risk "CRITICAL"');

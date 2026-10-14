@@ -7,7 +7,7 @@ export class InMemoryEventBus implements IEventBus {
 
   public subscribe<T extends IDomainEvent = IDomainEvent>(
     eventType: string,
-    handler: DomainEventHandler<T>
+    handler: DomainEventHandler<T>,
   ): void {
     if (!this.handlers.has(eventType)) {
       this.handlers.set(eventType, new Set());
@@ -17,7 +17,7 @@ export class InMemoryEventBus implements IEventBus {
 
   public unsubscribe<T extends IDomainEvent = IDomainEvent>(
     eventType: string,
-    handler: DomainEventHandler<T>
+    handler: DomainEventHandler<T>,
   ): void {
     const handlersSet = this.handlers.get(eventType);
     if (handlersSet) {
@@ -42,7 +42,7 @@ export class InMemoryEventBus implements IEventBus {
         // without bubbling up to crash the primary publisher transaction.
         const errorMessage = err instanceof Error ? err.message : String(err);
         console.error(
-          `[EventBus] Subscriber error on event '${event.eventType}' (ID: ${event.eventId}): ${errorMessage}`
+          `[EventBus] Subscriber error on event '${event.eventType}' (ID: ${event.eventId}): ${errorMessage}`,
         );
       }
     });

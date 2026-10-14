@@ -23,5 +23,9 @@ export interface BillingPortResult {
 export interface BillingPort {
   createSubscription(params: CreateSubscriptionParams): Promise<BillingPortResult>;
   cancelSubscription(subscriptionId: string): Promise<boolean>;
-  updateSubscriptionPlan(subscriptionId: string, planTier: string, billingInterval: string): Promise<BillingPortResult>;
+  updateSubscriptionPlan(
+    subscriptionId: string,
+    planTier: string,
+    billingInterval: string,
+  ): Promise<BillingPortResult>;
 }

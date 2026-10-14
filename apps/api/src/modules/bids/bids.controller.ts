@@ -1,7 +1,7 @@
 /**
  * BidsController — NestJS controller for bid project endpoints with RBAC guards.
  */
-import { Controller, Get, Post, Delete, Param, Query, Body, HttpCode } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Query, Body, HttpCode, Inject } from '@nestjs/common';
 import { BidsService, type ListBidsQuery } from './bids.service.js';
 import { ComplianceService } from '../compliance/compliance.service.js';
 import { GetBidDecisionUseCase } from './application/GetBidDecisionUseCase.js';
@@ -12,9 +12,9 @@ import { NotFoundError } from '../../common/errors/errors.js';
 @Controller('api/v1/bids')
 export class BidsController {
   constructor(
-    private readonly bidsService: BidsService,
-    private readonly complianceService: ComplianceService,
-    private readonly bidDecisionUseCase: GetBidDecisionUseCase,
+    @Inject(BidsService) private readonly bidsService: BidsService,
+    @Inject(ComplianceService) private readonly complianceService: ComplianceService,
+    @Inject(GetBidDecisionUseCase) private readonly bidDecisionUseCase: GetBidDecisionUseCase,
   ) {}
 
   @Get()
@@ -138,7 +138,16 @@ export class BidsController {
   }
 
   private toDecisionWire(decision: Awaited<ReturnType<GetBidDecisionUseCase['evaluate']>>) {
-    const { decisionId, bidId, profileVersionId, verdict, state, readinessScore, evaluatedAt, response } = decision;
+    const {
+      decisionId,
+      bidId,
+      profileVersionId,
+      verdict,
+      state,
+      readinessScore,
+      evaluatedAt,
+      response,
+    } = decision;
     return {
       decisionId,
       bidId,

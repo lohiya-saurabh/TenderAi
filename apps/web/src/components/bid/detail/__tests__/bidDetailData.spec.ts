@@ -16,7 +16,7 @@ describe('bidDetailData — Robust Reason & Decision Formatting', () => {
         mitigationAdvice: 'Ensure dedicated overdraft limit is sanctioned.',
       });
       expect(formatted).toBe(
-        'Working Capital Lock-in: 10% security deposit required for 18 months. [Ensure dedicated overdraft limit is sanctioned.]'
+        'Working Capital Lock-in: 10% security deposit required for 18 months. [Ensure dedicated overdraft limit is sanctioned.]',
       );
     });
 
@@ -27,7 +27,7 @@ describe('bidDetailData — Robust Reason & Decision Formatting', () => {
         category: 'LIQUIDATED_DAMAGES',
       });
       expect(formatted).toBe(
-        'LIQUIDATED DAMAGES: Standard 0.5% per week delay penalty capped at 10% of contract value.'
+        'LIQUIDATED DAMAGES: Standard 0.5% per week delay penalty capped at 10% of contract value.',
       );
       expect(formatted).not.toContain('undefined');
     });
@@ -50,7 +50,7 @@ describe('bidDetailData — Robust Reason & Decision Formatting', () => {
         detail: '3-Year Average Turnover of ₹281.90 Cr exceeds requirement.',
       });
       expect(formatted).toBe(
-        'Exceeds Turnover Threshold: 3-Year Average Turnover of ₹281.90 Cr exceeds requirement.'
+        'Exceeds Turnover Threshold: 3-Year Average Turnover of ₹281.90 Cr exceeds requirement.',
       );
     });
 
@@ -78,7 +78,8 @@ describe('bidDetailData — Robust Reason & Decision Formatting', () => {
           },
           {
             title: 'Strong Similar Work Experience',
-            detail: 'Largest completed project of ₹215.00 Cr qualifies against the ₹120.00 Cr threshold.',
+            detail:
+              'Largest completed project of ₹215.00 Cr qualifies against the ₹120.00 Cr threshold.',
             category: 'TECHNICAL',
           },
           {
@@ -124,10 +125,10 @@ describe('bidDetailData — Robust Reason & Decision Formatting', () => {
       });
 
       expect(decision.reasons).toContain(
-        'Exceeds Turnover Threshold: 3-Year Average Turnover of ₹281.90 Cr exceeds the ₹150.00 Cr requirement.'
+        'Exceeds Turnover Threshold: 3-Year Average Turnover of ₹281.90 Cr exceeds the ₹150.00 Cr requirement.',
       );
       expect(decision.reasons).toContain(
-        'LIQUIDATED DAMAGES: Standard 0.5% per week delay penalty capped at 10% of contract value.'
+        'LIQUIDATED DAMAGES: Standard 0.5% per week delay penalty capped at 10% of contract value.',
       );
     });
   });

@@ -1,13 +1,7 @@
 import { TenderDocument } from '../domain/entities/TenderDocument.js';
 import { IStorageService } from './IStorageService.js';
-import {
-  DocumentContentNormalizer,
-  NormalizedDocumentPage,
-} from './DocumentContentNormalizer.js';
-import {
-  IDocumentExtractor,
-  ExtractedComplianceItem,
-} from './IngestionWorker.js';
+import { DocumentContentNormalizer, NormalizedDocumentPage } from './DocumentContentNormalizer.js';
+import { IDocumentExtractor, ExtractedComplianceItem } from './IngestionWorker.js';
 export type { ExtractedComplianceItem };
 import { StructuredLogger } from '../../../common/logging/StructuredLogger.js';
 import { LoggingContextHolder } from '../../../common/logging/LoggingContext.js';
@@ -68,7 +62,7 @@ export interface AiExtractorConfig {
   timeoutMs?: number;
   customFetch?: (
     url: string,
-    init: RequestInit
+    init: RequestInit,
   ) => Promise<{ ok: boolean; status: number; json: () => Promise<AiServiceExtractResponse> }>;
 }
 
@@ -79,13 +73,13 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
   private readonly timeoutMs: number;
   private readonly customFetch?: (
     url: string,
-    init: RequestInit
+    init: RequestInit,
   ) => Promise<{ ok: boolean; status: number; json: () => Promise<AiServiceExtractResponse> }>;
 
   constructor(
     private readonly storageService: IStorageService,
     private readonly normalizer: DocumentContentNormalizer = new DocumentContentNormalizer(),
-    config: AiExtractorConfig = {}
+    config: AiExtractorConfig = {},
   ) {
     this.aiBaseUrl = config.aiBaseUrl ?? process.env.AI_ENGINE_URL ?? 'http://localhost:8000';
     const internalServiceKey = config.internalServiceKey ?? process.env.INTERNAL_SERVICE_KEY;
@@ -93,17 +87,21 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
       throw new Error('INTERNAL_SERVICE_KEY must be configured in production.');
     }
     this.internalServiceKey = internalServiceKey ?? 'tenderpulse-internal-secret-2026';
-    this.timeoutMs = config.timeoutMs ?? (process.env.AI_EXTRACTION_TIMEOUT_MS ? parseInt(process.env.AI_EXTRACTION_TIMEOUT_MS, 10) : 120000);
+    this.timeoutMs =
+      config.timeoutMs ??
+      (process.env.AI_EXTRACTION_TIMEOUT_MS
+        ? parseInt(process.env.AI_EXTRACTION_TIMEOUT_MS, 10)
+        : 120000);
     this.customFetch = config.customFetch;
   }
 
   public async extract(
     document: ExtractableDocument,
-    securityContext?: SecurityContextDto
+    securityContext?: SecurityContextDto,
   ): Promise<ExtractedComplianceItem[]> {
     if (!this.customFetch) {
       throw new Error(
-        `Synchronous extraction via AiDocumentExtractor.extract() is disabled. Ingestion must use dispatchExtraction() for asynchronous queue/event choreography.`
+        `Synchronous extraction via AiDocumentExtractor.extract() is disabled. Ingestion must use dispatchExtraction() for asynchronous queue/event choreography.`,
       );
     }
 
@@ -119,7 +117,7 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
 
     if (!exists) {
       throw new Error(
-        `Failed to retrieve document content for key '${document.storagePath}'. Object not found in storage.`
+        `Failed to retrieve document content for key '${document.storagePath}'. Object not found in storage.`,
       );
     }
 
@@ -141,11 +139,11 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
       downloadUrl = await this.storageService.generatePresignedDownloadUrl(
         document.storagePath,
         document.fileName,
-        900 // 15-minute lease
+        900, // 15-minute lease
       );
     } catch (err: unknown) {
       this.logger.warn(
-        `Failed to generate presigned download URL for doc ${document.id}: ${(err as Error)?.message}. Falling back to inline buffer normalization.`
+        `Failed to generate presigned download URL for doc ${document.id}: ${(err as Error)?.message}. Falling back to inline buffer normalization.`,
       );
     }
 
@@ -188,7 +186,8 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
     const endpoint = `${this.aiBaseUrl}/api/v1/extract`;
 
     this.logger.log(
-      `Dispatching document ${document.id} to AI engine (${endpoint}) via ${downloadUrl ? 'presigned URL handover' : `${candidatePages.length} locally extracted pages`
+      `Dispatching document ${document.id} to AI engine (${endpoint}) via ${
+        downloadUrl ? 'presigned URL handover' : `${candidatePages.length} locally extracted pages`
       }...`,
     );
 
@@ -211,7 +210,7 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
 
       if (!response.ok) {
         throw new Error(
-          `AI extraction service returned HTTP ${response.status} for document '${document.id}'.`
+          `AI extraction service returned HTTP ${response.status} for document '${document.id}'.`,
         );
       }
 
@@ -242,7 +241,8 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
             stampPaperDenominationInr: item.executionRules?.stampPaperDenominationInr ?? undefined,
             notarizationRequired: Boolean(item.executionRules?.notarizationRequired),
             udinRequired: Boolean(item.executionRules?.udinRequired),
-            signingAuthorityRank: item.executionRules?.signingAuthorityRank ?? 'Authorized Signatory',
+            signingAuthorityRank:
+              item.executionRules?.signingAuthorityRank ?? 'Authorized Signatory',
           },
           provenance: {
             pageNumber: Number(item.provenance.pageNumber) || 1,
@@ -272,7 +272,7 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
 
     if (!exists) {
       throw new Error(
-        `Failed to retrieve document content for key '${document.storagePath}'. Object not found in storage.`
+        `Failed to retrieve document content for key '${document.storagePath}'. Object not found in storage.`,
       );
     }
 
@@ -304,7 +304,7 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
       downloadUrl?.includes('mock-s3.tenderpulse.local') ||
       downloadUrl?.includes('.local') ||
       downloadUrl?.includes('localhost:4566') ||
-      downloadUrl?.includes('127.0.0.1:4566')
+      downloadUrl?.includes('127.0.0.1:4566'),
     );
     let candidatePages: NormalizedDocumentPage[] = [];
     if (!downloadUrl || isMockStorage) {
@@ -367,9 +367,7 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
       });
 
       if (!response.ok) {
-        throw new Error(
-          `AI worker service returned HTTP ${response.status} for async dispatch.`,
-        );
+        throw new Error(`AI worker service returned HTTP ${response.status} for async dispatch.`);
       }
 
       const data = await response.json();
@@ -385,12 +383,12 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
   }
 
   private async extractCandidatePagesLocally(
-    document: ExtractableDocument
+    document: ExtractableDocument,
   ): Promise<NormalizedDocumentPage[]> {
     const rawContent = await this.storageService.getObject(document.storagePath);
     if (!rawContent) {
       throw new Error(
-        `Failed to retrieve document content for key '${document.storagePath}'. Object not found in storage.`
+        `Failed to retrieve document content for key '${document.storagePath}'. Object not found in storage.`,
       );
     }
 
@@ -401,7 +399,10 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
 
     const isPureTocPage = (text: string): boolean => {
       if (!text || text.trim().length === 0) return true;
-      const lines = text.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
+      const lines = text
+        .split('\n')
+        .map((l) => l.trim())
+        .filter((l) => l.length > 0);
       if (lines.length === 0) return true;
 
       const textLower = text.toLowerCase();
@@ -422,7 +423,9 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
       }
 
       const tocRatio = tocLines / lines.length;
-      const hasOperative = /\b(shall|must|is required to|will be forfeited|undertakes to)\b/i.test(text);
+      const hasOperative = /\b(shall|must|is required to|will be forfeited|undertakes to)\b/i.test(
+        text,
+      );
 
       if (isTocTitle && tocRatio > 0.2 && !hasOperative) return true;
       if (tocRatio > 0.5 && !hasOperative) return true;

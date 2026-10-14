@@ -11,9 +11,7 @@ import { getBreakpoint, type Breakpoint } from '../components/dashboard/tenderLi
  */
 export function useBreakpoint(): Breakpoint {
   const [breakpoint, setBreakpoint] = useState<Breakpoint>(() =>
-    typeof window === 'undefined'
-      ? 'xl'
-      : getBreakpoint(window.innerWidth),
+    typeof window === 'undefined' ? 'xl' : getBreakpoint(window.innerWidth),
   );
 
   useEffect(() => {

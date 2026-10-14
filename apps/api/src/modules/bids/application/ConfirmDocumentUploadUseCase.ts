@@ -42,11 +42,11 @@ export class ConfirmDocumentUploadUseCase {
     private readonly unitOfWork: IUnitOfWork = new DirectUnitOfWork(),
     private readonly jobRepository?: IIngestionJobRepository,
     private readonly jobQueue?: IJobQueue,
-    private readonly eventBus?: IEventBus
-  ) { }
+    private readonly eventBus?: IEventBus,
+  ) {}
 
   public async execute(
-    command: ConfirmDocumentUploadCommand
+    command: ConfirmDocumentUploadCommand,
   ): Promise<ConfirmDocumentUploadResult> {
     // 1. RBAC Authorization check
     TenantContextHolder.requirePermission(Permissions.DOCUMENTS_UPLOAD);
@@ -60,7 +60,7 @@ export class ConfirmDocumentUploadUseCase {
     // 3. Anti-IDOR: Scoped lookup of TenderDocument
     const document = await this.documentRepository.findById(
       command.documentId,
-      command.organizationId
+      command.organizationId,
     );
     if (!document) {
       throw new EntityNotFoundException('TenderDocument', command.documentId);
@@ -75,13 +75,13 @@ export class ConfirmDocumentUploadUseCase {
     const headResult = await this.storageService.headObject(document.s3Key);
     if (!headResult.exists) {
       throw new ValidationException(
-        `File not found in storage at key '${document.s3Key}'. Direct upload must complete before confirmation.`
+        `File not found in storage at key '${document.s3Key}'. Direct upload must complete before confirmation.`,
       );
     }
 
     if (headResult.sizeBytes !== document.sizeBytes) {
       throw new ValidationException(
-        `File size mismatch: Declared ${document.sizeBytes} bytes, but storage reports ${headResult.sizeBytes} bytes.`
+        `File size mismatch: Declared ${document.sizeBytes} bytes, but storage reports ${headResult.sizeBytes} bytes.`,
       );
     }
 
@@ -127,7 +127,7 @@ export class ConfirmDocumentUploadUseCase {
             documentStatus: document.status.value,
             fileName: document.fileName,
           },
-        })
+        }),
       );
     });
 

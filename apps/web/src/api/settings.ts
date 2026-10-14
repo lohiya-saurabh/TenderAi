@@ -27,6 +27,8 @@ export function getWorkspaceSettings(): Promise<ApiResult<WorkspaceSettings>> {
   return apiGet<WorkspaceSettings>('/api/v1/settings/workspace');
 }
 
-export function updateWorkspaceSettings(dto: UpdateWorkspaceSettingsDto): Promise<ApiResult<WorkspaceSettings>> {
+export function updateWorkspaceSettings(
+  dto: UpdateWorkspaceSettingsDto,
+): Promise<ApiResult<WorkspaceSettings>> {
   return apiPatch<WorkspaceSettings>('/api/v1/settings/workspace', dto);
 }

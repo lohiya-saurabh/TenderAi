@@ -38,12 +38,14 @@ describe('GcsStorageService (Google Cloud Storage Adapter)', () => {
 
   describe('generatePresignedUploadUrl', () => {
     it('should request a V4 signed write URL with correct content-type and expiry', async () => {
-      mockGetSignedUrl.mockResolvedValueOnce(['https://storage.googleapis.com/tenderpulse-vault-gcp-dev/tenants/org1/doc.pdf?X-Goog-Signature=test']);
+      mockGetSignedUrl.mockResolvedValueOnce([
+        'https://storage.googleapis.com/tenderpulse-vault-gcp-dev/tenants/org1/doc.pdf?X-Goog-Signature=test',
+      ]);
 
       const url = await storageService.generatePresignedUploadUrl(
         'tenants/org1/doc.pdf',
         'application/pdf',
-        600
+        600,
       );
 
       expect(mockBucket).toHaveBeenCalledWith('tenderpulse-vault-gcp-dev');
@@ -53,7 +55,7 @@ describe('GcsStorageService (Google Cloud Storage Adapter)', () => {
           version: 'v4',
           action: 'write',
           contentType: 'application/pdf',
-        })
+        }),
       );
       expect(url).toContain('storage.googleapis.com');
     });
@@ -61,12 +63,14 @@ describe('GcsStorageService (Google Cloud Storage Adapter)', () => {
 
   describe('generatePresignedDownloadUrl', () => {
     it('should request a V4 signed read URL with response-content-disposition', async () => {
-      mockGetSignedUrl.mockResolvedValueOnce(['https://storage.googleapis.com/tenderpulse-vault-gcp-dev/tenants/org1/doc.pdf?download=true']);
+      mockGetSignedUrl.mockResolvedValueOnce([
+        'https://storage.googleapis.com/tenderpulse-vault-gcp-dev/tenants/org1/doc.pdf?download=true',
+      ]);
 
       const url = await storageService.generatePresignedDownloadUrl(
         'tenants/org1/doc.pdf',
         'NIT_Document.pdf',
-        300
+        300,
       );
 
       expect(mockGetSignedUrl).toHaveBeenCalledWith(
@@ -74,7 +78,7 @@ describe('GcsStorageService (Google Cloud Storage Adapter)', () => {
           version: 'v4',
           action: 'read',
           responseDisposition: 'attachment; filename="NIT_Document.pdf"',
-        })
+        }),
       );
       expect(url).toContain('download=true');
     });
@@ -95,7 +99,9 @@ describe('GcsStorageService (Google Cloud Storage Adapter)', () => {
 
       expect(result.exists).toBe(true);
       expect(result.sizeBytes).toBe(1048576);
-      expect(result.checksumSha256).toBe('e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855');
+      expect(result.checksumSha256).toBe(
+        'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+      );
     });
 
     it('should return exists=false and size=0 when object is not found (404)', async () => {
@@ -114,7 +120,9 @@ describe('GcsStorageService (Google Cloud Storage Adapter)', () => {
       (error as unknown as { code: number }).code = 403;
       mockGetMetadata.mockRejectedValueOnce(error);
 
-      await expect(storageService.headObject('tenants/org1/secret.pdf')).rejects.toThrow('Permission Denied');
+      await expect(storageService.headObject('tenants/org1/secret.pdf')).rejects.toThrow(
+        'Permission Denied',
+      );
     });
   });
 

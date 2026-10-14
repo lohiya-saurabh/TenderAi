@@ -27,6 +27,23 @@ let restartDebounceTimer = null;
 let isShuttingDown = false;
 let isRestarting = false;
 
+function parseEnvFile(filePath) {
+  const envVars = {};
+  if (!fs.existsSync(filePath)) return envVars;
+  const content = fs.readFileSync(filePath, 'utf-8');
+  for (const line of content.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx > 0) {
+      const key = trimmed.slice(0, eqIdx).trim();
+      const val = trimmed.slice(eqIdx + 1).trim();
+      envVars[key] = val;
+    }
+  }
+  return envVars;
+}
+
 function launchApiServer() {
   if (isShuttingDown) return;
 
@@ -36,10 +53,13 @@ function launchApiServer() {
   }
   nodeArgs.push(path.join(distDir, 'main.js'));
 
+  const fileEnv = parseEnvFile(envFile);
+  const childEnv = { ...process.env, ...fileEnv };
+
   childProcess = spawn('node', nodeArgs, {
     cwd: rootDir,
     stdio: 'inherit',
-    env: { ...process.env },
+    env: childEnv,
   });
 
   childProcess.on('exit', (code, signal) => {
@@ -49,7 +69,9 @@ function launchApiServer() {
       // Previous instance exited cleanly; boot the new instance now
       launchApiServer();
     } else if (!isShuttingDown && code !== 0 && signal !== 'SIGTERM' && signal !== 'SIGKILL') {
-      console.warn(`[WatchAPI] API process exited with code ${code}. Waiting for next TypeScript compilation...`);
+      console.warn(
+        `[WatchAPI] API process exited with code ${code}. Waiting for next TypeScript compilation...`,
+      );
     }
   });
 }
@@ -93,7 +115,9 @@ if (fs.existsSync(distDir)) {
     }
 
     restartDebounceTimer = setTimeout(() => {
-      console.log(`\n🔄 [WatchAPI] Recompilation detected in ${filename}. Restarting API server...`);
+      console.log(
+        `\n🔄 [WatchAPI] Recompilation detected in ${filename}. Restarting API server...`,
+      );
       restartApiServer();
     }, 350);
   });
@@ -102,7 +126,9 @@ if (fs.existsSync(distDir)) {
     console.error('[WatchAPI] Watcher error:', err);
   });
 } else {
-  console.warn(`[WatchAPI] Directory ${distDir} does not exist yet. Ensure tsc has compiled the project.`);
+  console.warn(
+    `[WatchAPI] Directory ${distDir} does not exist yet. Ensure tsc has compiled the project.`,
+  );
 }
 
 function cleanup() {

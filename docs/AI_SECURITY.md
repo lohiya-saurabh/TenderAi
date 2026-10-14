@@ -280,7 +280,7 @@ Before initiating an AI extraction run, the API resolves the exact document whit
 async function buildWorkflowSecurityContext(
   bidId: string,
   tenantId: string,
-  userId: string
+  userId: string,
 ): Promise<SecurityContext> {
   // 1. Fetch bid project (enforcing tenant boundary)
   const bid = await bidRepo.findById(bidId, tenantId);

@@ -28,9 +28,7 @@ function makeBid(overrides: Partial<BidSummary> = {}): BidSummary {
   };
 }
 
-function makeComplianceItem(
-  overrides: Partial<ComplianceItem> = {},
-): ComplianceItem {
+function makeComplianceItem(overrides: Partial<ComplianceItem> = {}): ComplianceItem {
   return {
     id: 'ci-1',
     bidId: 'bid-1',
@@ -82,9 +80,7 @@ describe('computeReadiness', () => {
   });
 
   it('computes approved/total percentage', () => {
-    const readiness = computeReadiness(
-      makeBid({ totalRequirements: 4, approvedRequirements: 3 }),
-    );
+    const readiness = computeReadiness(makeBid({ totalRequirements: 4, approvedRequirements: 3 }));
     expect(readiness.pct).toBe(75);
     expect(readiness.flagged).toBe(0);
   });
@@ -151,7 +147,9 @@ describe('buildActionItems', () => {
     expect(items).toHaveLength(1);
     expect(items[0].type).toBe('FLAGGED_REQUIREMENT');
     expect(items[0].urgency).toBe('critical');
-    expect(items[0].headline).toBe('Clause ITB 3.1: Bid Security / EMD Guarantee of INR 5,00,000 via BG/FDR');
+    expect(items[0].headline).toBe(
+      'Clause ITB 3.1: Bid Security / EMD Guarantee of INR 5,00,000 via BG/FDR',
+    );
     expect(items[0].category).toBe('FINANCIAL');
     expect(items[0].actionUrl).toBe('/bids/bid-1/compliance/ci-1');
     expect(items[0].description).toContain('NIT_Vol1.pdf');
@@ -172,7 +170,9 @@ describe('buildActionItems', () => {
 
   it('ignores PASS clauses that do not require human review (low signal)', () => {
     const bids = [makeBid({ status: 'REVIEW_READY' })];
-    const complianceByBid = { 'bid-1': [makeComplianceItem({ status: 'PASS', humanReviewRequired: false })] };
+    const complianceByBid = {
+      'bid-1': [makeComplianceItem({ status: 'PASS', humanReviewRequired: false })],
+    };
     expect(buildActionItems(bids, complianceByBid, NOW)).toEqual([]);
   });
 

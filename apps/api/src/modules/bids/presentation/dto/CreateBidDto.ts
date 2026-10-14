@@ -25,7 +25,7 @@ export class CreateBidDto {
       payload.tenderNumber.trim() === ''
     ) {
       throw new ValidationException(
-        'Field "tenderNumber" is required and must be a non-empty string.'
+        'Field "tenderNumber" is required and must be a non-empty string.',
       );
     }
     if (
@@ -34,7 +34,7 @@ export class CreateBidDto {
       payload.tenderingAuthority.trim() === ''
     ) {
       throw new ValidationException(
-        'Field "tenderingAuthority" is required and must be a non-empty string.'
+        'Field "tenderingAuthority" is required and must be a non-empty string.',
       );
     }
     if (typeof payload.estimatedValueRupees !== 'number' || payload.estimatedValueRupees < 0) {

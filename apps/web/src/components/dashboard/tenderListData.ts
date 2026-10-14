@@ -23,7 +23,11 @@ import type {
   BidSummary,
   BidVerdict,
 } from '../../api/bids.js';
-import { computeReadiness, computeRiskLevel, type DashboardRiskLevel } from '../../utils/readiness.js';
+import {
+  computeReadiness,
+  computeRiskLevel,
+  type DashboardRiskLevel,
+} from '../../utils/readiness.js';
 import { getDeadlineInfo } from '../../utils/deadline.js';
 import { formatDate } from '../../utils/formatDate.js';
 
@@ -81,9 +85,7 @@ export function getVisibleColumns(breakpoint: Breakpoint): ColumnKey[] {
     case 'xl':
       return ALL_COLUMNS;
     case 'lg':
-      return ALL_COLUMNS.filter(
-        (column) => column !== 'fit' && column !== 'recommendation',
-      );
+      return ALL_COLUMNS.filter((column) => column !== 'fit' && column !== 'recommendation');
     case 'md':
       return ALL_COLUMNS.filter(
         (column) =>
@@ -128,10 +130,7 @@ export const DEFAULT_TENDER_LIST_FILTERS: TenderListFilters = {
  * Client-side filter: status tab, risk level, and free-text search
  * across title, tender number, and tendering authority.
  */
-export function filterBids(
-  bids: BidSummary[],
-  filters: TenderListFilters,
-): BidSummary[] {
+export function filterBids(bids: BidSummary[], filters: TenderListFilters): BidSummary[] {
   const search = filters.search.trim().toLowerCase();
 
   return bids.filter((bid) => {
@@ -140,8 +139,7 @@ export function filterBids(
       return false;
     }
     if (search.length > 0) {
-      const haystack =
-        `${bid.title} ${bid.tenderNumber} ${bid.tenderingAuthority}`.toLowerCase();
+      const haystack = `${bid.title} ${bid.tenderNumber} ${bid.tenderingAuthority}`.toLowerCase();
       if (!haystack.includes(search)) return false;
     }
     return true;
@@ -153,9 +151,7 @@ export function filterBids(
  * filters, for the no-match empty state. Pure so the empty
  * state copy is unit-testable.
  */
-export function describeActiveFilters(
-  filters: TenderListFilters,
-): string[] {
+export function describeActiveFilters(filters: TenderListFilters): string[] {
   const descriptions: string[] = [];
   if (filters.status !== 'ALL') {
     descriptions.push(`status "${filters.status}"`);
@@ -174,13 +170,7 @@ export function describeActiveFilters(
 // ---------------------------------------------------------------------------
 
 export type SortKey =
-  | 'title'
-  | 'organization'
-  | 'value'
-  | 'deadline'
-  | 'status'
-  | 'risk'
-  | 'readiness';
+  'title' | 'organization' | 'value' | 'deadline' | 'status' | 'risk' | 'readiness';
 
 export type SortDirection = 'asc' | 'desc';
 
@@ -256,9 +246,7 @@ export function compareBids(
 ): number {
   switch (key) {
     case 'title':
-      return direction === 'asc'
-        ? a.title.localeCompare(b.title)
-        : b.title.localeCompare(a.title);
+      return direction === 'asc' ? a.title.localeCompare(b.title) : b.title.localeCompare(a.title);
     case 'organization':
       return direction === 'asc'
         ? a.tenderingAuthority.localeCompare(b.tenderingAuthority)
@@ -284,11 +272,7 @@ export function compareBids(
         ? RISK_SCORE[computeRiskLevel(a)] - RISK_SCORE[computeRiskLevel(b)]
         : RISK_SCORE[computeRiskLevel(b)] - RISK_SCORE[computeRiskLevel(a)];
     case 'readiness':
-      return compareNullableNumbers(
-        computeReadiness(a).pct,
-        computeReadiness(b).pct,
-        direction,
-      );
+      return compareNullableNumbers(computeReadiness(a).pct, computeReadiness(b).pct, direction);
   }
 }
 

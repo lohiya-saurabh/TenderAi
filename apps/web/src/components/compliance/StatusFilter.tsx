@@ -1,12 +1,7 @@
 import React from 'react';
 
 export type ComplianceStatusFilterValue =
-  | 'ALL'
-  | 'PASS'
-  | 'FAIL'
-  | 'MISSING'
-  | 'REVIEW_REQUIRED'
-  | 'NOT_APPLICABLE';
+  'ALL' | 'PASS' | 'FAIL' | 'MISSING' | 'REVIEW_REQUIRED' | 'NOT_APPLICABLE';
 
 export interface StatusFilterProps {
   value: ComplianceStatusFilterValue;
@@ -15,18 +10,14 @@ export interface StatusFilterProps {
 }
 
 const statusColors: Record<Exclude<ComplianceStatusFilterValue, 'ALL'>, string> = {
-  PASS: 'var(--color-success)',
-  FAIL: 'var(--color-danger)',
-  MISSING: 'var(--color-warning)',
-  REVIEW_REQUIRED: 'var(--color-primary-500)',
-  NOT_APPLICABLE: 'var(--color-surface-muted)',
+  PASS: 'var(--status-pass-text)',
+  FAIL: 'var(--status-fail-text)',
+  MISSING: 'var(--status-missing-text)',
+  REVIEW_REQUIRED: 'var(--status-review-text)',
+  NOT_APPLICABLE: 'var(--status-na-text)',
 };
 
-export const StatusFilter: React.FC<StatusFilterProps> = ({
-  value,
-  onChange,
-  counts,
-}) => {
+export const StatusFilter: React.FC<StatusFilterProps> = ({ value, onChange, counts }) => {
   const options: { value: ComplianceStatusFilterValue; label: string; color?: string }[] = [
     { label: 'All Items', value: 'ALL' },
     { label: 'Pass', value: 'PASS', color: statusColors.PASS },
@@ -37,7 +28,7 @@ export const StatusFilter: React.FC<StatusFilterProps> = ({
   ];
 
   return (
-    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+    <div className="flex items-center gap-1.5 flex-wrap">
       {options.map((opt) => {
         const isActive = value === opt.value;
         const count = counts ? counts[opt.value] : null;
@@ -45,34 +36,20 @@ export const StatusFilter: React.FC<StatusFilterProps> = ({
         return (
           <button
             key={opt.value}
+            type="button"
             onClick={() => onChange(opt.value)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              padding: '0.4rem 0.75rem',
-              borderRadius: 'var(--radius-full)',
-              fontSize: '0.8rem',
-              fontWeight: isActive ? 600 : 500,
-              cursor: 'pointer',
-              border: `1px solid ${isActive ? 'var(--color-primary-500)' : 'var(--color-surface-border)'}`,
-              backgroundColor: isActive ? 'rgba(99, 102, 241, 0.15)' : 'var(--color-surface-card)',
-              color: isActive ? 'var(--color-surface-text)' : 'var(--color-surface-muted)',
-              transition: 'all var(--transition-fast)',
-            }}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-colors cursor-pointer border ${
+              isActive
+                ? 'bg-foreground text-background border-foreground font-semibold shadow-xs'
+                : 'bg-background text-muted-foreground border-border hover:text-foreground hover:bg-muted/50 font-medium'
+            }`}
           >
             <span>{opt.label}</span>
             {count != null && (
               <span
-                style={{
-                  fontSize: '0.7rem',
-                  padding: '0.1rem 0.4rem',
-                  borderRadius: 'var(--radius-full)',
-                  backgroundColor: opt.color
-                    ? `color-mix(in srgb, ${opt.color} 20%, transparent)`
-                    : 'var(--color-surface-input)',
-                  color: opt.color || 'inherit',
-                }}
+                className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-full ${
+                  isActive ? 'bg-background/20 text-background' : 'bg-muted text-muted-foreground'
+                }`}
               >
                 {count}
               </span>

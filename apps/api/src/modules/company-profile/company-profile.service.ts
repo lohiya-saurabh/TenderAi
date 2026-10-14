@@ -10,13 +10,15 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
 import { eq, and, desc, max } from 'drizzle-orm';
-import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '../../common/database/database.module.js';
+import {
+  DRIZZLE_TOKEN,
+  type DrizzleDb,
+  createDrizzle,
+} from '../../common/database/database.module.js';
 import * as schema from '../../common/database/schema.js';
 import { NotFoundError, BadRequestError } from '../../common/errors/errors.js';
 import { TenantContextHolder } from '../../common/security/TenantContext.js';
-import type {
-  CompanyProfilePayload,
-} from './presentation/dto/CompanyProfilePayload.js';
+import type { CompanyProfilePayload } from './presentation/dto/CompanyProfilePayload.js';
 import { validateCompanyProfilePayload } from './presentation/dto/CompanyProfilePayload.js';
 
 export interface CompanyProfileVersionView {
@@ -79,12 +81,7 @@ export class CompanyProfileService {
       const [comp] = await this.db
         .select()
         .from(schema.companies)
-        .where(
-          and(
-            eq(schema.companies.id, companyId),
-            eq(schema.companies.organizationId, orgId),
-          ),
-        )
+        .where(and(eq(schema.companies.id, companyId), eq(schema.companies.organizationId, orgId)))
         .limit(1);
 
       if (!comp) {
@@ -100,7 +97,9 @@ export class CompanyProfileService {
       .limit(1);
 
     if (!defaultComp) {
-      throw new BadRequestError('No company entity found for this organization. Every organization must have at least one company.');
+      throw new BadRequestError(
+        'No company entity found for this organization. Every organization must have at least one company.',
+      );
     }
 
     return defaultComp.id;
@@ -156,8 +155,8 @@ export class CompanyProfileService {
     const pointer = pointers[0];
     const views = versions.map((v) => this.mapVersion(v));
     const active = pointer
-      ? views.find((v) => v.id === pointer.activeVersionId) ?? views[0] ?? null
-      : views[0] ?? null;
+      ? (views.find((v) => v.id === pointer.activeVersionId) ?? views[0] ?? null)
+      : (views[0] ?? null);
 
     return { companyId: targetCompId, active, versions: views };
   }
@@ -311,14 +310,13 @@ export class CompanyProfileService {
 
     const violations = validateCompanyProfilePayload(payload);
     if (violations.length > 0) {
-      throw new BadRequestError(
-        `Company profile validation failed: ${violations.join(' ')}`,
-      );
+      throw new BadRequestError(`Company profile validation failed: ${violations.join(' ')}`);
     }
 
-    const trimmedName = typeof name === 'string' && name.trim()
-      ? name.trim()
-      : `Profile v${await this.nextVersion(orgId, targetCompId)}`;
+    const trimmedName =
+      typeof name === 'string' && name.trim()
+        ? name.trim()
+        : `Profile v${await this.nextVersion(orgId, targetCompId)}`;
 
     // Immutable append-only versioning: never update in place.
     const versionNumber = await this.nextVersion(orgId, targetCompId);
@@ -393,13 +391,9 @@ export class CompanyProfileService {
     return (row?.maxVersion ?? 0) + 1;
   }
 
-  private mapVersion(
-    record: schema.CompanyProfileVersion,
-  ): CompanyProfileVersionView {
+  private mapVersion(record: schema.CompanyProfileVersion): CompanyProfileVersionView {
     const payload =
-      typeof record.payload === 'string'
-        ? JSON.parse(record.payload)
-        : record.payload;
+      typeof record.payload === 'string' ? JSON.parse(record.payload) : record.payload;
     return {
       id: record.id,
       companyId: record.companyId,

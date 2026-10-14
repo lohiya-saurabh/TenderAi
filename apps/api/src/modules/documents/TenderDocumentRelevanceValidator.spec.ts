@@ -16,7 +16,7 @@ describe('TenderDocumentRelevanceValidator — Pre-Ingestion Integrity Verificat
   it('accepts document matching explicit tender reference number', async () => {
     const content = Buffer.from(
       'NOTICE INVITING TENDER\nTender Ref No: CPWD/DELHI/2026/CIVIL-0491\n' +
-      'Bids are invited from eligible contractors for the works.',
+        'Bids are invited from eligible contractors for the works.',
       'utf-8',
     );
 
@@ -35,9 +35,9 @@ describe('TenderDocumentRelevanceValidator — Pre-Ingestion Integrity Verificat
   it('accepts document matching tendering authority and key project title terms', async () => {
     const content = Buffer.from(
       'CENTRAL PUBLIC WORKS DEPARTMENT\n' +
-      'GENERAL CONDITIONS OF CONTRACT\n' +
-      'Sustainable Administrative Complex Construction Project in Delhi\n' +
-      'Section 1: Instructions to Bidders.',
+        'GENERAL CONDITIONS OF CONTRACT\n' +
+        'Sustainable Administrative Complex Construction Project in Delhi\n' +
+        'Section 1: Instructions to Bidders.',
       'utf-8',
     );
 
@@ -55,8 +55,8 @@ describe('TenderDocumentRelevanceValidator — Pre-Ingestion Integrity Verificat
   it('rejects clearly unrelated document (e.g. recipe or random receipt)', async () => {
     const content = Buffer.from(
       'CHOCOLATE CHIP COOKIE RECIPE\n' +
-      'Ingredients: 2 cups flour, 1 cup butter, 1 cup brown sugar, chocolate chips.\n' +
-      'Instructions: Preheat oven to 350 degrees F. Bake for 10-12 minutes until golden brown.',
+        'Ingredients: 2 cups flour, 1 cup butter, 1 cup brown sugar, chocolate chips.\n' +
+        'Instructions: Preheat oven to 350 degrees F. Bake for 10-12 minutes until golden brown.',
       'utf-8',
     );
 
@@ -76,8 +76,8 @@ describe('TenderDocumentRelevanceValidator — Pre-Ingestion Integrity Verificat
   it('rejects document belonging to a completely different authority and tender', async () => {
     const content = Buffer.from(
       'MUNICIPAL CORPORATION OF GREATER MUMBAI (MCGM)\n' +
-      'Tender ID: MCGM/WATER/2025/PIPE-9871\n' +
-      'Replacement of Water Distribution Pipelines in Bandra West, Mumbai, Maharashtra.',
+        'Tender ID: MCGM/WATER/2025/PIPE-9871\n' +
+        'Replacement of Water Distribution Pipelines in Bandra West, Mumbai, Maharashtra.',
       'utf-8',
     );
 
@@ -103,8 +103,8 @@ describe('TenderDocumentRelevanceValidator — Pre-Ingestion Integrity Verificat
 
     const validContent = Buffer.from(
       'REQUEST FOR PROPOSAL (RFP)\n' +
-      'RFP No: MHA/SMARTCITY/2026/ITS-0118\n' +
-      'City-Wide Integrated CCTV Surveillance Project, Karnataka.',
+        'RFP No: MHA/SMARTCITY/2026/ITS-0118\n' +
+        'City-Wide Integrated CCTV Surveillance Project, Karnataka.',
       'utf-8',
     );
 
@@ -119,7 +119,7 @@ describe('TenderDocumentRelevanceValidator — Pre-Ingestion Integrity Verificat
 
     const invalidContent = Buffer.from(
       'NATIONAL HIGHWAYS AUTHORITY OF INDIA (NHAI)\n' +
-      'Four-laning of NH-62 section from km 100 to km 250 in Rajasthan.',
+        'Four-laning of NH-62 section from km 100 to km 250 in Rajasthan.',
       'utf-8',
     );
 

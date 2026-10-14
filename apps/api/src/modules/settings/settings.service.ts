@@ -4,7 +4,11 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
 import { eq } from 'drizzle-orm';
-import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '../../common/database/database.module.js';
+import {
+  DRIZZLE_TOKEN,
+  type DrizzleDb,
+  createDrizzle,
+} from '../../common/database/database.module.js';
 import * as schema from '../../common/database/schema.js';
 import { BadRequestError } from '../../common/errors/errors.js';
 import { TenantContextHolder } from '../../common/security/TenantContext.js';
@@ -100,14 +104,19 @@ export class SettingsService {
       organizationName: orgName,
       defaultCompanyId: record.defaultCompanyId ?? null,
       notificationPreferences: record.notificationPreferences,
-      updatedAt: record.updatedAt instanceof Date ? record.updatedAt.toISOString() : String(record.updatedAt),
+      updatedAt:
+        record.updatedAt instanceof Date
+          ? record.updatedAt.toISOString()
+          : String(record.updatedAt),
     };
   }
 
   /**
    * Update workspace settings and notification preferences for caller's tenant.
    */
-  public async updateWorkspaceSettings(dto: UpdateWorkspaceSettingsDto): Promise<WorkspaceSettingsView> {
+  public async updateWorkspaceSettings(
+    dto: UpdateWorkspaceSettingsDto,
+  ): Promise<WorkspaceSettingsView> {
     const orgId = this.requireOrg();
     const current = await this.getWorkspaceSettings();
 

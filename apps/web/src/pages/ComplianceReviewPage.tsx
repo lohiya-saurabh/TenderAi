@@ -6,16 +6,24 @@ import { StatusBadge } from '../components/common/StatusBadge.js';
 import { RiskBadge } from '../components/common/RiskBadge.js';
 import { Badge } from '../components/common/Badge.js';
 import { Button } from '../components/common/Button.js';
-import { Card } from '../components/common/Card.js';
 import { ReviewActions } from '../components/compliance/ReviewActions.js';
 import { ExecutionRulesCard } from '../components/compliance/ExecutionRulesCard.js';
 import { ErrorBanner } from '../components/common/ErrorBanner.js';
-import { LoadingSkeleton } from '../components/common/LoadingSkeleton.js';
+import { Skeleton } from '../components/ui/skeleton.js';
 import { EvidenceDrawer } from '../components/compliance/EvidenceDrawer.js';
 import { SourceCitationDrawer } from '../components/compliance/SourceCitationDrawer.js';
 import { AssessmentPanel } from '../components/compliance/AssessmentPanel.js';
-import { ChevronLeftIcon } from '../components/common/Icons.js';
-import { Check, X, Bot, AlertTriangle, FileWarning } from 'lucide-react';
+import {
+  ArrowLeft,
+  Check,
+  X,
+  Bot,
+  AlertTriangle,
+  FileWarning,
+  Copy,
+  CheckCheck,
+  ExternalLink,
+} from 'lucide-react';
 import { deriveGroundingMatch } from '../utils/grounding.js';
 
 export const ComplianceReviewPage: React.FC = () => {
@@ -38,9 +46,19 @@ export const ComplianceReviewPage: React.FC = () => {
   const [isAssessmentPanelOpen, setIsAssessmentPanelOpen] = useState(false);
 
   const fetchItem = useCallback(() => getComplianceItem(bidId, itemId), [bidId, itemId]);
-  const { data: item, isLoading, error, refetch, setData: setItem } = useApi<ComplianceItem>(fetchItem, [bidId, itemId]);
+  const {
+    data: item,
+    isLoading,
+    error,
+    refetch,
+    setData: setItem,
+  } = useApi<ComplianceItem>(fetchItem, [bidId, itemId]);
 
-  const handleReview = async (status: ComplianceItem['status'], notes?: string, expectedVersion?: number) => {
+  const handleReview = async (
+    status: ComplianceItem['status'],
+    notes?: string,
+    expectedVersion?: number,
+  ) => {
     if (!item) return;
     setActionError(null);
     setActionSuccess(null);
@@ -82,22 +100,25 @@ export const ComplianceReviewPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div style={{ maxWidth: '1000px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem', padding: '1rem 0' }}>
-        <LoadingSkeleton height="40px" />
-        <LoadingSkeleton height="180px" />
-        <LoadingSkeleton height="220px" />
-        <LoadingSkeleton height="200px" />
+      <div className="max-w-5xl mx-auto flex flex-col gap-6 py-6">
+        <Skeleton className="h-10 w-64 rounded-lg" />
+        <Skeleton className="h-44 w-full rounded-xl" />
+        <Skeleton className="h-56 w-full rounded-xl" />
+        <Skeleton className="h-48 w-full rounded-xl" />
       </div>
     );
   }
 
   if (error || !item) {
     return (
-      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '1.5rem 0' }}>
-        <ErrorBanner message={error?.message || 'Compliance requirement not found'} onRetry={refetch} />
-        <div style={{ marginTop: '1rem' }}>
-          <Link to={`/bids/${bidId}`} style={{ color: 'var(--color-primary-400)', textDecoration: 'none' }}>
-            ← Return to Bid Project
+      <div className="max-w-5xl mx-auto py-8">
+        <ErrorBanner
+          message={error?.message || 'Compliance requirement not found'}
+          onRetry={refetch}
+        />
+        <div className="mt-4">
+          <Link to={`/bids/${bidId}`} className="text-primary hover:underline text-sm font-medium">
+            ← Return to Bid Dossier
           </Link>
         </div>
       </div>
@@ -105,61 +126,64 @@ export const ComplianceReviewPage: React.FC = () => {
   }
 
   const grounding = deriveGroundingMatch(item);
-  const confidenceScore = item.provenance?.confidenceScore ?? item.sourceCitation?.confidenceScore ?? 0;
+  const confidenceScore =
+    item.provenance?.confidenceScore ?? item.sourceCitation?.confidenceScore ?? 0;
   const confidencePct = Math.round(confidenceScore * 100);
 
   // Compute Review Trigger Reason
   const reviewTriggers: string[] = [];
   if (item.humanReviewRequired) {
-    reviewTriggers.push('Triggered by System: Mandatory human sign-off required for this clause category.');
+    reviewTriggers.push(
+      'Triggered by System: Mandatory human sign-off required for this clause category.',
+    );
   }
   if (!grounding.isExactVerbatim) {
-    reviewTriggers.push(`Incomplete Citation Anchors (${grounding.matchPct}%): Source document coordinates or verbatim text partially unverified.`);
+    reviewTriggers.push(
+      `Incomplete Citation Anchors (${grounding.matchPct}%): Source document coordinates or verbatim text partially unverified.`,
+    );
   } else if (confidenceScore < 0.8 && confidenceScore > 0) {
-    reviewTriggers.push(`Extraction Model Flag (${confidencePct}%): Extraction model flagged potential text ambiguity.`);
+    reviewTriggers.push(
+      `Extraction Model Flag (${confidencePct}%): Extraction model flagged potential text ambiguity.`,
+    );
   }
   if (!item.companyEvidence || item.companyEvidence.status === 'MISSING') {
-    reviewTriggers.push('Evidence Gap: No verified company credential currently matches this requirement.');
+    reviewTriggers.push(
+      'Evidence Gap: No verified company credential currently matches this requirement.',
+    );
   } else if (item.companyEvidence.status === 'EXPIRED') {
-    reviewTriggers.push(`Expired Evidence: Attached document expired on ${item.companyEvidence.expiryDate || 'unknown date'}.`);
+    reviewTriggers.push(
+      `Expired Evidence: Attached document expired on ${item.companyEvidence.expiryDate || 'unknown date'}.`,
+    );
   }
   if (item.risk && (item.risk.level === 'HIGH' || item.risk.level === 'CRITICAL')) {
     reviewTriggers.push(`High Commercial/Legal Risk: ${item.risk.summary}`);
   }
   if (reviewTriggers.length === 0) {
-    reviewTriggers.push('Standard Verification: Human confirmation needed to lock compliance matrix.');
+    reviewTriggers.push(
+      'Standard Verification: Human confirmation needed to lock compliance matrix.',
+    );
   }
 
   return (
-    <div style={{ maxWidth: '1000px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.75rem', padding: '1rem 0 3rem' }}>
-      {/* Back Navigation Bar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+    <div className="w-full flex flex-col gap-6">
+      {/* 1. Back Navigation Bar */}
+      <div className="flex items-center justify-between flex-wrap gap-4 border-b border-border pb-4">
+        <div className="flex items-center gap-2">
           <Link
             to={`/bids/${bidId}`}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              color: 'var(--color-surface-muted)',
-              fontSize: 'var(--text-sm)',
-              textDecoration: 'none',
-              fontWeight: 500,
-            }}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors no-underline"
           >
-            <ChevronLeftIcon size={16} />
-            Back to Bid Workspace
+            <ArrowLeft className="w-3.5 h-3.5" />
+            Back to Bid Dossier
           </Link>
-          <span style={{ color: 'var(--color-surface-subtle)' }}>/</span>
-          <span style={{ color: 'var(--color-surface-text)', fontSize: 'var(--text-sm)', fontWeight: 600 }}>
+          <span className="text-muted-foreground/40 text-xs">/</span>
+          <span className="text-xs font-mono font-medium text-foreground uppercase tracking-wider">
             Human Review Adjudication
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)' }}>
-            Current Status:
-          </span>
+        <div className="flex items-center gap-2.5">
+          <span className="text-xs text-muted-foreground font-mono">Current Status:</span>
           <StatusBadge status={item.status} size="md" />
           {item.risk && <RiskBadge level={item.risk.level} size="sm" />}
         </div>
@@ -167,95 +191,44 @@ export const ComplianceReviewPage: React.FC = () => {
 
       {actionError && <ErrorBanner message={actionError} onDismiss={() => setActionError(null)} />}
       {actionSuccess && (
-        <div
-          style={{
-            backgroundColor: 'rgba(16, 185, 129, 0.12)',
-            border: '1px solid var(--color-success)',
-            color: 'var(--color-success)',
-            padding: '0.75rem 1rem',
-            borderRadius: 'var(--radius-md)',
-            fontSize: 'var(--text-sm)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Check size={16} /> {actionSuccess}
+        <div className="bg-muted/80 border border-border text-foreground px-4 py-3 rounded-lg text-sm flex items-center justify-between">
+          <span className="flex items-center gap-2">
+            <Check className="w-4 h-4 shrink-0 text-foreground" /> {actionSuccess}
           </span>
           <button
             onClick={() => setActionSuccess(null)}
-            style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+            className="text-inherit hover:opacity-75 cursor-pointer bg-transparent border-0 p-0"
             aria-label="Close"
           >
-            <X size={16} />
+            <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
       {/* Review Stage Flow Progression Header */}
-      <div
-        className="no-scrollbar"
-        style={{
-          backgroundColor: 'var(--color-surface-bg)',
-          border: '1px solid var(--color-surface-border)',
-          borderRadius: 'var(--radius-lg)',
-          padding: '0.85rem 1.25rem',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          overflowX: 'auto',
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none',
-          gap: '0.75rem',
-          fontSize: 'var(--text-xs)',
-          color: 'var(--color-surface-muted)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--color-primary-400)', fontWeight: 600 }}>
-          <span>1. Requirement</span>
-        </div>
-        <span>→</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--color-primary-400)', fontWeight: 600 }}>
-          <span>2. Tender Evidence</span>
-        </div>
-        <span>→</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--color-primary-400)', fontWeight: 600 }}>
-          <span>3. Company Evidence</span>
-        </div>
-        <span>→</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--color-primary-400)', fontWeight: 600 }}>
-          <span>4. AI Assessment</span>
-        </div>
-        <span>→</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--color-warning)', fontWeight: 600 }}>
-          <span>5. Trigger Reason</span>
-        </div>
-        <span>→</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--color-success)', fontWeight: 700 }}>
-          <span>6. Human Decision</span>
-        </div>
+      <div className="bg-card border border-border rounded-xl px-4 py-3 flex items-center justify-between overflow-x-auto gap-3 text-xs text-muted-foreground font-mono">
+        <span className="font-semibold text-primary">1. Requirement</span>
+        <span className="text-muted-foreground/40">→</span>
+        <span className="font-semibold text-primary">2. Tender Evidence</span>
+        <span className="text-muted-foreground/40">→</span>
+        <span className="font-semibold text-primary">3. Company Evidence</span>
+        <span className="text-muted-foreground/40">→</span>
+        <span className="font-semibold text-primary">4. AI Assessment</span>
+        <span className="text-muted-foreground/40">→</span>
+        <span className="font-semibold text-orange-600 dark:text-orange-400">
+          5. Trigger Reason
+        </span>
+        <span className="text-muted-foreground/40">→</span>
+        <span className="font-bold text-foreground">6. Human Decision</span>
       </div>
 
       {/* ========================================================================= */}
       {/* 1. REQUIREMENT DEFINITION */}
       {/* ========================================================================= */}
-      <Card padding="lg" style={{ borderLeft: '4px solid var(--color-primary-500)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.75rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <span
-              style={{
-                fontSize: 'var(--text-2xs)',
-                fontWeight: 700,
-                padding: '0.2rem 0.5rem',
-                borderRadius: 'var(--radius-sm)',
-                backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                color: 'var(--color-primary-300)',
-                border: '1px solid rgba(99, 102, 241, 0.3)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-              }}
-            >
+      <div className="bg-card border border-border border-l-4 border-l-primary rounded-xl p-6 shadow-xs flex flex-col gap-4">
+        <div className="flex justify-between items-start flex-wrap gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="px-2.5 py-0.5 rounded text-[11px] font-mono font-bold tracking-wider uppercase bg-primary/10 text-primary border border-primary/20">
               Stage 1 • {item.category} Compliance
             </span>
             <Badge variant={item.isMandatory ? 'danger' : 'neutral'} size="sm">
@@ -267,177 +240,154 @@ export const ComplianceReviewPage: React.FC = () => {
               </Badge>
             )}
             {item.tenderClauseRef && (
-              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)', fontFamily: 'var(--font-mono)' }}>
+              <span className="text-xs font-mono text-muted-foreground">
                 Clause: {item.tenderClauseRef}
               </span>
             )}
           </div>
-          <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)', fontFamily: 'var(--font-mono)' }}>
+          <span className="text-[11px] font-mono text-muted-foreground">
             ID: {item.id.slice(0, 8)} • Rev v{item.version}
           </span>
         </div>
 
-        <h1 style={{ fontSize: 'var(--text-xl)', fontWeight: 700, color: 'var(--color-surface-text)', margin: '0 0 0.75rem', lineHeight: 1.3 }}>
+        <h1 className="text-xl font-bold tracking-tight text-foreground leading-snug">
           {item.requirement}
         </h1>
 
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-surface-text)', lineHeight: 1.6, margin: 0 }}>
-          {item.description}
-        </p>
+        <p className="text-sm text-foreground/90 leading-relaxed">{item.description}</p>
 
         {/* Execution & Statutory Rules Pillbox if applicable */}
         {item.executionRules && (
-          <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--color-surface-border)' }}>
+          <div className="mt-2 pt-3 border-t border-border">
             <ExecutionRulesCard executionRules={item.executionRules} />
           </div>
         )}
-      </Card>
+      </div>
 
       {/* ========================================================================= */}
       {/* 2. TENDER EVIDENCE (GROUNDING ANCHOR) */}
       {/* ========================================================================= */}
-      <Card padding="lg">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-surface-text)' }}>
+      <div className="bg-card border border-border rounded-xl p-6 shadow-xs flex flex-col gap-4">
+        <div className="flex justify-between items-center flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-foreground">
               Stage 2 • What does the tender say?
             </span>
-            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)' }}>
+            <span className="text-xs text-muted-foreground font-mono">
               (Tender Source Grounding)
             </span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div className="flex items-center gap-2">
             <span
-              style={{
-                fontSize: 'var(--text-2xs)',
-                fontWeight: 600,
-                padding: '0.2rem 0.5rem',
-                borderRadius: 'var(--radius-sm)',
-                backgroundColor: grounding.matchPct >= 80 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                color: grounding.matchPct >= 80 ? 'var(--color-success)' : 'var(--color-warning)',
-                border: `1px solid ${grounding.matchPct >= 80 ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
-              }}
+              className={`px-2 py-0.5 rounded text-[11px] font-mono font-semibold ${
+                grounding.matchPct >= 80
+                  ? 'bg-muted text-foreground border border-border'
+                  : 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20'
+              }`}
               title={grounding.citationNote}
             >
               {grounding.badgeLabel}
             </span>
-            <Button variant="ghost" size="sm" onClick={() => setIsCitationDrawerOpen(true)}>
-              Full Citation ↗
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsCitationDrawerOpen(true)}
+              className="text-xs gap-1"
+            >
+              Full Citation <ExternalLink className="w-3 h-3" />
             </Button>
           </div>
         </div>
 
         {/* Provenance Document & Page Metadata */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1.25rem',
-            fontSize: 'var(--text-xs)',
-            color: 'var(--color-surface-muted)',
-            marginBottom: '0.75rem',
-            flexWrap: 'wrap',
-          }}
-        >
+        <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap font-mono">
           <div>
-            <strong>Document:</strong>{' '}
-            <span style={{ color: 'var(--color-surface-text)' }}>
-              {item.sourceCitation?.document || item.provenance?.documentName || 'NIT Tender Document'}
+            <strong className="text-foreground">Document:</strong>{' '}
+            <span>
+              {item.sourceCitation?.document ||
+                item.provenance?.documentName ||
+                'NIT Tender Document'}
             </span>
           </div>
           <div>
-            <strong>Page:</strong>{' '}
-            <span style={{ color: 'var(--color-surface-text)', fontFamily: 'var(--font-mono)' }}>
+            <strong className="text-foreground">Page:</strong>{' '}
+            <span className="text-primary font-semibold">
               p. {item.sourceCitation?.page ?? item.provenance?.pageNumber ?? 1}
             </span>
           </div>
           {(item.sourceCitation?.section || item.provenance?.sectionOrClause) && (
             <div>
-              <strong>Section / Clause:</strong>{' '}
-              <span style={{ color: 'var(--color-surface-text)' }}>
-                {item.sourceCitation?.section || item.provenance?.sectionOrClause}
-              </span>
+              <strong className="text-foreground">Section / Clause:</strong>{' '}
+              <span>{item.sourceCitation?.section || item.provenance?.sectionOrClause}</span>
             </div>
           )}
         </div>
 
         {/* Verbatim Quote Container */}
-        <div
-          style={{
-            backgroundColor: 'var(--color-surface-bg)',
-            border: '1px solid var(--color-surface-border)',
-            borderLeft: '4px solid var(--color-primary-500)',
-            borderRadius: '0 var(--radius-md) var(--radius-md) 0',
-            padding: '1rem 1.25rem',
-            position: 'relative',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
-            <p
-              style={{
-                fontFamily: 'var(--font-serif, Georgia, serif)',
-                fontSize: 'var(--text-sm)',
-                lineHeight: 1.6,
-                color: 'var(--color-surface-text)',
-                margin: 0,
-                fontStyle: 'italic',
-              }}
-            >
-              "{item.provenance?.verbatimQuote || item.sourceCitation?.verbatimQuote || item.description}"
+        <div className="bg-background border border-border border-l-4 border-l-primary rounded-r-lg p-4">
+          <div className="flex justify-between items-start gap-4">
+            <p className="font-mono text-xs sm:text-sm text-foreground/90 leading-relaxed italic m-0">
+              "
+              {item.provenance?.verbatimQuote ||
+                item.sourceCitation?.verbatimQuote ||
+                item.description}
+              "
             </p>
             <Button
               variant="ghost"
               size="sm"
               onClick={() =>
                 handleCopyQuote(
-                  item.provenance?.verbatimQuote || item.sourceCitation?.verbatimQuote || item.description,
+                  item.provenance?.verbatimQuote ||
+                    item.sourceCitation?.verbatimQuote ||
+                    item.description,
                 )
               }
-              style={{ flexShrink: 0, fontSize: 'var(--text-2xs)' }}
+              className="shrink-0 text-xs gap-1"
             >
-              {copiedQuote ? 'Copied' : 'Copy Quote'}
+              {copiedQuote ? (
+                <CheckCheck className="w-3.5 h-3.5 text-primary" />
+              ) : (
+                <Copy className="w-3.5 h-3.5" />
+              )}
+              {copiedQuote ? 'Copied' : 'Copy'}
             </Button>
           </div>
         </div>
-      </Card>
+      </div>
 
       {/* ========================================================================= */}
       {/* 3. COMPANY EVIDENCE (BIDDER DOSSIER) */}
       {/* ========================================================================= */}
-      <Card padding="lg">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-surface-text)' }}>
+      <div className="bg-card border border-border rounded-xl p-6 shadow-xs flex flex-col gap-4">
+        <div className="flex justify-between items-center flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-foreground">
               Stage 3 • What company evidence exists?
             </span>
-            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)' }}>
+            <span className="text-xs text-muted-foreground font-mono">
               (Company Capability Profile)
             </span>
           </div>
 
           {item.companyEvidence && (
-            <Button variant="ghost" size="sm" onClick={() => setIsEvidenceDrawerOpen(true)}>
-              Inspect Evidence ↗
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsEvidenceDrawerOpen(true)}
+              className="text-xs gap-1"
+            >
+              Inspect Evidence <ExternalLink className="w-3 h-3" />
             </Button>
           )}
         </div>
 
         {item.companyEvidence ? (
-          <div
-            style={{
-              backgroundColor: 'var(--color-surface-bg)',
-              border: '1px solid var(--color-surface-border)',
-              borderRadius: 'var(--radius-md)',
-              padding: '1rem 1.25rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.75rem',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-surface-text)' }}>
+          <div className="bg-background border border-border rounded-lg p-4 flex flex-col gap-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-foreground">
                   {item.companyEvidence.title}
                 </span>
                 <Badge
@@ -453,266 +403,189 @@ export const ComplianceReviewPage: React.FC = () => {
                   {item.companyEvidence.status}
                 </Badge>
               </div>
-              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)' }}>
-                Doc Type: <strong>{item.companyEvidence.docType}</strong>
+              <span className="text-xs text-muted-foreground font-mono">
+                Doc Type:{' '}
+                <strong className="text-foreground">{item.companyEvidence.docType}</strong>
               </span>
             </div>
 
-            <div style={{ display: 'flex', gap: '1.5rem', fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)', flexWrap: 'wrap' }}>
+            <div className="flex gap-4 text-xs text-muted-foreground flex-wrap font-mono">
               {item.companyEvidence.udinNumber && (
                 <div>
-                  <strong>UDIN:</strong>{' '}
-                  <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-surface-text)' }}>
+                  <strong className="text-foreground">UDIN:</strong>{' '}
+                  <span className="text-primary font-semibold">
                     {item.companyEvidence.udinNumber}
                   </span>
                 </div>
               )}
               {item.companyEvidence.expiryDate && (
                 <div>
-                  <strong>Validity / Expiry:</strong>{' '}
-                  <span style={{ color: 'var(--color-surface-text)' }}>
-                    {item.companyEvidence.expiryDate}
-                  </span>
+                  <strong className="text-foreground">Validity:</strong>{' '}
+                  <span>{item.companyEvidence.expiryDate}</span>
                 </div>
               )}
               {item.companyEvidence.documentName && (
                 <div>
-                  <strong>File Name:</strong>{' '}
-                  <span style={{ color: 'var(--color-surface-text)' }}>
-                    {item.companyEvidence.documentName}
-                  </span>
+                  <strong className="text-foreground">File:</strong>{' '}
+                  <span>{item.companyEvidence.documentName}</span>
                 </div>
               )}
             </div>
 
             {item.companyEvidence.notes && (
-              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)', fontStyle: 'italic', borderTop: '1px dashed var(--color-surface-border)', paddingTop: '0.5rem' }}>
+              <div className="text-xs text-muted-foreground italic border-t border-dashed border-border pt-2">
                 Note: {item.companyEvidence.notes}
               </div>
             )}
           </div>
         ) : (
-          <div
-            style={{
-              backgroundColor: 'rgba(239, 68, 68, 0.06)',
-              border: '1px dashed rgba(239, 68, 68, 0.3)',
-              borderRadius: 'var(--radius-md)',
-              padding: '1.25rem',
-              textAlign: 'center',
-            }}
-          >
-            <div style={{ color: 'var(--color-danger)', fontWeight: 600, fontSize: 'var(--text-sm)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-              <FileWarning size={16} /> No Matching Company Evidence Linked
+          <div className="bg-destructive/5 border border-dashed border-destructive/30 rounded-lg p-6 text-center">
+            <div className="text-destructive font-semibold text-sm flex items-center justify-center gap-2 mb-1">
+              <FileWarning className="w-4 h-4" /> No Matching Company Evidence Linked
             </div>
-            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)', margin: '0 0 0.75rem' }}>
-              The system could not find an uploaded credential matching this requirement in your Company Profile.
+            <p className="text-xs text-muted-foreground mb-3">
+              The system could not find an uploaded credential matching this requirement in your
+              Company Profile.
             </p>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setIsEvidenceDrawerOpen(true)}
+              className="text-xs"
             >
               Browse Evidence Vault & Attach
             </Button>
           </div>
         )}
-      </Card>
+      </div>
 
       {/* ========================================================================= */}
       {/* 4. AI PRE-ASSESSMENT (ADVISORY — NOT FINAL) */}
       {/* ========================================================================= */}
-      <Card
-        padding="lg"
-        style={{
-          border: '1px dashed rgba(99, 102, 241, 0.4)',
-          backgroundColor: 'rgba(99, 102, 241, 0.03)',
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-primary-300)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Bot size={16} /> Stage 4 • What did the AI conclude?
+      <div className="bg-card border border-border border-dashed rounded-xl p-6 shadow-xs flex flex-col gap-4">
+        <div className="flex justify-between items-center flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-foreground flex items-center gap-1.5">
+              <Bot className="w-4 h-4 text-primary" /> Stage 4 • What did the AI conclude?
             </span>
-            <span
-              style={{
-                fontSize: 'var(--text-2xs)',
-                padding: '0.15rem 0.45rem',
-                borderRadius: 'var(--radius-sm)',
-                backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                color: 'var(--color-primary-300)',
-                fontWeight: 600,
-                textTransform: 'uppercase',
-              }}
-            >
-              AI Recommendation (Advisory Only — Not Final)
+            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold uppercase bg-primary/10 text-primary border border-primary/20">
+              Advisory Pre-Assessment
             </span>
           </div>
 
           {item.rationale && (
-            <Button variant="ghost" size="sm" onClick={() => setIsAssessmentPanelOpen(true)}>
-              Full Comparison Breakdown ↗
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsAssessmentPanelOpen(true)}
+              className="text-xs gap-1"
+            >
+              Full Comparison Breakdown <ExternalLink className="w-3 h-3" />
             </Button>
           )}
         </div>
 
         {item.rationale ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-            {/* Rule comparison block */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-                gap: '0.75rem',
-              }}
-            >
-              <div
-                style={{
-                  backgroundColor: 'var(--color-surface-card)',
-                  padding: '0.85rem 1rem',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--color-surface-border)',
-                }}
-              >
-                <div style={{ fontSize: 'var(--text-2xs)', fontWeight: 600, color: 'var(--color-surface-muted)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+          <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="bg-background border border-border rounded-lg p-3.5">
+                <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-1">
                   Tender Mandate (Normalized)
                 </div>
-                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-text)', fontWeight: 500 }}>
+                <div className="text-xs text-foreground font-medium">
                   {item.rationale.tenderRequirement}
                 </div>
               </div>
 
-              <div
-                style={{
-                  backgroundColor: 'var(--color-surface-card)',
-                  padding: '0.85rem 1rem',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--color-surface-border)',
-                }}
-              >
-                <div style={{ fontSize: 'var(--text-2xs)', fontWeight: 600, color: 'var(--color-surface-muted)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+              <div className="bg-background border border-border rounded-lg p-3.5">
+                <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-1">
                   Company Capability (Found)
                 </div>
-                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-text)', fontWeight: 500 }}>
+                <div className="text-xs text-foreground font-medium">
                   {item.rationale.companyCapability || 'No matching credential found.'}
                 </div>
               </div>
             </div>
 
-            {/* AI Result & Rule Summary */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '0.65rem 1rem',
-                backgroundColor: 'var(--color-surface-card)',
-                borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--color-surface-border)',
-                flexWrap: 'wrap',
-                gap: '0.5rem',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: 'var(--text-xs)' }}>
-                <span style={{ color: 'var(--color-surface-muted)' }}>Evaluated Rule:</span>
-                <strong style={{ color: 'var(--color-surface-text)' }}>{item.rationale.ruleApplied}</strong>
+            <div className="flex items-center justify-between p-3 bg-background border border-border rounded-lg flex-wrap gap-2 text-xs font-mono">
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">Evaluated Rule:</span>
+                <strong className="text-foreground">{item.rationale.ruleApplied}</strong>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: 'var(--text-xs)' }}>
-                <span style={{ color: 'var(--color-surface-muted)' }}>AI Proposed Outcome:</span>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">AI Outcome:</span>
                 <span
-                  style={{
-                    fontWeight: 700,
-                    color:
-                      item.rationale.comparisonResult === 'MET'
-                        ? 'var(--color-success)'
-                        : item.rationale.comparisonResult === 'NOT_MET'
-                          ? 'var(--color-danger)'
-                          : 'var(--color-warning)',
-                  }}
+                  className={`font-bold ${
+                    item.rationale.comparisonResult === 'MET'
+                      ? 'text-foreground'
+                      : item.rationale.comparisonResult === 'NOT_MET'
+                        ? 'text-destructive'
+                        : 'text-amber-500'
+                  }`}
                 >
                   {item.rationale.comparisonResult}
                 </span>
-                <span style={{ color: 'var(--color-surface-muted)' }}>
+                <span className="text-muted-foreground">
                   ({Math.round((item.rationale.confidenceScore || 0) * 100)}% confidence)
                 </span>
               </div>
             </div>
           </div>
         ) : (
-          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)' }}>
+          <div className="text-xs text-muted-foreground">
             AI comparison rationale is not available for this item. Standard rule parsing applies.
           </div>
         )}
-      </Card>
+      </div>
 
       {/* ========================================================================= */}
       {/* 5. WHY IS REVIEW REQUIRED? (TRIGGER & RATIONALE) */}
       {/* ========================================================================= */}
-      <Card
-        padding="lg"
-        style={{
-          borderLeft: '4px solid var(--color-warning)',
-          backgroundColor: 'rgba(245, 158, 11, 0.04)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.6rem' }}>
-          <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-warning)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <AlertTriangle size={16} /> Stage 5 • Why is human review required?
+      <div className="bg-amber-500/5 border border-amber-500/20 border-l-4 border-l-amber-500 rounded-xl p-6 shadow-xs flex flex-col gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+            <AlertTriangle className="w-4 h-4" /> Stage 5 • Why is human review required?
           </span>
         </div>
 
-        <ul style={{ margin: 0, paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+        <ul className="m-0 pl-5 flex flex-col gap-1.5">
           {reviewTriggers.map((trigger, idx) => (
-            <li key={idx} style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-text)', lineHeight: 1.5 }}>
+            <li key={idx} className="text-xs text-foreground/90 leading-relaxed">
               {trigger}
             </li>
           ))}
         </ul>
 
         {item.reviewNotes && (
-          <div
-            style={{
-              marginTop: '0.85rem',
-              paddingTop: '0.75rem',
-              borderTop: '1px dashed var(--color-surface-border)',
-              fontSize: 'var(--text-xs)',
-              color: 'var(--color-surface-muted)',
-            }}
-          >
+          <div className="mt-2 pt-2.5 border-t border-dashed border-amber-500/20 text-xs text-muted-foreground font-mono">
             <strong>Previous Reviewer Note:</strong> {item.reviewNotes}
-            {item.reviewedBy && <span> (by {item.reviewedBy} at {item.reviewedAt})</span>}
+            {item.reviewedBy && (
+              <span>
+                {' '}
+                (by {item.reviewedBy} at {item.reviewedAt})
+              </span>
+            )}
           </div>
         )}
-      </Card>
+      </div>
 
       {/* ========================================================================= */}
       {/* 6. HUMAN DECISION CONSOLE */}
       {/* ========================================================================= */}
-      <div
-        style={{
-          backgroundColor: 'var(--color-surface-card)',
-          border: '2px solid var(--color-primary-500)',
-          borderRadius: 'var(--radius-lg)',
-          padding: '1.5rem',
-          boxShadow: 'var(--shadow-lg)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1.25rem',
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+      <div className="bg-card border-2 border-primary rounded-xl p-6 shadow-md flex flex-col gap-5">
+        <div className="flex justify-between items-center flex-wrap gap-2">
           <div>
-            <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--color-surface-text)', margin: '0 0 0.25rem' }}>
+            <h3 className="text-base font-bold text-foreground m-0">
               Stage 6 • Human Decision Console
             </h3>
-            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)', margin: 0 }}>
-              Select your binding verdict. The human decision overrides any AI pre-assessment.
+            <p className="text-xs text-muted-foreground m-0 mt-0.5">
+              Select your binding verdict. The human decision overrides any AI pre-assessment and is
+              committed to the immutable audit log.
             </p>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)' }}>
-              Active Status:
-            </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground font-mono">Active Status:</span>
             <StatusBadge status={item.status} size="md" />
           </div>
         </div>

@@ -240,11 +240,79 @@ To understand why contractors are desperate for TenderPulse AI, examine these re
 
 ---
 
-## 8. Summary: How TenderPulse AI Solves This
+## 8. Procurement Rule Patterns & The 20+ Candidate Detection Categories
 
-TenderPulse AI acts as a relentless, tireless compliance reviewer that reads every clause, cross-references every Annexure format, checks stamp paper and signatory rules, and detects discrepancies before the contractor hits the "Submit" button.
+TenderPulse AI translates the complex statutory rules of Indian procurement into an automated, high-recall candidate detection and extraction engine (ADR 0028). 
+
+Because government departments express mandatory obligations across varied vocabularies (sometimes without explicit words like `shall` or `must`), our domain rules map directly to **20+ standardized procurement categories**:
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│             20+ Procurement Candidate Categories & Weights             │
+├──────────────────────────┬────────┬────────────────────────────────────┤
+│ Category                 │ Weight │ Statutory Scope                    │
+├──────────────────────────┼────────┼────────────────────────────────────┤
+│ FINANCIAL_SECURITY       │  0.95  │ EMD, PBG, Bid Security, Bank BG    │
+│ ELIGIBILITY_RESTRICTION  │  0.95  │ Debarment, Blacklisting, Insolvency│
+│ EXECUTION_RULE           │  0.90  │ Stamp Paper, Notarization, UDIN    │
+│ DEONTIC_MODAL            │  0.85  │ Shall, Must, Covenants, Mandated to│
+│ FINANCIAL_THRESHOLD      │  0.85  │ Turnover, Net Worth, Solvency, W/C │
+│ MANDATORY_DOCUMENTS      │  0.85  │ PoA, Board Resolution, Integrity   │
+│ DAMAGES_PENALTY          │  0.85  │ Liquidated Damages, Forfeiture     │
+│ SHORT_INSTRUCTION        │  0.85  │ Compact imperatives (Submit EMD)   │
+│ NEGATIVE_COVENANTS       │  0.80  │ Shall not, Prohibited from         │
+│ TECHNICAL_CRITERIA       │  0.80  │ Similar Works, 3-2-1 Rule, Plants  │
+│ DEADLINE                 │  0.75  │ Bid validity, Closing dates        │
+│ MAINTENANCE_SLA          │  0.75  │ Defect Liability Period (DLP)      │
+│ CONSTRUCTION_MILESTONES  │  0.75  │ Work schedules, Project phases     │
+│ STATUTORY_PERMITS        │  0.70  │ Environmental, Labor, Mining, PESO │
+│ DISPUTE_RESOLUTION      │  0.70  │ SAROD, Arbitration, Courts         │
+│ ESCROW_WATERFALL         │  0.70  │ Concessionaire revenue routing     │
+└──────────────────────────┴────────┴────────────────────────────────────┘
+```
+
+### 8.1 Debarment & Disqualification Restrictions (P0 Signal)
+
+Under **GFR 2017 Rule 151** and CVC guidelines, a firm can be debarred from public procurement across three tiers:
+1. **Departmental Blacklisting**: Specific to a Ministry or state department (e.g. disqualified by CPWD for 2 years).
+2. **Cross-Departmental Debarment**: By Ministry of Finance / Department of Expenditure, binding on all Central Ministries.
+3. **Integrity Pact Violations**: Immediate forfeiture of EMD and 3-year commercial ban.
+
+Crucially, debarment clauses are frequently formulated **without deontic modals**:
+> *"Bids submitted by firms appearing on the debarred list maintained by MoRTH or NHAI will be rejected."*
+> *"Any entity undergoing Corporate Insolvency Resolution Process (CIRP) under the IBC 2016 is ineligible."*
+
+In TenderPulse AI, these passages receive a top-tier **0.95 priority score**, ensuring they are immediately extracted into Packet 1 eligibility checks.
+
+### 8.2 Execution & Statutory Rules: Stamp Paper, Notarization, and UDIN (P0 Signal)
+
+1. **State Stamp Act Invariants**:
+   Under the **Indian Stamp Act, 1899** and state-specific amendments (e.g., *Maharashtra Stamp Act 1958*, *Karnataka Stamp Act 1957*), legal instruments must bear stamp duty commensurate with state law:
+   - Delhi: Minimum ₹100 for affidavits / ₹50 for undertakings.
+   - Maharashtra: Minimum ₹500 for Powers of Attorney and Affidavits (Article 4 of Schedule I).
+   - Under-stamped documents are legally inadmissible in evidence (Section 35) and cause instant bid rejection.
+2. **Chartered Accountant UDIN Requirement**:
+   Per ICAI Council Mandate (effective 1st July 2019) and Ministry of Finance directives, all certificates issued by practicing Chartered Accountants for government tenders must carry an **18-digit Unique Document Identification Number (UDIN)**. The portal rejects certificates with pending or omitted UDINs.
+
+### 8.3 Technical Experience & "Similar Works" Scoring
+
+Tenders structure technical qualification using tiered completion equations:
+- **3-2-1 Rule**: 3 works of 40% cost, OR 2 works of 50% cost, OR 1 work of 80% cost.
+- **Lookback Window**: Typically the last 7 years ending on the last day of the month previous to the one in which NIT is invited.
+- **Escalation Factor**: To equalize past projects against inflation, tender authorities allow a compounded annual indexing factor (typically $7\%$ to $10\%$ per annum) on past financial values:
+  $$\text{Indexed Value} = \text{Past Value} \times (1 + r)^n$$
+
+### 8.4 Context Fusion: Bridging Layout Blocks to Document Hierarchy
+
+Tender documents frequently place operative instructions in terse bullet points or table cells:
+> Block text: `"₹15,00,000"` (appearing in a table cell or short bullet).
+
+A naive keyword search ignores this block. However, TenderPulse AI's **Context Fusion** links the block to its parent `SectionNode` AST:
+$$\text{Lineage: } \text{Document} > \text{SECTION 3: INSTRUCTIONS TO BIDDERS} > \text{Clause 3.1: Earnest Money Deposit}$$
+The fused text `[SECTION 3: EARNEST MONEY DEPOSIT] - [₹15,00,000]` activates candidate scoring, assigning a 0.95 priority score and ensuring 100% extraction recall.
 
 ---
+
 ---
 
 # Part B — Software Domain Model & Ubiquitous Language
@@ -262,7 +330,7 @@ Our customer is an Indian MSME or contractor that earns revenue by winning gover
 
 The platform's job is to make the bidder **informed before they commit**:
 
-1. **Should I pursue this tender?** — Can this company *prove* it meets the eligibility bar?
+1. **Should I pursue this tender?** — Can this company _prove_ it meets the eligibility bar?
 2. **What exactly does this tender require?** — Every annexure, declaration, stamp paper value, signing rank, threshold.
 3. **Do we have the required evidence?** — Which of our certificates/documents satisfy which requirement, and which are missing or expired?
 4. **What could cause rejection?** — Commercial traps (LD, DLP, PBG) and evidence gaps.
@@ -270,7 +338,7 @@ The platform's job is to make the bidder **informed before they commit**:
 
 The **persistent Company Capability Profile** is the moat: everything a company has done once (registrations, certifications, financials, past projects, completion certificates, OEM letters, people, equipment, geography, past bid evidence) is captured once and re-evaluated against every future tender.
 
-> **The one-sentence domain:** *A Tender is evaluated against a pinned version of a Company Capability Profile, producing a BidDecision, a gap register, a risk register, and a readiness verdict — all grounded in verbatim citations and all confirmable by a human.*
+> **The one-sentence domain:** _A Tender is evaluated against a pinned version of a Company Capability Profile, producing a BidDecision, a gap register, a risk register, and a readiness verdict — all grounded in verbatim citations and all confirmable by a human._
 
 ## 10. Concept Derivation
 
@@ -288,20 +356,20 @@ From the candidate concept list, derived by asking "what does the business actua
 
 ### 11.1 Aggregates (transactional & consistency boundaries)
 
-| Aggregate root | Contains | Invariant |
-|:---------------|:---------|:----------|
-| **CompanyProfile** | CapabilityEntry entities (all 11 sections), each linked to EvidenceDocument IDs | One ACTIVE version per company at a time; every edit creates a new immutable version; every capability claim must reference ≥0 evidence documents |
-| **Tender** | TenderDocument, TenderRequirement, TenderAmendment entities | A requirement without provenance (file/page/clause/verbatim quote) cannot exist; amendments supersede requirements, never mutate them silently |
-| **BidCase** (the pursuit) | EvidenceMatch, RiskFinding, ComplianceAssessment result, BidDecision, ReadinessAssessment; references Tender + **pinned** CompanyProfile version | The profile version is frozen at case creation so decisions are reproducible; a BidDecision is only valid after human confirmation |
-| **ReviewTask** | ReviewDecision history | One open task per (subject, reviewer) at a time; every resolution records who/when/what changed |
-| **WorkflowRun** | step states, retry count, lease | At-least-once execution with idempotent completion (existing `IngestionJob` is today's incarnation) |
-| **AuditEvent** | — | Immutable, append-only; never updated or deleted |
+| Aggregate root            | Contains                                                                                                                                         | Invariant                                                                                                                                         |
+| :------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **CompanyProfile**        | CapabilityEntry entities (all 11 sections), each linked to EvidenceDocument IDs                                                                  | One ACTIVE version per company at a time; every edit creates a new immutable version; every capability claim must reference ≥0 evidence documents |
+| **Tender**                | TenderDocument, TenderRequirement, TenderAmendment entities                                                                                      | A requirement without provenance (file/page/clause/verbatim quote) cannot exist; amendments supersede requirements, never mutate them silently    |
+| **BidCase** (the pursuit) | EvidenceMatch, RiskFinding, ComplianceAssessment result, BidDecision, ReadinessAssessment; references Tender + **pinned** CompanyProfile version | The profile version is frozen at case creation so decisions are reproducible; a BidDecision is only valid after human confirmation                |
+| **ReviewTask**            | ReviewDecision history                                                                                                                           | One open task per (subject, reviewer) at a time; every resolution records who/when/what changed                                                   |
+| **WorkflowRun**           | step states, retry count, lease                                                                                                                  | At-least-once execution with idempotent completion (existing `IngestionJob` is today's incarnation)                                               |
+| **AuditEvent**            | —                                                                                                                                                | Immutable, append-only; never updated or deleted                                                                                                  |
 
 ### 11.2 Domain entities (with identity & lifecycle, living inside aggregates)
 
 - **Tenant** (a.k.a. Organization) — the account, billing, and data-isolation boundary.
 - **User** — a human; joins tenants via **Membership** (bridge entity carrying a Role). A user can belong to multiple tenants (e.g., a bid consultant).
-- **Company** — the legal entity the profile describes. Distinct from Tenant: a tenant *accesses* the system; a company *is evaluated*. MVP: 1 tenant : 1 company, but modeled separately so a group or consultancy can manage several profiles later.
+- **Company** — the legal entity the profile describes. Distinct from Tenant: a tenant _accesses_ the system; a company _is evaluated_. MVP: 1 tenant : 1 company, but modeled separately so a group or consultancy can manage several profiles later.
 - **CapabilityEntry** and its specializations: **Registration, Certification, FinancialRecord, Experience/Project, WorkOrder, CompletionCertificate, OEMRelationship, Employee, Equipment, GeographicPresence** — each has identity, issuance data, and an expiry/validity window, so they can expire, be renewed, or be revoked.
 - **EvidenceDocument** — a stored document (certificate, CA letter, work-order PDF) with metadata and a validity window. Its own small aggregate because one certificate can back several capability entries and several bids.
 - **TenderDocument, TenderRequirement, TenderAmendment** — inside Tender.
@@ -311,11 +379,11 @@ From the candidate concept list, derived by asking "what does the business actua
 ### 11.3 Value objects (immutable, no identity, embedded — not tables)
 
 - **Permission** — atomic string (`bids:create`, `compliance:review`). Code checks permissions, never role names.
-- **ExecutionRules** — stamp paper required/denomination, notarization, UDIN, signing-authority rank. *(Exists in code today.)*
-- **Provenance** — source file, page, clause reference, verbatim quote. *(Exists in code today; the product's trust foundation.)*
-- **Money** — rupees, no float math. *(Exists in code today.)*
+- **ExecutionRules** — stamp paper required/denomination, notarization, UDIN, signing-authority rank. _(Exists in code today.)_
+- **Provenance** — source file, page, clause reference, verbatim quote. _(Exists in code today; the product's trust foundation.)_
+- **Money** — rupees, no float math. _(Exists in code today.)_
 - **Criterion** — a structured eligibility test: type (turnover / experience-count / certification / geography / OEM…), operator, threshold, unit, lookback window.
-- **EligibilityVerdict** — ELIGIBLE / CONDITIONALLY_ELIGIBLE / INELIGIBLE + structured shortfall detail (e.g., *required ₹4.5 Cr avg turnover; profile ₹4.2 Cr; shortfall ₹30 L*).
+- **EligibilityVerdict** — ELIGIBLE / CONDITIONALLY_ELIGIBLE / INELIGIBLE + structured shortfall detail (e.g., _required ₹4.5 Cr avg turnover; profile ₹4.2 Cr; shortfall ₹30 L_).
 - **MatchState** — MATCHED / PARTIAL / EXPIRED / MISSING / NOT_APPLICABLE.
 - **AssessmentState** — PASS / FAIL / MISSING_EVIDENCE / REVIEW_REQUIRED; the requirement-level rollup of criterion results (§57), distinct from MatchState (per-criterion) and EligibilityVerdict (per-tender).
 - **EvidenceRef** — company-side citation: documentId, pages, section, verbatim quote of the extracted fact, verificationTier, extractionMethod. The company-side twin of Provenance (§53).
@@ -326,8 +394,8 @@ From the candidate concept list, derived by asking "what does the business actua
 ### 11.4 Workflow / process concepts (not tables)
 
 - **Workflow** — the process definition (ingest → parse → extract → match → assess → review → readiness).
-- **WorkflowRun** — one execution of a workflow; *is* an aggregate root (see 11.1) because it has transactional state (lease, retries, DLQ).
-- **ComplianceAssessment** — the *process* of evaluating a Tender against a profile, plus its recorded *result* inside the BidCase. The process is orchestration; the result is data.
+- **WorkflowRun** — one execution of a workflow; _is_ an aggregate root (see 11.1) because it has transactional state (lease, retries, DLQ).
+- **ComplianceAssessment** — the _process_ of evaluating a Tender against a profile, plus its recorded _result_ inside the BidCase. The process is orchestration; the result is data.
 - **BidReadiness** — the rollup process producing the readiness score and gate.
 - **CorrigendumMonitoring** — the loop that diffs amendments and re-evaluates.
 - **MatchScorecard** — the output document of matching (Go / Conditional-Go / No-Go with reasons). A projection, not an entity.
@@ -340,19 +408,19 @@ From the candidate concept list, derived by asking "what does the business actua
 
 ### 11.6 Lifecycles & state transitions
 
-| Concept | States |
-|:--------|:-------|
-| CompanyProfile | DRAFT → ACTIVE → ARCHIVED (every edit mints a new version; old versions immutable) |
-| EvidenceDocument | PENDING → VERIFIED → EXPIRED → RENEWED / REVOKED |
-| Tender | DISCOVERED → REGISTERED → ANALYZING → ANALYZED → DECIDED → PURSUING → CLOSED (SUBMITTED / WITHDRAWN / AWARDED / LOST) |
-| TenderRequirement | EXTRACTED → PROPOSED → CONFIRMED → SUPERSEDED (by amendment) |
-| TenderAmendment | PENDING → APPLIED → ASSESSED |
-| EvidenceMatch | PENDING → MATCHED / PARTIAL / EXPIRED / MISSING / NOT_APPLICABLE |
+| Concept              | States                                                                                                                                                                       |
+| :------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CompanyProfile       | DRAFT → ACTIVE → ARCHIVED (every edit mints a new version; old versions immutable)                                                                                           |
+| EvidenceDocument     | PENDING → VERIFIED → EXPIRED → RENEWED / REVOKED                                                                                                                             |
+| Tender               | DISCOVERED → REGISTERED → ANALYZING → ANALYZED → DECIDED → PURSUING → CLOSED (SUBMITTED / WITHDRAWN / AWARDED / LOST)                                                        |
+| TenderRequirement    | EXTRACTED → PROPOSED → CONFIRMED → SUPERSEDED (by amendment)                                                                                                                 |
+| TenderAmendment      | PENDING → APPLIED → ASSESSED                                                                                                                                                 |
+| EvidenceMatch        | PENDING → MATCHED / PARTIAL / EXPIRED / MISSING / NOT_APPLICABLE                                                                                                             |
 | ComplianceAssessment | UNASSESSED → ENGINE_ASSESSED (PASS / FAIL / MISSING_EVIDENCE / REVIEW_REQUIRED) → HUMAN_RESOLVED (CONFIRMED / OVERRIDDEN / WAIVED); engineVerdict retained on override (§56) |
-| BidDecision | AI_PROPOSED → UNDER_REVIEW → CONFIRMED (GO / CONDITIONAL_GO / NO_GO) |
-| ReviewTask | OPEN → CLAIMED → RESOLVED (APPROVED / REJECTED / EDITED) / EXPIRED |
-| WorkflowRun | PENDING → PROCESSING → COMPLETED / FAILED / DEAD_LETTER *(matches existing IngestionJob state machine)* |
-| BidCase | CREATED → MATCHING → ASSESSED → IN_REVIEW → READY_TO_SUBMIT → SUBMITTED / ABANDONED |
+| BidDecision          | AI_PROPOSED → UNDER_REVIEW → CONFIRMED (GO / CONDITIONAL_GO / NO_GO)                                                                                                         |
+| ReviewTask           | OPEN → CLAIMED → RESOLVED (APPROVED / REJECTED / EDITED) / EXPIRED                                                                                                           |
+| WorkflowRun          | PENDING → PROCESSING → COMPLETED / FAILED / DEAD_LETTER _(matches existing IngestionJob state machine)_                                                                      |
+| BidCase              | CREATED → MATCHING → ASSESSED → IN_REVIEW → READY_TO_SUBMIT → SUBMITTED / ABANDONED                                                                                          |
 
 ### 11.7 Important relationships
 
@@ -377,23 +445,23 @@ This is the heart of the product. Ten steps, deterministic at every decision poi
 
 **Phase 0 — Register the Tender.** User uploads the tender package (NIT/RFP/GCC/SCC/BOQ). Documents are parsed; NIT metadata (authority, est. value, deadline, EMD, fee) is extracted. The **Tender** aggregate is created.
 
-**Phase 1 — Extract Requirements.** The 16-domain taxonomy extracts every Packet-1 requirement as a **TenderRequirement** with ExecutionRules and **Provenance** (file, page, clause, verbatim quote). Crucially, eligibility criteria are extracted as structured **Criteria** — *"average turnover ≥ ₹4.5 Cr over FY22–25"*, *"3 similar works ≥ 40% of est. value in last 7 years"*, *"ISO 9001 valid at bid date"* — not as prose.
+**Phase 1 — Extract Requirements.** The 16-domain taxonomy extracts every Packet-1 requirement as a **TenderRequirement** with ExecutionRules and **Provenance** (file, page, clause, verbatim quote). Crucially, eligibility criteria are extracted as structured **Criteria** — _"average turnover ≥ ₹4.5 Cr over FY22–25"_, _"3 similar works ≥ 40% of est. value in last 7 years"_, _"ISO 9001 valid at bid date"_ — not as prose.
 
 **Phase 2 — Pin the Profile.** A **BidCase** is created against the Tender and the **current CompanyProfile version N**. The pin is permanent: even if the profile is later edited, this case remains evaluated against version N.
 
 **Phase 3 — Criterion-by-Criterion Matching (deterministic).** For each structured criterion, pure arithmetic/logic — **never LLM inference**:
 
-| Pillar | Tender criterion | Profile data evaluated | Deterministic test |
-|:-------|:-----------------|:-----------------------|:-------------------|
-| Financial | Avg turnover ≥ ₹4.5 Cr (FY22–25) | FinancialRecords (FY-wise turnover) | mean(turnover) ≥ 4.5 Cr; else shortfall = 4.5 − mean |
-| Financial | Solvency ≥ 20% of est. value | Bank solvency letters | letter limit ≥ 0.2 × est. value AND issued within window |
-| Experience | 3 similar works ≥ 40% each, 7 yrs | Experience/Project + CompletionCertificate entries | count(works where value ≥ 0.4 × est. value AND completed within 7y AND scope matches) ≥ 3 |
-| Experience | Completion cert signed by EE or above | CompletionCertificate.signingRank | rank ≥ EE in hierarchy (AE < EE < SE) |
-| Statutory | Valid GSTIN, PAN, Udyam | Registrations | present AND active AND unexpired at bid date |
-| Certification | ISO 9001 valid at bid date | Certifications | issueDate ≤ bidDate ≤ expiryDate |
-| Geographic | State-specific registration | GeographicPresence | presence ∩ required region ≠ ∅ |
-| Commercial | OEM authorization for supplied goods | OEMRelationships | authorization exists AND covers product line AND valid |
-| Personnel/Equipment | Key personnel / plant undertaking | Employees, Equipment | named roles/capacities present |
+| Pillar              | Tender criterion                      | Profile data evaluated                             | Deterministic test                                                                        |
+| :------------------ | :------------------------------------ | :------------------------------------------------- | :---------------------------------------------------------------------------------------- |
+| Financial           | Avg turnover ≥ ₹4.5 Cr (FY22–25)      | FinancialRecords (FY-wise turnover)                | mean(turnover) ≥ 4.5 Cr; else shortfall = 4.5 − mean                                      |
+| Financial           | Solvency ≥ 20% of est. value          | Bank solvency letters                              | letter limit ≥ 0.2 × est. value AND issued within window                                  |
+| Experience          | 3 similar works ≥ 40% each, 7 yrs     | Experience/Project + CompletionCertificate entries | count(works where value ≥ 0.4 × est. value AND completed within 7y AND scope matches) ≥ 3 |
+| Experience          | Completion cert signed by EE or above | CompletionCertificate.signingRank                  | rank ≥ EE in hierarchy (AE < EE < SE)                                                     |
+| Statutory           | Valid GSTIN, PAN, Udyam               | Registrations                                      | present AND active AND unexpired at bid date                                              |
+| Certification       | ISO 9001 valid at bid date            | Certifications                                     | issueDate ≤ bidDate ≤ expiryDate                                                          |
+| Geographic          | State-specific registration           | GeographicPresence                                 | presence ∩ required region ≠ ∅                                                            |
+| Commercial          | OEM authorization for supplied goods  | OEMRelationships                                   | authorization exists AND covers product line AND valid                                    |
+| Personnel/Equipment | Key personnel / plant undertaking     | Employees, Equipment                               | named roles/capacities present                                                            |
 
 **Phase 4 — Requirement-Level Match State.** Each TenderRequirement gets a **MatchState**: MATCHED (evidence satisfies it), PARTIAL (some sub-criteria met), EXPIRED (evidence exists but validity lapsed), MISSING (no evidence — must be produced), or NOT_APPLICABLE.
 
@@ -407,7 +475,7 @@ This is the heart of the product. Ten steps, deterministic at every decision poi
 
 **Phase 7 — Missing Evidence List.** Every MISSING/EXPIRED/PARTIAL item becomes a prioritized acquisition task: what to obtain (₹100 stamp paper, notarized affidavit, UDIN-bearing CA certificate, EE-signed completion certificate, OEM letter), owner, and deadline countdown.
 
-**Phase 8 — Human Review.** AI-proposed requirements, matches, verdicts, and risks become **ReviewTasks**. The Bid Manager approves, rejects, or edits (optimistic concurrency). The **BidDecision** (GO / CONDITIONAL-GO / NO-GO) is only valid once human-confirmed — *AI proposes, human confirms*.
+**Phase 8 — Human Review.** AI-proposed requirements, matches, verdicts, and risks become **ReviewTasks**. The Bid Manager approves, rejects, or edits (optimistic concurrency). The **BidDecision** (GO / CONDITIONAL-GO / NO-GO) is only valid once human-confirmed — _AI proposes, human confirms_.
 
 **Phase 9 — Readiness Rollup.** ReadinessScore = f(% requirements evidence-complete, open risk severity, days-to-deadline, EMD availability). The `READY_TO_SUBMIT` gate requires human sign-off; then the **GeneratedArtifact** (Packet-1 preparation pack with citations) is exported.
 
@@ -419,74 +487,75 @@ This is the heart of the product. Ten steps, deterministic at every decision poi
 2. **Every claim is grounded.** No requirement or risk exists without Provenance. 100% verbatim citation is a hard invariant, not a goal.
 3. **Decisions are reproducible.** The pinned ProfileVersionRef means "why did we say GO on 12 March?" is always answerable.
 4. **Hard-fail determinism.** The worst error is a false GO on an INELIGIBLE tender — so eligibility tests are strict and conservative; uncertainty surfaces as CONDITIONAL-GO, never as GO.
-5. **Evidence ≠ requirement.** A requirement is satisfied either by existing profile evidence or by an attestation the bidder must still *produce* (affidavit, stamp paper). The model tracks both.
+5. **Evidence ≠ requirement.** A requirement is satisfied either by existing profile evidence or by an attestation the bidder must still _produce_ (affidavit, stamp paper). The model tracks both.
 6. **The profile compounds.** Every tender evaluated enriches the profile (past bid evidence, win/loss outcomes), making the next evaluation faster and smarter — the platform moat.
 
 ## 13. Mapping to Today's Codebase
 
-| Today (code) | Becomes (domain model) |
-|:-------------|:-----------------------|
-| `BidProject` aggregate | Split into **Tender** (opportunity + package) + **BidCase** (the pursuit/evaluation) |
-| `ComplianceItem` | **TenderRequirement** (extraction side) + **EvidenceMatch** (evaluation side) |
-| `IngestionJob` | **WorkflowRun** (state machine carried forward) |
-| `TenderDocument` | **TenderDocument** (unchanged role) |
-| `AuditLog` | **AuditEvent** (append-only stream) |
-| Python `HumanReviewManager` | **ReviewTask / ReviewDecision** aggregate |
-| `users` table + `org_acme_infra_001` literal | **Tenant / User / Membership / Role** (multi-tenant, per-request resolution) |
-| *(missing)* | **CompanyProfile, CapabilityEntry (11 sections), EvidenceDocument, EvidenceMatch, RiskFinding, BidDecision, ReadinessAssessment, GeneratedArtifact, TenderAmendment** — the pivot's new domain |
+| Today (code)                                 | Becomes (domain model)                                                                                                                                                                         |
+| :------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BidProject` aggregate                       | Split into **Tender** (opportunity + package) + **BidCase** (the pursuit/evaluation)                                                                                                           |
+| `ComplianceItem`                             | **TenderRequirement** (extraction side) + **EvidenceMatch** (evaluation side)                                                                                                                  |
+| `IngestionJob`                               | **WorkflowRun** (state machine carried forward)                                                                                                                                                |
+| `TenderDocument`                             | **TenderDocument** (unchanged role)                                                                                                                                                            |
+| `AuditLog`                                   | **AuditEvent** (append-only stream)                                                                                                                                                            |
+| Python `HumanReviewManager`                  | **ReviewTask / ReviewDecision** aggregate                                                                                                                                                      |
+| `users` table + `org_acme_infra_001` literal | **Tenant / User / Membership / Role** (multi-tenant, per-request resolution)                                                                                                                   |
+| _(missing)_                                  | **CompanyProfile, CapabilityEntry (11 sections), EvidenceDocument, EvidenceMatch, RiskFinding, BidDecision, ReadinessAssessment, GeneratedArtifact, TenderAmendment** — the pivot's new domain |
 
 ## 14. Domain Model Glossary (Ubiquitous Language)
 
-| Term | Definition |
-|:-----|:-----------|
-| **Tenant** | The account/isolation boundary (an organization). Owns profiles, tenders, bid cases, audit events. |
-| **User** | A human authenticated against a tenant; holds exactly one Role per tenant via Membership. |
-| **Membership** | Bridge between User and Tenant; carries the Role. |
-| **Role** | Named permission bundle (ADMIN, BID_MANAGER, REVIEWER, VIEWER). Reference data; code checks Permissions, not Roles. |
-| **Permission** | Atomic capability string (`bids:create`, `compliance:review`). The unit of authorization. |
-| **Company** | The legal business entity whose capability is modeled and evaluated. |
-| **CompanyProfile** | Aggregate root: the persistent, versioned, structured record of everything the company can prove. The product's differentiator. |
-| **CapabilityEntry** | A single structured fact about the company, in one of 11 sections. |
-| **Registration** | Statutory registration (Udyam, GSTIN, PAN, EPFO, ESIC, Shops & Establishments). |
-| **Certification** | Issued certificate (ISO, CMMI, industry certs) with issuer, number, validity window. |
-| **FinancialRecord** | FY-wise financial fact: audited turnover, net worth, working capital, solvency limit (with CA UDIN). |
-| **Experience / Project** | A completed or ongoing work: scope, value, client, location, period. |
-| **WorkOrder** | A framed work/supply order received from a client. |
-| **CompletionCertificate** | Client-issued proof a work was completed, carrying the signing officer's authority rank. |
-| **OEMRelationship** | OEM authorization / dealership / distribution agreement covering product lines. |
-| **Employee** | Key personnel with qualifications and role (project manager, safety officer). |
-| **Equipment** | Owned/leased plant & machinery with capacity specs. |
-| **GeographicPresence** | Offices, service regions, state registrations. |
-| **PreviousBidEvidence** | Past bid outcomes and disqualification reasons; feeds matching and risk learning. |
-| **EvidenceDocument** | A stored source document (PDF/letter) backing one or more capability claims, with a validity window. |
-| **Tender** | Aggregate root: a registered tender opportunity with its document package. |
-| **TenderDocument** | One file of the tender package (NIT, RFP, GCC, SCC, specs, BOQ). |
-| **TenderRequirement** | One extracted Packet-1 requirement with ExecutionRules and Provenance. |
-| **TenderAmendment** | A corrigendum/addendum; diffs requirements and triggers re-evaluation. |
-| **Evidence** | The body of a company's stored proof (capabilities + evidence documents) evaluated against requirements. |
-| **EvidenceMatch** | The evaluated link between one TenderRequirement and the capability/evidence that satisfies it, with a MatchState. |
-| **ComplianceAssessment** | The process (and its recorded result) of evaluating a Tender against a pinned CompanyProfile. |
-| **Risk** | A commercial trap or exposure (LD, DLP, PBG, payment terms, EMD lockup) with severity and citation. |
-| **BidDecision** | The human-confirmed GO / CONDITIONAL-GO / NO_GO verdict with rationale, made against a pinned profile version. |
-| **Workflow / WorkflowRun** | The async process definition / one execution of it (ingest, extract, match, re-evaluate), with lease/retry/DLQ state. |
-| **ReviewTask / ReviewDecision** | A unit of human review (approve / reject / edit) and its recorded resolution. |
-| **GeneratedArtifact** | An exported, audit-ready Packet-1 preparation pack generated from a BidCase. |
-| **AuditEvent** | An immutable, append-only record of something that happened, attributable to a user or system process. |
-| **MatchScorecard** | Derived output of matching: verdict, shortfalls, and Go/Conditional-Go/No-Go recommendation. A projection, not stored truth. |
-| **ReadinessScore / Bid Readiness** | Derived rollup of evidence completeness, open risks, and deadline pressure; gated by human sign-off. |
+| Term                               | Definition                                                                                                                      |
+| :--------------------------------- | :------------------------------------------------------------------------------------------------------------------------------ |
+| **Tenant**                         | The account/isolation boundary (an organization). Owns profiles, tenders, bid cases, audit events.                              |
+| **User**                           | A human authenticated against a tenant; holds exactly one Role per tenant via Membership.                                       |
+| **Membership**                     | Bridge between User and Tenant; carries the Role.                                                                               |
+| **Role**                           | Named permission bundle (ADMIN, BID_MANAGER, REVIEWER, VIEWER). Reference data; code checks Permissions, not Roles.             |
+| **Permission**                     | Atomic capability string (`bids:create`, `compliance:review`). The unit of authorization.                                       |
+| **Company**                        | The legal business entity whose capability is modeled and evaluated.                                                            |
+| **CompanyProfile**                 | Aggregate root: the persistent, versioned, structured record of everything the company can prove. The product's differentiator. |
+| **CapabilityEntry**                | A single structured fact about the company, in one of 11 sections.                                                              |
+| **Registration**                   | Statutory registration (Udyam, GSTIN, PAN, EPFO, ESIC, Shops & Establishments).                                                 |
+| **Certification**                  | Issued certificate (ISO, CMMI, industry certs) with issuer, number, validity window.                                            |
+| **FinancialRecord**                | FY-wise financial fact: audited turnover, net worth, working capital, solvency limit (with CA UDIN).                            |
+| **Experience / Project**           | A completed or ongoing work: scope, value, client, location, period.                                                            |
+| **WorkOrder**                      | A framed work/supply order received from a client.                                                                              |
+| **CompletionCertificate**          | Client-issued proof a work was completed, carrying the signing officer's authority rank.                                        |
+| **OEMRelationship**                | OEM authorization / dealership / distribution agreement covering product lines.                                                 |
+| **Employee**                       | Key personnel with qualifications and role (project manager, safety officer).                                                   |
+| **Equipment**                      | Owned/leased plant & machinery with capacity specs.                                                                             |
+| **GeographicPresence**             | Offices, service regions, state registrations.                                                                                  |
+| **PreviousBidEvidence**            | Past bid outcomes and disqualification reasons; feeds matching and risk learning.                                               |
+| **EvidenceDocument**               | A stored source document (PDF/letter) backing one or more capability claims, with a validity window.                            |
+| **Tender**                         | Aggregate root: a registered tender opportunity with its document package.                                                      |
+| **TenderDocument**                 | One file of the tender package (NIT, RFP, GCC, SCC, specs, BOQ).                                                                |
+| **TenderRequirement**              | One extracted Packet-1 requirement with ExecutionRules and Provenance.                                                          |
+| **TenderAmendment**                | A corrigendum/addendum; diffs requirements and triggers re-evaluation.                                                          |
+| **Evidence**                       | The body of a company's stored proof (capabilities + evidence documents) evaluated against requirements.                        |
+| **EvidenceMatch**                  | The evaluated link between one TenderRequirement and the capability/evidence that satisfies it, with a MatchState.              |
+| **ComplianceAssessment**           | The process (and its recorded result) of evaluating a Tender against a pinned CompanyProfile.                                   |
+| **Risk**                           | A commercial trap or exposure (LD, DLP, PBG, payment terms, EMD lockup) with severity and citation.                             |
+| **BidDecision**                    | The human-confirmed GO / CONDITIONAL-GO / NO_GO verdict with rationale, made against a pinned profile version.                  |
+| **Workflow / WorkflowRun**         | The async process definition / one execution of it (ingest, extract, match, re-evaluate), with lease/retry/DLQ state.           |
+| **ReviewTask / ReviewDecision**    | A unit of human review (approve / reject / edit) and its recorded resolution.                                                   |
+| **GeneratedArtifact**              | An exported, audit-ready Packet-1 preparation pack generated from a BidCase.                                                    |
+| **AuditEvent**                     | An immutable, append-only record of something that happened, attributable to a user or system process.                          |
+| **MatchScorecard**                 | Derived output of matching: verdict, shortfalls, and Go/Conditional-Go/No-Go recommendation. A projection, not stored truth.    |
+| **ReadinessScore / Bid Readiness** | Derived rollup of evidence completeness, open risks, and deadline pressure; gated by human sign-off.                            |
 
-*(Business procurement terms — NIT, EMD, PBG, BOQ, UDIN, Corrigendum, LD, DLP, Two-Cover System, etc. — are defined in §5 above.)*
+_(Business procurement terms — NIT, EMD, PBG, BOQ, UDIN, Corrigendum, LD, DLP, Two-Cover System, etc. — are defined in §5 above.)_
+
+---
+
+_Stop point reached: domain model and glossary only. No database or code changes implemented, per PROMPT 2._
 
 ---
 
-*Stop point reached: domain model and glossary only. No database or code changes implemented, per PROMPT 2.*
-
----
 ---
 
 # Part C — Company Capability Profile: Detailed Design
 
-**Design prompt:** the most important product differentiator. A tender evaluation must never start from a blank PDF — it must ask *"What do we already know about this company?"*
+**Design prompt:** the most important product differentiator. A tender evaluation must never start from a blank PDF — it must ask _"What do we already know about this company?"_
 
 ## 15. The Ten Design Requirements
 
@@ -500,32 +569,32 @@ This is the heart of the product. Ten steps, deterministic at every decision poi
 
 A **CapabilityEntry** is one typed, structured fact. The engine can only evaluate what is structured — so every attribute the matching engine needs is a typed field, never free text:
 
-| Section | Subtype examples | Structured attributes |
-|:--------|:-----------------|:-----------------------|
-| Registrations | UDYAM, GSTIN, PAN, EPFO, ESIC | registrationType, registrationNumber, issuingAuthority, validTo |
-| Certifications | ISO 9001/14001/45001, CMMI | standard, certificateNumber, issuer, issueDate, expiryDate, scope |
-| Financial | Audited turnover, net worth, solvency | financialYear, turnoverInr (paise), netWorthInr, workingCapitalInr, caUdin |
-| Experience | Completed/ongoing works | projectName, client, scopeDescription, contractValueInr, startDate, completionDate, location, workType |
-| Work orders | Framed orders | orderNumber, client, valueInr, period, scope |
-| Completion certificates | Client-issued proof | projectRef, issuedBy, signingAuthorityRank (AE/EE/SE…), certificateDate |
-| OEM authorization | Authorizations, dealerships | oemName, authorizationType, productLines[], validFrom, validTo |
-| Staff | Key personnel | name, role, qualification, experienceYears, certificates[] |
-| Equipment | Plant & machinery | name, type, capacity, owned/leased, quantity, year |
-| Geographic capability | Offices, service regions | region/state, officeType, since |
-| Previous bid evidence | Win/loss history | tenderRef, authority, date, outcome (WON/LOST/WITHDRAWN/DISQUALIFIED), disqualificationReason, estimatedValueInr |
+| Section                 | Subtype examples                      | Structured attributes                                                                                            |
+| :---------------------- | :------------------------------------ | :--------------------------------------------------------------------------------------------------------------- |
+| Registrations           | UDYAM, GSTIN, PAN, EPFO, ESIC         | registrationType, registrationNumber, issuingAuthority, validTo                                                  |
+| Certifications          | ISO 9001/14001/45001, CMMI            | standard, certificateNumber, issuer, issueDate, expiryDate, scope                                                |
+| Financial               | Audited turnover, net worth, solvency | financialYear, turnoverInr (paise), netWorthInr, workingCapitalInr, caUdin                                       |
+| Experience              | Completed/ongoing works               | projectName, client, scopeDescription, contractValueInr, startDate, completionDate, location, workType           |
+| Work orders             | Framed orders                         | orderNumber, client, valueInr, period, scope                                                                     |
+| Completion certificates | Client-issued proof                   | projectRef, issuedBy, signingAuthorityRank (AE/EE/SE…), certificateDate                                          |
+| OEM authorization       | Authorizations, dealerships           | oemName, authorizationType, productLines[], validFrom, validTo                                                   |
+| Staff                   | Key personnel                         | name, role, qualification, experienceYears, certificates[]                                                       |
+| Equipment               | Plant & machinery                     | name, type, capacity, owned/leased, quantity, year                                                               |
+| Geographic capability   | Offices, service regions              | region/state, officeType, since                                                                                  |
+| Previous bid evidence   | Win/loss history                      | tenderRef, authority, date, outcome (WON/LOST/WITHDRAWN/DISQUALIFIED), disqualificationReason, estimatedValueInr |
 
-**Rule:** *if the matching engine must test it, it must be structured.* Attributes are validated per subtype by a JSON Schema at the domain boundary.
+**Rule:** _if the matching engine must test it, it must be structured._ Attributes are validated per subtype by a JSON Schema at the domain boundary.
 
 ### 15.3 Evidence attachment
 
 - **EvidenceDocument** is its own small aggregate: the stored blob (via `IStorageService`, path `tenants/{orgId}/profile/{entryId}/{evidenceId}/{fileName}`) plus metadata (file name, MIME, size, SHA-256, document kind, issuer, dates).
-- **Many-to-many**: one certificate can back several capability entries (e.g., a CA certificate backing turnover *and* net worth); one entry can be backed by several documents (e.g., ISO certificate + audit report).
+- **Many-to-many**: one certificate can back several capability entries (e.g., a CA certificate backing turnover _and_ net worth); one entry can be backed by several documents (e.g., ISO certificate + audit report).
 - Attachment is a domain operation (`attachEvidence(entryId, evidenceId)`) that records an audit event — not a silent link update.
 
 ### 15.4 Evidence validity & expiry
 
 - **ValidityWindow** value object: `validFrom`, `validTo` (nullable — undated proofs like PAN are open-ended).
-- Validity is evaluated *at a point in time*: `isValidAt(date)`. Tender evaluation uses the **bid submission date**, not "today", so a certificate valid now but expiring before submission is correctly flagged.
+- Validity is evaluated _at a point in time_: `isValidAt(date)`. Tender evaluation uses the **bid submission date**, not "today", so a certificate valid now but expiring before submission is correctly flagged.
 - Expiry is a first-class domain event: entries transition VERIFIED → EXPIRED; a scheduled workflow scans 30/15/7-day horizons and emits `EvidenceExpiring` / `EvidenceExpired` events that drive notifications and the missing-evidence list.
 
 ### 15.5 Source provenance
@@ -572,14 +641,14 @@ Every profile mutation emits an immutable **AuditEvent**: PROFILE_CREATED, PROFI
 
 ## 16. Structured Data vs. Documents — The Rule
 
-| | **Structured data** | **Documents** |
-|:--|:--------------------|:--------------|
-| What | Typed fields the engine tests (amounts, dates, counts, ranks, regions, codes, validity windows) | The PDFs/letters/certificates themselves |
-| Where | `capability_entries.attributes` (JSONB, schema-validated per subtype) | Object storage via `IStorageService`, referenced by ID |
-| Role | **The data the product reasons over** | **The proof that backs the data** |
-| Produced by | Human entry, connector import, or **one-time extraction at ingest** (e.g., OCR a CA certificate → turnover + UDIN → structured FinancialRecord) | Upload or connector fetch |
+|             | **Structured data**                                                                                                                             | **Documents**                                          |
+| :---------- | :---------------------------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------- |
+| What        | Typed fields the engine tests (amounts, dates, counts, ranks, regions, codes, validity windows)                                                 | The PDFs/letters/certificates themselves               |
+| Where       | `capability_entries.attributes` (JSONB, schema-validated per subtype)                                                                           | Object storage via `IStorageService`, referenced by ID |
+| Role        | **The data the product reasons over**                                                                                                           | **The proof that backs the data**                      |
+| Produced by | Human entry, connector import, or **one-time extraction at ingest** (e.g., OCR a CA certificate → turnover + UDIN → structured FinancialRecord) | Upload or connector fetch                              |
 
-A document is never "the capability" — it is the evidence *for* a capability. Extraction populates structured fields once; the engine then evaluates fields, not PDFs. This is what makes matching deterministic, testable, and fast.
+A document is never "the capability" — it is the evidence _for_ a capability. Extraction populates structured fields once; the engine then evaluates fields, not PDFs. This is what makes matching deterministic, testable, and fast.
 
 ## 17. From One-Shot Analyzer to Ongoing SaaS
 
@@ -592,15 +661,16 @@ A document is never "the capability" — it is the evidence *for* a capability. 
 3. **Learning loop** — previous-bid evidence accumulates; disqualification patterns surface across tenders.
 4. **Multi-user workflows** — admin owns the profile, finance attests financials, reviewers verify evidence, bid managers consume it.
 5. **Expansion driver** — completeness scores motivate filling more sections; more sections → better matching → more value.
-6. **Retention moat** — the longer the profile lives, the more expensive it is to leave; the data *is* the product.
+6. **Retention moat** — the longer the profile lives, the more expensive it is to leave; the data _is_ the product.
 
 The profile converts TenderPulse from a tool you open per tender into a system of record you cannot bid without.
 
 ---
 
-*Stop point reached: design only, per PROMPT 5. No code implemented.*
+_Stop point reached: design only, per PROMPT 5. No code implemented._
 
 ---
+
 ---
 
 # Part D — Tender Ingestion & Requirement Normalization
@@ -611,25 +681,25 @@ The profile converts TenderPulse from a tool you open per tender into a system o
 
 A tender package is decomposed into up to 17 document types, each with its own processing profile:
 
-| Type | Processing profile |
-|:-----|:--------------------|
-| **NIT** | Metadata mine: authority, tender number, est. value, deadline, EMD, fee, pre-bid dates — deterministic regex on short text |
-| **RFP** | Instruction + eligibility extraction; section segmentation by TOC |
-| **TECHNICAL_SPECS** | Scope-of-work; LLM tier likely needed for semantic normalization |
-| **ELIGIBILITY_CRITERIA** | Structured criteria extraction (thresholds, counts, windows) — the Bid/No-Bid input |
-| **FINANCIAL_CRITERIA** | Turnover/net-worth/solvency thresholds; amounts in paise |
-| **EXPERIENCE_REQUIREMENTS** | Similar-work rules (3-2-1), completion-certificate requirements, signing-rank thresholds |
-| **CERTIFICATION_REQUIREMENTS** | Required certificates, validity windows, issuer requirements |
-| **OEM_REQUIREMENTS** | Authorization letters, product-line coverage |
-| **GEOGRAPHIC_REQUIREMENTS** | Region/state presence, registration requirements |
-| **STAFFING_REQUIREMENTS** | Key personnel, qualifications, experience years |
-| **EQUIPMENT_REQUIREMENTS** | Plant/machinery undertakings, capacity specs |
-| **EMD_PBG_RULES** | Percentages, amounts, validity, exemption rules (Udyam) |
-| **DECLARATIONS** | Affidavit formats, stamp paper, notarization, UDIN |
-| **COMMERCIAL_CONDITIONS** | LD, DLP, payment terms, retention — risk register input |
-| **BOQ** | Table extraction; locked sheets noted as unparseable (anti-scope: no pricing) |
-| **ANNEXURES** | Format requirements; each annexure becomes a submission requirement |
-| **CORRIGENDUM** | Amendment pipeline (§29) — never merged into the base package silently |
+| Type                           | Processing profile                                                                                                         |
+| :----------------------------- | :------------------------------------------------------------------------------------------------------------------------- |
+| **NIT**                        | Metadata mine: authority, tender number, est. value, deadline, EMD, fee, pre-bid dates — deterministic regex on short text |
+| **RFP**                        | Instruction + eligibility extraction; section segmentation by TOC                                                          |
+| **TECHNICAL_SPECS**            | Scope-of-work; LLM tier likely needed for semantic normalization                                                           |
+| **ELIGIBILITY_CRITERIA**       | Structured criteria extraction (thresholds, counts, windows) — the Bid/No-Bid input                                        |
+| **FINANCIAL_CRITERIA**         | Turnover/net-worth/solvency thresholds; amounts in paise                                                                   |
+| **EXPERIENCE_REQUIREMENTS**    | Similar-work rules (3-2-1), completion-certificate requirements, signing-rank thresholds                                   |
+| **CERTIFICATION_REQUIREMENTS** | Required certificates, validity windows, issuer requirements                                                               |
+| **OEM_REQUIREMENTS**           | Authorization letters, product-line coverage                                                                               |
+| **GEOGRAPHIC_REQUIREMENTS**    | Region/state presence, registration requirements                                                                           |
+| **STAFFING_REQUIREMENTS**      | Key personnel, qualifications, experience years                                                                            |
+| **EQUIPMENT_REQUIREMENTS**     | Plant/machinery undertakings, capacity specs                                                                               |
+| **EMD_PBG_RULES**              | Percentages, amounts, validity, exemption rules (Udyam)                                                                    |
+| **DECLARATIONS**               | Affidavit formats, stamp paper, notarization, UDIN                                                                         |
+| **COMMERCIAL_CONDITIONS**      | LD, DLP, payment terms, retention — risk register input                                                                    |
+| **BOQ**                        | Table extraction; locked sheets noted as unparseable (anti-scope: no pricing)                                              |
+| **ANNEXURES**                  | Format requirements; each annexure becomes a submission requirement                                                        |
+| **CORRIGENDUM**                | Amendment pipeline (§29) — never merged into the base package silently                                                     |
 
 Document type is **auto-classified deterministically** (filename patterns, header/footer text, TOC matching, authority boilerplate fingerprints) and **user-confirmed** — misclassification degrades extraction quality, so it is a reviewable, auditable field.
 
@@ -679,7 +749,8 @@ TenderRequirement {
 ```
 
 **Design rules:**
-- **Structured criteria wherever possible.** A requirement that *can* be expressed as `{type: TURNOVER, operator: GTE, threshold: 4500000000 paise, window: "FY22-25"}` *must* be — the EligibilityEngine consumes criteria, not prose (ADR 0019).
+
+- **Structured criteria wherever possible.** A requirement that _can_ be expressed as `{type: TURNOVER, operator: GTE, threshold: 4500000000 paise, window: "FY22-25"}` _must_ be — the EligibilityEngine consumes criteria, not prose (ADR 0019).
 - **`criteria[].minimumVerificationTier`** lets a tender demand authority-verified evidence (e.g., UDIN-bearing CA certificate) — matched against the Company Profile's verification tiers.
 - **Dedup + rule fusion** (existing, carried forward): requirements matching `(category, normalizedTitle)` merge; most-restrictive execution rules win (`stampPaperRequired: true`, `max(denomination)`, `notarizationRequired: true`); multi-page citations consolidate ("Clauses across Pages 7, 15, 22").
 
@@ -701,19 +772,19 @@ Every requirement carries a **Provenance** value object with four mandatory anch
 Corrigenda are first-class citizens, never merged silently:
 
 1. Corrigendum uploaded as a **CORRIGENDUM** document → same pipeline.
-2. **Deterministic diff** against existing requirements: keyword/clause/section matching produces ADDED / CHANGED / REMOVED candidates; the LLM tier may *suggest* diffs for ambiguous cases, but the diff result is human-reviewed (gate).
+2. **Deterministic diff** against existing requirements: keyword/clause/section matching produces ADDED / CHANGED / REMOVED candidates; the LLM tier may _suggest_ diffs for ambiguous cases, but the diff result is human-reviewed (gate).
 3. Affected base requirements transition → **SUPERSEDED** (immutable history preserved — requirements are never mutated in place).
 4. New/changed requirements enter as PROPOSED; affected **BidCases re-enter MATCHING** via an async re-evaluation workflow (only changed criteria re-run).
 5. The **BidDecision is flagged for re-confirmation** — a corrigendum that changes eligibility invalidates a prior GO until a human re-confirms.
 
 ## 30. Idempotency
 
-| Level | Mechanism |
-|:------|:----------|
-| **Document** | SHA-256 checksum; `UNIQUE (organization_id, checksum_sha256)` — identical re-uploads are deduplicated |
+| Level           | Mechanism                                                                                                                                                                                                              |
+| :-------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Document**    | SHA-256 checksum; `UNIQUE (organization_id, checksum_sha256)` — identical re-uploads are deduplicated                                                                                                                  |
 | **Requirement** | Deterministic requirement key = `hash(category, normalizedTitle, documentId, clauseReference)` — reprocessing a document yields the same keys; bulk ingest upserts by key; retries and re-runs produce zero duplicates |
-| **Workflow** | `WorkflowRun` completion is idempotent (existing at-least-once delivery pattern: duplicate deliveries acknowledged and deleted without duplicate rows) |
-| **Amendment** | Corrigendum documents are checksummed like any document; a corrigendum applied twice diffs to an empty change set |
+| **Workflow**    | `WorkflowRun` completion is idempotent (existing at-least-once delivery pattern: duplicate deliveries acknowledged and deleted without duplicate rows)                                                                 |
+| **Amendment**   | Corrigendum documents are checksummed like any document; a corrigendum applied twice diffs to an empty change set                                                                                                      |
 
 ## 31. Chunking Strategy
 
@@ -726,24 +797,24 @@ Section-aware, not blind fixed-size:
 
 ## 32. Deterministic-First Boundary
 
-**The rule: do not use an LLM where deterministic parsing is enough.** Execution order is always deterministic tiers first; the LLM tier runs only on sections the deterministic tiers could not confidently parse, and its output passes the *same* normalization, dedup, and grounding verification as regex output.
+**The rule: do not use an LLM where deterministic parsing is enough.** Execution order is always deterministic tiers first; the LLM tier runs only on sections the deterministic tiers could not confidently parse, and its output passes the _same_ normalization, dedup, and grounding verification as regex output.
 
-| Concern | Deterministic (tier 1–2) | LLM (tier 3, fallback only) |
-|:--------|:--------------------------|:------------------------------|
-| Text extraction | pdf-parse / pdfjs | — |
-| OCR | Tesseract / Textract | — |
-| Section segmentation | TOC + heading + numbering detection | — |
-| NIT metadata (dates, amounts, EMD) | regex on short text | — |
-| Thresholds (₹, %, years, counts) | numeric regex → structured criteria | — |
-| Clause references (ITB 11.2, Clause 6) | structural regex | — |
-| Stamp paper / notary / UDIN / signing rank | keyword + pattern rules | — |
-| Known requirement patterns (16-domain taxonomy) | keyword detection (existing regex extractor) | — |
-| Dedup + rule fusion | `(category, normalizedTitle)` merge | — |
-| Verbatim verification | exact substring check | — |
-| Scope-of-work normalization | — | semantic structuring |
-| Ambiguous requirement phrasing | — | proposal + provenance |
-| Near-duplicate clustering across documents | — | similarity suggestion |
-| Corrigendum diff suggestion | deterministic candidate matching | ambiguous-case suggestion |
+| Concern                                         | Deterministic (tier 1–2)                     | LLM (tier 3, fallback only) |
+| :---------------------------------------------- | :------------------------------------------- | :-------------------------- |
+| Text extraction                                 | pdf-parse / pdfjs                            | —                           |
+| OCR                                             | Tesseract / Textract                         | —                           |
+| Section segmentation                            | TOC + heading + numbering detection          | —                           |
+| NIT metadata (dates, amounts, EMD)              | regex on short text                          | —                           |
+| Thresholds (₹, %, years, counts)                | numeric regex → structured criteria          | —                           |
+| Clause references (ITB 11.2, Clause 6)          | structural regex                             | —                           |
+| Stamp paper / notary / UDIN / signing rank      | keyword + pattern rules                      | —                           |
+| Known requirement patterns (16-domain taxonomy) | keyword detection (existing regex extractor) | —                           |
+| Dedup + rule fusion                             | `(category, normalizedTitle)` merge          | —                           |
+| Verbatim verification                           | exact substring check                        | —                           |
+| Scope-of-work normalization                     | —                                            | semantic structuring        |
+| Ambiguous requirement phrasing                  | —                                            | proposal + provenance       |
+| Near-duplicate clustering across documents      | —                                            | similarity suggestion       |
+| Corrigendum diff suggestion                     | deterministic candidate matching             | ambiguous-case suggestion   |
 
 `detectionMethod` is recorded per requirement so extraction quality is measurable **per tier** — the AI evaluation framework (`apps/ai` scorecards) extends to per-tier precision tracking.
 
@@ -762,28 +833,29 @@ Per document: `fileName`, `documentType` (auto-classified + user-confirmed), `pa
 
 ---
 
-*Stop point reached: design only, per PROMPT 6. No code implemented.*
+_Stop point reached: design only, per PROMPT 6. No code implemented._
 
 ---
+
 ---
 
 # Part E — Evaluation & Matching Engine (The Deterministic Core)
 
-**Purpose:** specify *how* a tender is evaluated against a pinned Company Profile version (ADR 0019). Pure functions, no I/O, no clock reads, no LLM — exhaustively unit-testable and legally defensible. This is the engine that answers *"Should I pursue this tender?"*
+**Purpose:** specify _how_ a tender is evaluated against a pinned Company Profile version (ADR 0019). Pure functions, no I/O, no clock reads, no LLM — exhaustively unit-testable and legally defensible. This is the engine that answers _"Should I pursue this tender?"_
 
 ## 42. Criterion Evaluation Algorithms
 
 Every eligibility criterion extracted from a tender is one of seven types. Each has a pure evaluator:
 
-| Type | Evaluator | Inputs | Result |
-|:-----|:----------|:-------|:-------|
-| **THRESHOLD** | numeric comparison | operator (GTE/LTE/EQ), threshold, unit; profile attribute value | SATISFIED / SHORTFALL with `delta` |
-| **COUNT** | filtered count | predicate over experience entries: `value ≥ p% × est. value` ∧ `completed within window` ∧ `scope matches` | SATISFIED / SHORTFALL (`found N of M`) |
-| **VALIDITY** | date-window containment | entry `valid_from`/`valid_to` vs. **evaluation date = bid submission date** | SATISFIED / EXPIRED / MISSING |
-| **SET_MEMBERSHIP** | set intersection | profile regions ∩ required regions | SATISFIED / SHORTFALL (`missing regions`) |
-| **RANK** | ordinal hierarchy | profile signing rank vs. required minimum (AE < EE < SE < CE) | SATISFIED / SHORTFALL |
-| **PRESENCE** | existence + active check | registration/certification of matching type and number | SATISFIED / MISSING |
-| **RATIO** | ratio computation | limit ≥ p% × estimated tender value | SATISFIED / SHORTFALL |
+| Type               | Evaluator                | Inputs                                                                                                     | Result                                    |
+| :----------------- | :----------------------- | :--------------------------------------------------------------------------------------------------------- | :---------------------------------------- |
+| **THRESHOLD**      | numeric comparison       | operator (GTE/LTE/EQ), threshold, unit; profile attribute value                                            | SATISFIED / SHORTFALL with `delta`        |
+| **COUNT**          | filtered count           | predicate over experience entries: `value ≥ p% × est. value` ∧ `completed within window` ∧ `scope matches` | SATISFIED / SHORTFALL (`found N of M`)    |
+| **VALIDITY**       | date-window containment  | entry `valid_from`/`valid_to` vs. **evaluation date = bid submission date**                                | SATISFIED / EXPIRED / MISSING             |
+| **SET_MEMBERSHIP** | set intersection         | profile regions ∩ required regions                                                                         | SATISFIED / SHORTFALL (`missing regions`) |
+| **RANK**           | ordinal hierarchy        | profile signing rank vs. required minimum (AE < EE < SE < CE)                                              | SATISFIED / SHORTFALL                     |
+| **PRESENCE**       | existence + active check | registration/certification of matching type and number                                                     | SATISFIED / MISSING                       |
+| **RATIO**          | ratio computation        | limit ≥ p% × estimated tender value                                                                        | SATISFIED / SHORTFALL                     |
 
 Each evaluator returns:
 
@@ -882,7 +954,7 @@ On corrigendum application: only **changed requirement keys** re-run (§29). The
 
 # Part F — Evidence & Compliance Engine (Evidence-Based Assessment)
 
-**Purpose:** answer the product's core operational question — *"For this tender requirement, what evidence does the company have?"* — with every assessment carrying its evidence. Part E specified *how criteria are computed*; Part F specifies *how evidence is found, linked, validated, explained, decided, and audited*. The two are deliberately separate: Part E is arithmetic, Part F is the evidence lifecycle around it.
+**Purpose:** answer the product's core operational question — _"For this tender requirement, what evidence does the company have?"_ — with every assessment carrying its evidence. Part E specified _how criteria are computed_; Part F specifies _how evidence is found, linked, validated, explained, decided, and audited_. The two are deliberately separate: Part E is arithmetic, Part F is the evidence lifecycle around it.
 
 ## 49. The Evidence-First Principle
 
@@ -905,7 +977,7 @@ ComplianceAssessment {
 }
 ```
 
-Scores are **derived summaries, never answers**. The readiness score (§46) is a rollup *of* evidence-backed assessments — every point traceable to a requirement, a criterion, and a document page. If a user asks "why 82%?", the system answers with the 18% of weighted requirements that are not PASS, each with its evidence trail.
+Scores are **derived summaries, never answers**. The readiness score (§46) is a rollup _of_ evidence-backed assessments — every point traceable to a requirement, a criterion, and a document page. If a user asks "why 82%?", the system answers with the 18% of weighted requirements that are not PASS, each with its evidence trail.
 
 ## 50. The Five-Stage Pipeline
 
@@ -933,19 +1005,19 @@ TenderRequirement (normalized, §27)
 
 Five stages, five owners, five failure modes, five independent quality metrics:
 
-| Stage | Owner | May it judge? | Quality metric | If it fails |
-|:------|:------|:--------------|:---------------|:------------|
-| 1. Retrieval | Deterministic code | No | recall@k on held-out tenders | False MISSING_EVIDENCE — visible, recoverable via review |
-| 2. Extraction (facts) | Code + grounded AI | No | grounding score (verbatim match) | Rejected pre-persistence (existing invariant, §28) |
-| 3. Rules | Pure functions | **Yes — the only place** | Property tests, mutation tests | Unit-testable; deterministic replay |
-| 4. Explanation | LLM | No | claim–result faithfulness | Template fallback; verdict unaffected |
-| 5. Decision | Human | Yes (override) | Audit completeness | Blocked without reason + permission |
+| Stage                 | Owner              | May it judge?            | Quality metric                   | If it fails                                              |
+| :-------------------- | :----------------- | :----------------------- | :------------------------------- | :------------------------------------------------------- |
+| 1. Retrieval          | Deterministic code | No                       | recall@k on held-out tenders     | False MISSING_EVIDENCE — visible, recoverable via review |
+| 2. Extraction (facts) | Code + grounded AI | No                       | grounding score (verbatim match) | Rejected pre-persistence (existing invariant, §28)       |
+| 3. Rules              | Pure functions     | **Yes — the only place** | Property tests, mutation tests   | Unit-testable; deterministic replay                      |
+| 4. Explanation        | LLM                | No                       | claim–result faithfulness        | Template fallback; verdict unaffected                    |
+| 5. Decision           | Human              | Yes (override)           | Audit completeness               | Blocked without reason + permission                      |
 
 **The reasons:**
 
 1. **Defensibility.** Indian procurement is vigilance-auditable (CVC). "Why PASS?" must be answerable with documents, pages, and arithmetic. If an LLM produced the verdict, the answer is "the model said so" — legally worthless. A deterministic verdict plus a grounded explanation is defensible; a model verdict is not.
 2. **Testability.** Each layer is measured with its own instrument — recall, grounding, determinism, faithfulness, audit completeness. A regression in one layer cannot hide inside another. You can fix retrieval without re-validating rules.
-3. **Failure isolation.** A retrieval miss yields a *visible* MISSING_EVIDENCE (human can supply the document); an AI hallucination yields wrong *prose* (verdict intact); a human error yields an *audited* override (attributable, reversible). No single-layer failure silently produces a false PASS.
+3. **Failure isolation.** A retrieval miss yields a _visible_ MISSING_EVIDENCE (human can supply the document); an AI hallucination yields wrong _prose_ (verdict intact); a human error yields an _audited_ override (attributable, reversible). No single-layer failure silently produces a false PASS.
 4. **Security.** The AI stage receives only the deterministic result bundle for requirements the user is authorized to see (ADR 0011/0013). Company financials never enter prompts; tenant isolation is enforced at the retrieval port, before any AI boundary.
 5. **Reproducibility.** Pinned profile version (§11.7) + explicit evaluation date (§48) ⇒ byte-identical verdicts on replay. The explanation may vary; the state cannot.
 
@@ -956,7 +1028,7 @@ Five stages, five owners, five failure modes, five independent quality metrics:
 - **Input:** TenderRequirement — its `criteria`, `requiredDocuments`, and `criteria[].minimumVerificationTier` (§27).
 - **Sources** (all queried against the **pinned profile version**, never the live profile — reproducibility): structured `capability_entries` by subtype; `evidence_documents` metadata full-text search; ANN semantic search over chunk embeddings (tenant-filtered, §2.8).
 - **Deterministic in v1.** No LLM in the retrieval path (ADR 0019); semantic ranking is advisory only and may suggest, never select.
-- **Output:** `CandidateEvidenceSet { candidates: EvidenceRef[], retrievalMethod, queryId }` — deliberately over-retrieved (top-K = 20). Recall is *measured* on evaluation fixtures, never assumed.
+- **Output:** `CandidateEvidenceSet { candidates: EvidenceRef[], retrievalMethod, queryId }` — deliberately over-retrieved (top-K = 20). Recall is _measured_ on evaluation fixtures, never assumed.
 - **Tenant isolation** is enforced at the repository port (RLS + explicit `organizationId` filter) before any ranking — retrieval cannot leak across tenants even if downstream code is buggy.
 - **Failure mode:** retrieval error or empty set → `MISSING_EVIDENCE` with reason `RETRIEVAL_EMPTY`. An empty retrieval is never treated as PASS.
 
@@ -983,14 +1055,14 @@ Runs the Part E §42 evaluators, then three domain policies — all pure functio
 3. Tie → source authority: ITR/filed > bank letter > CA certificate > self-declaration.
 4. Else → `UNRESOLVED` → REVIEW_REQUIRED, citing **all** conflicting refs. **Never silently pick one.**
 
-**Date completeness.** A missing validity or issue date → `UNKNOWN_VALIDITY` → REVIEW_REQUIRED. Conservative by design: an undated certificate cannot *prove* validity, so the engine never assumes it.
+**Date completeness.** A missing validity or issue date → `UNKNOWN_VALIDITY` → REVIEW_REQUIRED. Conservative by design: an undated certificate cannot _prove_ validity, so the engine never assumes it.
 
 **Output:** `CriterionResult[]` (§42) + `ConflictRecord[]` + `EngineVerdict ∈ {PASS, FAIL, MISSING_EVIDENCE, REVIEW_REQUIRED}`.
 
 ## 55. Stage 4 — AI Explanation
 
 - **Input:** the deterministic result bundle (criterion results, evidence refs, conflict records, verbatim quotes) for authorized requirements — **not** raw documents, not company data beyond scope.
-- **The output schema has no verdict field.** The AI cannot express an assessment (contract boundary, ADR 0019). It produces a narrative such as: *"Requirement: average turnover ≥ ₹10 Cr (FY22–25), NIT p.7 §3.1. Company evidence: FY25 audited A/c (Doc A, pp. 12–13) ₹9.8 Cr; FY24 ₹10.4 Cr; FY23 ₹9.9 Cr; FY22 ₹10.1 Cr → average ₹10.05 Cr. Engine result: PASS, margin ₹5 L. Conflicting CA letter (Doc C, self-declared, no UDIN) resolved by tier policy in favour of the audited statement."*
+- **The output schema has no verdict field.** The AI cannot express an assessment (contract boundary, ADR 0019). It produces a narrative such as: _"Requirement: average turnover ≥ ₹10 Cr (FY22–25), NIT p.7 §3.1. Company evidence: FY25 audited A/c (Doc A, pp. 12–13) ₹9.8 Cr; FY24 ₹10.4 Cr; FY23 ₹9.9 Cr; FY22 ₹10.1 Cr → average ₹10.05 Cr. Engine result: PASS, margin ₹5 L. Conflicting CA letter (Doc C, self-declared, no UDIN) resolved by tier policy in favour of the audited statement."_
 - **Grounding of explanations.** Every claim cites a `resultId`/`evidenceRef`; a deterministic verifier checks each claim against the result bundle — the explanation may rephrase and connect, never assert new facts.
 - **Failure handling.** Bounded retries → fallback to a deterministic template renderer. **The assessment stands without prose; prose never blocks verdicts.** Model id + version recorded; the explanation is stored immutably beside the verdict it explains.
 
@@ -1013,33 +1085,33 @@ WAIVED ──evidence changes──► ENGINE_ASSESSED (re-opened)
 
 Criterion states (Part E §42) roll up to requirement-level assessment states — worst-first, deterministic:
 
-| Criterion result | Assessment |
-|:-----------------|:-----------|
-| All SATISFIED and tier-sufficient | **PASS** |
-| Any SHORTFALL (numeric / count / region / rank / ratio) | **FAIL** (structured delta attached) |
-| Any EXPIRED (invalid at submission date) | **FAIL** (reason = EXPIRED; drives RENEW gap action) |
-| Any MISSING (no candidate evidence) | **MISSING_EVIDENCE** |
-| Tier unmet — mandatory | **MISSING_EVIDENCE** |
-| Tier unmet — advisory | **REVIEW_REQUIRED** |
-| Conflict UNRESOLVED | **REVIEW_REQUIRED** (all conflicting refs cited) |
-| Ambiguous clause (no structured criteria extractable) | **REVIEW_REQUIRED** |
-| Missing validity/issue date | **REVIEW_REQUIRED** (UNKNOWN_VALIDITY) |
+| Criterion result                                        | Assessment                                           |
+| :------------------------------------------------------ | :--------------------------------------------------- |
+| All SATISFIED and tier-sufficient                       | **PASS**                                             |
+| Any SHORTFALL (numeric / count / region / rank / ratio) | **FAIL** (structured delta attached)                 |
+| Any EXPIRED (invalid at submission date)                | **FAIL** (reason = EXPIRED; drives RENEW gap action) |
+| Any MISSING (no candidate evidence)                     | **MISSING_EVIDENCE**                                 |
+| Tier unmet — mandatory                                  | **MISSING_EVIDENCE**                                 |
+| Tier unmet — advisory                                   | **REVIEW_REQUIRED**                                  |
+| Conflict UNRESOLVED                                     | **REVIEW_REQUIRED** (all conflicting refs cited)     |
+| Ambiguous clause (no structured criteria extractable)   | **REVIEW_REQUIRED**                                  |
+| Missing validity/issue date                             | **REVIEW_REQUIRED** (UNKNOWN_VALIDITY)               |
 
 Mixed criteria → worst state wins, ordered **FAIL > MISSING_EVIDENCE > REVIEW_REQUIRED > PASS**: a proven negative outranks an unproven one, which outranks uncertainty.
 
 ## 58. Hard Cases — Design Table
 
-| Case | Detection | Deterministic policy | Assessment outcome |
-|:-----|:----------|:---------------------|:-------------------|
-| **Conflicting evidence** (two documents, different turnover) | Same field, ≥2 values | Conflict policy §54c | Resolved with policy recorded, or REVIEW_REQUIRED if unresolvable |
-| **Expired certificates** | validity window ∌ evaluationDate | Expiry policy §54a | FAIL (EXPIRED) + RENEW gap item (§45) |
-| **Insufficient evidence** (exists but below required tier) | tier < minimumVerificationTier | Tier policy §54b | MISSING_EVIDENCE (mandatory) / REVIEW_REQUIRED (advisory) |
-| **Ambiguous clauses** ("good financial standing") | No structured criteria extractable | AMBIGUOUS flag at extraction (§32) | REVIEW_REQUIRED; AI may propose interpretations, marked advisory — never a verdict |
-| **Missing dates** | validity/issue date absent | UNKNOWN_VALIDITY | REVIEW_REQUIRED — never assume valid |
-| **Contradictory company data** (profile entry vs. evidence doc) | entry.value ≠ evidence.fact | Conflict policy; evidence outranks self-entered data when its tier ≥ entry tier | Resolved by policy, else REVIEW_REQUIRED |
-| **Multiple evidence documents** | ≥2 candidates per criterion | All linked; best-selected per §53 policy | Assessment cites all; selection + non-selection recorded |
-| **Manual override** | Human action | OCC + `compliance:override` + mandatory reason | OVERRIDDEN; both verdicts retained immutably |
-| **Audit trail** | Every stage | Append-only AuditEvent (§59) | Immutable; full reconstruction possible |
+| Case                                                            | Detection                          | Deterministic policy                                                            | Assessment outcome                                                                 |
+| :-------------------------------------------------------------- | :--------------------------------- | :------------------------------------------------------------------------------ | :--------------------------------------------------------------------------------- |
+| **Conflicting evidence** (two documents, different turnover)    | Same field, ≥2 values              | Conflict policy §54c                                                            | Resolved with policy recorded, or REVIEW_REQUIRED if unresolvable                  |
+| **Expired certificates**                                        | validity window ∌ evaluationDate   | Expiry policy §54a                                                              | FAIL (EXPIRED) + RENEW gap item (§45)                                              |
+| **Insufficient evidence** (exists but below required tier)      | tier < minimumVerificationTier     | Tier policy §54b                                                                | MISSING_EVIDENCE (mandatory) / REVIEW_REQUIRED (advisory)                          |
+| **Ambiguous clauses** ("good financial standing")               | No structured criteria extractable | AMBIGUOUS flag at extraction (§32)                                              | REVIEW_REQUIRED; AI may propose interpretations, marked advisory — never a verdict |
+| **Missing dates**                                               | validity/issue date absent         | UNKNOWN_VALIDITY                                                                | REVIEW_REQUIRED — never assume valid                                               |
+| **Contradictory company data** (profile entry vs. evidence doc) | entry.value ≠ evidence.fact        | Conflict policy; evidence outranks self-entered data when its tier ≥ entry tier | Resolved by policy, else REVIEW_REQUIRED                                           |
+| **Multiple evidence documents**                                 | ≥2 candidates per criterion        | All linked; best-selected per §53 policy                                        | Assessment cites all; selection + non-selection recorded                           |
+| **Manual override**                                             | Human action                       | OCC + `compliance:override` + mandatory reason                                  | OVERRIDDEN; both verdicts retained immutably                                       |
+| **Audit trail**                                                 | Every stage                        | Append-only AuditEvent (§59)                                                    | Immutable; full reconstruction possible                                            |
 
 ## 59. Audit Trail
 
@@ -1051,9 +1123,9 @@ Payloads are **reference-only** (ids and structured values, never PDF binaries o
 
 ## 60. Worked Example (full trace)
 
-**Requirement:** *"The bidder shall have an average annual turnover of at least ₹10,00,00,000 during FY22–FY25"* — HARD_ELIGIBILITY, TURNOVER criterion, `{operator: GTE, threshold: 1,000,000,000, unit: INR, window: FY22-25, minimumVerificationTier: AUDITED}`.
+**Requirement:** _"The bidder shall have an average annual turnover of at least ₹10,00,00,000 during FY22–FY25"_ — HARD_ELIGIBILITY, TURNOVER criterion, `{operator: GTE, threshold: 1,000,000,000, unit: INR, window: FY22-25, minimumVerificationTier: AUDITED}`.
 
-- **Tender evidence:** `NIT_84_2026.pdf`, p. 7, `BDS → Section III → 3.1`, quote *"…average annual turnover of at least ₹10,00,00,000…"* (grounding-verified, §28).
+- **Tender evidence:** `NIT_84_2026.pdf`, p. 7, `BDS → Section III → 3.1`, quote _"…average annual turnover of at least ₹10,00,00,000…"_ (grounding-verified, §28).
 - **[1] Retrieval** (pinned profile v7, tenant-scoped): 6 candidates — FY22–FY25 audited statements, one CA letter, one ITR acknowledgement.
 - **[2] Match:** audited A/c FY25 p. 12 → ₹9.8 Cr (AUDITED, UDIN); FY24 p. 12 → ₹10.4 Cr; FY23 → ₹9.9 Cr; FY22 → ₹10.1 Cr. CA letter claims FY25 = ₹11 Cr (SELF_DECLARED, no UDIN) → **conflict** on FY25 value.
 - **[3] Validation:** mean(9.8, 10.4, 9.9, 10.1) = ₹10.05 Cr ≥ ₹10 Cr → SATISFIED, margin ₹5 L. Conflict resolved by §54c rule 1: AUDITED beats SELF_DECLARED → FY25 = ₹9.8 Cr. Tier policy: AUDITED ≥ AUDITED → sufficient.
@@ -1066,4 +1138,4 @@ Payloads are **reference-only** (ids and structured values, never PDF binaries o
 
 ---
 
-*Stop point reached: design only, per PROMPT 7. No code implemented.*
+_Stop point reached: design only, per PROMPT 7. No code implemented._

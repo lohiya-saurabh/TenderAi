@@ -29,110 +29,110 @@ export const App: React.FC = () => {
       <ThemeProvider>
         <AuthProvider>
           <CompanyProvider>
-          <Routes>
-            {/* Public Marketing & Pricing Routes */}
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/pricing" element={<PricingPage />} />
-            <Route path="/signup" element={<SignupPage />} />
-            <Route path="/login" element={<LoginPage />} />
+            <Routes>
+              {/* Public Marketing & Pricing Routes */}
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/pricing" element={<PricingPage />} />
+              <Route path="/signup" element={<SignupPage />} />
+              <Route path="/login" element={<LoginPage />} />
 
-            {/* Protected Onboarding Flow */}
-            <Route
-              path="/onboarding"
-              element={
-                <ProtectedRoute>
-                  <OnboardingPage />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* Protected Application Workspace inside AppShell */}
-            <Route
-              element={
-                <ProtectedRoute>
-                  <AppShell />
-                </ProtectedRoute>
-              }
-            >
+              {/* Protected Onboarding Flow */}
               <Route
-                path="/bids"
-                element={
-                  <ProtectedRoute requiredPermission={PERMISSIONS.BIDS_READ}>
-                    <DashboardPage />
-                  </ProtectedRoute>
-                }
-              />
-
-              <Route
-                path="/bids/new"
-                element={
-                  <ProtectedRoute requiredPermission={PERMISSIONS.BIDS_CREATE}>
-                    <CreateBidPage />
-                  </ProtectedRoute>
-                }
-              />
-
-              <Route
-                path="/company-profile"
-                element={
-                  <ProtectedRoute requiredPermission={PERMISSIONS.BIDS_READ}>
-                    <CompanyProfilePage />
-                  </ProtectedRoute>
-                }
-              />
-
-              <Route
-                path="/profile"
+                path="/onboarding"
                 element={
                   <ProtectedRoute>
-                    <ProfilePage />
+                    <OnboardingPage />
                   </ProtectedRoute>
                 }
               />
 
+              {/* Protected Application Workspace inside AppShell */}
               <Route
-                path="/settings"
                 element={
                   <ProtectedRoute>
-                    <SettingsPage />
+                    <AppShell />
                   </ProtectedRoute>
                 }
-              />
+              >
+                <Route
+                  path="/bids"
+                  element={
+                    <ProtectedRoute requiredPermission={PERMISSIONS.BIDS_READ}>
+                      <DashboardPage />
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/bids/:id"
-                element={
-                  <ProtectedRoute requiredPermission={PERMISSIONS.BIDS_READ}>
-                    <BidDetailPage />
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/bids/new"
+                  element={
+                    <ProtectedRoute requiredPermission={PERMISSIONS.BIDS_CREATE}>
+                      <CreateBidPage />
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/bids/:id/compliance/:itemId"
-                element={
-                  <ProtectedRoute requiredPermission={PERMISSIONS.BIDS_READ}>
-                    <ComplianceReviewPage />
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/company-profile"
+                  element={
+                    <ProtectedRoute requiredPermission={PERMISSIONS.BIDS_READ}>
+                      <CompanyProfilePage />
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/bids/:id/audit"
-                element={
-                  <ProtectedRoute requiredPermission={PERMISSIONS.AUDIT_READ}>
-                    <AuditHistoryPage />
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/profile"
+                  element={
+                    <ProtectedRoute>
+                      <ProfilePage />
+                    </ProtectedRoute>
+                  }
+                />
 
-              {/* 404 Fallback */}
-              <Route path="*" element={<NotFoundPage />} />
-            </Route>
-          </Routes>
-        </CompanyProvider>
-      </AuthProvider>
-    </ThemeProvider>
-  </BrowserRouter>
+                <Route
+                  path="/settings"
+                  element={
+                    <ProtectedRoute>
+                      <SettingsPage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/bids/:id"
+                  element={
+                    <ProtectedRoute requiredPermission={PERMISSIONS.BIDS_READ}>
+                      <BidDetailPage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/bids/:id/compliance/:itemId"
+                  element={
+                    <ProtectedRoute requiredPermission={PERMISSIONS.BIDS_READ}>
+                      <ComplianceReviewPage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/bids/:id/audit"
+                  element={
+                    <ProtectedRoute requiredPermission={PERMISSIONS.AUDIT_READ}>
+                      <AuditHistoryPage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* 404 Fallback */}
+                <Route path="*" element={<NotFoundPage />} />
+              </Route>
+            </Routes>
+          </CompanyProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </BrowserRouter>
   );
 };

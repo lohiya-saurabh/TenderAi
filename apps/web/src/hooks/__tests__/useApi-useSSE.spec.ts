@@ -96,7 +96,9 @@ describe('useApi & useSSE — SWR Background Revalidation and Terminal SSE Guard
     expect(mockEventSource.close).not.toHaveBeenCalled();
 
     // Step 2: Terminal completion event
-    onMessage({ data: JSON.stringify({ step: 'COMPLETED', progress: 100, status: 'REVIEW_READY' }) });
+    onMessage({
+      data: JSON.stringify({ step: 'COMPLETED', progress: 100, status: 'REVIEW_READY' }),
+    });
     expect(isTerminated).toBe(true);
     expect(mockEventSource.close).toHaveBeenCalledTimes(1);
     expect(isConnected).toBe(false);

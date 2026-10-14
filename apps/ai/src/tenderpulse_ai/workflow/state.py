@@ -31,6 +31,7 @@ class ComplianceWorkflowState(TypedDict, total=False):
 
     # Node 3: Candidate Detection
     detected_candidates: list[dict[str, Any]]
+    unselected_passages: list[dict[str, Any]]
 
     # Node 4: Context Assembly
     assembled_contexts: list[dict[str, Any]]

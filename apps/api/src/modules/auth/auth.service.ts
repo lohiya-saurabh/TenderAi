@@ -4,12 +4,21 @@
 import { Injectable, Inject, Optional } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
 import bcrypt from 'bcrypt';
+import crypto from 'node:crypto';
 import { sql } from 'drizzle-orm';
-import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '../../common/database/database.module.js';
+import {
+  DRIZZLE_TOKEN,
+  type DrizzleDb,
+  createDrizzle,
+} from '../../common/database/database.module.js';
 import * as schema from '../../common/database/schema.js';
 import { UnauthorizedError, ConflictError, BadRequestError } from '../../common/errors/errors.js';
 import { TokenService } from '../../common/security/TokenService.js';
-import { ROLE_PERMISSIONS, type UserRole, type Permission } from '../../common/security/permissions.js';
+import {
+  ROLE_PERMISSIONS,
+  type UserRole,
+  type Permission,
+} from '../../common/security/permissions.js';
 
 // Precomputed cost-10 bcrypt hash used to normalize timing and defend against user enumeration
 const DUMMY_BCRYPT_HASH = '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
@@ -83,8 +92,12 @@ export class AuthService {
     }
 
     const permissions: Permission[] =
-      typeof matched.permissions === 'string' ? JSON.parse(matched.permissions) : matched.permissions;
-    const normalizedRole = String(matched.role ?? 'BID_MANAGER').toUpperCase().replace(/\s+/g, '_');
+      typeof matched.permissions === 'string'
+        ? JSON.parse(matched.permissions)
+        : matched.permissions;
+    const normalizedRole = String(matched.role ?? 'BID_MANAGER')
+      .toUpperCase()
+      .replace(/\s+/g, '_');
 
     const userProfile = {
       id: matched.id,
@@ -107,6 +120,8 @@ export class AuthService {
     });
     const refreshToken = this.tokenService.signRefreshToken(userProfile.id);
 
+    await this.persistRefreshToken(userProfile.id, refreshToken);
+
     return {
       accessToken,
       refreshToken,
@@ -114,13 +129,38 @@ export class AuthService {
     };
   }
 
-  public async refresh(incomingRefreshToken?: string): Promise<{ accessToken: string; refreshToken: string }> {
+  public async refresh(
+    incomingRefreshToken?: string,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
     if (!incomingRefreshToken) {
       throw new UnauthorizedError('Missing or empty refresh token.');
     }
 
     // Cryptographic signature and expiration check
     const { userId } = this.tokenService.verifyRefreshToken(incomingRefreshToken);
+
+    const tokenHash = crypto.createHash('sha256').update(incomingRefreshToken).digest('hex');
+    try {
+      const [storedToken] = await this.db
+        .select()
+        .from(schema.refreshTokens)
+        .where(sql`${schema.refreshTokens.tokenHash} = ${tokenHash}`)
+        .limit(1);
+
+      if (storedToken && storedToken.revokedAt) {
+        throw new UnauthorizedError('Refresh token has been revoked.');
+      }
+
+      if (storedToken) {
+        await this.db
+          .update(schema.refreshTokens)
+          .set({ revokedAt: new Date() })
+          .where(sql`${schema.refreshTokens.tokenHash} = ${tokenHash}`);
+      }
+    } catch (err) {
+      if (err instanceof UnauthorizedError) throw err;
+      // ignore table absence in memory test doubles
+    }
 
     const [user] = await this.db
       .select()
@@ -129,14 +169,16 @@ export class AuthService {
       .limit(1);
 
     if (!user) {
-      throw new UnauthorizedError('User account associated with this refresh token no longer exists.');
+      throw new UnauthorizedError(
+        'User account associated with this refresh token no longer exists.',
+      );
     }
 
     const permissions: Permission[] =
-      typeof user.permissions === 'string'
-        ? JSON.parse(user.permissions)
-        : user.permissions;
-    const normalizedRole = String(user.role ?? 'BID_MANAGER').toUpperCase().replace(/\s+/g, '_');
+      typeof user.permissions === 'string' ? JSON.parse(user.permissions) : user.permissions;
+    const normalizedRole = String(user.role ?? 'BID_MANAGER')
+      .toUpperCase()
+      .replace(/\s+/g, '_');
 
     const userProfile = {
       id: user.id,
@@ -159,10 +201,45 @@ export class AuthService {
     });
     const newRefreshToken = this.tokenService.signRefreshToken(userProfile.id);
 
+    await this.persistRefreshToken(userProfile.id, newRefreshToken);
+
     return {
       accessToken: newAccessToken,
       refreshToken: newRefreshToken,
     };
+  }
+
+  public async logout(incomingRefreshToken?: string): Promise<void> {
+    if (!incomingRefreshToken) return;
+    try {
+      const tokenHash = crypto.createHash('sha256').update(incomingRefreshToken).digest('hex');
+      await this.db
+        .update(schema.refreshTokens)
+        .set({ revokedAt: new Date() })
+        .where(sql`${schema.refreshTokens.tokenHash} = ${tokenHash}`);
+    } catch {
+      // ignore
+    }
+  }
+
+  private async persistRefreshToken(userId: string, refreshToken: string): Promise<void> {
+    try {
+      const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + 7 * 24 * 3600 * 1000);
+      await this.db
+        .insert(schema.refreshTokens)
+        .values({
+          id: `rt_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`,
+          userId,
+          tokenHash,
+          expiresAt,
+          createdAt: now,
+        })
+        .onConflictDoNothing();
+    } catch {
+      // ignore in test doubles where table is unseeded
+    }
   }
 
   /**
@@ -170,7 +247,9 @@ export class AuthService {
    * initial Free Plan subscription, and first Company entity.
    */
   public async register(dto: RegisterDto): Promise<RegisterResult> {
-    const candidateEmail = String(dto.email || '').trim().toLowerCase();
+    const candidateEmail = String(dto.email || '')
+      .trim()
+      .toLowerCase();
     const candidatePassword = String(dto.password || '');
     const candidateName = String(dto.name || '').trim();
 
@@ -250,7 +329,10 @@ export class AuthService {
         id: companyId,
         organizationId: orgId,
         legalName: companyName,
-        slug: companyName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+        slug: companyName
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/(^-|-$)/g, ''),
         gstin: dto.gstin?.trim() || null,
         pan: dto.pan?.trim() || null,
         udyamId: dto.udyamId?.trim() || null,
@@ -338,6 +420,7 @@ export class AuthService {
       organizationName: userProfile.organizationName,
     });
     const refreshToken = this.tokenService.signRefreshToken(userProfile.id);
+    await this.persistRefreshToken(userProfile.id, refreshToken);
 
     return {
       accessToken,

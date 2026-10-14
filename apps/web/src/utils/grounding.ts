@@ -50,17 +50,9 @@ export function deriveGroundingMatch(item: {
   } | null;
   description?: string;
 }): GroundingDerivation {
-  const quote = (
-    item.provenance?.verbatimQuote ||
-    item.sourceCitation?.verbatimQuote ||
-    ''
-  ).trim();
+  const quote = (item.provenance?.verbatimQuote || item.sourceCitation?.verbatimQuote || '').trim();
   const page = item.provenance?.pageNumber ?? item.sourceCitation?.page;
-  const clause = (
-    item.provenance?.sectionOrClause ||
-    item.sourceCitation?.section ||
-    ''
-  ).trim();
+  const clause = (item.provenance?.sectionOrClause || item.sourceCitation?.section || '').trim();
   const doc = (
     item.provenance?.documentName ||
     item.sourceCitation?.document ||
@@ -99,9 +91,10 @@ export function deriveGroundingMatch(item: {
   return {
     matchPct: score,
     badgeLabel: `${score}% Grounding Match`,
-    citationNote: hasPageNumber && doc
-      ? `Partially anchored to ${doc}, Page ${page}`
-      : 'Source citation coordinates incomplete',
+    citationNote:
+      hasPageNumber && doc
+        ? `Partially anchored to ${doc}, Page ${page}`
+        : 'Source citation coordinates incomplete',
     isExactVerbatim: false,
     anchors: {
       hasVerbatimQuote,

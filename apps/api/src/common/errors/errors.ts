@@ -3,7 +3,10 @@
  */
 
 export class HttpError extends Error {
-  constructor(public readonly statusCode: number, message: string) {
+  constructor(
+    public readonly statusCode: number,
+    message: string,
+  ) {
     super(message);
     this.name = 'HttpError';
   }
@@ -41,5 +44,12 @@ export class ForbiddenError extends HttpError {
   constructor(message: string) {
     super(403, message);
     this.name = 'ForbiddenError';
+  }
+}
+
+export class InternalServerError extends HttpError {
+  constructor(message: string) {
+    super(500, message);
+    this.name = 'InternalServerError';
   }
 }

@@ -113,6 +113,43 @@ class DoclingTable(BaseModel):
     rows: list[list[str]] = Field(default_factory=list)
     caption: str | None = Field(default=None)
 
+    def to_markdown(self) -> str:
+        """Serializes the table into a standard GitHub-flavored Markdown table string."""
+        if not self.headers and not self.rows:
+            return ""
+        
+        headers = self.headers if self.headers else [f"Col {i+1}" for i in range(len(self.rows[0]) if self.rows else 0)]
+        header_row = "| " + " | ".join(headers) + " |"
+        separator_row = "| " + " | ".join(["---"] * len(headers)) + " |"
+        
+        row_lines: list[str] = []
+        for row in self.rows:
+            # Pad or truncate row to match header length
+            padded = row + [""] * (len(headers) - len(row))
+            row_lines.append("| " + " | ".join(padded[:len(headers)]) + " |")
+        
+        return "\n".join([header_row, separator_row] + row_lines)
+
+    def to_dict_records(self) -> list[dict[str, str]]:
+        """Converts table rows into a list of dictionaries mapping header name to cell value."""
+        if not self.headers or not self.rows:
+            return []
+        records: list[dict[str, str]] = []
+        for row in self.rows:
+            rec: dict[str, str] = {}
+            for idx, h in enumerate(self.headers):
+                rec[h] = row[idx] if idx < len(row) else ""
+            records.append(rec)
+        return records
+
+    def get_cell(self, row_idx: int, col_name: str) -> str | None:
+        """Retrieves a cell value by row index and column header name."""
+        records = self.to_dict_records()
+        if 0 <= row_idx < len(records):
+            return records[row_idx].get(col_name)
+        return None
+
+
 
 class DoclingParsedDocument(BaseModel):
     document_id: str = Field(..., min_length=1)
@@ -144,6 +181,10 @@ class CandidatePassage(BaseModel):
     page_number: int = Field(default=1, ge=1)
     block_id: str
     matched_rules: list[str] = Field(default_factory=list)
+    priority_score: float = Field(default=0.5, ge=0.0, le=1.0)
+    is_table_cell: bool = Field(default=False)
+    extraction_tier: str = Field(default="PRIMARY")
+    context_path: str = Field(default="")
 
 
 class AssembledClauseContext(BaseModel):

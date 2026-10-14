@@ -1,13 +1,7 @@
 import React from 'react';
 
 export type BadgeVariant =
-  | 'primary'
-  | 'secondary'
-  | 'success'
-  | 'warning'
-  | 'danger'
-  | 'info'
-  | 'neutral';
+  'primary' | 'secondary' | 'success' | 'warning' | 'danger' | 'info' | 'neutral';
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   variant?: BadgeVariant;
@@ -30,53 +24,53 @@ export const Badge: React.FC<BadgeProps> = ({
     switch (variant) {
       case 'primary':
         return {
-          bg: 'rgba(99, 102, 241, 0.15)',
-          color: '#818cf8',
-          border: 'rgba(99, 102, 241, 0.3)',
-          dotColor: '#6366f1',
+          bg: 'var(--color-surface-card-subtle)',
+          color: 'var(--color-surface-text)',
+          border: 'var(--color-surface-border)',
+          dotColor: 'var(--color-surface-text)',
         };
       case 'success':
         return {
-          bg: 'var(--color-success-bg)',
-          color: 'var(--color-success)',
-          border: 'var(--color-success-border)',
-          dotColor: '#10b981',
+          bg: 'var(--status-pass-bg)',
+          color: 'var(--status-pass-text)',
+          border: 'var(--status-pass-border)',
+          dotColor: 'var(--status-pass-text)',
         };
       case 'warning':
         return {
-          bg: 'var(--color-warning-bg)',
-          color: 'var(--color-warning)',
-          border: 'var(--color-warning-border)',
-          dotColor: '#f59e0b',
+          bg: 'var(--status-amber-bg)',
+          color: 'var(--status-amber-text)',
+          border: 'var(--status-amber-border)',
+          dotColor: '#ea580c',
         };
       case 'danger':
         return {
-          bg: 'var(--color-danger-bg)',
-          color: 'var(--color-danger)',
-          border: 'var(--color-danger-border)',
-          dotColor: '#ef4444',
+          bg: 'var(--status-flag-bg)',
+          color: 'var(--status-flag-text)',
+          border: 'var(--status-flag-border)',
+          dotColor: '#c2410c',
         };
       case 'info':
         return {
-          bg: 'var(--color-info-bg)',
-          color: 'var(--color-info)',
-          border: 'var(--color-info-border)',
-          dotColor: '#3b82f6',
+          bg: 'var(--color-surface-card-subtle)',
+          color: 'var(--color-surface-text)',
+          border: 'var(--color-surface-border)',
+          dotColor: 'var(--color-surface-text)',
         };
       case 'secondary':
         return {
           bg: 'var(--color-surface-card-hover)',
           color: 'var(--color-surface-text)',
           border: 'var(--color-surface-border)',
-          dotColor: '#94a3b8',
+          dotColor: 'var(--color-surface-subtle)',
         };
       case 'neutral':
       default:
         return {
-          bg: 'rgba(148, 163, 184, 0.1)',
+          bg: 'var(--color-surface-card-subtle)',
           color: 'var(--color-surface-muted)',
-          border: 'rgba(148, 163, 184, 0.25)',
-          dotColor: '#64748b',
+          border: 'var(--color-surface-border)',
+          dotColor: 'var(--color-surface-subtle)',
         };
     }
   };

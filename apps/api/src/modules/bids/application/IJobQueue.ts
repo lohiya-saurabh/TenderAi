@@ -31,7 +31,7 @@ export interface IJobQueue {
 
   receiveMessages(
     maxMessages?: number,
-    visibilityTimeoutSeconds?: number
+    visibilityTimeoutSeconds?: number,
   ): Promise<QueueMessage<IngestionJobMessage>[]>;
 
   deleteMessage(receiptHandle: string): Promise<void>;
@@ -41,7 +41,7 @@ export interface IJobQueue {
   moveToDeadLetter(
     message: IngestionJobMessage,
     reason: string,
-    receiveCount?: number
+    receiveCount?: number,
   ): Promise<void>;
 
   getDeadLetterMessages(): Promise<DeadLetterMessage<IngestionJobMessage>[]>;

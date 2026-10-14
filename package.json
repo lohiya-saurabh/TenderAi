@@ -2,6 +2,7 @@
   "name": "tenderpulse-monorepo",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "workspaces": [
     "packages/*",
     "apps/*"
@@ -14,8 +15,12 @@
     "type-check": "npm run type-check --workspaces --if-present",
     "test": "vitest run tests/ && npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
-    "format": "prettier --write '**/*.{ts,tsx,json,md,yml}'",
-    "format:check": "prettier --check '**/*.{ts,tsx,json,md}'"
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:wipe": "node --env-file=.env scripts/wipe-data.js",
+    "db:seed": "node --env-file=.env scripts/seed-data.js",
+    "db:status": "node scripts/db-status.js",
+    "db:query": "node scripts/db-query.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

@@ -4,7 +4,11 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
 import { eq, and, asc, desc } from 'drizzle-orm';
-import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '../../common/database/database.module.js';
+import {
+  DRIZZLE_TOKEN,
+  type DrizzleDb,
+  createDrizzle,
+} from '../../common/database/database.module.js';
 import * as schema from '../../common/database/schema.js';
 import { NotFoundError, ConflictError } from '../../common/errors/errors.js';
 import type { DemoComplianceItem } from '../../seed/data.js';
@@ -148,8 +152,7 @@ export class ComplianceService {
         const preferCur =
           (!exQuote && Boolean(curQuote)) ||
           (exQuote.length < 50 && curQuote.length >= 50) ||
-          ((curProv.confidenceScore || 0) > (exProv.confidenceScore || 0) &&
-            curQuote.length >= 40);
+          ((curProv.confidenceScore || 0) > (exProv.confidenceScore || 0) && curQuote.length >= 40);
 
         const chosen = preferCur ? row : existing;
         const other = preferCur ? existing : row;
@@ -170,9 +173,7 @@ export class ComplianceService {
           notarizationRequired: Boolean(
             chosenRules.notarizationRequired || otherRules.notarizationRequired,
           ),
-          udinRequired: Boolean(
-            chosenRules.udinRequired || otherRules.udinRequired,
-          ),
+          udinRequired: Boolean(chosenRules.udinRequired || otherRules.udinRequired),
         };
 
         uniqueMap.set(key, {
@@ -210,24 +211,18 @@ export class ComplianceService {
    * Review tasks — real projection of the compliance matrix:
    * requirements awaiting human action (status PENDING, REVIEW_REQUIRED, or humanReviewRequired).
    */
-  public async listReviewTasks(
-    bidId: string,
-  ): Promise<DemoComplianceItem[]> {
+  public async listReviewTasks(bidId: string): Promise<DemoComplianceItem[]> {
     const items = await this.listItems(bidId);
     return items.filter(
       (item) =>
-        item.status === 'PENDING' ||
-        item.status === 'REVIEW_REQUIRED' ||
-        item.humanReviewRequired,
+        item.status === 'PENDING' || item.status === 'REVIEW_REQUIRED' || item.humanReviewRequired,
     );
   }
 
   /**
    * Bid readiness rollup — server-side computation over the requirement matrix.
    */
-  public async getReadinessRollup(
-    bidId: string,
-  ): Promise<{
+  public async getReadinessRollup(bidId: string): Promise<{
     totalRequirements: number;
     ready: number;
     flagged: number;
@@ -242,7 +237,9 @@ export class ComplianceService {
     const ready = items.filter((r) => r.status === 'READY' || r.status === 'PASS').length;
     const flagged = items.filter((r) => r.status === 'FLAGGED' || r.status === 'FAIL').length;
     const pending = items.filter((r) => r.status === 'PENDING' || r.status === 'MISSING').length;
-    const waived = items.filter((r) => r.status === 'WAIVED' || r.status === 'NOT_APPLICABLE').length;
+    const waived = items.filter(
+      (r) => r.status === 'WAIVED' || r.status === 'NOT_APPLICABLE',
+    ).length;
     const reviewRequired = items.filter(
       (r) => r.status === 'REVIEW_REQUIRED' || r.humanReviewRequired,
     ).length;
@@ -287,7 +284,11 @@ export class ComplianceService {
           matchStatus = 'EXPIRED';
         } else if (item.companyEvidence?.status === 'MISSING') {
           matchStatus = 'UNMATCHED';
-        } else if (item.companyEvidence?.status === 'SELF_ATTESTED' || item.status === 'REVIEW_REQUIRED' || item.humanReviewRequired) {
+        } else if (
+          item.companyEvidence?.status === 'SELF_ATTESTED' ||
+          item.status === 'REVIEW_REQUIRED' ||
+          item.humanReviewRequired
+        ) {
           matchStatus = 'PARTIAL';
         } else {
           matchStatus = 'MATCHED';
@@ -309,7 +310,9 @@ export class ComplianceService {
 
     const totalMatched = matches.filter((m) => m.matchStatus === 'MATCHED').length;
     const totalPartial = matches.filter((m) => m.matchStatus === 'PARTIAL').length;
-    const totalUnmatched = matches.filter((m) => m.matchStatus === 'UNMATCHED' || m.matchStatus === 'EXPIRED').length;
+    const totalUnmatched = matches.filter(
+      (m) => m.matchStatus === 'UNMATCHED' || m.matchStatus === 'EXPIRED',
+    ).length;
 
     return {
       bidId,
@@ -317,7 +320,10 @@ export class ComplianceService {
       totalMatched,
       totalPartial,
       totalUnmatched,
-      coveragePct: matches.length > 0 ? Math.round(((totalMatched + totalPartial * 0.5) / matches.length) * 100) : 0,
+      coveragePct:
+        matches.length > 0
+          ? Math.round(((totalMatched + totalPartial * 0.5) / matches.length) * 100)
+          : 0,
       matches,
     };
   }
@@ -344,13 +350,9 @@ export class ComplianceService {
       .select()
       .from(schema.bidDecisions)
       .where(
-        and(
-          eq(schema.bidDecisions.bidId, bidId),
-          eq(schema.bidDecisions.organizationId, orgId),
-        ),
+        and(eq(schema.bidDecisions.bidId, bidId), eq(schema.bidDecisions.organizationId, orgId)),
       )
-      .orderBy(desc(schema.bidDecisions.createdAt))
-
+      .orderBy(desc(schema.bidDecisions.createdAt));
 
     const statutoryRisks: StatutoryRiskItem[] = [];
     let estimatedFinancialExposureRupees = 0;
@@ -359,7 +361,9 @@ export class ComplianceService {
       const rules = item.executionRules;
       const constraints: string[] = [];
       if (rules?.stampPaperRequired) {
-        constraints.push(`Non-Judicial Stamp Paper of ₹${rules.stampPaperDenominationInr ?? 100} required`);
+        constraints.push(
+          `Non-Judicial Stamp Paper of ₹${rules.stampPaperDenominationInr ?? 100} required`,
+        );
       }
       if (rules?.notarizationRequired) {
         constraints.push('Notarization by Notary Public / Oath Commissioner required');
@@ -374,7 +378,10 @@ export class ComplianceService {
       if (item.risk || item.status === 'FLAGGED' || item.status === 'FAIL') {
         const rawLevel = item.risk?.level?.toUpperCase();
         const level: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' =
-          rawLevel === 'CRITICAL' || rawLevel === 'HIGH' || rawLevel === 'MEDIUM' || rawLevel === 'LOW'
+          rawLevel === 'CRITICAL' ||
+          rawLevel === 'HIGH' ||
+          rawLevel === 'MEDIUM' ||
+          rawLevel === 'LOW'
             ? rawLevel
             : item.status === 'FAIL'
               ? 'CRITICAL'
@@ -422,16 +429,29 @@ export class ComplianceService {
               const obj = cr as Record<string, unknown>;
               const rawLevel = String(obj.level || 'MEDIUM').toUpperCase();
               const level: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' =
-                rawLevel === 'CRITICAL' || rawLevel === 'HIGH' || rawLevel === 'MEDIUM' || rawLevel === 'LOW'
+                rawLevel === 'CRITICAL' ||
+                rawLevel === 'HIGH' ||
+                rawLevel === 'MEDIUM' ||
+                rawLevel === 'LOW'
                   ? (rawLevel as 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW')
                   : 'MEDIUM';
 
               commercialRisks.push({
                 category: String(obj.category || 'COMMERCIAL'),
-                title: typeof obj.title === 'string' ? obj.title : typeof obj.risk_type === 'string' ? obj.risk_type : undefined,
+                title:
+                  typeof obj.title === 'string'
+                    ? obj.title
+                    : typeof obj.risk_type === 'string'
+                      ? obj.risk_type
+                      : undefined,
                 summary: String(obj.summary || obj.description || obj.detail || ''),
                 level,
-                mitigationAdvice: typeof obj.mitigation_advice === 'string' ? obj.mitigation_advice : typeof obj.mitigation === 'string' ? obj.mitigation : null,
+                mitigationAdvice:
+                  typeof obj.mitigation_advice === 'string'
+                    ? obj.mitigation_advice
+                    : typeof obj.mitigation === 'string'
+                      ? obj.mitigation
+                      : null,
                 source: 'BID_DECISION',
               });
             }
@@ -590,12 +610,7 @@ export class ComplianceService {
         totalRequirements: totalCount,
         updatedAt: now,
       })
-      .where(
-        and(
-          eq(schema.bids.id, bidId),
-          eq(schema.bids.organizationId, orgId),
-        ),
-      );
+      .where(and(eq(schema.bids.id, bidId), eq(schema.bids.organizationId, orgId)));
 
     // Record audit event in PostgreSQL
     await this.db.insert(schema.auditLogs).values({
@@ -626,6 +641,27 @@ export class ComplianceService {
     };
   }
 
+  public async bulkReviewItems(
+    bidId: string,
+    items: Array<{
+      id: string;
+      status: DemoComplianceItem['status'];
+      notes?: string | null;
+      expectedVersion?: number;
+    }>,
+  ): Promise<ReviewComplianceResult[]> {
+    const results: ReviewComplianceResult[] = [];
+    for (const item of items) {
+      const res = await this.reviewItem(bidId, item.id, {
+        status: item.status,
+        notes: item.notes,
+        expectedVersion: item.expectedVersion,
+      });
+      results.push(res);
+    }
+    return results;
+  }
+
   private mapComplianceRecord(record: schema.ComplianceItem): DemoComplianceItem {
     const executionRules =
       typeof record.executionRules === 'string'
@@ -648,6 +684,15 @@ export class ComplianceService {
         ? JSON.parse(record.rationale)
         : (record.rationale as DemoComplianceItem['rationale']);
 
+    const prov = (provenance ?? {}) as Record<string, unknown>;
+    const sourceCitation = {
+      document: String(prov.documentName || 'NIT Tender Document'),
+      page: Number(prov.pageNumber || 1),
+      section: String(prov.sectionOrClause || prov.clauseReference || ''),
+      verbatimQuote: String(prov.verbatimQuote || record.description || ''),
+      confidenceScore: Number(prov.confidenceScore || 0.9),
+    };
+
     return {
       id: record.id,
       bidId: record.bidId,
@@ -668,13 +713,18 @@ export class ComplianceService {
       version: record.version,
       executionRules,
       provenance,
+      sourceCitation,
       companyEvidence: companyEvidence ?? null,
       risk: risk ?? null,
       rationale: rationale ?? null,
       createdAt:
-        record.createdAt instanceof Date ? record.createdAt.toISOString() : String(record.createdAt),
+        record.createdAt instanceof Date
+          ? record.createdAt.toISOString()
+          : String(record.createdAt),
       updatedAt:
-        record.updatedAt instanceof Date ? record.updatedAt.toISOString() : String(record.updatedAt),
+        record.updatedAt instanceof Date
+          ? record.updatedAt.toISOString()
+          : String(record.updatedAt),
     };
   }
 }

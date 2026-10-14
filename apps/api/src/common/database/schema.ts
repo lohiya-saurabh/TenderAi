@@ -2,7 +2,16 @@
  * Drizzle ORM Schema definition for TenderPulse AI PostgreSQL database.
  * Single source of truth for compile-time types and query building.
  */
-import { pgTable, text, integer, bigint, timestamp, boolean, jsonb, real } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  text,
+  integer,
+  bigint,
+  timestamp,
+  boolean,
+  jsonb,
+  real,
+} from 'drizzle-orm/pg-core';
 
 export const users = pgTable('users', {
   id: text('id').primaryKey(),
@@ -44,6 +53,15 @@ export const companies = pgTable('companies', {
   pan: text('pan'),
   udyamId: text('udyam_id'),
   constitution: text('constitution'),
+  cin: text('cin'),
+  gstinVerifiedAt: timestamp('gstin_verified_at', { withTimezone: true }),
+  gstinVerificationData: jsonb('gstin_verification_data'),
+  udyamVerifiedAt: timestamp('udyam_verified_at', { withTimezone: true }),
+  udyamVerificationData: jsonb('udyam_verification_data'),
+  mcaVerifiedAt: timestamp('mca_verified_at', { withTimezone: true }),
+  mcaVerificationData: jsonb('mca_verification_data'),
+  digilockerLinkedAt: timestamp('digilocker_linked_at', { withTimezone: true }),
+  digilockerMetadata: jsonb('digilocker_metadata'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -264,7 +282,9 @@ export const subscriptions = pgTable('subscriptions', {
   planTier: text('plan_tier').notNull().default('FREE'), // 'FREE' | 'STARTER' | 'GROWTH' | 'BUSINESS' | 'ENTERPRISE'
   billingInterval: text('billing_interval').notNull().default('MONTHLY'), // 'MONTHLY' | 'ANNUAL'
   status: text('status').notNull().default('ACTIVE'), // 'TRIAL' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED'
-  currentPeriodStart: timestamp('current_period_start', { withTimezone: true }).notNull().defaultNow(),
+  currentPeriodStart: timestamp('current_period_start', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
   currentPeriodEnd: timestamp('current_period_end', { withTimezone: true }).notNull(),
   cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -285,3 +305,82 @@ export const usageRecords = pgTable('usage_records', {
 
 export type UsageRecord = typeof usageRecords.$inferSelect;
 export type NewUsageRecord = typeof usageRecords.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// Company Evidence Documents & Verification Layer
+// ---------------------------------------------------------------------------
+
+export type EvidenceVerificationStatus =
+  'IMPORTED' | 'EXTRACTED' | 'SOURCE_VERIFIED' | 'NEEDS_REVIEW' | 'EXPIRED' | 'REJECTED';
+
+export type EvidenceSourceProvider = 'LOCAL_UPLOAD' | 'GOOGLE_DRIVE' | 'ONEDRIVE' | 'DIGILOCKER';
+
+export const companyEvidenceDocuments = pgTable('company_evidence_documents', {
+  id: text('id').primaryKey(),
+  organizationId: text('organization_id').notNull(),
+  companyId: text('company_id')
+    .notNull()
+    .references(() => companies.id, { onDelete: 'cascade' }),
+  fileName: text('file_name').notNull(),
+  storagePath: text('storage_path').notNull(),
+  fileSizeBytes: bigint('file_size_bytes', { mode: 'number' }).notNull(),
+  mimeType: text('mime_type').notNull(),
+  sha256Hash: text('sha256_hash').notNull(),
+  evidenceType: text('evidence_type').notNull(), // 'AUDITED_BALANCE_SHEET', 'WORK_ORDER', 'COMPLETION_CERT', 'GST_REG', 'UDYAM_CERT', 'ISO_CERT', 'PAN_CARD', 'INCORPORATION_CERT', 'OTHER'
+  issuer: text('issuer'),
+  referenceNumber: text('reference_number'),
+  validFrom: timestamp('valid_from', { withTimezone: true }),
+  validTo: timestamp('valid_to', { withTimezone: true }),
+  sourceProvider: text('source_provider')
+    .notNull()
+    .default('LOCAL_UPLOAD')
+    .$type<EvidenceSourceProvider>(),
+  sourceReference: text('source_reference'),
+  importedAt: timestamp('imported_at', { withTimezone: true }).notNull().defaultNow(),
+  verificationStatus: text('verification_status')
+    .notNull()
+    .default('IMPORTED')
+    .$type<EvidenceVerificationStatus>(),
+  verificationMethod: text('verification_method'), // 'REGISTRY_API', 'DIGITAL_SIGNATURE', 'MANUAL_REVIEW'
+  verifiedAt: timestamp('verified_at', { withTimezone: true }),
+  verifiedBy: text('verified_by'),
+  discrepancyNotes: text('discrepancy_notes'),
+  extractedAttributes: jsonb('extracted_attributes'),
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type CompanyEvidenceDocument = typeof companyEvidenceDocuments.$inferSelect;
+export type NewCompanyEvidenceDocument = typeof companyEvidenceDocuments.$inferInsert;
+
+export const evidenceVerificationHistory = pgTable('evidence_verification_history', {
+  id: text('id').primaryKey(),
+  organizationId: text('organization_id').notNull(),
+  companyId: text('company_id').notNull(),
+  evidenceDocumentId: text('evidence_document_id')
+    .notNull()
+    .references(() => companyEvidenceDocuments.id, { onDelete: 'cascade' }),
+  previousStatus: text('previous_status').notNull(),
+  newStatus: text('new_status').notNull(),
+  verificationMethod: text('verification_method').notNull(),
+  verifiedBy: text('verified_by').notNull(),
+  verificationPayload: jsonb('verification_payload'),
+  discrepancyNotes: text('discrepancy_notes'),
+  timestamp: timestamp('timestamp', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type EvidenceVerificationHistoryRecord = typeof evidenceVerificationHistory.$inferSelect;
+export type NewEvidenceVerificationHistoryRecord = typeof evidenceVerificationHistory.$inferInsert;
+
+export const refreshTokens = pgTable('refresh_tokens', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  tokenHash: text('token_hash').notNull().unique(),
+  revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type RefreshTokenRecord = typeof refreshTokens.$inferSelect;
+export type NewRefreshTokenRecord = typeof refreshTokens.$inferInsert;

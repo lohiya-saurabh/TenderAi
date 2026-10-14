@@ -4,7 +4,7 @@
  * Some endpoints (mock upload/download, SSE) need raw access to the Express Request/Response
  * objects, so they use @Req() and @Res() decorators with passthrough mode.
  */
-import { Controller, Get, Post, Put, Delete, Param, Body, Req, Res, Headers } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Req, Res, Headers, Inject } from '@nestjs/common';
 import { Request, Response } from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -15,14 +15,11 @@ import { Permissions } from '../../common/security/permissions.js';
 
 @Controller('api/v1')
 export class DocumentsController {
-  constructor(private readonly documentsService: DocumentsService) {}
+  constructor(@Inject(DocumentsService) private readonly documentsService: DocumentsService) {}
 
   @Delete('bids/:bidId/documents/:docId')
   @RequirePermission(Permissions.BIDS_DELETE)
-  async deleteDocument(
-    @Param('bidId') bidId: string,
-    @Param('docId') docId: string,
-  ) {
+  async deleteDocument(@Param('bidId') bidId: string, @Param('docId') docId: string) {
     return this.documentsService.deleteDocument(bidId, docId);
   }
 
@@ -58,6 +55,15 @@ export class DocumentsController {
     @Req() req: Request,
     @Res() res: Response,
   ): void {
+    if (process.env.NODE_ENV === 'production') {
+      res.status(403).json({
+        status: 'FORBIDDEN',
+        message:
+          'Mock direct upload endpoint is disabled in production environments. Use presigned cloud storage URLs.',
+      });
+      return;
+    }
+
     const chunks: Buffer[] = [];
     req.on('data', (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
     req.on('end', async () => {
@@ -68,26 +74,22 @@ export class DocumentsController {
         await this.documentsService.registerUploadedMockObject(storagePath, buffer);
         res.status(200).json({ status: 'UPLOADED', size: buffer.length });
       } catch (err: unknown) {
-        res.status(500).json({ status: 'FAILED', message: err instanceof Error ? err.message : String(err) });
+        res
+          .status(500)
+          .json({ status: 'FAILED', message: err instanceof Error ? err.message : String(err) });
       }
     });
   }
 
   @Post('bids/:bidId/documents/confirm')
   @RequirePermission(Permissions.DOCUMENTS_UPLOAD)
-  async confirmUpload(
-    @Param('bidId') bidId: string,
-    @Body() body: { documentId?: string },
-  ) {
+  async confirmUpload(@Param('bidId') bidId: string, @Body() body: { documentId?: string }) {
     return this.documentsService.confirmUpload(bidId, body.documentId);
   }
 
   @Post('bids/:bidId/documents/:docId/reprocess')
   @RequirePermission(Permissions.DOCUMENTS_UPLOAD)
-  async reprocessDocument(
-    @Param('bidId') bidId: string,
-    @Param('docId') docId: string,
-  ) {
+  async reprocessDocument(@Param('bidId') bidId: string, @Param('docId') docId: string) {
     return this.documentsService.reprocessDocument(bidId, docId);
   }
 
@@ -112,8 +114,15 @@ export class DocumentsController {
     const samplesDir = path.resolve(process.cwd(), 'samples');
     let sampleFile = path.join(samplesDir, 'CPWD_Civil_Works_NIT_Notice_Inviting_Tender.pdf');
 
-    if (bidId.includes('gem') || bidId.includes('aiims') || (fileName && fileName.toLowerCase().includes('gem'))) {
-      sampleFile = path.join(samplesDir, 'GeM_AIIMS_Raipur_Surgical_Microscope_GEM-2026-B-8008666.pdf');
+    if (
+      bidId.includes('gem') ||
+      bidId.includes('aiims') ||
+      (fileName && fileName.toLowerCase().includes('gem'))
+    ) {
+      sampleFile = path.join(
+        samplesDir,
+        'GeM_AIIMS_Raipur_Surgical_Microscope_GEM-2026-B-8008666.pdf',
+      );
     } else if (bidId.includes('rail') || (fileName && fileName.toLowerCase().includes('rail'))) {
       sampleFile = path.join(samplesDir, 'Indian_Railways_NCR_Traction_Motor_Bearing_20263463.pdf');
     } else if (bidId.includes('nhai') || (fileName && fileName.toLowerCase().includes('nhai'))) {
@@ -207,7 +216,10 @@ export class DocumentsController {
           if (typeof res.end === 'function') res.end();
         }
       } catch (err) {
-        console.warn(`[DocumentsController] Error polling extraction progress for bid ${bidId}:`, err);
+        console.warn(
+          `[DocumentsController] Error polling extraction progress for bid ${bidId}:`,
+          err,
+        );
       }
     };
 

@@ -10,7 +10,10 @@ import { BID_REPOSITORY_TOKEN } from './domain/repositories/IBidRepository.js';
 import { PostgresBidRepository } from '../../infrastructure/persistence/PostgresBidRepository.js';
 import { DATABASE_TOKEN } from '../../common/database/database.module.js';
 import { ComplianceModule } from '../compliance/compliance.module.js';
-import { GetBidDecisionUseCase, AI_DECISION_CLIENT_TOKEN } from './application/GetBidDecisionUseCase.js';
+import {
+  GetBidDecisionUseCase,
+  AI_DECISION_CLIENT_TOKEN,
+} from './application/GetBidDecisionUseCase.js';
 import { AiDecisionClient } from './application/AiDecisionClient.js';
 
 @Module({
@@ -31,4 +34,4 @@ import { AiDecisionClient } from './application/AiDecisionClient.js';
   ],
   exports: [BidsService, BID_REPOSITORY_TOKEN, GetBidDecisionUseCase],
 })
-export class BidsModule { }
+export class BidsModule {}

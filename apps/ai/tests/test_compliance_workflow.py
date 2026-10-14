@@ -16,7 +16,10 @@ from tenderpulse_ai.security.exceptions import (
 from tenderpulse_ai.tools.network_guard import NetworkEgressGuard
 from tenderpulse_ai.tools.page_text import PageTextTool
 from tenderpulse_ai.tools.retrieval import DocumentChunk, ScopedRetrievalTool
-from tenderpulse_ai.workflow.graph import build_compliance_workflow_graph
+from tenderpulse_ai.workflow.graph import (
+    build_compliance_workflow_graph,
+    route_verification_outcome,
+)
 from tenderpulse_ai.workflow.nodes import WorkflowNodeContext
 
 
@@ -386,3 +389,22 @@ async def test_model_failure_recovers_safely():
     items = await llm_client.extract_compliance("sys", "prompt")
     assert len(items) == 1
     assert items[0].category == "PBG"
+
+
+def test_route_verification_outcome_logic():
+    # Case 1: All items verified and high confidence -> postgres_store
+    state_valid = {"unverified_items": [], "confidence_score": 0.95, "retry_count": 0}
+    assert route_verification_outcome(state_valid) == "postgres_store"
+
+    # Case 2: Unverified items exist and retry_count < 2 -> targeted_refine
+    state_refine = {"unverified_items": ["fake_item"], "confidence_score": 0.5, "retry_count": 0}
+    assert route_verification_outcome(state_refine) == "targeted_refine"
+
+    # Case 3: Unverified items exist and max retries reached -> escalate_human_review
+    state_max_retries = {"unverified_items": ["fake_item"], "confidence_score": 0.5, "retry_count": 2}
+    assert route_verification_outcome(state_max_retries) == "escalate_human_review"
+
+    # Case 4: Zero unverified items but confidence score < 0.80 -> escalate_human_review (NO infinite retry!)
+    state_low_conf_no_unverified = {"unverified_items": [], "confidence_score": 0.725, "retry_count": 0}
+    assert route_verification_outcome(state_low_conf_no_unverified) == "escalate_human_review"
+

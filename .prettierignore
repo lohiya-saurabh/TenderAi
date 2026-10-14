@@ -1,9 +1,88 @@
+# Package managers and dependencies
 node_modules
+**/node_modules
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# Build and compilation outputs
 dist
+**/dist
+build
+**/build
+.next
+.turbo
+out
+
+# Test, coverage, and report artifacts
 coverage
+**/coverage
+.nyc_output
+test-results
+**/test-results
+playwright-report
+playwright-screenshots
+e2e/screenshots
+
+# Version control and OS metadata
 .git
 .DS_Store
-package-lock.json
+**/.DS_Store
+Thumbs.db
+
+# Python virtual environment, caches, and bytecode
 *.pyc
 __pycache__
+**/__pycache__
+.pytest_cache
+**/.pytest_cache
+.ruff_cache
+**/.ruff_cache
 .venv
+**/.venv
+venv
+*.egg-info
+
+# Infrastructure and Terraform (formatted via terraform fmt)
+infrastructure/terraform
+**/.terraform
+*.tf
+*.tfvars
+*.tfstate*
+*.hcl
+
+# Sample documents and binary assets
+samples
+*.pdf
+*.xls
+*.xlsx
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+*.svg
+
+# Knowledge Graph & AI AST outputs
+graphify-out
+**/graphify-out
+
+# Local databases, storage, and binary data
+data
+**/data
+*.sqlite
+*.sqlite3
+*.db
+.pglite
+
+# Keys and credentials
+*-key.json
+gcp-key.json
+*.pem
+
+# Logs and environment files
+*.log
+.env*
+!.env.example
+!.env.local.example
+!.env.gcp.example

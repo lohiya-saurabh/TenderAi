@@ -39,7 +39,7 @@ export class ReviewComplianceItemUseCase {
     private readonly complianceRepository: IComplianceItemRepository,
     private readonly auditRepository: IAuditRepository,
     private readonly unitOfWork: IUnitOfWork,
-    private readonly eventBus?: IEventBus
+    private readonly eventBus?: IEventBus,
   ) {}
 
   public async execute(command: ReviewComplianceItemCommand): Promise<ReviewComplianceItemResult> {
@@ -58,7 +58,7 @@ export class ReviewComplianceItemUseCase {
         'ComplianceItem',
         item.id,
         command.expectedVersion,
-        item.version
+        item.version,
       );
     }
 
@@ -84,7 +84,7 @@ export class ReviewComplianceItemUseCase {
             notes: command.notes,
             version: item.version,
           },
-        })
+        }),
       );
     });
 

@@ -6,7 +6,11 @@ import { createDrizzle } from '../../../common/database/database.module.js';
 import * as schema from '../../../common/database/schema.js';
 import { TenantContextHolder } from '../../../common/security/TenantContext.js';
 import { GetBidDecisionUseCase } from './GetBidDecisionUseCase.js';
-import { AiDecisionClient, type AiBidDecisionRequest, type AiBidDecisionResponse } from './AiDecisionClient.js';
+import {
+  AiDecisionClient,
+  type AiBidDecisionRequest,
+  type AiBidDecisionResponse,
+} from './AiDecisionClient.js';
 import { NotFoundError, ConflictError } from '../../../common/errors/errors.js';
 
 /** Fake engine: captures the request, returns a canned verdict. */
@@ -21,9 +25,7 @@ class FakeAiDecisionClient {
   }
 }
 
-const cannedResponse = (
-  overrides: Partial<AiBidDecisionResponse> = {},
-): AiBidDecisionResponse => ({
+const cannedResponse = (overrides: Partial<AiBidDecisionResponse> = {}): AiBidDecisionResponse => ({
   tender_id: 'bid-dec-01',
   company_id: 'org_acme_infra_001',
   profile_version_id: 'cpv-test-01',
@@ -70,8 +72,7 @@ describe('GetBidDecisionUseCase — bid/no-bid evaluation pipeline', () => {
       tenderNumber: 'NHAI/DEL/2026/EC-24',
       tenderingAuthority: 'NHAI',
       estimatedValueRupees: 120000000, // ₹12 Crore
-      submissionDeadline:
-      opts.deadline !== undefined ? opts.deadline : '2026-12-31T18:00:00.000Z',
+      submissionDeadline: opts.deadline !== undefined ? opts.deadline : '2026-12-31T18:00:00.000Z',
       locationState: opts.location === undefined ? 'Delhi' : opts.location,
       status: 'DRAFT',
       totalRequirements: 0,
@@ -105,7 +106,8 @@ describe('GetBidDecisionUseCase — bid/no-bid evaluation pipeline', () => {
         documentName: 'NIT.pdf',
         pageNumber: 14,
         sectionOrClause: 'Clause 5.1',
-        verbatimQuote: 'The bidder shall have an average annual turnover of not less than ₹50 Crores',
+        verbatimQuote:
+          'The bidder shall have an average annual turnover of not less than ₹50 Crores',
         confidenceScore: 0.94,
       },
       createdAt: new Date(),
@@ -168,21 +170,28 @@ describe('GetBidDecisionUseCase — bid/no-bid evaluation pipeline', () => {
 
   beforeEach(async () => {
     db = new PGlite();
-    await initDatabase(db, { seedUsers: false, seedFullProfile: false, seedBidsAndCompliance: false });
+    await initDatabase(db, {
+      seedUsers: false,
+      seedFullProfile: false,
+      seedBidsAndCompliance: false,
+    });
     drizzleDb = createDrizzle(db);
 
-    await drizzleDb.insert(schema.companies).values([
-      {
-        id: 'comp_acme_infra_001',
-        organizationId: orgId,
-        legalName: 'Acme Infrastructure Solutions Ltd.',
-      },
-      {
-        id: 'comp_rival_infra_999',
-        organizationId: rivalOrgId,
-        legalName: 'Rival Infrastructure Ltd.',
-      },
-    ]).onConflictDoNothing();
+    await drizzleDb
+      .insert(schema.companies)
+      .values([
+        {
+          id: 'comp_acme_infra_001',
+          organizationId: orgId,
+          legalName: 'Acme Infrastructure Solutions Ltd.',
+        },
+        {
+          id: 'comp_rival_infra_999',
+          organizationId: rivalOrgId,
+          legalName: 'Rival Infrastructure Ltd.',
+        },
+      ])
+      .onConflictDoNothing();
 
     fakeClient = new FakeAiDecisionClient(cannedResponse());
     // Structural typing: the fake satisfies the AiDecisionClient contract.
@@ -244,9 +253,7 @@ describe('GetBidDecisionUseCase — bid/no-bid evaluation pipeline', () => {
     expect(req.requirements[0].execution_rules.signing_authority_rank).toBe('Director');
 
     // Company profile pass-through
-    expect(req.company_profile.company_name).toBe(
-      'Acme Infrastructure Solutions Ltd.',
-    );
+    expect(req.company_profile.company_name).toBe('Acme Infrastructure Solutions Ltd.');
     expect(req.company_profile.profile_version_id).toBe('cpv-test-01');
     expect(req.company_profile.operating_regions).toEqual(['Delhi', 'Haryana']);
     expect(req.company_profile.turnover_records).toHaveLength(1);

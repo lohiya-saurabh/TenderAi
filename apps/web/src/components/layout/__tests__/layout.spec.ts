@@ -13,7 +13,7 @@ describe('Application Shell Layout Suite', () => {
       const element = React.createElement(
         MemoryRouter,
         { initialEntries: ['/bids/bid_123/compliance/item_456'] },
-        React.createElement(Breadcrumbs)
+        React.createElement(Breadcrumbs),
       );
       expect(element).toBeDefined();
     });
@@ -24,7 +24,7 @@ describe('Application Shell Layout Suite', () => {
       const sidebar = React.createElement(
         MemoryRouter,
         null,
-        React.createElement(Sidebar, { isCollapsed: false })
+        React.createElement(Sidebar, { isCollapsed: false }),
       );
       expect(sidebar).toBeDefined();
     });
@@ -33,7 +33,7 @@ describe('Application Shell Layout Suite', () => {
       const sidebar = React.createElement(
         MemoryRouter,
         null,
-        React.createElement(Sidebar, { isCollapsed: true })
+        React.createElement(Sidebar, { isCollapsed: true }),
       );
       expect(sidebar).toBeDefined();
     });
@@ -42,7 +42,7 @@ describe('Application Shell Layout Suite', () => {
       const sidebar = React.createElement(
         MemoryRouter,
         null,
-        React.createElement(Sidebar, { isMobileOpen: true, onCloseMobile: () => {} })
+        React.createElement(Sidebar, { isMobileOpen: true, onCloseMobile: () => {} }),
       );
       expect(sidebar).toBeDefined();
     });
@@ -57,7 +57,7 @@ describe('Application Shell Layout Suite', () => {
           isSidebarCollapsed: false,
           onToggleMobileSidebar: () => {},
           onToggleSidebarCollapse: () => {},
-        })
+        }),
       );
       expect(header).toBeDefined();
     });
@@ -65,22 +65,14 @@ describe('Application Shell Layout Suite', () => {
 
   describe('User Account Menu', () => {
     it('should instantiate UserAccountMenu', () => {
-      const menu = React.createElement(
-        MemoryRouter,
-        null,
-        React.createElement(UserAccountMenu)
-      );
+      const menu = React.createElement(MemoryRouter, null, React.createElement(UserAccountMenu));
       expect(menu).toBeDefined();
     });
   });
 
   describe('AppShell Root Container', () => {
     it('should instantiate AppShell with responsive desktop and mobile containers', () => {
-      const shell = React.createElement(
-        MemoryRouter,
-        null,
-        React.createElement(AppShell)
-      );
+      const shell = React.createElement(MemoryRouter, null, React.createElement(AppShell));
       expect(shell).toBeDefined();
     });
   });

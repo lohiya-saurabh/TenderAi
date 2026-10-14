@@ -37,18 +37,22 @@ export class AwsS3StorageService implements IStorageService {
     this.s3Client = new S3Client({
       region: config.region || process.env.AWS_REGION || 'ap-south-1',
       endpoint: config.endpoint || process.env.S3_ENDPOINT || undefined,
-      forcePathStyle: config.forcePathStyle ?? (Boolean(config.endpoint || process.env.S3_ENDPOINT)),
-      credentials: config.credentials || (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY ? {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-      } : undefined),
+      forcePathStyle: config.forcePathStyle ?? Boolean(config.endpoint || process.env.S3_ENDPOINT),
+      credentials:
+        config.credentials ||
+        (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+          ? {
+              accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+              secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+            }
+          : undefined),
     });
   }
 
   public async generatePresignedUploadUrl(
     s3Key: string,
     contentType: string,
-    expiresInSeconds = 900
+    expiresInSeconds = 900,
   ): Promise<string> {
     const command = new PutObjectCommand({
       Bucket: this.bucketName,
@@ -73,7 +77,7 @@ export class AwsS3StorageService implements IStorageService {
   public async generatePresignedDownloadUrl(
     s3Key: string,
     downloadFileName: string,
-    expiresInSeconds = 300
+    expiresInSeconds = 300,
   ): Promise<string> {
     const encodedFileName = encodeURIComponent(downloadFileName);
     const command = new GetObjectCommand({
@@ -113,8 +117,14 @@ export class AwsS3StorageService implements IStorageService {
       if (
         error instanceof NotFound ||
         error instanceof NoSuchKey ||
-        (typeof error === 'object' && error !== null && 'name' in error && (error.name === 'NotFound' || error.name === 'NoSuchKey')) ||
-        (typeof error === 'object' && error !== null && '$metadata' in error && (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode === 404)
+        (typeof error === 'object' &&
+          error !== null &&
+          'name' in error &&
+          (error.name === 'NotFound' || error.name === 'NoSuchKey')) ||
+        (typeof error === 'object' &&
+          error !== null &&
+          '$metadata' in error &&
+          (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode === 404)
       ) {
         return { exists: false, sizeBytes: 0 };
       }
@@ -140,8 +150,14 @@ export class AwsS3StorageService implements IStorageService {
       if (
         error instanceof NotFound ||
         error instanceof NoSuchKey ||
-        (typeof error === 'object' && error !== null && 'name' in error && (error.name === 'NotFound' || error.name === 'NoSuchKey')) ||
-        (typeof error === 'object' && error !== null && '$metadata' in error && (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode === 404)
+        (typeof error === 'object' &&
+          error !== null &&
+          'name' in error &&
+          (error.name === 'NotFound' || error.name === 'NoSuchKey')) ||
+        (typeof error === 'object' &&
+          error !== null &&
+          '$metadata' in error &&
+          (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode === 404)
       ) {
         return null;
       }
@@ -149,7 +165,11 @@ export class AwsS3StorageService implements IStorageService {
     }
   }
 
-  public async putObject(s3Key: string, content: Buffer, contentType = 'application/pdf'): Promise<void> {
+  public async putObject(
+    s3Key: string,
+    content: Buffer,
+    contentType = 'application/pdf',
+  ): Promise<void> {
     const command = new PutObjectCommand({
       Bucket: this.bucketName,
       Key: s3Key,
@@ -177,7 +197,11 @@ export class AwsS3StorageService implements IStorageService {
       }
       return list.Contents.map((obj) => obj.Key).filter((key): key is string => Boolean(key));
     } catch (err) {
-      this.logger.warn('storage.find_files_by_prefix.failed', `Failed to list files with prefix ${prefix}`, { prefix, error: err });
+      this.logger.warn(
+        'storage.find_files_by_prefix.failed',
+        `Failed to list files with prefix ${prefix}`,
+        { prefix, error: err },
+      );
       return [];
     }
   }
@@ -190,9 +214,14 @@ export class AwsS3StorageService implements IStorageService {
           Key: s3Key,
         }),
       );
-      this.logger.info('storage.delete.completed', 'Deleted object from storage', { objectKey: s3Key });
+      this.logger.info('storage.delete.completed', 'Deleted object from storage', {
+        objectKey: s3Key,
+      });
     } catch (err) {
-      this.logger.warn('storage.delete.failed', `Failed to delete object ${s3Key}`, { objectKey: s3Key, error: err });
+      this.logger.warn('storage.delete.failed', `Failed to delete object ${s3Key}`, {
+        objectKey: s3Key,
+        error: err,
+      });
     }
   }
 
@@ -213,10 +242,17 @@ export class AwsS3StorageService implements IStorageService {
             Delete: { Objects: objects },
           }),
         );
-        this.logger.info('storage.delete_prefix.completed', `Deleted objects with prefix ${prefix}`, { prefix, count: objects.length });
+        this.logger.info(
+          'storage.delete_prefix.completed',
+          `Deleted objects with prefix ${prefix}`,
+          { prefix, count: objects.length },
+        );
       }
     } catch (err) {
-      this.logger.warn('storage.delete_prefix.failed', `Failed to delete prefix ${prefix}`, { prefix, error: err });
+      this.logger.warn('storage.delete_prefix.failed', `Failed to delete prefix ${prefix}`, {
+        prefix,
+        error: err,
+      });
     }
   }
 }

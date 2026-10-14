@@ -198,11 +198,7 @@ export type BidVerdict = 'GO' | 'CONDITIONAL_GO' | 'NO_GO' | 'REVIEW_REQUIRED';
  * (AI_PROPOSED); a human confirms or overrides. The UI must never
  * present an AI_PROPOSED verdict as final.
  */
-export type BidDecisionState =
-  | 'AI_PROPOSED'
-  | 'UNDER_REVIEW'
-  | 'CONFIRMED'
-  | 'OVERRIDDEN';
+export type BidDecisionState = 'AI_PROPOSED' | 'UNDER_REVIEW' | 'CONFIRMED' | 'OVERRIDDEN';
 
 /**
  * Wire contract of GET /api/v1/bids/:id/bid-decision
@@ -236,9 +232,7 @@ export interface BidDecisionSummary {
  * Latest persisted bid/no-bid decision for a tender.
  * Requires BIDS_READ. 404 when the tender has never been evaluated.
  */
-export function getBidDecision(
-  bidId: string,
-): Promise<ApiResult<BidDecisionSummary>> {
+export function getBidDecision(bidId: string): Promise<ApiResult<BidDecisionSummary>> {
   return apiGet<BidDecisionSummary>(`/api/v1/bids/${bidId}/bid-decision`);
 }
 
@@ -247,9 +241,7 @@ export function getBidDecision(
  * pinned Company Capability Profile.
  * Requires BIDS_UPDATE (writes a decision record).
  */
-export function evaluateBidDecision(
-  bidId: string,
-): Promise<ApiResult<BidDecisionSummary>> {
+export function evaluateBidDecision(bidId: string): Promise<ApiResult<BidDecisionSummary>> {
   return apiPost<BidDecisionSummary>(`/api/v1/bids/${bidId}/bid-decision`, {});
 }
 
@@ -301,9 +293,7 @@ export interface TenderDeadlinesResponse {
 }
 
 /** Get lifecycle milestone deadlines and countdown status for a bid */
-export function getTenderDeadlines(
-  bidId: string,
-): Promise<ApiResult<TenderDeadlinesResponse>> {
+export function getTenderDeadlines(bidId: string): Promise<ApiResult<TenderDeadlinesResponse>> {
   return apiGet<TenderDeadlinesResponse>(`/api/v1/bids/${bidId}/deadlines`);
 }
 
@@ -375,9 +365,7 @@ export interface EvidenceMatchesResponse {
 }
 
 /** Get company-side proof cross-referencing and coverage rollup for a bid */
-export function getEvidenceMatches(
-  bidId: string,
-): Promise<ApiResult<EvidenceMatchesResponse>> {
+export function getEvidenceMatches(bidId: string): Promise<ApiResult<EvidenceMatchesResponse>> {
   return apiGet<EvidenceMatchesResponse>(`/api/v1/bids/${bidId}/evidence-matches`);
 }
 
@@ -429,9 +417,7 @@ export interface RiskFindingsResponse {
 }
 
 /** Get consolidated statutory, execution, and commercial risk radar for a bid */
-export function getRiskFindings(
-  bidId: string,
-): Promise<ApiResult<RiskFindingsResponse>> {
+export function getRiskFindings(bidId: string): Promise<ApiResult<RiskFindingsResponse>> {
   return apiGet<RiskFindingsResponse>(`/api/v1/bids/${bidId}/risk-findings`);
 }
 
@@ -449,7 +435,12 @@ export interface TenderAmendmentItem {
   documentId: string;
   documentName: string;
   publishedAt: string;
-  amendmentType: 'DEADLINE_EXTENSION' | 'TECHNICAL_SPEC_CHANGE' | 'EMD_AMENDMENT' | 'ELIGIBILITY_REVISION' | 'GENERAL_CLARIFICATION';
+  amendmentType:
+    | 'DEADLINE_EXTENSION'
+    | 'TECHNICAL_SPEC_CHANGE'
+    | 'EMD_AMENDMENT'
+    | 'ELIGIBILITY_REVISION'
+    | 'GENERAL_CLARIFICATION';
   summary: string;
   impact: {
     deadlineChanged: boolean;
@@ -470,12 +461,8 @@ export interface TenderAmendmentsResponse {
 }
 
 /** Get corrigendum / amendment notification and impact stream across monitored tenders */
-export function getTenderAmendments(
-  bidId?: string,
-): Promise<ApiResult<TenderAmendmentsResponse>> {
+export function getTenderAmendments(bidId?: string): Promise<ApiResult<TenderAmendmentsResponse>> {
   return apiGet<TenderAmendmentsResponse>(
     `/api/v1/tenders/amendments${bidId ? `?bidId=${bidId}` : ''}`,
   );
 }
-
-

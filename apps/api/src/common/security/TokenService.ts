@@ -147,7 +147,10 @@ export class TokenService {
     const expectedBuf = Buffer.from(expectedSignature);
 
     // Constant-time signature verification prevents timing attack forging
-    if (incomingBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(incomingBuf, expectedBuf)) {
+    if (
+      incomingBuf.length !== expectedBuf.length ||
+      !crypto.timingSafeEqual(incomingBuf, expectedBuf)
+    ) {
       throw new UnauthorizedError('Invalid token signature.');
     }
 

@@ -20,7 +20,11 @@ describe('Tenant Registration, Billing & Entitlements Engine Suite', () => {
 
   beforeEach(async () => {
     pglite = new PGlite();
-    await initDatabase(pglite, { seedUsers: true, seedFullProfile: true, seedBidsAndCompliance: true });
+    await initDatabase(pglite, {
+      seedUsers: true,
+      seedFullProfile: true,
+      seedBidsAndCompliance: true,
+    });
 
     authService = new AuthService(pglite);
     billingService = new BillingService(pglite);
@@ -192,7 +196,9 @@ describe('Tenant Registration, Billing & Entitlements Engine Suite', () => {
       await entitlementService.recordAnalysisUsage(orgId);
 
       // 4th analysis should throw ForbiddenError
-      await expect(entitlementService.checkTenderAnalysisLimit(orgId)).rejects.toThrow(ForbiddenError);
+      await expect(entitlementService.checkTenderAnalysisLimit(orgId)).rejects.toThrow(
+        ForbiddenError,
+      );
 
       // Upgrade to Growth (allows 50)
       await billingService.changePlan(orgId, { planTier: 'GROWTH' });

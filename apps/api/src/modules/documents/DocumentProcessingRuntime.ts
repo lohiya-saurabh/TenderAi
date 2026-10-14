@@ -1,14 +1,16 @@
 import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { and, eq, lte, or, sql } from 'drizzle-orm';
-import type { SecurityContextDto } from '@tenderpulse/shared-types';
+import { and, eq, lte, or } from 'drizzle-orm';
 import { DRIZZLE_TOKEN, type DrizzleDb } from '../../common/database/database.module.js';
 import * as schema from '../../common/database/schema.js';
-import { QUEUE_TOKEN } from '../../infrastructure/queue/queue.module.js';
-import { STORAGE_TOKEN } from '../../infrastructure/storage/storage.module.js';
-import type { IJobQueue, IngestionJobMessage, QueueMessage } from '../bids/application/IJobQueue.js';
-import type { IStorageService } from '../bids/application/IStorageService.js';
-import type { DocumentExtractionPort } from '../bids/application/AiDocumentExtractor.js';
-import type { DocumentType } from '../bids/domain/entities/TenderDocument.js';
+import {
+  INGESTION_QUEUE_TOKEN,
+  COMPLETION_QUEUE_TOKEN,
+} from '../../infrastructure/queue/queue.module.js';
+import type {
+  IJobQueue,
+  IngestionJobMessage,
+  QueueMessage,
+} from '../bids/application/IJobQueue.js';
 import { DocumentCompletionService } from './DocumentCompletionService.js';
 import type { DocumentExtractionCompletedEvent } from '@tenderpulse/shared-types';
 import { StructuredLogger } from '../../common/logging/StructuredLogger.js';
@@ -21,35 +23,38 @@ const VISIBILITY_TIMEOUT_SECONDS = 300;
 const VISIBILITY_RENEWAL_INTERVAL_MS = 60_000;
 const MAX_PROCESSING_ATTEMPTS = 3;
 const OUTBOX_LEASE_MS = 5 * 60_000;
-export const DOCUMENT_EXTRACTOR_TOKEN = 'DOCUMENT_EXTRACTOR';
-const DOCUMENT_TYPES: ReadonlySet<string> = new Set([
-  'NIT',
-  'RFP',
-  'TECHNICAL_SPECS',
-  'GCC',
-  'SCC',
-  'BOQ',
-  'CORRIGENDUM',
-  'OTHER',
-]);
 
-function isDocumentType(value: string): value is DocumentType {
-  return DOCUMENT_TYPES.has(value);
-}
-
+/**
+ * DocumentProcessingRuntime (Event-Driven Cloud Architecture)
+ *
+ * Responsibilities:
+ * 1. PRODUCER (Ingestion Queue): Scans transactional outbox (document_processing_outbox)
+ *    and enqueues IngestionJobMessage records to the Ingestion Queue.
+ *    NestJS NEVER consumes from the Ingestion Queue.
+ *
+ * 2. CONSUMER (Completion Queue): Polls the dedicated Completion Queue for
+ *    DocumentExtractionCompletedEvent emitted by the Python AI worker.
+ *    Delegates atomic single-writer PostgreSQL persistence to DocumentCompletionService
+ *    and deletes the completion queue message upon transaction commit.
+ */
 @Injectable()
 export class DocumentProcessingRuntime implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new StructuredLogger(DocumentProcessingRuntime.name, 'api');
   private running = false;
   private loop: Promise<void> | undefined;
 
+  public readonly completionService: DocumentCompletionService;
+
   constructor(
     @Inject(DRIZZLE_TOKEN) private readonly db: DrizzleDb,
-    @Inject(STORAGE_TOKEN) private readonly storage: IStorageService,
-    @Inject(QUEUE_TOKEN) private readonly queue: IJobQueue,
-    @Inject(DOCUMENT_EXTRACTOR_TOKEN) private readonly extractor: DocumentExtractionPort,
-    private readonly completionService: DocumentCompletionService = new DocumentCompletionService(db),
+    @Inject(INGESTION_QUEUE_TOKEN) public readonly ingestionQueue: IJobQueue,
+    @Inject(COMPLETION_QUEUE_TOKEN) public readonly completionQueue: IJobQueue,
+    completionService?: DocumentCompletionService,
   ) {
+    this.completionService =
+      completionService instanceof DocumentCompletionService
+        ? completionService
+        : new DocumentCompletionService(this.db);
   }
 
   public onModuleInit(): void {
@@ -70,21 +75,38 @@ export class DocumentProcessingRuntime implements OnModuleInit, OnModuleDestroy 
   private async run(): Promise<void> {
     while (this.running) {
       try {
+        // 1. Transactional Outbox Publisher:
+        // Reads pending outbox records and enqueues to the Ingestion Queue.
+        // NestJS is strictly the PRODUCER of the Ingestion Queue; it NEVER consumes it.
         await this.publishPendingOutboxMessages();
-        const [message] = await this.queue.receiveMessages(1, VISIBILITY_TIMEOUT_SECONDS);
-        if (message) {
-          await this.processMessage(message);
+
+        // 2. Dedicated Completion Queue Consumer:
+        // Polls the Completion Queue for DocumentExtractionCompletedEvent published by Python.
+        // NestJS is strictly the CONSUMER of the Completion Queue.
+        const [completionMsg] = await this.completionQueue.receiveMessages(
+          1,
+          VISIBILITY_TIMEOUT_SECONDS,
+        );
+        if (completionMsg) {
+          await this.processCompletionMessage(completionMsg);
           continue;
         }
       } catch (error) {
-        this.logger.error('Document processing poll failed; the queue message remains eligible for retry.', error);
+        this.logger.error(
+          'Document processing polling loop encountered an error; worker remains healthy.',
+          error,
+        );
       }
 
       await new Promise<void>((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
     }
   }
 
-  private async publishPendingOutboxMessages(): Promise<void> {
+  /**
+   * Publishes pending outbox messages to the Ingestion Queue.
+   * Employs optimistic leases to ensure at-least-once durable publishing across replicas.
+   */
+  public async publishPendingOutboxMessages(): Promise<void> {
     const now = new Date();
     const staleLease = new Date(now.getTime() - OUTBOX_LEASE_MS);
     const pending = await this.db
@@ -128,7 +150,7 @@ export class DocumentProcessingRuntime implements OnModuleInit, OnModuleDestroy 
 
       const message = record.payload as IngestionJobMessage;
       try {
-        await this.queue.enqueue(message);
+        await this.ingestionQueue.enqueue(message);
         await this.db
           .update(schema.documentProcessingOutbox)
           .set({
@@ -138,6 +160,12 @@ export class DocumentProcessingRuntime implements OnModuleInit, OnModuleDestroy 
             lastError: null,
           })
           .where(eq(schema.documentProcessingOutbox.id, record.id));
+
+        this.logger.info(
+          'outbox.message.published',
+          `Published outbox job ${record.id} (doc: ${record.documentId}) to Ingestion Queue.`,
+          { outboxId: record.id, documentId: record.documentId },
+        );
       } catch (error) {
         const attempts = record.attempts + 1;
         const retrySeconds = Math.min(5 * 2 ** Math.min(attempts - 1, 6), 300);
@@ -152,271 +180,118 @@ export class DocumentProcessingRuntime implements OnModuleInit, OnModuleDestroy 
             lockedAt: null,
           })
           .where(eq(schema.documentProcessingOutbox.id, record.id));
-        this.logger.error(`Failed to publish document job ${record.id}; retrying in ${retrySeconds}s.`, error);
+        this.logger.error(
+          `Failed to publish document job ${record.id} to Ingestion Queue; retrying in ${retrySeconds}s.`,
+          error,
+        );
       }
     }
   }
 
-  private async processMessage(message: QueueMessage<IngestionJobMessage>): Promise<void> {
+  /**
+   * Processes a completion event received from the dedicated Completion Queue.
+   * Enforces Single-Writer Principle: delegates transactional write to DocumentCompletionService,
+   * then deletes the message from the completion queue upon success.
+   */
+  public async processCompletionMessage(
+    message: QueueMessage<unknown>,
+  ): Promise<void> {
     const { body, receiptHandle, receiveCount } = message;
-    const completionEvent = body as unknown as Partial<DocumentExtractionCompletedEvent>;
+    const event = body as Partial<DocumentExtractionCompletedEvent>;
 
     const traceId =
-      body.traceId ||
-      body.correlationId ||
-      completionEvent.traceId ||
-      completionEvent.correlationId ||
+      event.traceId ||
+      event.correlationId ||
       `trc_${randomUUID().replace(/-/g, '').slice(0, 16)}`;
-
-    const correlationId =
-      body.correlationId || completionEvent.correlationId || traceId;
+    const correlationId = event.correlationId || event.jobId || traceId;
 
     return LoggingContextHolder.run(
       {
         traceId,
         correlationId,
-        jobId: body.jobId || completionEvent.jobId,
-        tenantId: body.organizationId || completionEvent.organizationId,
-        tenderId: body.bidId || completionEvent.bidId,
-        documentId: body.documentId || completionEvent.documentId,
+        jobId: event.jobId,
+        tenantId: event.organizationId,
+        tenderId: event.bidId,
+        documentId: event.documentId,
       },
       async () => {
         const startTime = performance.now();
-        if (completionEvent.items && Array.isArray(completionEvent.items) && completionEvent.documentId && completionEvent.bidId) {
-          this.logger.info('queue.completion_event.received', `Received extraction completion event on queue for doc ${completionEvent.documentId}`, {
-            documentId: completionEvent.documentId,
-            itemsCount: completionEvent.items.length,
-          });
-          await this.completionService.processExtractionCompleted(completionEvent as DocumentExtractionCompletedEvent);
-          await this.queue.deleteMessage(receiptHandle);
-          return;
-        }
-
         this.logger.info(
-          'job.started',
-          `Processing document job ${body.jobId} (Tenant: ${body.organizationId}, Bid: ${body.bidId}, Document: ${body.documentId})`,
+          'queue.completion_event.received',
+          `Received extraction completion event for doc ${event.documentId} (bid: ${event.bidId}, status: ${event.status}, items: ${event.items?.length ?? 0})`,
           {
-            jobId: body.jobId,
-            tenantId: body.organizationId,
-            bidId: body.bidId,
-            documentId: body.documentId,
+            jobId: event.jobId,
+            documentId: event.documentId,
+            status: event.status,
+            itemsCount: event.items?.length ?? 0,
             receiveCount,
           },
         );
-    const [source] = await this.db
-      .select({ document: schema.tenderDocuments, bid: schema.bids, company: schema.companies })
-      .from(schema.tenderDocuments)
-      .innerJoin(
-        schema.bids,
-        and(
-          eq(schema.bids.id, schema.tenderDocuments.bidId),
-          eq(schema.bids.organizationId, schema.tenderDocuments.organizationId),
-        ),
-      )
-      .innerJoin(
-        schema.companies,
-        and(
-          eq(schema.companies.id, schema.bids.companyId),
-          eq(schema.companies.organizationId, schema.bids.organizationId),
-        ),
-      )
-      .where(
-        and(
-          eq(schema.tenderDocuments.id, body.documentId),
-          eq(schema.tenderDocuments.bidId, body.bidId),
-          eq(schema.tenderDocuments.organizationId, body.organizationId),
-        ),
-      )
-      .limit(1);
 
-    if (!source) {
-      await this.moveInvalidMessageToDlq(message, 'Document, bid, company, or tenant ownership could not be verified.');
-      return;
-    }
+        const visibilityHeartbeat = setInterval(() => {
+          void this.completionQueue
+            .changeMessageVisibility(receiptHandle, VISIBILITY_TIMEOUT_SECONDS)
+            .catch((error: unknown) =>
+              this.logger.error(
+                `Could not renew visibility for completion event ${event.jobId}.`,
+                error,
+              ),
+            );
+        }, VISIBILITY_RENEWAL_INTERVAL_MS);
+        visibilityHeartbeat.unref();
 
-    if (
-      !body.companyId ||
-      body.companyId !== source.bid.companyId ||
-      source.company.id !== body.companyId
-    ) {
-      await this.moveInvalidMessageToDlq(message, 'Queue company claim does not match the persisted bid company.');
-      return;
-    }
+        try {
+          if (!event.documentId || !event.bidId || !event.organizationId) {
+            this.logger.error(
+              `Malformed completion message missing required identifiers (documentId, bidId, or organizationId): ${JSON.stringify(event)}`,
+            );
+            await this.completionQueue.moveToDeadLetter(
+              event as any,
+              'Malformed completion message missing documentId, bidId, or organizationId.',
+              receiveCount,
+            );
+            await this.completionQueue.deleteMessage(receiptHandle);
+            return;
+          }
 
-    if (!body.storageReference || body.storageReference !== source.document.storagePath) {
-      await this.moveInvalidMessageToDlq(message, 'Queue storage reference does not match the persisted document.');
-      return;
-    }
-    if (!isDocumentType(source.document.documentType)) {
-      await this.moveInvalidMessageToDlq(message, 'Document type is not supported for extraction.');
-      return;
-    }
+          // Atomically persist results to PostgreSQL via DocumentCompletionService (Single-Writer Principle)
+          await this.completionService.processExtractionCompleted(
+            event as DocumentExtractionCompletedEvent,
+          );
 
-    if (source.document.status === 'COMPLETED') {
-      await this.queue.deleteMessage(receiptHandle);
-      return;
-    }
-    if (source.document.status === 'DEAD_LETTER') {
-      await this.queue.moveToDeadLetter(
-        body,
-        source.document.lastProcessingError ?? 'Document processing previously exhausted its attempts.',
-        receiveCount,
-      );
-      await this.queue.deleteMessage(receiptHandle);
-      return;
-    }
+          // Acknowledge and delete message from completion queue
+          await this.completionQueue.deleteMessage(receiptHandle);
 
-    const staleBefore = new Date(Date.now() - VISIBILITY_TIMEOUT_SECONDS * 1000);
-    const claimed = await this.db
-      .update(schema.tenderDocuments)
-      .set({
-        status: 'PROCESSING',
-        processingAttempts: sql`${schema.tenderDocuments.processingAttempts} + 1`,
-        processingStartedAt: new Date(),
-        lastProcessingError: null,
-      })
-      .where(
-        and(
-          eq(schema.tenderDocuments.id, source.document.id),
-          eq(schema.tenderDocuments.organizationId, source.document.organizationId),
-          or(
-            eq(schema.tenderDocuments.status, 'QUEUED_FOR_EXTRACTION'),
-            eq(schema.tenderDocuments.status, 'FAILED'),
-            and(
-              eq(schema.tenderDocuments.status, 'PROCESSING'),
-              lte(schema.tenderDocuments.processingStartedAt, staleBefore),
-            ),
-          ),
-        ),
-      )
-      .returning({
-        id: schema.tenderDocuments.id,
-        processingAttempts: schema.tenderDocuments.processingAttempts,
-      });
+          const durationMs = Math.round((performance.now() - startTime) * 10) / 10;
+          this.logger.info(
+            'queue.completion_event.persisted',
+            `Successfully processed and acknowledged completion event for doc ${event.documentId} (${durationMs}ms).`,
+            { jobId: event.jobId, durationMs },
+          );
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          this.logger.error(
+            `Failed to persist completion event for doc ${event.documentId}; attempt #${receiveCount}.`,
+            error,
+          );
 
-    if (claimed.length === 0) {
-      const [currentDocument] = await this.db
-        .select({
-          status: schema.tenderDocuments.status,
-        })
-        .from(schema.tenderDocuments)
-        .where(
-          and(
-            eq(schema.tenderDocuments.id, source.document.id),
-            eq(schema.tenderDocuments.organizationId, source.document.organizationId),
-          ),
-        )
-        .limit(1);
-      if (currentDocument?.status === 'COMPLETED') {
-        await this.queue.deleteMessage(receiptHandle);
-      } else {
-        await this.queue.changeMessageVisibility(receiptHandle, VISIBILITY_RENEWAL_INTERVAL_MS / 1000);
-      }
-      return;
-    }
-
-    this.logger.debug(
-      `Claimed DB processing lease for document ${source.document.id} (Attempt #${claimed[0]!.processingAttempts}). Starting extraction...`,
-    );
-
-    const visibilityHeartbeat = setInterval(() => {
-      void this.queue
-        .changeMessageVisibility(receiptHandle, VISIBILITY_TIMEOUT_SECONDS)
-        .catch((error: unknown) => this.logger.error(`Could not renew visibility for ${body.jobId}.`, error));
-    }, VISIBILITY_RENEWAL_INTERVAL_MS);
-    visibilityHeartbeat.unref();
-
-    try {
-      const storageHead = await this.storage.headObject(source.document.storagePath);
-      if (!storageHead.exists || storageHead.sizeBytes <= 0) {
-        throw new Error(`Document object is missing or empty: ${source.document.storagePath}`);
-      }
-
-      const securityContext: SecurityContextDto = {
-        tenantId: source.bid.organizationId,
-        companyId: source.bid.companyId,
-        userId: 'document-processing-worker',
-        roles: ['ADMIN'],
-        workflowRunId: body.workflowRunId ?? body.jobId,
-        correlationId: body.correlationId ?? body.jobId,
-        allowedDocumentIds: [source.document.id],
-        allowedSourceIds: [source.document.storagePath],
-        purpose: 'COMPLIANCE_EXTRACTION',
-      };
-      const dispatchResult = await this.extractor.dispatchExtraction(
-        {
-          id: source.document.id,
-          bidId: source.bid.id,
-          organizationId: source.bid.organizationId,
-          documentType: source.document.documentType,
-          fileName: source.document.fileName,
-          storagePath: source.document.storagePath,
-        },
-        securityContext,
-      );
-      this.logger.info(
-        'extraction.dispatched',
-        `Dispatched extraction job ${dispatchResult.jobId} asynchronously to AI engine for doc ${source.document.id}. Awaiting completion event.`,
-        { jobId: dispatchResult.jobId, documentId: source.document.id },
-      );
-      await this.queue.deleteMessage(receiptHandle);
-      const durationMs = Math.round((performance.now() - startTime) * 10) / 10;
-      this.logger.info(
-        'job.completed',
-        `Document job ${body.jobId} dispatched and acknowledged (${durationMs}ms).`,
-        { jobId: body.jobId },
-        { duration_ms: durationMs },
-      );
-      return;
-    } catch (error) {
-      await this.handleProcessingFailure(message, claimed[0]!.processingAttempts, error);
-      return;
-    } finally {
-      clearInterval(visibilityHeartbeat);
-    }
+          if (receiveCount >= MAX_PROCESSING_ATTEMPTS) {
+            await this.completionQueue.moveToDeadLetter(
+              event as any,
+              `Exceeded max attempts (${MAX_PROCESSING_ATTEMPTS}): ${errorMessage}`,
+              receiveCount,
+            );
+            await this.completionQueue.deleteMessage(receiptHandle);
+          } else {
+            await this.completionQueue.changeMessageVisibility(
+              receiptHandle,
+              Math.min(30 * 2 ** (receiveCount - 1), 300),
+            );
+          }
+        } finally {
+          clearInterval(visibilityHeartbeat);
+        }
       },
     );
-  }
-
-  private async handleProcessingFailure(
-    message: QueueMessage<IngestionJobMessage>,
-    attempt: number,
-    error: unknown,
-  ): Promise<void> {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    const terminal = attempt >= MAX_PROCESSING_ATTEMPTS || message.receiveCount >= MAX_PROCESSING_ATTEMPTS;
-    await this.db
-      .update(schema.tenderDocuments)
-      .set({
-        status: terminal ? 'DEAD_LETTER' : 'FAILED',
-        processingStartedAt: null,
-        lastProcessingError: errorMessage,
-      })
-      .where(
-        and(
-          eq(schema.tenderDocuments.id, message.body.documentId),
-          eq(schema.tenderDocuments.organizationId, message.body.organizationId),
-        ),
-      );
-
-    if (terminal) {
-      await this.queue.moveToDeadLetter(message.body, errorMessage, message.receiveCount);
-      await this.queue.deleteMessage(message.receiptHandle);
-      this.logger.error(`Document job ${message.body.jobId} moved to dead letter after ${attempt} attempts.`, error);
-      return;
-    }
-
-    const backoffSeconds = Math.min(30 * 2 ** Math.max(attempt - 1, 0), 900);
-    await this.queue.changeMessageVisibility(message.receiptHandle, backoffSeconds);
-    this.logger.error(`Document job ${message.body.jobId} failed on attempt ${attempt}; retrying.`, error);
-  }
-
-  private async moveInvalidMessageToDlq(
-    message: QueueMessage<IngestionJobMessage>,
-    reason: string,
-  ): Promise<void> {
-    await this.queue.moveToDeadLetter(message.body, reason, message.receiveCount);
-    await this.queue.deleteMessage(message.receiptHandle);
-    this.logger.error(`Rejected document job ${message.body.jobId}: ${reason}`);
   }
 }

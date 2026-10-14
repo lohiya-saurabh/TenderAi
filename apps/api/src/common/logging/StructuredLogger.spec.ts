@@ -85,7 +85,8 @@ describe('StructuredLogger & LogSanitizer', () => {
       'https://my-bucket.s3.ap-south-1.amazonaws.com/tenders/doc.pdf?X-Amz-Signature=secret123456789&X-Amz-Credential=AKIAIOSFODNN7EXAMPLE';
 
     logger.info('storage.download', `Fetching ${sampleUrl}`, {
-      authHeader: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.do_not_leak_me',
+      authHeader:
+        'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.do_not_leak_me',
       dbUrl: 'postgres://admin:superSecretPassword@db.tenderpulse.local:5432/tenderpulse',
     });
 
@@ -94,7 +95,9 @@ describe('StructuredLogger & LogSanitizer', () => {
     expect(log.message).not.toContain('secret123456789');
     expect(log.message).toContain('X-Amz-Signature=[REDACTED]');
     expect(log.metadata.authHeader).toBe('Bearer [REDACTED_JWT]');
-    expect(log.metadata.dbUrl).toBe('postgres://admin:[REDACTED]@db.tenderpulse.local:5432/tenderpulse');
+    expect(log.metadata.dbUrl).toBe(
+      'postgres://admin:[REDACTED]@db.tenderpulse.local:5432/tenderpulse',
+    );
   });
 
   it('redacts Indian statutory identifiers (PAN, GSTIN, Aadhaar)', () => {
@@ -140,5 +143,53 @@ describe('StructuredLogger & LogSanitizer', () => {
     expect(capturedLogs[1].level).toBe('WARN');
     expect(capturedLogs[2].level).toBe('ERROR');
     expect(capturedLogs[2].metadata.errorMessage).toBe('Something broke');
+  });
+
+  it('truncates oversized prompts and raw document contents in log payloads', () => {
+    const hugePrompt = 'Analyze this massive tender clause requirement '.repeat(50); // ~2350 chars
+    const hugeDocument = 'Confidential tender specification sheet page 1 '.repeat(40); // ~1880 chars
+
+    const sanitized = LogSanitizer.sanitize({
+      prompt: hugePrompt,
+      document_content: hugeDocument,
+      smallField: 'normal value',
+    }) as Record<string, string>;
+
+    expect(sanitized.prompt).toContain('[TRUNCATED:');
+    expect(sanitized.prompt.length).toBeLessThan(500);
+    expect(sanitized.document_content).toContain('[TRUNCATED:');
+    expect(sanitized.document_content.length).toBeLessThan(500);
+    expect(sanitized.smallField).toBe('normal value');
+  });
+
+  it('rotates files and enforces retention count in RotatingLogStream', async () => {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    const os = await import('node:os');
+    const { RotatingLogStream } = await import('./RotatingLogStream.js');
+
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'log-test-'));
+    const logFile = path.join(tempDir, 'test.log');
+
+    // Create stream with 200 bytes max and 3 backups
+    const stream = new RotatingLogStream({
+      filePath: logFile,
+      maxBytes: 200,
+      maxFiles: 3,
+    });
+
+    // Write ~80 bytes per line, 5 times -> should trigger rotations
+    for (let i = 0; i < 5; i++) {
+      stream.write(`Log line #${i}: ${'x'.repeat(70)}\n`);
+    }
+
+    await stream.end();
+
+    // Verify rotation occurred and backups were created
+    expect(fs.existsSync(logFile)).toBe(true);
+    expect(fs.existsSync(`${logFile}.1`)).toBe(true);
+
+    // Clean up
+    fs.rmSync(tempDir, { recursive: true, force: true });
   });
 });

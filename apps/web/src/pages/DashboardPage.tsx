@@ -18,13 +18,9 @@ import { TenderListSection } from '../components/dashboard/TenderListSection.js'
 import { MissingApiCallout } from '../components/dashboard/MissingApiCallout.js';
 import { computePipelineStages } from '../components/dashboard/dashboardData.js';
 
-import { useCompany } from '../context/CompanyContext.js';
-import { CompanySelector } from '../components/layout/CompanySelector.js';
-
 export const DashboardPage: React.FC = () => {
   const { data: bids, isLoading, error, refetch } = useApi<BidSummary[]>(listBids);
   const { hasPermission } = useAuth();
-  const { selectedCompany } = useCompany();
 
   const { itemsByBid, isLoading: complianceLoading } = useBidComplianceItems(bids);
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
@@ -40,33 +36,24 @@ export const DashboardPage: React.FC = () => {
 
   const handleSelectStage = (status: string) => {
     setSelectedStatus(status);
-    document
-      .getElementById('tender-list')
-      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.getElementById('tender-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 lg:gap-8">
       {/* 1. Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              Bid Dashboard
-            </h1>
-            {selectedCompany && (
-              <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
-                {selectedCompany.legalName}
-              </span>
-            )}
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Bid Dashboard</h1>
           </div>
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-            What is happening with my bids — blockers, pipeline stage, deadlines, and tender readiness at a glance
+            What is happening with my bids — blockers, pipeline stage, deadlines, and tender
+            readiness at a glance
           </p>
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0">
-          <CompanySelector />
           {canCreateBid && (
             <Link to="/bids/new" className="no-underline shrink-0">
               <Button variant="default" size="sm" className="gap-1.5 shadow-sm">
@@ -102,12 +89,12 @@ export const DashboardPage: React.FC = () => {
 
           {/* 3. Attention row: Action Required + Upcoming Deadlines */}
           {isLoading ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Skeleton className="h-72 rounded-lg" />
               <Skeleton className="h-72 rounded-lg" />
             </div>
           ) : allBids.length > 0 ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <ActionRequiredCard
                 bids={allBids}
                 complianceByBid={itemsByBid}

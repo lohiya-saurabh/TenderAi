@@ -30,8 +30,10 @@ export function useApi<T>(
   });
 
   const isInitialMount = useRef(true);
+  const activeRequestId = useRef(0);
 
   const execute = useCallback(async () => {
+    const currentId = ++activeRequestId.current;
     setState((prev) => ({
       ...prev,
       isLoading: prev.data === null,
@@ -40,6 +42,7 @@ export function useApi<T>(
     }));
     try {
       const result = await fetcher();
+      if (currentId !== activeRequestId.current) return;
       if (result.ok) {
         setState({ data: result.data, isLoading: false, isValidating: false, error: null });
       } else {
@@ -51,6 +54,7 @@ export function useApi<T>(
         }));
       }
     } catch (err) {
+      if (currentId !== activeRequestId.current) return;
       setState((prev) => ({
         data: prev.data,
         isLoading: false,
@@ -81,7 +85,10 @@ export function useApi<T>(
   const setData = (updater: React.SetStateAction<T | null>) => {
     setState((prev) => ({
       ...prev,
-      data: typeof updater === 'function' ? (updater as (prev: T | null) => T | null)(prev.data) : updater,
+      data:
+        typeof updater === 'function'
+          ? (updater as (prev: T | null) => T | null)(prev.data)
+          : updater,
     }));
   };
 

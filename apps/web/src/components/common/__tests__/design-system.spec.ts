@@ -55,8 +55,14 @@ describe('Design System Primitives & Tokens Suite', () => {
       const flaggedElement = React.createElement(StatusBadge, { status: 'FLAGGED' });
       const pendingElement = React.createElement(StatusBadge, { status: 'PENDING' });
       const waivedElement = React.createElement(StatusBadge, { status: 'WAIVED' });
-      const processingElement = React.createElement(StatusBadge, { status: 'PROCESSING', iconOnly: true });
-      const queuedElement = React.createElement(StatusBadge, { status: 'QUEUED_FOR_EXTRACTION', iconOnly: true });
+      const processingElement = React.createElement(StatusBadge, {
+        status: 'PROCESSING',
+        iconOnly: true,
+      });
+      const queuedElement = React.createElement(StatusBadge, {
+        status: 'QUEUED_FOR_EXTRACTION',
+        iconOnly: true,
+      });
       const completedElement = React.createElement(StatusBadge, { status: 'COMPLETED' });
 
       expect(readyElement.props.status).toBe('READY');
@@ -90,7 +96,7 @@ describe('Design System Primitives & Tokens Suite', () => {
       const badge = React.createElement(
         Badge,
         { variant: 'success', size: 'sm', dot: true },
-        'Verified'
+        'Verified',
       );
       expect(badge.props.variant).toBe('success');
       expect(badge.props.size).toBe('sm');
@@ -113,7 +119,7 @@ describe('Design System Primitives & Tokens Suite', () => {
       const btn = React.createElement(
         Button,
         { variant: 'primary', size: 'lg', isLoading: true },
-        'Submit Bid'
+        'Submit Bid',
       );
       expect(btn.props.variant).toBe('primary');
       expect(btn.props.size).toBe('lg');
@@ -134,7 +140,11 @@ describe('Design System Primitives & Tokens Suite', () => {
 
   describe('Cards & Tables', () => {
     it('should construct card hierarchy', () => {
-      const header = React.createElement(CardHeader, null, React.createElement(CardTitle, null, 'Project'));
+      const header = React.createElement(
+        CardHeader,
+        null,
+        React.createElement(CardTitle, null, 'Project'),
+      );
       const content = React.createElement(CardContent, null, 'Card body text');
       const card = React.createElement(Card, { variant: 'interactive' }, header, content);
 
@@ -146,9 +156,13 @@ describe('Design System Primitives & Tokens Suite', () => {
       const row = React.createElement(
         TableRow,
         null,
-        React.createElement(TableCell, null, 'Clause 4.1')
+        React.createElement(TableCell, null, 'Clause 4.1'),
       );
-      const head = React.createElement(TableHead, null, React.createElement(TableHeader, null, 'Clause'));
+      const head = React.createElement(
+        TableHead,
+        null,
+        React.createElement(TableHeader, null, 'Clause'),
+      );
       const body = React.createElement(TableBody, null, row);
       const table = React.createElement(Table, { striped: true, hoverable: true }, head, body);
 
@@ -171,7 +185,7 @@ describe('Design System Primitives & Tokens Suite', () => {
       const panel = React.createElement(
         TabPanel,
         { tabId: 'missing', activeTab: 'missing' },
-        'Missing content'
+        'Missing content',
       );
 
       expect(tabs.props.activeTab).toBe('missing');
@@ -185,7 +199,7 @@ describe('Design System Primitives & Tokens Suite', () => {
       const modal = React.createElement(
         Modal,
         { isOpen: true, onClose: () => {}, title: 'Confirm Submission', size: 'lg' },
-        'Modal body'
+        'Modal body',
       );
       expect(modal.props.isOpen).toBe(true);
       expect(modal.props.title).toBe('Confirm Submission');
@@ -196,7 +210,7 @@ describe('Design System Primitives & Tokens Suite', () => {
       const drawer = React.createElement(
         Drawer,
         { isOpen: true, onClose: () => {}, title: 'Evidence Citation', width: '560px' },
-        'Drawer body'
+        'Drawer body',
       );
       expect(drawer.props.isOpen).toBe(true);
       expect(drawer.props.title).toBe('Evidence Citation');
@@ -207,7 +221,7 @@ describe('Design System Primitives & Tokens Suite', () => {
       const tooltip = React.createElement(
         Tooltip,
         { content: 'More info', position: 'top' },
-        React.createElement('button', null, 'Hover')
+        React.createElement('button', null, 'Hover'),
       );
       expect(tooltip.props.content).toBe('More info');
       expect(tooltip.props.position).toBe('top');
@@ -219,7 +233,7 @@ describe('Design System Primitives & Tokens Suite', () => {
       const alert = React.createElement(
         Alert,
         { variant: 'warning', title: 'High LD Risk' },
-        'LD capped at 10%.'
+        'LD capped at 10%.',
       );
       expect(alert.props.variant).toBe('warning');
       expect(alert.props.title).toBe('High LD Risk');

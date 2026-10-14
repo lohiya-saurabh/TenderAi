@@ -15,12 +15,8 @@ describe('Profile & Settings Pages Suite', () => {
         React.createElement(
           AuthProvider,
           null,
-          React.createElement(
-            CompanyProvider,
-            null,
-            React.createElement(ProfilePage)
-          )
-        )
+          React.createElement(CompanyProvider, null, React.createElement(ProfilePage)),
+        ),
       );
       expect(element).toBeDefined();
     });
@@ -34,12 +30,8 @@ describe('Profile & Settings Pages Suite', () => {
         React.createElement(
           AuthProvider,
           null,
-          React.createElement(
-            CompanyProvider,
-            null,
-            React.createElement(SettingsPage)
-          )
-        )
+          React.createElement(CompanyProvider, null, React.createElement(SettingsPage)),
+        ),
       );
       expect(element).toBeDefined();
     });
@@ -51,12 +43,8 @@ describe('Profile & Settings Pages Suite', () => {
         React.createElement(
           AuthProvider,
           null,
-          React.createElement(
-            CompanyProvider,
-            null,
-            React.createElement(SettingsPage)
-          )
-        )
+          React.createElement(CompanyProvider, null, React.createElement(SettingsPage)),
+        ),
       );
       expect(element).toBeDefined();
     });
@@ -68,12 +56,8 @@ describe('Profile & Settings Pages Suite', () => {
         React.createElement(
           AuthProvider,
           null,
-          React.createElement(
-            CompanyProvider,
-            null,
-            React.createElement(SettingsPage)
-          )
-        )
+          React.createElement(CompanyProvider, null, React.createElement(SettingsPage)),
+        ),
       );
       expect(element).toBeDefined();
     });
@@ -85,12 +69,8 @@ describe('Profile & Settings Pages Suite', () => {
         React.createElement(
           AuthProvider,
           null,
-          React.createElement(
-            CompanyProvider,
-            null,
-            React.createElement(SettingsPage)
-          )
-        )
+          React.createElement(CompanyProvider, null, React.createElement(SettingsPage)),
+        ),
       );
       expect(element).toBeDefined();
     });
@@ -102,12 +82,8 @@ describe('Profile & Settings Pages Suite', () => {
         React.createElement(
           AuthProvider,
           null,
-          React.createElement(
-            CompanyProvider,
-            null,
-            React.createElement(SettingsPage)
-          )
-        )
+          React.createElement(CompanyProvider, null, React.createElement(SettingsPage)),
+        ),
       );
       expect(element).toBeDefined();
     });

@@ -69,7 +69,7 @@ Bidder must have minimum annual turnover of INR 50 Crores with CA certificate be
       documentRepo,
       storageService,
       auditRepo,
-      unitOfWork
+      unitOfWork,
     );
     confirmUploadUseCase = new ConfirmDocumentUploadUseCase(
       bidRepo,
@@ -78,7 +78,7 @@ Bidder must have minimum annual turnover of INR 50 Crores with CA certificate be
       auditRepo,
       unitOfWork,
       jobRepo,
-      jobQueue
+      jobQueue,
     );
 
     // AI Document Extractor configured with mock fetch simulating the FastAPI LangGraph compliance engine
@@ -119,7 +119,8 @@ Bidder must have minimum annual turnover of INR 50 Crores with CA certificate be
               {
                 category: 'TECHNICAL',
                 title: 'Technical Qualification & Past Performance',
-                description: 'Minimum turnover of INR 50 Crores with CA certificate bearing valid UDIN',
+                description:
+                  'Minimum turnover of INR 50 Crores with CA certificate bearing valid UDIN',
                 executionRules: {
                   stampPaperRequired: false,
                   stampPaperDenominationInr: null,
@@ -156,7 +157,7 @@ Bidder must have minimum annual turnover of INR 50 Crores with CA certificate be
       aiExtractor,
       300,
       'worker-production-ai-1',
-      eventBus
+      eventBus,
     );
   });
 
@@ -194,7 +195,7 @@ Bidder must have minimum annual turnover of INR 50 Crores with CA certificate be
           uploadSession.s3Key,
           2097152,
           validChecksum,
-          simulatedTenderText
+          simulatedTenderText,
         );
 
         // Confirm upload: transitions Doc to VERIFIED, Bid to QUEUED, creates IngestionJob (PENDING), enqueues to SQS
@@ -211,7 +212,7 @@ Bidder must have minimum annual turnover of INR 50 Crores with CA certificate be
           jobId: confirmResult.jobId,
           s3Key: uploadSession.s3Key,
         };
-      }
+      },
     );
   };
 
@@ -396,7 +397,7 @@ Bidder must have minimum annual turnover of INR 50 Crores with CA certificate be
       complianceRepo,
       auditRepo,
       unitOfWork,
-      transientAiExtractor
+      transientAiExtractor,
     );
 
     // First attempt fails with transient error
@@ -423,7 +424,9 @@ Bidder must have minimum annual turnover of INR 50 Crores with CA certificate be
         return {
           ok: false,
           status: 500,
-          json: async () => ({ error: 'Fatal PDF decompression error: corrupt cross-reference stream' }),
+          json: async () => ({
+            error: 'Fatal PDF decompression error: corrupt cross-reference stream',
+          }),
         };
       },
     });
@@ -436,7 +439,7 @@ Bidder must have minimum annual turnover of INR 50 Crores with CA certificate be
       complianceRepo,
       auditRepo,
       unitOfWork,
-      brokenExtractor
+      brokenExtractor,
     );
 
     // Attempt 1: Fails -> Retry 1
@@ -547,7 +550,7 @@ Bidder must have minimum annual turnover of INR 50 Crores with CA certificate be
       complianceRepo,
       auditRepo,
       unitOfWork,
-      invalidAiExtractor
+      invalidAiExtractor,
     );
 
     const failResult = await strictWorker.pollAndProcess();

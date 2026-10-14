@@ -19,6 +19,7 @@ import { SettingsModule } from './modules/settings/settings.module.js';
 import { TeamsModule } from './modules/teams/teams.module.js';
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
 import { BillingModule } from './modules/billing/billing.module.js';
+import { CompanyVerificationModule } from './modules/company-verification/company-verification.module.js';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { BillingModule } from './modules/billing/billing.module.js';
     AuditModule,
     CompanyProfileModule,
     CompaniesModule,
+    CompanyVerificationModule,
     DashboardModule,
     UsersModule,
     SettingsModule,

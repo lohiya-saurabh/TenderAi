@@ -6,7 +6,7 @@ export interface ITenderDocumentRepository {
   findByChecksum(
     bidId: string,
     checksumSha256: string,
-    organizationId: string
+    organizationId: string,
   ): Promise<TenderDocument | null>;
   save(document: TenderDocument): Promise<void>;
   update(document: TenderDocument): Promise<void>;

@@ -1,11 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import {
-  apiGet,
-  setTokens,
-  clearTokens,
-  getAccessToken,
-  setOnAuthExpired,
-} from '../client.js';
+import { apiGet, setTokens, clearTokens, getAccessToken, setOnAuthExpired } from '../client.js';
 
 describe('API Client', () => {
   beforeEach(() => {
@@ -68,7 +62,8 @@ describe('API Client', () => {
   it('handles automatic 401 refresh retry', async () => {
     setTokens('expired-access', 'valid-refresh');
 
-    const mockFetch = vi.fn()
+    const mockFetch = vi
+      .fn()
       // First call fails with 401
       .mockResolvedValueOnce({
         ok: false,
@@ -107,7 +102,8 @@ describe('API Client', () => {
     const onExpired = vi.fn();
     setOnAuthExpired(onExpired);
 
-    const mockFetch = vi.fn()
+    const mockFetch = vi
+      .fn()
       // First call 401
       .mockResolvedValueOnce({
         ok: false,
@@ -135,11 +131,16 @@ describe('API Client', () => {
     };
     vi.stubGlobal('localStorage', {
       getItem: (k: string) => storageData[k] ?? null,
-      setItem: (k: string, v: string) => { storageData[k] = v; },
-      removeItem: (k: string) => { delete storageData[k]; },
+      setItem: (k: string, v: string) => {
+        storageData[k] = v;
+      },
+      removeItem: (k: string) => {
+        delete storageData[k];
+      },
     });
 
-    const mockFetch = vi.fn()
+    const mockFetch = vi
+      .fn()
       // Proactive refresh call
       .mockResolvedValueOnce({
         ok: true,
@@ -180,5 +181,51 @@ describe('API Client', () => {
       }),
     );
     expect(getAccessToken()).toBe('restored-access-token');
+  });
+
+  it('deduplicates concurrent in-flight GET requests for the same path', async () => {
+    let fetchResolver: ((val: unknown) => void) | null = null;
+    const pendingPromise = new Promise((resolve) => {
+      fetchResolver = resolve;
+    });
+
+    const mockFetch = vi.fn().mockImplementation(() =>
+      pendingPromise.then(() => ({
+        ok: true,
+        status: 200,
+        json: async () => ({ data: 'shared-payload' }),
+      })),
+    );
+    vi.stubGlobal('fetch', mockFetch);
+
+    // Launch two identical GET calls concurrently
+    const promise1 = apiGet<{ data: string }>('/api/v1/notifications');
+    const promise2 = apiGet<{ data: string }>('/api/v1/notifications');
+
+    // Resolve the delayed network call
+    fetchResolver?.(true);
+
+    const [res1, res2] = await Promise.all([promise1, promise2]);
+
+    // Assert that only ONE underlying network request was made
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(res1.ok).toBe(true);
+    expect(res2.ok).toBe(true);
+    if (res1.ok && res2.ok) {
+      expect(res1.data).toEqual({ data: 'shared-payload' });
+      expect(res2.data).toEqual({ data: 'shared-payload' });
+    }
+
+    // A subsequent call AFTER completion makes a new fresh network request
+    const mockFetchAfter = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ data: 'fresh-payload' }),
+    });
+    vi.stubGlobal('fetch', mockFetchAfter);
+
+    const res3 = await apiGet<{ data: string }>('/api/v1/notifications');
+    expect(mockFetchAfter).toHaveBeenCalledTimes(1);
+    expect(res3.ok).toBe(true);
   });
 });

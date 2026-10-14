@@ -15,7 +15,12 @@ export interface ComplianceRowProps {
   item: ComplianceItem;
   isExpanded: boolean;
   onToggleExpand: (id: string) => void;
-  onReview: (itemId: string, status: ComplianceItem['status'], notes?: string, expectedVersion?: number) => Promise<void>;
+  onReview: (
+    itemId: string,
+    status: ComplianceItem['status'],
+    notes?: string,
+    expectedVersion?: number,
+  ) => Promise<void>;
   onInspectEvidence?: (item: ComplianceItem) => void;
   onInspectCitation?: (item: ComplianceItem) => void;
   onInspectAssessment?: (item: ComplianceItem) => void;
@@ -50,95 +55,47 @@ export const ComplianceRow: React.FC<ComplianceRowProps> = ({
 
   return (
     <div
-      style={{
-        backgroundColor: 'var(--color-surface-card)',
-        border: `1px solid ${isExpanded ? 'var(--color-primary-500)' : 'var(--color-surface-border)'}`,
-        borderRadius: 'var(--radius-md)',
-        overflow: 'hidden',
-        transition: 'all var(--transition-fast)',
-        boxShadow: isExpanded ? 'var(--shadow-md)' : 'none',
-      }}
+      className={`transition-colors ${
+        isExpanded ? 'bg-orange-50/40 dark:bg-orange-950/15' : 'hover:bg-muted/30'
+      }`}
     >
       {/* Main 7-Column Row */}
       <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '30% 11% 8% 18% 13% 10% 10%',
-          gap: '0.75rem',
-          padding: '0.75rem 1rem',
-          alignItems: 'center',
-          cursor: 'pointer',
-          backgroundColor: isExpanded ? 'rgba(99, 102, 241, 0.04)' : 'transparent',
-          borderBottom: isExpanded ? '1px solid var(--color-surface-border)' : 'none',
-          userSelect: 'none',
-        }}
+        className="grid grid-cols-[30%_11%_8%_18%_13%_10%_10%] gap-3 px-5 py-3.5 items-center cursor-pointer select-none"
         onClick={() => onToggleExpand(item.id)}
       >
         {/* 1. Requirement */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0 }}>
+        <div className="flex items-start gap-2.5 min-w-0">
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
               onToggleExpand(item.id);
             }}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '0.2rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--color-surface-muted)',
-              flexShrink: 0,
-            }}
+            className="p-0.5 text-muted-foreground hover:text-foreground shrink-0 mt-0.5 transition-colors"
             aria-label={isExpanded ? 'Collapse row' : 'Expand row'}
           >
             {isExpanded ? (
-              <ChevronDownIcon size={16} color="var(--color-primary-400)" />
+              <ChevronDownIcon size={15} color="#ea580c" />
             ) : (
-              <ChevronRightIcon size={16} />
+              <ChevronRightIcon size={15} />
             )}
           </button>
-          <div style={{ minWidth: 0, flex: 1 }}>
+          <div className="min-w-0 flex-1">
             <div
-              style={{
-                fontSize: 'var(--text-xs)',
-                fontWeight: 600,
-                color: 'var(--color-surface-text)',
-                lineHeight: 1.4,
-              }}
-              className="line-clamp-2 break-words"
+              className="text-xs font-semibold text-foreground leading-snug line-clamp-2 break-words"
               title={item.requirement}
             >
               {item.requirement}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.15rem' }}>
+            <div className="flex items-center gap-2 mt-1">
               {item.tenderClauseRef && (
-                <span
-                  style={{
-                    fontSize: '0.65rem',
-                    fontFamily: 'var(--font-mono)',
-                    color: 'var(--color-primary-400)',
-                    backgroundColor: 'rgba(99, 102, 241, 0.08)',
-                    padding: '0.05rem 0.35rem',
-                    borderRadius: 'var(--radius-sm)',
-                  }}
-                >
+                <span className="text-[10px] font-mono font-medium text-foreground bg-muted px-1.5 py-0.5 rounded">
                   Clause {item.tenderClauseRef}
                 </span>
               )}
               {item.subCategory && (
-                <span
-                  style={{
-                    fontSize: '0.7rem',
-                    color: 'var(--color-surface-muted)',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
+                <span className="text-[11px] text-muted-foreground truncate">
                   {item.subCategory}
                 </span>
               )}
@@ -160,23 +117,15 @@ export const ComplianceRow: React.FC<ComplianceRowProps> = ({
               Mandatory
             </Badge>
           ) : (
-            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-subtle)', fontWeight: 500 }}>
-              Optional
-            </span>
+            <span className="text-xs text-muted-foreground font-medium">Optional</span>
           )}
         </div>
 
         {/* 4. Company Evidence */}
-        <div style={{ minWidth: 0 }}>
+        <div className="min-w-0">
           {item.companyEvidence ? (
             <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                minWidth: 0,
-                cursor: 'pointer',
-              }}
+              className="flex items-center gap-1.5 min-w-0 cursor-pointer group"
               onClick={(e) => {
                 e.stopPropagation();
                 onInspectEvidence?.(item);
@@ -184,84 +133,45 @@ export const ComplianceRow: React.FC<ComplianceRowProps> = ({
               title="Click to inspect linked company evidence"
             >
               <StatusBadge status={item.companyEvidence.status} size="sm" showIcon={false} />
-              <span
-                style={{
-                  fontSize: 'var(--text-xs)',
-                  color: 'var(--color-surface-text)',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  textDecoration: 'underline',
-                  textDecorationColor: 'var(--color-surface-border)',
-                }}
-              >
+              <span className="text-xs text-foreground truncate group-hover:underline underline-offset-2">
                 {item.companyEvidence.title}
               </span>
             </div>
           ) : (
-            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-subtle)', fontStyle: 'italic' }}>
-              No evidence linked
-            </span>
+            <span className="text-xs text-muted-foreground italic">No evidence linked</span>
           )}
         </div>
 
         {/* 5. Status */}
-        <div style={{ display: 'flex', alignItems: 'center' }}>
+        <div className="flex items-center">
           <StatusBadge status={item.status} size="sm" />
         </div>
 
         {/* 6. Risk */}
-        <div style={{ display: 'flex', alignItems: 'center' }}>
+        <div className="flex items-center">
           <RiskBadge level={riskLevel} size="sm" />
         </div>
 
         {/* 7. Source */}
-        <div style={{ minWidth: 0 }}>
+        <div className="min-w-0">
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
               onInspectCitation?.(item);
             }}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.3rem',
-              padding: '0.2rem 0.5rem',
-              backgroundColor: 'var(--color-surface-bg)',
-              border: '1px solid var(--color-surface-border)',
-              borderRadius: 'var(--radius-sm)',
-              fontSize: '0.7rem',
-              color: 'var(--color-surface-muted)',
-              cursor: 'pointer',
-              maxWidth: '100%',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              transition: 'all var(--transition-fast)',
-            }}
+            className="inline-flex items-center gap-1 px-2 py-1 bg-background hover:bg-muted/60 border border-border rounded text-[11px] font-mono text-muted-foreground hover:text-foreground transition-colors max-w-full truncate"
             title="Inspect source clause citation"
           >
             <FileText size={12} className="shrink-0 text-muted-foreground" />
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              p.{sourcePage}
-            </span>
+            <span className="truncate">p.{sourcePage}</span>
           </button>
         </div>
       </div>
 
       {/* Expanded Detail Panel — Answers the 4 Core Questions */}
       {isExpanded && (
-        <div
-          style={{
-            padding: '1.25rem',
-            backgroundColor: 'var(--color-surface-bg)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1rem',
-            borderTop: '1px solid var(--color-surface-border)',
-          }}
-        >
+        <div className="px-5 py-5 border-t border-border/80 bg-background/60 flex flex-col gap-4">
           {/* Dual-Sided Evidence Traceability Chain */}
           <EvidenceTraceabilityChain
             item={item}
@@ -272,196 +182,170 @@ export const ComplianceRow: React.FC<ComplianceRowProps> = ({
 
           {/* Question 1: What does the tender require? */}
           <Card padding="md">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '0.5rem' }}>
-              <h5 style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-primary-400)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+            <div className="flex justify-between items-start gap-3 mb-2">
+              <h5 className="text-[11px] font-bold text-foreground uppercase tracking-wider">
                 1. What does the tender require?
               </h5>
-              {item.isMandatory && <Badge variant="danger" size="sm">Mandatory Qualification Criterion</Badge>}
+              {item.isMandatory && (
+                <Badge variant="danger" size="sm">
+                  Mandatory Qualification Criterion
+                </Badge>
+              )}
             </div>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-surface-text)', lineHeight: 1.6, margin: '0 0 0.75rem' }}>
+            <p className="text-xs sm:text-sm text-foreground leading-relaxed mb-3">
               {item.requirement}
             </p>
 
             {/* Execution / Statutory Rules Card */}
-            {item.executionRules && (
-              <ExecutionRulesCard executionRules={item.executionRules} />
-            )}
+            {item.executionRules && <ExecutionRulesCard executionRules={item.executionRules} />}
           </Card>
 
           {/* Grid for Questions 2, 3, and 4 */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 items-stretch">
             {/* Question 2: Do we have evidence? */}
-            <Card padding="md">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                <h5 style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-success)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
-                  2. Do we have evidence?
-                </h5>
-                {item.companyEvidence && (
-                  <StatusBadge status={item.companyEvidence.status} size="sm" />
-                )}
+            <Card padding="md" className="flex flex-col justify-between h-full">
+              <div className="flex flex-col flex-1">
+                <div className="flex justify-between items-center mb-2.5 min-h-[24px]">
+                  <h5 className="text-[11px] font-bold text-foreground uppercase tracking-wider">
+                    2. Do we have evidence?
+                  </h5>
+                  {item.companyEvidence && (
+                    <StatusBadge status={item.companyEvidence.status} size="sm" />
+                  )}
+                </div>
+
+                <div className="flex-1 flex flex-col justify-center">
+                  {item.companyEvidence ? (
+                    <div className="p-2.5 rounded bg-muted/30 border border-border/60 flex flex-col gap-1 text-xs min-h-[72px] justify-center">
+                      <div className="font-semibold text-foreground truncate">{item.companyEvidence.title}</div>
+                      <div className="text-muted-foreground text-[11px]">
+                        Type: <span className="text-foreground">{item.companyEvidence.docType}</span>
+                        {item.companyEvidence.udinNumber && (
+                          <span>
+                            {' '}
+                            • UDIN:{' '}
+                            <code className="text-foreground font-mono">
+                              {item.companyEvidence.udinNumber}
+                            </code>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-2.5 rounded bg-muted/15 border border-dashed border-border/70 text-xs text-muted-foreground leading-relaxed min-h-[72px] flex items-center">
+                      No company evidence attached to satisfy this clause.
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {item.companyEvidence ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: 'var(--text-xs)' }}>
-                  <div style={{ fontWeight: 600, color: 'var(--color-surface-text)' }}>
-                    {item.companyEvidence.title}
-                  </div>
-                  <div style={{ color: 'var(--color-surface-muted)' }}>
-                    Type: <span style={{ color: 'var(--color-surface-text)' }}>{item.companyEvidence.docType}</span>
-                    {item.companyEvidence.udinNumber && (
-                      <span> • UDIN: <code style={{ color: 'var(--color-primary-400)' }}>{item.companyEvidence.udinNumber}</code></span>
-                    )}
-                  </div>
-                  <div style={{ marginTop: '0.5rem' }}>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => onInspectEvidence?.(item)}
-                    >
-                      Inspect Evidence Details
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <span>No company evidence attached to satisfy this clause.</span>
-                  <div>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => onInspectEvidence?.(item)}
-                    >
-                      Map / Upload Evidence
-                    </Button>
-                  </div>
-                </div>
-              )}
+              <div className="pt-3 mt-auto">
+                <Button variant="secondary" size="sm" fullWidth onClick={() => onInspectEvidence?.(item)}>
+                  {item.companyEvidence ? 'Inspect Evidence Details' : 'Map / Upload Evidence'}
+                </Button>
+              </div>
             </Card>
 
             {/* Question 3: Why did the system reach this result? */}
-            <Card padding="md">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                <h5 style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-warning)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
-                  3. Why did the system reach this result?
-                </h5>
-                <StatusBadge status={item.status} size="sm" />
+            <Card padding="md" className="flex flex-col justify-between h-full">
+              <div className="flex flex-col flex-1">
+                <div className="flex justify-between items-center mb-2.5 min-h-[24px]">
+                  <h5 className="text-[11px] font-bold text-foreground uppercase tracking-wider">
+                    3. Why did the system reach this result?
+                  </h5>
+                  <StatusBadge status={item.status} size="sm" />
+                </div>
+
+                <div className="flex-1 flex flex-col justify-center">
+                  {item.rationale ? (
+                    <div className="p-2.5 rounded bg-muted/30 border border-border/60 flex flex-col gap-1 text-xs min-h-[72px] justify-center">
+                      <div className="text-foreground leading-relaxed line-clamp-2">
+                        <strong>Rule:</strong> {item.rationale.ruleApplied}
+                      </div>
+                      <div className="text-muted-foreground text-[11px] mt-0.5">
+                        Confidence:{' '}
+                        <span className="font-semibold text-foreground">
+                          {Math.round((item.rationale.confidenceScore || 0) * 100)}%
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-2.5 rounded bg-muted/15 border border-dashed border-border/70 text-xs text-muted-foreground leading-relaxed min-h-[72px] flex items-center">
+                      Automated rationale not computed yet.
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {item.rationale ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: 'var(--text-xs)' }}>
-                  <div style={{ color: 'var(--color-surface-text)', lineHeight: 1.5 }}>
-                    <strong>Rule:</strong> {item.rationale.ruleApplied}
-                  </div>
-                  <div style={{ color: 'var(--color-surface-muted)' }}>
-                    Confidence: <span style={{ fontWeight: 600, color: 'var(--color-surface-text)' }}>{Math.round((item.rationale.confidenceScore || 0) * 100)}%</span>
-                  </div>
-                  <div style={{ marginTop: '0.5rem' }}>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => onInspectAssessment?.(item)}
-                    >
-                      View Full Rationale Breakdown
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <span>Automated rationale not computed yet.</span>
-                  <div>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => onInspectAssessment?.(item)}
-                    >
-                      Inspect Assessment
-                    </Button>
-                  </div>
-                </div>
-              )}
+              <div className="pt-3 mt-auto">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  fullWidth
+                  onClick={() => onInspectAssessment?.(item)}
+                >
+                  {item.rationale ? 'View Full Rationale Breakdown' : 'Inspect Assessment'}
+                </Button>
+              </div>
             </Card>
 
             {/* Question 4: Where did this requirement come from? */}
-            <Card padding="md">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                <h5 style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-primary-400)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
-                  4. Where did this come from?
-                </h5>
-                <Badge variant="neutral" size="sm">
-                  Page {sourcePage}
-                </Badge>
+            <Card padding="md" className="flex flex-col justify-between h-full">
+              <div className="flex flex-col flex-1">
+                <div className="flex justify-between items-center mb-2.5 min-h-[24px]">
+                  <h5 className="text-[11px] font-bold text-foreground uppercase tracking-wider">
+                    4. Where did this come from?
+                  </h5>
+                  <Badge variant="neutral" size="sm">
+                    Page {sourcePage}
+                  </Badge>
+                </div>
+
+                <div className="flex-1 flex flex-col justify-center">
+                  <div className="flex flex-col gap-1.5 text-xs min-h-[72px] justify-center">
+                    <div className="text-foreground font-medium truncate">
+                      {sourceDocName}{' '}
+                      {item.sourceCitation?.section ? `• ${item.sourceCitation.section}` : ''}
+                    </div>
+                    <div className="bg-muted/40 border-l-2 border-orange-500 p-2 rounded-r text-xs italic text-muted-foreground leading-relaxed line-clamp-2">
+                      "
+                      {item.sourceCitation?.verbatimQuote ||
+                        item.provenance?.verbatimQuote ||
+                        'Verbatim quote available in citation drawer.'}
+                      "
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: 'var(--text-xs)' }}>
-                <div style={{ color: 'var(--color-surface-text)', fontWeight: 500 }}>
-                  {sourceDocName} {item.sourceCitation?.section ? `• ${item.sourceCitation.section}` : ''}
-                </div>
-                <div
-                  style={{
-                    backgroundColor: 'var(--color-surface-bg)',
-                    borderLeft: '2px solid var(--color-primary-500)',
-                    padding: '0.5rem 0.75rem',
-                    borderRadius: '0 var(--radius-sm) var(--radius-sm) 0',
-                    fontStyle: 'italic',
-                    color: 'var(--color-surface-muted)',
-                    lineHeight: 1.5,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                  }}
-                >
-                  "{item.sourceCitation?.verbatimQuote || item.provenance?.verbatimQuote || 'Verbatim quote available in citation drawer.'}"
-                </div>
-                <div style={{ marginTop: '0.5rem' }}>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => onInspectCitation?.(item)}
-                  >
-                    View Source Citation & Quote
-                  </Button>
-                </div>
+              <div className="pt-3 mt-auto">
+                <Button variant="secondary" size="sm" fullWidth onClick={() => onInspectCitation?.(item)}>
+                  View Source Citation & Quote
+                </Button>
               </div>
             </Card>
           </div>
 
           {/* Review Notes Section */}
           {item.reviewNotes && (
-            <div
-              style={{
-                padding: '0.75rem 1rem',
-                borderRadius: 'var(--radius-md)',
-                backgroundColor: 'var(--color-surface-card)',
-                border: '1px solid var(--color-surface-border)',
-                fontSize: 'var(--text-xs)',
-              }}
-            >
-              <div style={{ color: 'var(--color-surface-muted)', marginBottom: '0.25rem', fontWeight: 600 }}>
+            <div className="p-3.5 rounded-lg bg-card border border-border text-xs">
+              <div className="text-muted-foreground mb-1 font-semibold">
                 Reviewer Justification:
               </div>
-              <div style={{ color: 'var(--color-surface-text)', lineHeight: 1.5 }}>{item.reviewNotes}</div>
+              <div className="text-foreground leading-relaxed">{item.reviewNotes}</div>
             </div>
           )}
 
           {/* Footer with Human Review Actions */}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              paddingTop: '0.75rem',
-              borderTop: '1px solid var(--color-surface-border)',
-              flexWrap: 'wrap',
-              gap: '0.75rem',
-            }}
-          >
-            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)' }}>
-              Version {item.version} • {item.reviewedAt ? `Reviewed on ${item.reviewedAt}` : 'Pending Human Review'}
+          <div className="flex justify-between items-center pt-3.5 border-t border-border flex-wrap gap-3">
+            <div className="text-xs text-muted-foreground">
+              Version {item.version} •{' '}
+              {item.reviewedAt ? `Reviewed on ${item.reviewedAt}` : 'Pending Human Review'}
               {item.humanReviewRequired && (
-                <span style={{ marginLeft: '0.5rem' }}>
-                  <Badge variant="warning" size="sm">Human Review Required</Badge>
+                <span className="ml-2">
+                  <Badge variant="warning" size="sm">
+                    Human Review Required
+                  </Badge>
                 </span>
               )}
             </div>

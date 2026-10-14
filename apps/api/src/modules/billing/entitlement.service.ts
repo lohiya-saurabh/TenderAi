@@ -4,7 +4,11 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
 import { eq, sql, and } from 'drizzle-orm';
-import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '../../common/database/database.module.js';
+import {
+  DRIZZLE_TOKEN,
+  type DrizzleDb,
+  createDrizzle,
+} from '../../common/database/database.module.js';
 import * as schema from '../../common/database/schema.js';
 import { ForbiddenError } from '../../common/errors/errors.js';
 import { PLAN_CATALOG, type PlanTier, type PlanEntitlements } from './billing.types.js';
@@ -125,14 +129,12 @@ export class EntitlementService {
     const now = new Date();
     const periodKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-    await this.db
-      .insert(schema.usageRecords)
-      .values({
-        id: `usage_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-        organizationId,
-        metric: 'TENDER_ANALYSIS',
-        quantity: 1,
-        periodKey,
-      });
+    await this.db.insert(schema.usageRecords).values({
+      id: `usage_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      organizationId,
+      metric: 'TENDER_ANALYSIS',
+      quantity: 1,
+      periodKey,
+    });
   }
 }

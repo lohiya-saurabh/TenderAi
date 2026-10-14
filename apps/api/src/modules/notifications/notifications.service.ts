@@ -5,7 +5,11 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
 import { eq, and, desc, sql } from 'drizzle-orm';
-import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '../../common/database/database.module.js';
+import {
+  DRIZZLE_TOKEN,
+  type DrizzleDb,
+  createDrizzle,
+} from '../../common/database/database.module.js';
 import * as schema from '../../common/database/schema.js';
 import { BadRequestError, NotFoundError } from '../../common/errors/errors.js';
 import { TenantContextHolder } from '../../common/security/TenantContext.js';
@@ -53,9 +57,7 @@ export class NotificationsService {
       .limit(limit);
 
     // Filter to user-specific or broadcast notifications
-    const userRecords = records.filter(
-      (r) => !r.recipientUserId || r.recipientUserId === userId,
-    );
+    const userRecords = records.filter((r) => !r.recipientUserId || r.recipientUserId === userId);
 
     // Count total unread
     const [unreadResult] = await this.db
@@ -88,12 +90,7 @@ export class NotificationsService {
     const [existing] = await this.db
       .select()
       .from(schema.notifications)
-      .where(
-        and(
-          eq(schema.notifications.id, id),
-          eq(schema.notifications.organizationId, orgId),
-        ),
-      )
+      .where(and(eq(schema.notifications.id, id), eq(schema.notifications.organizationId, orgId)))
       .limit(1);
 
     if (!existing) {
@@ -171,16 +168,28 @@ export class NotificationsService {
     };
 
     if (dto.category === 'DEADLINE' && !prefs.notifyDeadlines) {
-      return { delivered: false, reason: 'SUPPRESSED_BY_TENANT_PREFERENCES (notifyDeadlines=false)' };
+      return {
+        delivered: false,
+        reason: 'SUPPRESSED_BY_TENANT_PREFERENCES (notifyDeadlines=false)',
+      };
     }
     if (dto.category === 'EVIDENCE_EXPIRY' && !prefs.notifyEvidenceExpiry) {
-      return { delivered: false, reason: 'SUPPRESSED_BY_TENANT_PREFERENCES (notifyEvidenceExpiry=false)' };
+      return {
+        delivered: false,
+        reason: 'SUPPRESSED_BY_TENANT_PREFERENCES (notifyEvidenceExpiry=false)',
+      };
     }
     if (dto.category === 'REVIEW_REQUEST' && !prefs.notifyReviewRequests) {
-      return { delivered: false, reason: 'SUPPRESSED_BY_TENANT_PREFERENCES (notifyReviewRequests=false)' };
+      return {
+        delivered: false,
+        reason: 'SUPPRESSED_BY_TENANT_PREFERENCES (notifyReviewRequests=false)',
+      };
     }
     if (dto.category === 'HIGH_RISK_FLAG' && !prefs.notifyHighRiskFlags) {
-      return { delivered: false, reason: 'SUPPRESSED_BY_TENANT_PREFERENCES (notifyHighRiskFlags=false)' };
+      return {
+        delivered: false,
+        reason: 'SUPPRESSED_BY_TENANT_PREFERENCES (notifyHighRiskFlags=false)',
+      };
     }
 
     // 2. Persist notification into PostgreSQL

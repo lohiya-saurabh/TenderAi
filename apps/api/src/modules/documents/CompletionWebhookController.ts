@@ -1,16 +1,11 @@
-import {
-  Controller,
-  Post,
-  Body,
-  Headers,
-  HttpCode,
-  HttpStatus,
-  Logger,
-} from '@nestjs/common';
+import { Controller, Post, Body, Headers, HttpCode, HttpStatus, Logger } from '@nestjs/common';
 import type { DocumentExtractionCompletedEvent } from '@tenderpulse/shared-types';
 import { Public } from '../../common/security/decorators/public.decorator.js';
 import { InternalServiceGuard } from '../../common/security/InternalServiceGuard.js';
-import { DocumentCompletionService, type CompletionProcessResult } from './DocumentCompletionService.js';
+import {
+  DocumentCompletionService,
+  type CompletionProcessResult,
+} from './DocumentCompletionService.js';
 
 @Controller('api/v1/internal')
 export class CompletionWebhookController {

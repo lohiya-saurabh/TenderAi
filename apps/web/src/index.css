@@ -4,121 +4,147 @@
 
 @layer base {
   :root {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
+    /* 1. Canvas & Text: Pure Crisp White & Ink-Black */
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
 
-    --card: 240 10% 5.5%;
-    --card-foreground: 0 0% 98%;
+    /* 2. Surfaces & Cards */
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --card-muted: 240 4.8% 95.9%;
+    --card-hover: 240 4.8% 98%;
 
-    --popover: 240 10% 5.5%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
 
-    --primary: 239 84% 67%;
-    --primary-foreground: 0 0% 100%;
+    /* 3. Primary Actions: High-Contrast Ink-Black (Never garish neon orange) */
+    --primary: 240 10% 3.9%;
+    --primary-foreground: 0 0% 98%;
 
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 10% 3.9%;
 
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
 
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 10% 3.9%;
 
-    --destructive: 346.8 77.2% 49.8%;
+    /* 4. Surgical Orange-Red for Flags, Warnings, and Destructive Actions */
+    --destructive: 14 90% 45%;
     --destructive-foreground: 0 0% 98%;
 
-    --success: 152 76% 40%;
+    /* Pass / Normal Evaluated Criteria: Neutral Monospace Ink-Black (No green, no orange) */
+    --success: 240 10% 3.9%;
     --success-foreground: 0 0% 98%;
 
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 98%;
+    /* Warning / Flags: Deep Terracotta Orange */
+    --warning: 24 95% 48%;
+    --warning-foreground: 0 0% 100%;
 
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
+    --border: 240 5.9% 90%;
+    --border-strong: 240 5.9% 80%;
+    --input: 240 5.9% 90%;
+    --ring: 240 10% 3.9%;
 
     --radius: 0.5rem;
 
-    /* Legacy design token compatibility bridges */
-    --color-surface-bg: hsl(var(--background));
-    --color-surface-card: hsl(var(--card));
-    --color-surface-card-hover: hsl(var(--accent));
-    --color-surface-card-subtle: #16161a;
-    --color-surface-border: hsl(var(--border));
-    --color-surface-border-light: #3f3f46;
-    --color-surface-border-subtle: #1c1c20;
-    --color-surface-text: hsl(var(--foreground));
-    --color-surface-muted: hsl(var(--muted-foreground));
-    --color-surface-subtle: #71717a;
-    --color-surface-input: hsl(var(--input));
+    /* Semantic Surface Tokens */
+    --color-surface-bg: #ffffff;
+    --color-surface-card: #ffffff;
+    --color-surface-card-hover: #fafafa;
+    --color-surface-card-subtle: #f4f4f5;
+    --color-surface-elevated: #ffffff;
+    --color-surface-border: #e4e4e7;
+    --color-surface-border-light: #f4f4f5;
+    --color-surface-border-subtle: #fafafa;
+    --color-surface-text: #09090b;
+    --color-surface-muted: #71717a;
+    --color-surface-subtle: #a1a1aa;
+    --color-surface-input: #ffffff;
 
-    --color-primary-300: #a5b4fc;
-    --color-primary-400: #818cf8;
-    --color-primary-500: #6366f1;
-    --color-primary-600: #4f46e5;
+    --text-heading: #09090b;
+    --text-body: #27272a;
+    --text-muted: #71717a;
 
-    --status-pass-bg: rgba(16, 185, 129, 0.1);
-    --status-pass-text: #34d399;
-    --status-pass-border: rgba(16, 185, 129, 0.25);
-    --status-pass-icon: #34d399;
+    --btn-primary-bg: #09090b;
+    --btn-primary-text: #ffffff;
+    --btn-primary-hover: #27272a;
 
-    --status-fail-bg: rgba(244, 63, 94, 0.1);
-    --status-fail-text: #fb7185;
-    --status-fail-border: rgba(244, 63, 94, 0.25);
-    --status-fail-icon: #fb7185;
+    /* Normal / Evaluated States (Clean Slate & Ink) */
+    --status-emerald-bg: #f4f4f5;
+    --status-emerald-text: #09090b;
+    --status-emerald-border: #e4e4e7;
 
-    --status-missing-bg: rgba(245, 158, 11, 0.1);
-    --status-missing-text: #fbbf24;
-    --status-missing-border: rgba(245, 158, 11, 0.25);
-    --status-missing-icon: #fbbf24;
+    --status-pass-bg: #f4f4f5;
+    --status-pass-text: #09090b;
+    --status-pass-border: #e4e4e7;
+    --status-pass-icon: #09090b;
 
-    --status-review-bg: rgba(168, 85, 247, 0.12);
-    --status-review-text: #c084fc;
-    --status-review-border: rgba(168, 85, 247, 0.28);
-    --status-review-icon: #c084fc;
+    /* Surgical Orange-Red Tiers for Flags & High-Risk Liability */
+    --status-amber-bg: #fff7ed;
+    --status-amber-text: #c2410c;
+    --status-amber-border: #fed7aa;
 
-    --status-na-bg: rgba(100, 116, 139, 0.12);
-    --status-na-text: #94a3b8;
-    --status-na-border: rgba(100, 116, 139, 0.3);
-    --status-na-icon: #64748b;
+    --status-flag-bg: #fff7ed;
+    --status-flag-text: #c2410c;
+    --status-flag-border: #fed7aa;
 
-    --color-status-ready: var(--status-pass-text);
-    --color-status-flagged: var(--status-fail-text);
-    --color-status-pending: var(--status-missing-text);
-    --color-status-waived: var(--status-na-text);
-    --color-status-processing: #3b82f6;
-    --color-status-draft: #8b5cf6;
-    --color-status-queued: #06b6d4;
-    --color-status-finalized: #059669;
-    --color-status-failed: #dc2626;
+    --status-fail-bg: #fff7ed;
+    --status-fail-text: #c2410c;
+    --status-fail-border: #fed7aa;
+    --status-fail-icon: #c2410c;
 
-    --color-danger: #ef4444;
-    --color-danger-bg: rgba(239, 68, 68, 0.1);
-    --color-danger-border: rgba(239, 68, 68, 0.3);
+    --status-missing-bg: #fff7ed;
+    --status-missing-text: #ea580c;
+    --status-missing-border: #fed7aa;
+    --status-missing-icon: #ea580c;
 
-    --color-success: #10b981;
-    --color-success-bg: rgba(16, 185, 129, 0.1);
-    --color-success-border: rgba(16, 185, 129, 0.3);
+    --status-review-bg: #fff7ed;
+    --status-review-text: #c2410c;
+    --status-review-border: #fed7aa;
+    --status-review-icon: #c2410c;
 
-    --color-warning: #f59e0b;
-    --color-warning-bg: rgba(245, 158, 11, 0.1);
-    --color-warning-border: rgba(245, 158, 11, 0.3);
+    --status-na-bg: #f4f4f5;
+    --status-na-text: #71717a;
+    --status-na-border: #e4e4e7;
+    --status-na-icon: #71717a;
 
-    --color-info: #3b82f6;
-    --color-info-bg: rgba(59, 130, 246, 0.1);
-    --color-info-border: rgba(59, 130, 246, 0.3);
+    --color-status-ready: #09090b;
+    --color-status-flagged: #c2410c;
+    --color-status-pending: #ea580c;
+    --color-status-waived: #71717a;
+    --color-status-processing: #ea580c;
+    --color-status-draft: #71717a;
+    --color-status-queued: #c2410c;
+    --color-status-finalized: #09090b;
+    --color-status-failed: #c2410c;
 
-    --text-2xs: 0.65rem;
-    --text-xs: 0.75rem;
-    --text-sm: 0.875rem;
-    --text-base: 1rem;
-    --text-lg: 1.125rem;
-    --text-xl: 1.25rem;
-    --text-2xl: 1.5rem;
-    --text-3xl: 1.875rem;
-    --text-4xl: 2.25rem;
+    --color-danger: #c2410c;
+    --color-danger-bg: #fff7ed;
+    --color-danger-border: #fed7aa;
 
+    --color-success: #09090b;
+    --color-success-bg: #f4f4f5;
+    --color-success-border: #e4e4e7;
+
+    --color-warning: #ea580c;
+    --color-warning-bg: #fff7ed;
+    --color-warning-border: #fed7aa;
+
+    --color-info: #09090b;
+    --color-info-bg: #f4f4f5;
+    --color-info-border: #e4e4e7;
+
+    --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+
+    --color-primary-100: #ffedd5;
+    --color-primary-300: #fdba74;
+    --color-primary-400: #fb923c;
+    --color-primary-500: #f97316;
+    --color-primary-600: #ea580c;
+
+    /* 4px Modular Spacing Scale */
     --space-0-5: 0.125rem;
     --space-1: 0.25rem;
     --space-1-5: 0.375rem;
@@ -133,84 +159,192 @@
     --space-12: 3rem;
     --space-16: 4rem;
 
+    --text-2xs: 0.65rem;
+    --text-xs: 0.75rem;
+    --text-sm: 0.875rem;
+    --text-base: 1rem;
+    --text-lg: 1.125rem;
+    --text-xl: 1.25rem;
+    --text-2xl: 1.5rem;
+    --text-3xl: 1.875rem;
+    --text-4xl: 2.25rem;
+
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-mono: 'JetBrains Mono', Menlo, Monaco, Consolas, monospace;
+    --font-regular: 400;
+    --font-medium: 500;
+    --font-semibold: 600;
+    --font-bold: 700;
+
+    --leading-none: 1;
+    --leading-tight: 1.25;
+    --leading-normal: 1.5;
+    --leading-relaxed: 1.75;
+
     --radius-sm: 0.375rem;
     --radius-md: 0.5rem;
     --radius-lg: 0.75rem;
     --radius-xl: 1rem;
     --radius-full: 9999px;
 
+    --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.09), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+
+    --z-index-dropdown: 50;
+    --z-index-sticky: 100;
+    --z-index-fixed: 200;
+    --z-index-drawer: 300;
+    --z-index-modal: 400;
+    --z-index-popover: 500;
+    --z-index-tooltip: 600;
+
     --sidebar-width: 260px;
     --sidebar-collapsed-width: 68px;
     --header-height: 64px;
     --content-max-width: 1440px;
-    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
-
-    /* Z-Index Stacking Hierarchy */
-    --z-index-base: 1;
-    --z-index-sticky: 20;
-    --z-index-sidebar: 30;
-    --z-index-header: 40;
-    --z-index-dropdown: 50;
-    --z-index-drawer: 60;
-    --z-index-modal: 70;
-    --z-index-popover: 80;
-    --z-index-tooltip: 90;
   }
 
-  .light {
-    --background: 210 40% 98%;
-    --foreground: 222.2 84% 4.9%;
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 240 6% 7%;
+    --card-foreground: 0 0% 98%;
+    --card-muted: 240 4% 10%;
+    --card-hover: 240 4% 13%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 240 6% 7%;
+    --popover-foreground: 0 0% 98%;
 
-    --primary: 239 84% 60%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 10% 3.9%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
 
-    --destructive: 346.8 77.2% 49.8%;
+    --destructive: 14 90% 45%;
     --destructive-foreground: 0 0% 98%;
 
-    --success: 152 76% 36%;
-    --success-foreground: 0 0% 100%;
+    --success: 0 0% 98%;
+    --success-foreground: 240 10% 3.9%;
 
-    --warning: 38 92% 50%;
+    --warning: 24 95% 53%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 239 84% 60%;
+    --border: 240 4% 16%;
+    --border-strong: 240 5% 26%;
+    --input: 240 4% 16%;
+    --ring: 0 0% 98%;
 
-    /* Legacy design token compatibility bridges for light mode */
-    --color-surface-bg: #f8fafc;
-    --color-surface-card: #ffffff;
-    --color-surface-card-hover: #f1f5f9;
-    --color-surface-card-subtle: #f8fafc;
-    --color-surface-border: #e2e8f0;
-    --color-surface-border-light: #cbd5e1;
-    --color-surface-border-subtle: #f1f5f9;
-    --color-surface-text: #0f172a;
-    --color-surface-muted: #64748b;
-    --color-surface-subtle: #94a3b8;
-    --color-surface-input: #ffffff;
+    --color-surface-bg: #09090b;
+    --color-surface-card: #121215;
+    --color-surface-card-hover: #18181b;
+    --color-surface-card-subtle: #18181b;
+    --color-surface-elevated: #18181b;
+    --color-surface-border: #27272a;
+    --color-surface-border-light: #3f3f46;
+    --color-surface-border-subtle: #18181b;
+    --color-surface-text: #ffffff;
+    --color-surface-muted: #a1a1aa;
+    --color-surface-subtle: #71717a;
+    --color-surface-input: #18181b;
 
-    --color-primary-300: #4f46e5;
-    --color-primary-400: #6366f1;
-    --color-primary-500: #4f46e5;
-    --color-primary-600: #4338ca;
+    --text-heading: #ffffff;
+    --text-body: #e4e4e7;
+    --text-muted: #a1a1aa;
+
+    --btn-primary-bg: #ffffff;
+    --btn-primary-text: #09090b;
+    --btn-primary-hover: #e4e4e7;
+
+    --status-emerald-bg: #18181b;
+    --status-emerald-text: #ffffff;
+    --status-emerald-border: #27272a;
+
+    --status-pass-bg: #18181b;
+    --status-pass-text: #ffffff;
+    --status-pass-border: #27272a;
+    --status-pass-icon: #ffffff;
+
+    --status-amber-bg: rgba(194, 65, 12, 0.15);
+    --status-amber-text: #fb923c;
+    --status-amber-border: rgba(251, 146, 60, 0.3);
+
+    --status-flag-bg: rgba(194, 65, 12, 0.15);
+    --status-flag-text: #fb923c;
+    --status-flag-border: rgba(251, 146, 60, 0.3);
+
+    --status-fail-bg: rgba(194, 65, 12, 0.15);
+    --status-fail-text: #fb923c;
+    --status-fail-border: rgba(251, 146, 60, 0.3);
+    --status-fail-icon: #fb923c;
+
+    --status-missing-bg: rgba(234, 88, 12, 0.15);
+    --status-missing-text: #fdba74;
+    --status-missing-border: rgba(253, 186, 116, 0.3);
+    --status-missing-icon: #fdba74;
+
+    --status-review-bg: rgba(194, 65, 12, 0.15);
+    --status-review-text: #fb923c;
+    --status-review-border: rgba(251, 146, 60, 0.3);
+    --status-review-icon: #fb923c;
+
+    --status-na-bg: #18181b;
+    --status-na-text: #a1a1aa;
+    --status-na-border: #27272a;
+    --status-na-icon: #71717a;
+
+    --color-status-ready: #ffffff;
+    --color-status-flagged: #fb923c;
+    --color-status-pending: #fdba74;
+    --color-status-waived: #a1a1aa;
+    --color-status-processing: #fdba74;
+    --color-status-draft: #71717a;
+    --color-status-queued: #fb923c;
+    --color-status-finalized: #ffffff;
+    --color-status-failed: #fb923c;
+
+    --color-danger: #fb923c;
+    --color-danger-bg: rgba(194, 65, 12, 0.15);
+    --color-danger-border: rgba(251, 146, 60, 0.3);
+
+    --color-success: #ffffff;
+    --color-success-bg: #18181b;
+    --color-success-border: #27272a;
+
+    --color-warning: #fb923c;
+    --color-warning-bg: rgba(194, 65, 12, 0.15);
+    --color-warning-border: rgba(251, 146, 60, 0.3);
+
+    --color-info: #ffffff;
+    --color-info-bg: #18181b;
+    --color-info-border: #27272a;
+    --color-primary-100: #fed7aa;
+
+    --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.2);
+    --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px -1px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.35), 0 2px 4px -2px rgba(0, 0, 0, 0.35);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
   }
+}
+
+.mono {
+  font-family: 'JetBrains Mono', Menlo, Monaco, Consolas, monospace;
 }
 
 * {
@@ -220,9 +354,55 @@
 body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
-  font-feature-settings: "rlig" 1, "calt" 1;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-feature-settings:
+    'rlig' 1,
+    'calt' 1;
+  font-family:
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
   margin: 0;
+}
+
+/* Ensure inputs and textareas strictly adhere to current color theme and autofill */
+input,
+textarea,
+select {
+  color: hsl(var(--foreground));
+}
+
+select option {
+  background-color: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+}
+
+/* Calendar and picker indicators in dark mode */
+.dark input::-webkit-calendar-picker-indicator {
+  filter: invert(0.85);
+}
+
+input[type='date'],
+input[type='datetime-local'] {
+  color-scheme: light;
+}
+
+.dark input[type='date'],
+.dark input[type='datetime-local'] {
+  color-scheme: dark;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus {
+  -webkit-text-fill-color: hsl(var(--foreground)) !important;
+  -webkit-box-shadow: 0 0 0px 1000px hsl(var(--background)) inset !important;
+  transition: background-color 5000s ease-in-out 0s;
 }
 
 /* Scrollbar suppression utilities for clean, hover-friendly navigation */
@@ -239,52 +419,20 @@ body {
 
 /* Global navigation & tablist scrollbar elimination */
 nav,
-[role="tablist"],
-[role="navigation"],
-[role="group"][aria-label*="filter" i],
-[role="group"][aria-label*="tab" i] {
+[role='tablist'],
+[role='navigation'],
+[role='group'][aria-label*='filter' i],
+[role='group'][aria-label*='tab' i] {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
 
 nav::-webkit-scrollbar,
-[role="tablist"]::-webkit-scrollbar,
-[role="navigation"]::-webkit-scrollbar,
-[role="group"][aria-label*="filter" i]::-webkit-scrollbar,
-[role="group"][aria-label*="tab" i]::-webkit-scrollbar {
+[role='tablist']::-webkit-scrollbar,
+[role='navigation']::-webkit-scrollbar,
+[role='group'][aria-label*='filter' i]::-webkit-scrollbar,
+[role='group'][aria-label*='tab' i]::-webkit-scrollbar {
   display: none;
   width: 0;
   height: 0;
 }
-
-/* Modal & Drawer Entrance Animations */
-@keyframes slide-in-right {
-  from {
-    transform: translateX(100%);
-    opacity: 0.8;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-@keyframes scale-in {
-  from {
-    transform: scale(0.96);
-    opacity: 0.6;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-.slide-in-right {
-  animation: slide-in-right 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.scale-in {
-  animation: scale-in 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-

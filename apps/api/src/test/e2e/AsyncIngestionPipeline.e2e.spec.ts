@@ -55,7 +55,7 @@ describe('E2E: Asynchronous Queue Processing & Resilience Architecture (S3 → J
       documentRepo,
       storageService,
       auditRepo,
-      unitOfWork
+      unitOfWork,
     );
     confirmUploadUseCase = new ConfirmDocumentUploadUseCase(
       bidRepo,
@@ -64,7 +64,7 @@ describe('E2E: Asynchronous Queue Processing & Resilience Architecture (S3 → J
       auditRepo,
       unitOfWork,
       jobRepo,
-      jobQueue
+      jobQueue,
     );
 
     worker = new IngestionWorker(
@@ -74,7 +74,7 @@ describe('E2E: Asynchronous Queue Processing & Resilience Architecture (S3 → J
       documentRepo,
       complianceRepo,
       auditRepo,
-      unitOfWork
+      unitOfWork,
     );
   });
 
@@ -123,7 +123,7 @@ describe('E2E: Asynchronous Queue Processing & Resilience Architecture (S3 → J
           documentId: uploadSession.documentId,
           jobId: confirmResult.jobId,
         };
-      }
+      },
     );
   };
 
@@ -259,7 +259,7 @@ describe('E2E: Asynchronous Queue Processing & Resilience Architecture (S3 → J
       unitOfWork,
       undefined,
       300,
-      'worker-ingestion-2'
+      'worker-ingestion-2',
     );
 
     const recoveryResult = await worker2.pollAndProcess();
@@ -309,7 +309,7 @@ describe('E2E: Asynchronous Queue Processing & Resilience Architecture (S3 → J
         attempts += 1;
         if (attempts === 1) {
           throw new Error(
-            'Downstream AI service returned HTTP 429 Too Many Requests (Transient Rate Limit)'
+            'Downstream AI service returned HTTP 429 Too Many Requests (Transient Rate Limit)',
           );
         }
         return [
@@ -341,7 +341,7 @@ describe('E2E: Asynchronous Queue Processing & Resilience Architecture (S3 → J
       complianceRepo,
       auditRepo,
       unitOfWork,
-      flakeyExtractor
+      flakeyExtractor,
     );
 
     // Attempt 1: Fails transiently
@@ -393,7 +393,7 @@ describe('E2E: Asynchronous Queue Processing & Resilience Architecture (S3 → J
       complianceRepo,
       auditRepo,
       unitOfWork,
-      poisonExtractor
+      poisonExtractor,
     );
 
     // Attempt 1: Fails
@@ -458,7 +458,7 @@ describe('E2E: Asynchronous Queue Processing & Resilience Architecture (S3 → J
           estimatedValueRupees: 10000000,
           submissionDeadline: new Date(Date.now() + 86400000 * 30),
         });
-      }
+      },
     );
 
     // Create an ingestion job for Tenant B, but TAMPER the queue message or job to reference Tenant A's document!

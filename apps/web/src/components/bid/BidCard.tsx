@@ -34,7 +34,14 @@ export const BidCard: React.FC<BidCardProps> = ({ bid }) => {
         e.currentTarget.style.boxShadow = 'none';
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          marginBottom: '0.75rem',
+        }}
+      >
         <h3
           style={{
             fontSize: '1.1rem',
@@ -48,12 +55,23 @@ export const BidCard: React.FC<BidCardProps> = ({ bid }) => {
         <BidStatusBadge status={bid.status} />
       </div>
 
-      <div style={{ fontSize: '0.85rem', color: 'var(--color-surface-muted)', marginBottom: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+      <div
+        style={{
+          fontSize: '0.85rem',
+          color: 'var(--color-surface-muted)',
+          marginBottom: '1.25rem',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.25rem',
+        }}
+      >
         <div>
-          <strong style={{ color: 'var(--color-surface-text)' }}>Tender №:</strong> {bid.tenderNumber}
+          <strong style={{ color: 'var(--color-surface-text)' }}>Tender №:</strong>{' '}
+          {bid.tenderNumber}
         </div>
         <div>
-          <strong style={{ color: 'var(--color-surface-text)' }}>Authority:</strong> {bid.tenderingAuthority}
+          <strong style={{ color: 'var(--color-surface-text)' }}>Authority:</strong>{' '}
+          {bid.tenderingAuthority}
         </div>
       </div>
 
@@ -88,7 +106,9 @@ export const BidCard: React.FC<BidCardProps> = ({ bid }) => {
               <span>
                 {bid.approvedRequirements || 0}/{bid.totalRequirements}{' '}
                 {bid.flaggedRequirements ? (
-                  <span style={{ color: 'var(--color-danger)' }}>({bid.flaggedRequirements} flagged)</span>
+                  <span style={{ color: 'var(--color-danger)' }}>
+                    ({bid.flaggedRequirements} flagged)
+                  </span>
                 ) : null}
               </span>
             ) : (

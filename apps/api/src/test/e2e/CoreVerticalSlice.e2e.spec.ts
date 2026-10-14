@@ -46,7 +46,7 @@ describe('E2E: Tender Ingestion & Compliance Review Core Vertical Slice', () => 
       bidRepo,
       complianceRepo,
       auditRepo,
-      unitOfWork
+      unitOfWork,
     );
     const serviceGuard = new InternalServiceGuard(workerSecretKey);
     internalWorkerController = new InternalWorkerController(bulkIngestUseCase, serviceGuard);
@@ -69,7 +69,7 @@ describe('E2E: Tender Ingestion & Compliance Review Core Vertical Slice', () => 
           tenderingAuthority: 'Maharashtra State PWD',
           estimatedValueRupees: 85000000, // ₹8.5 Crore
           submissionDeadline: '2026-11-15T15:00:00.000Z',
-        })
+        }),
     );
 
     expect(createdBid.id).toBeDefined();
@@ -127,7 +127,7 @@ describe('E2E: Tender Ingestion & Compliance Review Core Vertical Slice', () => 
             },
           },
         ],
-      }
+      },
     );
 
     expect(workerResult.insertedCount).toBe(2);
@@ -162,7 +162,7 @@ describe('E2E: Tender Ingestion & Compliance Review Core Vertical Slice', () => 
         status: 'READY',
         notes: 'Purchased ₹100 stamp paper from court; notarized on 1-Oct.',
         expectedVersion: 1,
-      }
+      },
     );
 
     expect(reviewResult.status).toBe('READY');
@@ -183,8 +183,8 @@ describe('E2E: Tender Ingestion & Compliance Review Core Vertical Slice', () => 
           status: 'FLAGGED',
           notes: 'Attempting conflicting edit',
           expectedVersion: 1, // Stale version! Current is 2
-        }
-      )
+        },
+      ),
     ).rejects.toThrow(ConcurrencyConflictException);
 
     // -------------------------------------------------------------
@@ -199,7 +199,7 @@ describe('E2E: Tender Ingestion & Compliance Review Core Vertical Slice', () => 
         status: 'FLAGGED',
         notes: 'Sent to CA Sharma for UDIN generation; expected by tomorrow.',
         expectedVersion: 1,
-      }
+      },
     );
     expect(flagResult.status).toBe('FLAGGED');
     expect(flagResult.version).toBe(2);
@@ -223,8 +223,8 @@ describe('E2E: Tender Ingestion & Compliance Review Core Vertical Slice', () => 
         organizationId,
         'bid-123',
         'worker-bad',
-        { items: [] }
-      )
+        { items: [] },
+      ),
     ).rejects.toThrow(UnauthorizedTenantAccessException);
   });
 });

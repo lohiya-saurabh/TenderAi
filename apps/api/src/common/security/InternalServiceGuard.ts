@@ -5,10 +5,12 @@ export class InternalServiceGuard {
   private readonly internalApiKey: string;
 
   constructor(
-    internalApiKey = process.env['INTERNAL_SERVICE_KEY'] ?? 'tenderpulse-internal-secret-2026'
+    internalApiKey = process.env['INTERNAL_SERVICE_KEY'] ?? 'tenderpulse-internal-secret-2026',
   ) {
     if (process.env['NODE_ENV'] === 'production' && !process.env['INTERNAL_SERVICE_KEY']) {
-      throw new Error('FATAL: INTERNAL_SERVICE_KEY environment variable is required in production.');
+      throw new Error(
+        'FATAL: INTERNAL_SERVICE_KEY environment variable is required in production.',
+      );
     }
     this.internalApiKey = internalApiKey;
   }
@@ -16,7 +18,7 @@ export class InternalServiceGuard {
   public validate(incomingKey?: string): boolean {
     if (!incomingKey) {
       throw new UnauthorizedTenantAccessException(
-        'Unauthorized internal machine-to-machine request: Missing key.'
+        'Unauthorized internal machine-to-machine request: Missing key.',
       );
     }
 
@@ -25,11 +27,10 @@ export class InternalServiceGuard {
 
     if (keyBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(keyBuf, expectedBuf)) {
       throw new UnauthorizedTenantAccessException(
-        'Unauthorized internal machine-to-machine request: Invalid key.'
+        'Unauthorized internal machine-to-machine request: Invalid key.',
       );
     }
 
     return true;
   }
 }
-

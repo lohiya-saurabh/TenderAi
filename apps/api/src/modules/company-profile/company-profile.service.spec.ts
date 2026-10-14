@@ -17,9 +17,7 @@ describe('CompanyProfileService — versioned capability profile', () => {
   const orgId = 'org_acme_infra_001';
   const rivalOrgId = 'org_rival_infra_999';
 
-  const validPayload = (
-    overrides: Partial<CompanyProfilePayload> = {},
-  ): CompanyProfilePayload => ({
+  const validPayload = (overrides: Partial<CompanyProfilePayload> = {}): CompanyProfilePayload => ({
     company_name: 'Acme Infrastructure Solutions Ltd.',
     is_blacklisted: false,
     registrations: { GSTIN: '07AAKCA1234F1Z5' },
@@ -54,29 +52,33 @@ describe('CompanyProfileService — versioned capability profile', () => {
 
   beforeEach(async () => {
     db = new PGlite();
-    await initDatabase(db, { seedUsers: false, seedFullProfile: false, seedBidsAndCompliance: false });
+    await initDatabase(db, {
+      seedUsers: false,
+      seedFullProfile: false,
+      seedBidsAndCompliance: false,
+    });
     drizzleDb = createDrizzle(db);
     service = new CompanyProfileService(drizzleDb);
 
-    await drizzleDb.insert(schema.companies).values([
-      {
-        id: 'comp_acme_infra_001',
-        organizationId: orgId,
-        legalName: 'Acme Infrastructure Solutions Ltd.',
-      },
-      {
-        id: 'comp_rival_infra_999',
-        organizationId: rivalOrgId,
-        legalName: 'Rival Infrastructure Ltd.',
-      },
-    ]).onConflictDoNothing();
+    await drizzleDb
+      .insert(schema.companies)
+      .values([
+        {
+          id: 'comp_acme_infra_001',
+          organizationId: orgId,
+          legalName: 'Acme Infrastructure Solutions Ltd.',
+        },
+        {
+          id: 'comp_rival_infra_999',
+          organizationId: rivalOrgId,
+          legalName: 'Rival Infrastructure Ltd.',
+        },
+      ])
+      .onConflictDoNothing();
   });
 
   const run = <T>(fn: () => Promise<T>) =>
-    TenantContextHolder.run(
-      { organizationId: orgId, userId: 'usr_admin_01', role: 'ADMIN' },
-      fn,
-    );
+    TenantContextHolder.run({ organizationId: orgId, userId: 'usr_admin_01', role: 'ADMIN' }, fn);
 
   it('returns empty state when no profile exists', async () => {
     const view = await run(() => service.getProfile());
@@ -85,14 +87,10 @@ describe('CompanyProfileService — versioned capability profile', () => {
   });
 
   it('pins a new version as active (version 1)', async () => {
-    const created = await run(() =>
-      service.createProfileVersion('FY26 Profile', validPayload()),
-    );
+    const created = await run(() => service.createProfileVersion('FY26 Profile', validPayload()));
     expect(created.version).toBe(1);
     expect(created.name).toBe('FY26 Profile');
-    expect(created.payload.company_name).toBe(
-      'Acme Infrastructure Solutions Ltd.',
-    );
+    expect(created.payload.company_name).toBe('Acme Infrastructure Solutions Ltd.');
 
     const view = await run(() => service.getProfile());
     expect(view.active?.id).toBe(created.id);
@@ -100,9 +98,7 @@ describe('CompanyProfileService — versioned capability profile', () => {
   });
 
   it('creates immutable append-only versions and re-points active', async () => {
-    const first = await run(() =>
-      service.createProfileVersion('v1', validPayload()),
-    );
+    const first = await run(() => service.createProfileVersion('v1', validPayload()));
     const second = await run(() =>
       service.createProfileVersion(
         'v2',
@@ -134,9 +130,9 @@ describe('CompanyProfileService — versioned capability profile', () => {
 
   it('rejects invalid payloads at the API boundary', async () => {
     // Missing company_name
-    await expect(
-      run(() => service.createProfileVersion('bad', { foo: 'bar' })),
-    ).rejects.toThrow(/company_name is required/);
+    await expect(run(() => service.createProfileVersion('bad', { foo: 'bar' }))).rejects.toThrow(
+      /company_name is required/,
+    );
 
     // Negative turnover — invalid data (entry_id included but value negative)
     await expect(
@@ -159,9 +155,7 @@ describe('CompanyProfileService — versioned capability profile', () => {
   });
 
   it('enforces tenant boundary on version lookup (anti-IDOR)', async () => {
-    const created = await run(() =>
-      service.createProfileVersion('FY26', validPayload()),
-    );
+    const created = await run(() => service.createProfileVersion('FY26', validPayload()));
 
     await expect(
       TenantContextHolder.run(
@@ -176,9 +170,7 @@ describe('CompanyProfileService — versioned capability profile', () => {
   });
 
   it('generates a default name when none is provided', async () => {
-    const created = await run(() =>
-      service.createProfileVersion('', validPayload()),
-    );
+    const created = await run(() => service.createProfileVersion('', validPayload()));
     expect(created.name).toBe('Profile v1');
   });
 
@@ -208,22 +200,15 @@ describe('CompanyProfileService — versioned capability profile', () => {
       ],
     });
 
-    const created = await run(() =>
-      service.createProfileVersion('Full', payload),
-    );
+    const created = await run(() => service.createProfileVersion('Full', payload));
 
     const [row] = await drizzleDb
       .select()
       .from(schema.companyProfileVersions)
       .where(eq(schema.companyProfileVersions.id, created.id));
     expect(row).toBeDefined();
-    const stored =
-      typeof row!.payload === 'string'
-        ? JSON.parse(row!.payload)
-        : row!.payload;
+    const stored = typeof row!.payload === 'string' ? JSON.parse(row!.payload) : row!.payload;
     expect((stored as CompanyProfilePayload).experience).toHaveLength(1);
-    expect((stored as CompanyProfilePayload).certifications?.[0].standard_name).toBe(
-      'ISO 9001',
-    );
+    expect((stored as CompanyProfilePayload).certifications?.[0].standard_name).toBe('ISO 9001');
   });
 });

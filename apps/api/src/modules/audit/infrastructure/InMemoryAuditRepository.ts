@@ -11,13 +11,13 @@ export class InMemoryAuditRepository implements IAuditRepository {
   public async findByEntity(
     organizationId: string,
     entityType: string,
-    entityId: string
+    entityId: string,
   ): Promise<AuditLog[]> {
     return this.logs.filter(
       (log) =>
         log.organizationId === organizationId &&
         log.entityType === entityType &&
-        log.entityId === entityId
+        log.entityId === entityId,
     );
   }
 

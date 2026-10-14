@@ -40,11 +40,45 @@ export interface DocumentRelevanceValidationResult {
 }
 
 const COMMON_STOP_WORDS = new Set([
-  'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from',
-  'has', 'he', 'in', 'is', 'it', 'its', 'of', 'on', 'that', 'the',
-  'to', 'was', 'were', 'will', 'with', 'phase', 'project', 'work',
-  'works', 'services', 'supply', 'installation', 'tender', 'bidding',
-  'document', 'notice', 'inviting', 'contract', 'construction',
+  'a',
+  'an',
+  'and',
+  'are',
+  'as',
+  'at',
+  'be',
+  'by',
+  'for',
+  'from',
+  'has',
+  'he',
+  'in',
+  'is',
+  'it',
+  'its',
+  'of',
+  'on',
+  'that',
+  'the',
+  'to',
+  'was',
+  'were',
+  'will',
+  'with',
+  'phase',
+  'project',
+  'work',
+  'works',
+  'services',
+  'supply',
+  'installation',
+  'tender',
+  'bidding',
+  'document',
+  'notice',
+  'inviting',
+  'contract',
+  'construction',
 ]);
 
 export class TenderDocumentRelevanceValidator {
@@ -107,7 +141,8 @@ export class TenderDocumentRelevanceValidator {
       } else {
         // Test authority acronyms in parentheses or significant words (e.g. CPWD, NHAI, MHA)
         const acronymMatch = tender.tenderingAuthority.match(/\(([^)]+)\)/);
-        const acronym = acronymMatch && acronymMatch[1] ? acronymMatch[1].trim().toLowerCase() : null;
+        const acronym =
+          acronymMatch && acronymMatch[1] ? acronymMatch[1].trim().toLowerCase() : null;
         if (acronym && acronym.length >= 3 && docCorpus.includes(acronym)) {
           score += 25;
           matchedSignals.push(`Authority acronym match: "${acronym.toUpperCase()}"`);
@@ -144,10 +179,14 @@ export class TenderDocumentRelevanceValidator {
 
           if (overlapRatio >= 0.5) {
             score += 25;
-            matchedSignals.push(`Significant title keyword overlap (${Math.round(overlapRatio * 100)}%): [${matchedTitleTokens.join(', ')}]`);
+            matchedSignals.push(
+              `Significant title keyword overlap (${Math.round(overlapRatio * 100)}%): [${matchedTitleTokens.join(', ')}]`,
+            );
           } else if (matchedTitleTokens.length >= 2) {
             score += 15;
-            matchedSignals.push(`Partial title keywords matched: [${matchedTitleTokens.join(', ')}]`);
+            matchedSignals.push(
+              `Partial title keywords matched: [${matchedTitleTokens.join(', ')}]`,
+            );
           }
         }
       }
@@ -184,7 +223,9 @@ export class TenderDocumentRelevanceValidator {
     const foundMarkers = PROCUREMENT_MARKERS.filter((m) => docCorpus.includes(m));
     if (foundMarkers.length > 0) {
       score += 10;
-      matchedSignals.push(`Procurement markers identified: [${foundMarkers.slice(0, 3).join(', ')}]`);
+      matchedSignals.push(
+        `Procurement markers identified: [${foundMarkers.slice(0, 3).join(', ')}]`,
+      );
     }
 
     // Signal F: If document has virtually no extractable text (e.g. non-OCR scanned binary)
@@ -225,7 +266,10 @@ export class TenderDocumentRelevanceValidator {
   private evaluateFileNameFallback(lowerFileName: string, tender: TenderMetadataInput): number {
     let fnScore = 0;
     if (tender.tenderNumber) {
-      const refTokens = tender.tenderNumber.toLowerCase().split(/[\/\-_ ]+/).filter((t) => t.length >= 4);
+      const refTokens = tender.tenderNumber
+        .toLowerCase()
+        .split(/[\/\-_ ]+/)
+        .filter((t) => t.length >= 4);
       if (refTokens.some((t) => lowerFileName.includes(t))) {
         fnScore += 35;
       }
@@ -237,7 +281,10 @@ export class TenderDocumentRelevanceValidator {
         fnScore += 25;
       }
     }
-    const titleTokens = tender.title.toLowerCase().split(/[\s\-_]+/).filter((t) => t.length >= 4 && !COMMON_STOP_WORDS.has(t));
+    const titleTokens = tender.title
+      .toLowerCase()
+      .split(/[\s\-_]+/)
+      .filter((t) => t.length >= 4 && !COMMON_STOP_WORDS.has(t));
     const matchedTitle = titleTokens.filter((t) => lowerFileName.includes(t));
     if (matchedTitle.length >= 2) {
       fnScore += 25;

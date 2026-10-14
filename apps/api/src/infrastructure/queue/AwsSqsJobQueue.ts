@@ -37,10 +37,14 @@ export class AwsSqsJobQueue implements IJobQueue {
     this.sqsClient = new SQSClient({
       region: config.region || process.env.AWS_REGION || 'ap-south-1',
       endpoint: config.endpoint || process.env.SQS_ENDPOINT || undefined,
-      credentials: config.credentials || (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY ? {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-      } : undefined),
+      credentials:
+        config.credentials ||
+        (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+          ? {
+              accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+              secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+            }
+          : undefined),
     });
   }
 
@@ -59,22 +63,27 @@ export class AwsSqsJobQueue implements IJobQueue {
 
     await this.sqsClient.send(command);
 
-    this.logger.info('queue.message.published', `Published ingestion job ${payload.jobId} to SQS`, {
-      jobId: payload.jobId,
-      documentId: payload.documentId,
-      bidId: payload.bidId,
-    }, {
-      trace_id: enrichedPayload.traceId,
-      correlation_id: enrichedPayload.correlationId,
-      job_id: payload.jobId,
-      document_id: payload.documentId,
-      tender_id: payload.bidId,
-    });
+    this.logger.info(
+      'queue.message.published',
+      `Published ingestion job ${payload.jobId} to SQS`,
+      {
+        jobId: payload.jobId,
+        documentId: payload.documentId,
+        bidId: payload.bidId,
+      },
+      {
+        trace_id: enrichedPayload.traceId,
+        correlation_id: enrichedPayload.correlationId,
+        job_id: payload.jobId,
+        document_id: payload.documentId,
+        tender_id: payload.bidId,
+      },
+    );
   }
 
   public async receiveMessages(
     maxMessages = 10,
-    visibilityTimeoutSeconds = 300
+    visibilityTimeoutSeconds = 300,
   ): Promise<QueueMessage<IngestionJobMessage>[]> {
     const command = new ReceiveMessageCommand({
       QueueUrl: this.queueUrl,
@@ -122,7 +131,7 @@ export class AwsSqsJobQueue implements IJobQueue {
 
   public async changeMessageVisibility(
     receiptHandle: string,
-    visibilityTimeoutSeconds: number
+    visibilityTimeoutSeconds: number,
   ): Promise<void> {
     const command = new ChangeMessageVisibilityCommand({
       QueueUrl: this.queueUrl,
@@ -136,10 +145,12 @@ export class AwsSqsJobQueue implements IJobQueue {
   public async moveToDeadLetter(
     message: IngestionJobMessage,
     reason: string,
-    receiveCount = 1
+    receiveCount = 1,
   ): Promise<void> {
     if (!this.dlqUrl) {
-      throw new Error('Cannot move an SQS message to the dead-letter queue: AWS_SQS_DLQ_URL is not configured.');
+      throw new Error(
+        'Cannot move an SQS message to the dead-letter queue: AWS_SQS_DLQ_URL is not configured.',
+      );
     }
 
     const deadLetterPayload = {

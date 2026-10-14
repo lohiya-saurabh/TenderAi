@@ -5,7 +5,11 @@ import { Injectable, Inject, Logger } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { PGlite } from '@electric-sql/pglite';
 import { eq, and, inArray } from 'drizzle-orm';
-import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '../../common/database/database.module.js';
+import {
+  DRIZZLE_TOKEN,
+  type DrizzleDb,
+  createDrizzle,
+} from '../../common/database/database.module.js';
 import * as schema from '../../common/database/schema.js';
 import { STORAGE_TOKEN } from '../../infrastructure/storage/storage.module.js';
 import type { IStorageService } from '../bids/application/IStorageService.js';
@@ -65,8 +69,15 @@ export class DocumentsService {
     if (this.storageService) {
       if (typeof this.storageService.putObject === 'function') {
         await this.storageService.putObject(storagePath, content, 'application/pdf');
-      } else if (typeof (this.storageService as unknown as Record<string, unknown>).simulateUploadedObject === 'function') {
-        (this.storageService as unknown as { simulateUploadedObject: (p: string, s: number, c?: string, b?: Buffer) => void }).simulateUploadedObject(storagePath, content.length, undefined, content);
+      } else if (
+        typeof (this.storageService as unknown as Record<string, unknown>)
+          .simulateUploadedObject === 'function'
+      ) {
+        (
+          this.storageService as unknown as {
+            simulateUploadedObject: (p: string, s: number, c?: string, b?: Buffer) => void;
+          }
+        ).simulateUploadedObject(storagePath, content.length, undefined, content);
       }
     }
   }
@@ -118,11 +129,16 @@ export class DocumentsService {
     }
 
     const docId = `doc-${Date.now()}`;
-    const fileName = typeof rawFileName === 'string' && rawFileName.trim() ? rawFileName.trim() : 'document.pdf';
+    const fileName =
+      typeof rawFileName === 'string' && rawFileName.trim() ? rawFileName.trim() : 'document.pdf';
     const storagePath = `tenants/${orgId}/bids/${bidId}/${docId}/${fileName}`;
     const contentType = (typeof rawMimeType === 'string' && rawMimeType) || 'application/pdf';
-    const sizeBytes = typeof rawSizeBytes === 'number' && rawSizeBytes > 0 ? rawSizeBytes : undefined;
-    const documentType = typeof rawDocumentType === 'string' && rawDocumentType.trim() ? rawDocumentType.trim() : 'NIT';
+    const sizeBytes =
+      typeof rawSizeBytes === 'number' && rawSizeBytes > 0 ? rawSizeBytes : undefined;
+    const documentType =
+      typeof rawDocumentType === 'string' && rawDocumentType.trim()
+        ? rawDocumentType.trim()
+        : 'NIT';
 
     this.pendingUploads.set(docId, {
       fileName,
@@ -133,18 +149,21 @@ export class DocumentsService {
       documentType,
     });
 
-    const protocol = hostHeader && !hostHeader.includes('localhost') && !hostHeader.includes('127.0.0.1') ? 'https' : 'http';
+    const protocol =
+      hostHeader && !hostHeader.includes('localhost') && !hostHeader.includes('127.0.0.1')
+        ? 'https'
+        : 'http';
     const fallbackLocalUploadUrl = `${protocol}://${hostHeader || 'localhost:3000'}/api/v1/mock-upload/${bidId}/${docId}/${encodeURIComponent(fileName)}`;
 
     let uploadUrl: string;
     if (this.storageService) {
-      try {
-        uploadUrl = await this.storageService.generatePresignedUploadUrl(storagePath, contentType, 900);
-        // If mock storage returned a mock domain that cannot resolve via public DNS, route to local mock upload endpoint
-        if (uploadUrl.includes('mock-s3.tenderpulse.local') || uploadUrl.includes('.local/')) {
-          uploadUrl = fallbackLocalUploadUrl;
-        }
-      } catch {
+      uploadUrl = await this.storageService.generatePresignedUploadUrl(
+        storagePath,
+        contentType,
+        900,
+      );
+      // If mock storage returned a mock domain that cannot resolve via public DNS, route to local mock upload endpoint
+      if (uploadUrl.includes('mock-s3.tenderpulse.local') || uploadUrl.includes('.local/')) {
         uploadUrl = fallbackLocalUploadUrl;
       }
     } else {
@@ -181,7 +200,9 @@ export class DocumentsService {
     const companyId = bidRecord.companyId;
 
     const docId =
-      typeof rawDocumentId === 'string' && rawDocumentId.trim() ? rawDocumentId.trim() : `doc-${Date.now()}`;
+      typeof rawDocumentId === 'string' && rawDocumentId.trim()
+        ? rawDocumentId.trim()
+        : `doc-${Date.now()}`;
     const pending = this.pendingUploads.get(docId);
 
     // Look up existing DB row if pending in-memory cache was lost due to restart
@@ -213,7 +234,10 @@ export class DocumentsService {
           fileName = storagePath.split('/').pop() || fileName;
         }
       } catch (err) {
-        console.warn(`[DocumentsService] Failed to find files by prefix in storage for ${docId}:`, err);
+        console.warn(
+          `[DocumentsService] Failed to find files by prefix in storage for ${docId}:`,
+          err,
+        );
       }
     }
 
@@ -230,7 +254,10 @@ export class DocumentsService {
     }
     const fileSizeBytes = objectMetadata.sizeBytes;
 
-    if (existingDoc && ['QUEUED_FOR_EXTRACTION', 'PROCESSING', 'COMPLETED'].includes(existingDoc.status)) {
+    if (
+      existingDoc &&
+      ['QUEUED_FOR_EXTRACTION', 'PROCESSING', 'COMPLETED'].includes(existingDoc.status)
+    ) {
       return { documentId: docId, status: 'UPLOADED' };
     }
 
@@ -239,7 +266,10 @@ export class DocumentsService {
     try {
       docBuffer = await this.storageService.getObject(storagePath);
     } catch (err) {
-      this.logger.warn(`Failed to read object buffer for relevance validation: ${storagePath}`, err);
+      this.logger.warn(
+        `Failed to read object buffer for relevance validation: ${storagePath}`,
+        err,
+      );
     }
 
     if (docBuffer && docBuffer.length > 0) {
@@ -254,15 +284,30 @@ export class DocumentsService {
           tenderNumber: bidRecord.tenderNumber,
           tenderingAuthority: bidRecord.tenderingAuthority,
           locationState: bidRecord.locationState,
-          estimatedValueRupees: bidRecord.estimatedValueRupees ? Number(bidRecord.estimatedValueRupees) : null,
+          estimatedValueRupees: bidRecord.estimatedValueRupees
+            ? Number(bidRecord.estimatedValueRupees)
+            : null,
         },
       });
 
       if (!validation.isRelevant) {
         throw new BadRequestError(
           validation.rejectionReason ||
-          `The uploaded document '${fileName}' is not relevant to tender '${bidRecord.title}'. Tender reference number, authority, or project keywords could not be verified in document content.`,
+            `The uploaded document '${fileName}' is not relevant to tender '${bidRecord.title}'. Tender reference number, authority, or project keywords could not be verified in document content.`,
         );
+      }
+    }
+
+    let downloadUrl: string | undefined;
+    if (this.storageService) {
+      try {
+        downloadUrl = await this.storageService.generatePresignedDownloadUrl(
+          storagePath,
+          fileName,
+          3600,
+        );
+      } catch (err) {
+        this.logger.warn(`Failed to generate presigned download URL for ${storagePath}:`, err);
       }
     }
 
@@ -278,6 +323,7 @@ export class DocumentsService {
       workflowRunId,
       correlationId,
       storageReference: storagePath,
+      downloadUrl,
       documentType,
       fileName,
       timestamp: now.toISOString(),
@@ -379,10 +425,7 @@ export class DocumentsService {
     };
   }
 
-  public async reprocessDocument(
-    bidId: string,
-    docId: string,
-  ): Promise<ReprocessDocumentResult> {
+  public async reprocessDocument(bidId: string, docId: string): Promise<ReprocessDocumentResult> {
     const orgId = await this.getOrgIdForBid(bidId);
     const userId = TenantContextHolder.get()?.userId || 'usr_admin';
     const [source] = await this.db
@@ -410,7 +453,10 @@ export class DocumentsService {
     if (!source) {
       throw new NotFoundError(`Document '${docId}' not found in bid '${bidId}'.`);
     }
-    if (source.document.status === 'PROCESSING' || source.document.status === 'QUEUED_FOR_EXTRACTION') {
+    if (
+      source.document.status === 'PROCESSING' ||
+      source.document.status === 'QUEUED_FOR_EXTRACTION'
+    ) {
       throw new ConflictError(`Document '${docId}' is already queued or processing.`);
     }
     if (!this.storageService) {
@@ -418,7 +464,25 @@ export class DocumentsService {
     }
     const objectMetadata = await this.storageService.headObject(source.document.storagePath);
     if (!objectMetadata.exists || objectMetadata.sizeBytes <= 0) {
-      throw new Error(`Uploaded document is missing or empty in object storage: ${source.document.storagePath}`);
+      throw new Error(
+        `Uploaded document is missing or empty in object storage: ${source.document.storagePath}`,
+      );
+    }
+
+    let downloadUrl: string | undefined;
+    if (this.storageService) {
+      try {
+        downloadUrl = await this.storageService.generatePresignedDownloadUrl(
+          source.document.storagePath,
+          source.document.fileName,
+          3600,
+        );
+      } catch (err) {
+        this.logger.warn(
+          `Failed to generate presigned download URL for ${source.document.storagePath}:`,
+          err,
+        );
+      }
     }
 
     const now = new Date();
@@ -434,6 +498,7 @@ export class DocumentsService {
       workflowRunId,
       correlationId,
       storageReference: source.document.storagePath,
+      downloadUrl,
       documentType: source.document.documentType,
       fileName: source.document.fileName,
       timestamp: now.toISOString(),
@@ -510,8 +575,7 @@ export class DocumentsService {
       .limit(1);
 
     let fileName = docRow?.fileName || 'tender_document.pdf';
-    let storagePath =
-      docRow?.storagePath || `tenants/${orgId}/bids/${bidId}/${docId}/${fileName}`;
+    let storagePath = docRow?.storagePath || `tenants/${orgId}/bids/${bidId}/${docId}/${fileName}`;
 
     if (this.storageService) {
       try {
@@ -538,7 +602,10 @@ export class DocumentsService {
       }
     }
 
-    const protocol = hostHeader && !hostHeader.includes('localhost') && !hostHeader.includes('127.0.0.1') ? 'https' : 'http';
+    const protocol =
+      hostHeader && !hostHeader.includes('localhost') && !hostHeader.includes('127.0.0.1')
+        ? 'https'
+        : 'http';
     const downloadUrl = `${protocol}://${hostHeader || 'localhost:3000'}/api/v1/mock-download/${bidId}/${docId}/${encodeURIComponent(fileName)}`;
     return {
       downloadUrl,
@@ -569,7 +636,10 @@ export class DocumentsService {
         ),
       );
 
-    if (bid?.status === 'REVIEW_READY' || (docs.length > 0 && docs.every((d) => d.status === 'COMPLETED'))) {
+    if (
+      bid?.status === 'REVIEW_READY' ||
+      (docs.length > 0 && docs.every((d) => d.status === 'COMPLETED'))
+    ) {
       return {
         status: 'COMPLETED',
         step: 'COMPLETED',
@@ -729,12 +799,7 @@ export class DocumentsService {
         ...(nextStatus ? { status: nextStatus } : {}),
         updatedAt: now,
       })
-      .where(
-        and(
-          eq(schema.bids.id, bidId),
-          eq(schema.bids.organizationId, orgId),
-        ),
-      );
+      .where(and(eq(schema.bids.id, bidId), eq(schema.bids.organizationId, orgId)));
 
     // 7. Prune cloud storage blob & folder prefix
     if (this.storageService) {

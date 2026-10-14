@@ -20,7 +20,7 @@ export class InvalidStateTransitionException extends DomainException {
     super(
       `Cannot transition from '${currentState}' to '${targetState}'.${
         reason ? ` Reason: ${reason}` : ''
-      }`
+      }`,
     );
   }
 }
@@ -29,7 +29,7 @@ export class ConcurrencyConflictException extends DomainException {
   public readonly code = 'CONCURRENCY_CONFLICT';
   constructor(entityName: string, id: string, expectedVersion: number, actualVersion: number) {
     super(
-      `Concurrency conflict on ${entityName} '${id}': expected version ${expectedVersion}, but found version ${actualVersion}. Please refresh and retry.`
+      `Concurrency conflict on ${entityName} '${id}': expected version ${expectedVersion}, but found version ${actualVersion}. Please refresh and retry.`,
     );
   }
 }

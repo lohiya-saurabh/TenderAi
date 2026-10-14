@@ -20,13 +20,13 @@ export class BidsController {
     private readonly createBidUseCase: CreateBidUseCase,
     private readonly generateUploadUrlUseCase?: GenerateUploadUrlUseCase,
     private readonly confirmDocumentUploadUseCase?: ConfirmDocumentUploadUseCase,
-    private readonly getDocumentDownloadUrlUseCase?: GetDocumentDownloadUrlUseCase
+    private readonly getDocumentDownloadUrlUseCase?: GetDocumentDownloadUrlUseCase,
   ) {}
 
   public async create(
     organizationId: string,
     userId: string,
-    rawPayload: CreateBidPayload
+    rawPayload: CreateBidPayload,
   ): Promise<CreateBidResult> {
     const dto = new CreateBidDto(rawPayload);
 
@@ -45,7 +45,7 @@ export class BidsController {
     organizationId: string,
     userId: string,
     bidId: string,
-    rawPayload: GenerateUploadUrlPayload
+    rawPayload: GenerateUploadUrlPayload,
   ): Promise<GenerateUploadUrlResult> {
     if (!this.generateUploadUrlUseCase) {
       throw new Error('GenerateUploadUrlUseCase not configured on BidsController.');
@@ -68,7 +68,7 @@ export class BidsController {
     organizationId: string,
     userId: string,
     bidId: string,
-    rawPayload: ConfirmUploadPayload
+    rawPayload: ConfirmUploadPayload,
   ): Promise<ConfirmDocumentUploadResult> {
     if (!this.confirmDocumentUploadUseCase) {
       throw new Error('ConfirmDocumentUploadUseCase not configured on BidsController.');
@@ -87,7 +87,7 @@ export class BidsController {
     organizationId: string,
     userId: string,
     bidId: string,
-    documentId: string
+    documentId: string,
   ): Promise<GetDocumentDownloadUrlResult> {
     if (!this.getDocumentDownloadUrlUseCase) {
       throw new Error('GetDocumentDownloadUrlUseCase not configured on BidsController.');

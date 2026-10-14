@@ -41,7 +41,15 @@ export interface CompanyEvidence {
 /** Risk assessment for a requirement */
 export interface RequirementRisk {
   level: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  category: 'LIQUIDATED_DAMAGES' | 'WORKING_CAPITAL' | 'TIMELINE' | 'PAYMENT_TERMS' | 'LEGAL' | 'STATUTORY' | 'TECHNICAL' | 'FINANCIAL';
+  category:
+    | 'LIQUIDATED_DAMAGES'
+    | 'WORKING_CAPITAL'
+    | 'TIMELINE'
+    | 'PAYMENT_TERMS'
+    | 'LEGAL'
+    | 'STATUTORY'
+    | 'TECHNICAL'
+    | 'FINANCIAL';
   summary: string;
   financialImpactRupees?: number;
   mitigation?: string;
@@ -146,10 +154,14 @@ export function reviewComplianceItem(
 /** Bulk update compliance items */
 export function bulkReviewComplianceItems(
   bidId: string,
-  items: Array<{ id: string; status: ComplianceItem['status']; notes?: string; expectedVersion: number }>,
+  items: Array<{
+    id: string;
+    status: ComplianceItem['status'];
+    notes?: string;
+    expectedVersion: number;
+  }>,
 ): Promise<ApiResult<UpdateComplianceItemResponse[]>> {
-  return apiPatch<UpdateComplianceItemResponse[]>(
-    `/api/v1/bids/${bidId}/compliance-items/bulk`,
-    { items },
-  );
+  return apiPatch<UpdateComplianceItemResponse[]>(`/api/v1/bids/${bidId}/compliance-items/bulk`, {
+    items,
+  });
 }

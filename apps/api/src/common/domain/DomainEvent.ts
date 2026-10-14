@@ -29,7 +29,7 @@ export abstract class DomainEvent<T = unknown> implements IDomainEvent<T> {
     payload: T,
     version = 1,
     eventId?: string,
-    occurredAt?: Date
+    occurredAt?: Date,
   ) {
     this.eventId = eventId ?? uuidv4();
     this.eventType = eventType;
