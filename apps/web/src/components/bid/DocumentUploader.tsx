@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { generateUploadUrl, confirmDocumentUpload } from '../../api/bids.js';
+import { resolveUrl } from '../../api/client.js';
 import { Button } from '../common/Button.js';
 import { ErrorBanner } from '../common/ErrorBanner.js';
 import { ProgressBar } from '../progress/ProgressBar.js';
@@ -172,7 +173,7 @@ export const DocumentUploader: React.FC<DocumentUploaderProps> = ({
       };
 
       // 2. Direct Storage Upload to Presigned URL
-      await executeUpload(targetUploadUrl);
+      await executeUpload(resolveUrl(targetUploadUrl));
 
       setUploadProgress(85);
       setUploadMessage('Confirming storage checksum and registering with extraction worker...');

@@ -87,6 +87,50 @@ function getRefreshToken(): string | null {
   return storage ? storage.getItem(REFRESH_TOKEN_KEY) : fallbackRefreshToken;
 }
 
+interface CustomWindow {
+  __API_BASE_URL__?: string;
+  location?: Location;
+}
+
+interface CustomImportMeta {
+  env?: {
+    VITE_API_URL?: string;
+  };
+}
+
+/** Resolve API Base URL from Vite build env or dynamic window configuration */
+export function getApiBaseUrl(): string {
+  const meta = import.meta as unknown as CustomImportMeta;
+  if (meta?.env?.VITE_API_URL) {
+    return meta.env.VITE_API_URL;
+  }
+  if (typeof window !== 'undefined') {
+    const win = window as unknown as CustomWindow;
+    if (win.__API_BASE_URL__) {
+      return win.__API_BASE_URL__;
+    }
+    const hostname = win.location?.hostname || '';
+    if (hostname.includes('.s3-website.') || hostname.includes('s3.amazonaws.com')) {
+      return 'http://tenderpulse-alb-199908380.ap-south-1.elb.amazonaws.com';
+    }
+  }
+  return '';
+}
+
+/** Resolve relative or absolute endpoint URL */
+export function resolveUrl(path: string): string {
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
+  const baseUrl = getApiBaseUrl();
+  if (!baseUrl) {
+    return path;
+  }
+  const base = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+  const p = path.startsWith('/') ? path : `/${path}`;
+  return `${base}${p}`;
+}
+
 /**
  * Attempt a silent token refresh.
  * Returns true if refresh succeeded, false otherwise.
@@ -95,7 +139,7 @@ async function attemptRefresh(): Promise<boolean> {
   const refreshToken = getRefreshToken();
 
   try {
-    const response = await fetch('/api/v1/auth/refresh', {
+    const response = await fetch(resolveUrl('/api/v1/auth/refresh'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(refreshToken ? { refreshToken } : {}),
@@ -160,14 +204,15 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
     }
 
     try {
-      let response = await fetch(path, { ...options, headers, credentials: 'include' });
+      const targetUrl = resolveUrl(path);
+      let response = await fetch(targetUrl, { ...options, headers, credentials: 'include' });
 
       // On 401, attempt silent refresh and retry once (except on auth endpoints)
       if (response.status === 401 && !path.startsWith('/api/v1/auth/')) {
         const refreshed = await coordinatedRefresh();
         if (refreshed) {
           headers['Authorization'] = `Bearer ${accessToken}`;
-          response = await fetch(path, { ...options, headers, credentials: 'include' });
+          response = await fetch(targetUrl, { ...options, headers, credentials: 'include' });
         } else {
           // Refresh failed — session expired
           clearTokens();
