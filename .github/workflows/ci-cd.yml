@@ -391,6 +391,24 @@ jobs:
             echo "S3 bucket '${S3_WEB_SPA_BUCKET}' already exists."
           fi
 
+          # If direct S3 website hosting is used (no CloudFront distribution configured), ensure public read policy is present
+          if [ -z "${CLOUDFRONT_DISTRIBUTION_ID}" ]; then
+            aws s3api put-public-access-block --bucket "${S3_WEB_SPA_BUCKET}" \
+              --public-access-block-configuration "BlockPublicAcls=false,IgnorePublicAcls=false,BlockPublicPolicy=false,RestrictPublicBuckets=false" || true
+            aws s3api put-bucket-policy --bucket "${S3_WEB_SPA_BUCKET}" --policy "{
+              \"Version\": \"2012-10-17\",
+              \"Statement\": [
+                {
+                  \"Sid\": \"PublicReadGetObject\",
+                  \"Effect\": \"Allow\",
+                  \"Principal\": \"*\",
+                  \"Action\": \"s3:GetObject\",
+                  \"Resource\": \"arn:aws:s3:::${S3_WEB_SPA_BUCKET}/*\"
+                }
+              ]
+            }" || true
+          fi
+
       # Deploy static web assets to Amazon S3 & Invalidate CloudFront CDN
       - name: Deploy Static Web SPA to S3 & Invalidate CloudFront
         run: |
