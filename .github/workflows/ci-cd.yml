@@ -90,7 +90,7 @@ jobs:
           fi
 
   # ============================================================================
-  # STAGE 1: Code Quality, Linting & Formatting
+  # STAGE 1: Code Quality, Linting & Formatting (Runs in parallel after Stage 0)
   # ============================================================================
   quality-gate:
     name: 1. Lint & Formatting
@@ -110,6 +110,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: "pip"
 
       - name: Install Node dependencies
         run: npm ci
@@ -130,12 +131,12 @@ jobs:
           ruff format --check .
 
   # ============================================================================
-  # STAGE 2: Static Type Checking
+  # STAGE 2: Static Type Checking (Runs in parallel after Stage 0)
   # ============================================================================
   typecheck:
-    name: 2. TypeScript & Python Typecheck
+    name: 2. TypeScript Typecheck
     runs-on: ubuntu-latest
-    needs: [quality-gate]
+    needs: [branch-policy-gate]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -150,20 +151,18 @@ jobs:
         run: npm ci
 
       - name: Build shared packages
-        run: |
-          npm run build -w @tenderpulse/shared-types
-          npm run build -w @tenderpulse/ui
+        run: npm run build:shared
 
       - name: TypeScript type-check across monorepo (4 workspaces)
         run: npm run type-check
 
   # ============================================================================
-  # STAGE 3: Unit & Integration Tests (Deterministic Backend + Web)
+  # STAGE 3A: Backend API Unit & Integration Tests (Runs in parallel)
   # ============================================================================
-  test-unit-integration:
-    name: 3. Unit & Integration Test Suites
+  test-api:
+    name: 3a. Backend API Tests (NestJS)
     runs-on: ubuntu-latest
-    needs: [typecheck]
+    needs: [branch-policy-gate]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -178,20 +177,44 @@ jobs:
         run: npm ci
 
       - name: Build shared packages
-        run: |
-          npm run build -w @tenderpulse/shared-types
-          npm run build -w @tenderpulse/ui
+        run: npm run build:shared
 
-      - name: "Run Vitest Monorepo Test Suites (Web + API: 180+ tests)"
-        run: npm test
+      - name: Run NestJS API Test Suite (260+ tests)
+        run: npm run test -w @tenderpulse/api && npx vitest run tests/
 
   # ============================================================================
-  # STAGE 4: AI CI Gates (Regression, Candidate Recall Benchmark, Security)
+  # STAGE 3B: Frontend Web Tests (Runs in parallel - completes in ~20s)
   # ============================================================================
-  test-ai-quality-security:
-    name: 4. AI Evaluation & Security Regressions
+  test-web:
+    name: 3b. Frontend Web Tests (React)
     runs-on: ubuntu-latest
-    needs: [typecheck]
+    needs: [branch-policy-gate]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared packages
+        run: npm run build:shared
+
+      - name: Run Web Frontend Test Suite (160+ tests)
+        run: npm run test -w @tenderpulse/web
+
+  # ============================================================================
+  # STAGE 4: AI CI Gates (Regression, Candidate Recall, LangGraph)
+  # ============================================================================
+  test-ai:
+    name: 4. AI Engine Tests (Pytest & LangGraph)
+    runs-on: ubuntu-latest
+    needs: [branch-policy-gate]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -200,6 +223,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: apps/ai/requirements.txt
 
       - name: Install AI Engine dependencies
         run: |
@@ -212,12 +237,12 @@ jobs:
           python -m pytest tests/ -v
 
   # ============================================================================
-  # STAGE 5: Security Auditing (Secret Leakage, Dependency Vulnerabilities)
+  # STAGE 5: Security Auditing (Parallel Runner)
   # ============================================================================
   security-audit:
-    name: 5. Security & Vulnerability Audits
+    name: 5. Security & Secret Scans
     runs-on: ubuntu-latest
-    needs: [test-unit-integration, test-ai-quality-security]
+    needs: [branch-policy-gate]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -233,25 +258,16 @@ jobs:
         run: npm audit --audit-level=high || true
 
   # ============================================================================
-  # STAGE 6: Build Artifacts & Container Packaging (AWS ECR / Docker)
+  # STAGE 6A: Build Web SPA Artifacts (Only on push/merge to 'main')
   # ============================================================================
-  build-and-package:
-    name: 6. Build & Push Docker Images (Frontend, NestJS, FastAPI)
+  build-spa:
+    name: 6a. Build Web SPA (Vite Dist)
     runs-on: ubuntu-latest
-    needs: [security-audit]
-    outputs:
-      image_tag: ${{ steps.set_tag.outputs.tag }}
-      ecr_registry: ${{ steps.login-ecr.outputs.registry }}
+    needs: [quality-gate, typecheck, test-api, test-web, test-ai, security-audit]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Set Commit SHA Tag
-        id: set_tag
-        run: |
-          TAG="${GITHUB_SHA::8}"
-          echo "tag=${TAG}" >> $GITHUB_OUTPUT
-          echo "Resolved immutable container tag: ${TAG}"
 
       - name: Setup Node.js 22.x
         uses: actions/setup-node@v4
@@ -271,12 +287,46 @@ jobs:
           path: apps/web/dist/
           retention-days: 7
 
+  # ============================================================================
+  # STAGE 6B: Build & Push Docker Images in Parallel Matrix (Only on push to 'main')
+  # ============================================================================
+  build-and-push-docker:
+    name: 6b. Docker [${{ matrix.service.name }}]
+    runs-on: ubuntu-latest
+    needs: [quality-gate, typecheck, test-api, test-web, test-ai, security-audit]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - id: web
+            name: Web Nginx
+            file: ./apps/web/Dockerfile
+            repo: tenderpulse-web
+          - id: api
+            name: NestJS API
+            file: ./apps/api/Dockerfile
+            repo: tenderpulse-api
+          - id: ai-worker
+            name: FastAPI AI Worker
+            file: ./apps/ai/Dockerfile
+            repo: tenderpulse-ai-worker
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set Commit SHA Tag
+        id: set_tag
+        run: |
+          TAG="${GITHUB_SHA::8}"
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "Resolved immutable container tag: ${TAG}"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Authenticate to AWS: Only executed on merge/push to 'main'
+      # Authenticate to AWS: Supports OIDC (role-to-assume) or IAM Access Keys
       - name: Configure AWS Credentials
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
@@ -287,57 +337,32 @@ jobs:
 
       - name: Log in to Amazon ECR
         id: login-ecr
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: aws-actions/amazon-ecr-login@v2
 
       # Automatically create ECR repositories if they do not yet exist
-      - name: Ensure ECR Repositories Exist
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      - name: Ensure ECR Repository Exists
         run: |
-          REPOS=("tenderpulse-web" "tenderpulse-api" "tenderpulse-ai-worker")
-          for repo in "${REPOS[@]}"; do
-            if ! aws ecr describe-repositories --repository-names "$repo" --region ${{ env.AWS_REGION }} >/dev/null 2>&1; then
-              echo "Creating ECR repository: $repo"
-              aws ecr create-repository \
-                --repository-name "$repo" \
-                --image-scanning-configuration scanOnPush=true \
-                --encryption-configuration encryptionType=AES256 \
-                --region ${{ env.AWS_REGION }}
-            else
-              echo "ECR repository '$repo' already exists."
-            fi
-          done
+          REPO="${{ matrix.service.repo }}"
+          if ! aws ecr describe-repositories --repository-names "$REPO" --region ${{ env.AWS_REGION }} >/dev/null 2>&1; then
+            echo "Creating ECR repository: $REPO"
+            aws ecr create-repository \
+              --repository-name "$REPO" \
+              --image-scanning-configuration scanOnPush=true \
+              --encryption-configuration encryptionType=AES256 \
+              --region ${{ env.AWS_REGION }}
+          else
+            echo "ECR repository '$REPO' already exists."
+          fi
 
-      # 1. Build and Push Frontend (React SPA / Nginx) Container Image
-      - name: 1. Build & Push Frontend Docker Image
+      - name: Build & Push Container Image to ECR
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./apps/web/Dockerfile
-          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-          tags: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && format('{0}/tenderpulse-web:{1},{0}/tenderpulse-web:latest', steps.login-ecr.outputs.registry, steps.set_tag.outputs.tag) || 'tenderpulse-web:test' }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      # 2. Build and Push NestJS API Container Image
-      - name: 2. Build & Push NestJS API Docker Image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./apps/api/Dockerfile
-          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-          tags: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && format('{0}/tenderpulse-api:{1},{0}/tenderpulse-api:latest', steps.login-ecr.outputs.registry, steps.set_tag.outputs.tag) || 'tenderpulse-api:test' }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      # 3. Build and Push FastAPI AI Worker Container Image
-      - name: 3. Build & Push FastAPI AI Worker Docker Image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./apps/ai/Dockerfile
-          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-          tags: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && format('{0}/tenderpulse-ai-worker:{1},{0}/tenderpulse-ai-worker:latest', steps.login-ecr.outputs.registry, steps.set_tag.outputs.tag) || 'tenderpulse-ai-worker:test' }}
+          file: ${{ matrix.service.file }}
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/${{ matrix.service.repo }}:${{ steps.set_tag.outputs.tag }}
+            ${{ steps.login-ecr.outputs.registry }}/${{ matrix.service.repo }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -347,7 +372,7 @@ jobs:
   deploy-production:
     name: 7. Deploy to AWS Production (ap-south-1)
     runs-on: ubuntu-latest
-    needs: [build-and-package]
+    needs: [build-spa, build-and-push-docker]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment:
       name: production
@@ -394,7 +419,7 @@ jobs:
       # Update ECS Fargate Services (Rolling Update with zero downtime)
       - name: Deploy ECS Fargate Services (NestJS API & FastAPI AI Worker)
         run: |
-          IMAGE_TAG="${{ needs.build-and-package.outputs.image_tag }}"
+          IMAGE_TAG="${GITHUB_SHA::8}"
           echo "🚀 Updating ECS Service '${API_SERVICE}' on cluster '${ECS_CLUSTER}' (Image Tag: ${IMAGE_TAG})..."
           aws ecs update-service \
             --cluster "${ECS_CLUSTER}" \
@@ -431,9 +456,10 @@ jobs:
       # Post-Deployment Smoke Test
       - name: Production Smoke Tests
         run: |
+          TAG="${GITHUB_SHA::8}"
           echo "================================================================="
           echo "✅ Production Deployment Completed Successfully!"
-          echo "Image Tag Deployed : ${{ needs.build-and-package.outputs.image_tag }}"
+          echo "Image Tag Deployed : ${TAG}"
           echo "AWS Region         : ${{ env.AWS_REGION }}"
           echo "ECS Cluster        : ${{ env.ECS_CLUSTER }}"
           echo "Web S3 Bucket      : ${{ env.S3_WEB_SPA_BUCKET }}"
