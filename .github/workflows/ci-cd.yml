@@ -256,6 +256,8 @@ jobs:
           cache: "npm"
 
       - name: Build Web SPA Artifacts (Vite dist/)
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL || 'http://tenderpulse-alb-199908380.ap-south-1.elb.amazonaws.com' }}
         run: |
           npm ci
           npm run build

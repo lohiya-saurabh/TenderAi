@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { getAccessToken } from '../api/client.js';
+import { getAccessToken, resolveUrl } from '../api/client.js';
 
 export interface SSEProgressEvent {
   step: string;
@@ -48,8 +48,9 @@ export function useSSE(url: string | null): UseSSEReturn {
     isTerminatedRef.current = false;
 
     // Append token if available for authenticated SSE endpoint
+    const resolvedUrl = resolveUrl(url);
     const token = getAccessToken();
-    const sseUrl = token ? `${url}${url.includes('?') ? '&' : '?'}token=${token}` : url;
+    const sseUrl = token ? `${resolvedUrl}${resolvedUrl.includes('?') ? '&' : '?'}token=${token}` : resolvedUrl;
 
     const es = new EventSource(sseUrl, { withCredentials: true });
     eventSourceRef.current = es;

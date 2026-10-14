@@ -58,8 +58,14 @@ async function bootstrap() {
       origin: string | undefined,
       callback: (err: Error | null, allow?: boolean) => void,
     ) => {
-      // Allow non-browser requests or allowed frontend origins
-      if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+      // Allow non-browser requests or allowed frontend origins (including S3 website & CloudFront)
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        origin.includes('.s3-website.ap-south-1.amazonaws.com') ||
+        origin.includes('.cloudfront.net') ||
+        process.env.NODE_ENV !== 'production'
+      ) {
         callback(null, true);
       } else {
         callback(new Error(`CORS blocked for origin: ${origin}`));
