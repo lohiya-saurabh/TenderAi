@@ -375,6 +375,22 @@ jobs:
           role-session-name: TenderPulseProdDeployment
           audience: sts.amazonaws.com
 
+      # Automatically ensure S3 bucket exists for static web assets
+      - name: Ensure S3 Bucket Exists
+        run: |
+          if ! aws s3api head-bucket --bucket "${S3_WEB_SPA_BUCKET}" 2>/dev/null; then
+            echo "Creating S3 bucket: ${S3_WEB_SPA_BUCKET}"
+            if [ "${{ env.AWS_REGION }}" = "us-east-1" ]; then
+              aws s3api create-bucket --bucket "${S3_WEB_SPA_BUCKET}" --region "${{ env.AWS_REGION }}"
+            else
+              aws s3api create-bucket --bucket "${S3_WEB_SPA_BUCKET}" --region "${{ env.AWS_REGION }}" \
+                --create-bucket-configuration LocationConstraint="${{ env.AWS_REGION }}"
+            fi
+            aws s3 website "s3://${S3_WEB_SPA_BUCKET}/" --index-document index.html --error-document index.html || true
+          else
+            echo "S3 bucket '${S3_WEB_SPA_BUCKET}' already exists."
+          fi
+
       # Deploy static web assets to Amazon S3 & Invalidate CloudFront CDN
       - name: Deploy Static Web SPA to S3 & Invalidate CloudFront
         run: |
