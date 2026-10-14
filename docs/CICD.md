@@ -16,18 +16,16 @@ Our CI/CD architecture enforces a **10-stage deterministic verification pipeline
 
 ```mermaid
 flowchart TD
-    C[1. Git Commit / PR] --> L[2. Format & Lint\nPrettier + ESLint + Ruff]
-    L --> T[3. Static Typecheck\ntsc --noEmit + Mypy]
-    T --> UT[4. Unit & Integration Tests\nVitest (92+ tests) Monorepo]
-    T --> AI[5. AI Quality & Security Gates\nPrompt Regression + Eval Scorecards + Security Defenses]
-    UT --> SEC[6. Security & Leak Audits\nGitleaks + npm audit + Trivy]
+    BP["0. Branch Policy Gate<br/>Strict develop -> main Enforcer"] --> C["1. Git Commit / PR Trigger"]
+    C --> L["2. Format & Lint<br/>Prettier + ESLint + Ruff"]
+    L --> T["3. Static Typecheck<br/>tsc --noEmit (4 workspaces)"]
+    T --> UT["4. Unit & Integration Tests<br/>Vitest Monorepo (180+ tests)"]
+    T --> AI["5. AI Quality & Security Gates<br/>Candidate Recall 100% + LangGraph Eval"]
+    UT --> SEC["6. Security & Leak Audits<br/>Gitleaks + npm audit"]
     AI --> SEC
-    SEC --> B[7. Build & Container Packaging\nDocker buildx + ECR SHA Tagging]
-    B --> DS[8. Deploy to Staging\nMigrations -> ECS Fargate Rolling Update]
-    DS --> ST[9. Staging Smoke Tests\nSynthetic Auth + Presigned S3 Handshake]
-    ST --> GATE{Manual Approval Gate\non 'main'}
-    GATE -->|Approved| DP[10. Deploy to Production\nap-south-1 Multi-AZ + CloudWatch Verification]
-    GATE -->|Rejected| RB[Rollback / Abort]
+    SEC --> B["7. Build & Container Packaging<br/>Docker buildx: Frontend, API, AI Worker -> AWS ECR"]
+    B --> DP["8. Deploy to AWS Production<br/>ECS Fargate Rolling Update + S3/CloudFront SPA Sync"]
+    DP --> ST["9. Production Smoke Tests<br/>ALB Health Check + CloudWatch Metrics"]
 ```
 
 ---
@@ -36,16 +34,15 @@ flowchart TD
 
 | Stage  | Name                     | Tooling                      | Quality Threshold (Failure Policy)                                                                      |
 | :----- | :----------------------- | :--------------------------- | :------------------------------------------------------------------------------------------------------ |
-| **1**  | **Commit / PR Trigger**  | GitHub Actions               | Triggers on all PRs and pushes to `develop` and `main`.                                                 |
-| **2**  | **Formatting & Linting** | `prettier`, `eslint`, `ruff` | Zero ESLint errors (`--max-warnings=0`), zero Ruff violations.                                          |
-| **3**  | **Type Checking**        | `tsc --noEmit`, `mypy`       | Zero TypeScript errors across `@tenderpulse/api`, `@tenderpulse/web`, `@tenderpulse/ui`, and `apps/ai`. |
-| **4**  | **Unit & Integration**   | `vitest`                     | 100% test pass rate across all domain entities, value objects, state machines, and E2E vertical slices. |
-| **5**  | **AI Evaluation Gates**  | `pytest`, `apps/ai/tests`    | **Strict Pass**: Deterministic groundedness = 1.0, Schema conformity = 1.0, Injection defense = 1.0.    |
-| **6**  | **Security Auditing**    | `gitleaks`, `npm audit`      | Zero detected secrets/API keys; zero high/critical vulnerabilities.                                     |
-| **7**  | **Container Packaging**  | Docker Buildx, Amazon ECR    | Multi-stage Docker builds tagged with immutable 8-character `${GITHUB_SHA::8}`.                         |
-| **8**  | **Staging Deployment**   | AWS OIDC, ECS Fargate        | Automated deployment to `staging.tenderpulse.ai` upon merge to `develop`/`main`.                        |
-| **9**  | **Smoke Testing**        | Synthetic Test Runner        | Automated HTTP checks against `/api/v1/health`, login flow, and S3 upload handshakes.                   |
-| **10** | **Production Deploy**    | GitHub Environments Gate     | Requires manual engineering approval, auto-rollback on ALB health check failure.                        |
+| **0**  | **Branch Policy Gate**   | GitHub Actions + Rulesets    | **Strict Enforcer**: PRs to `main` must originate ONLY from `develop`. Direct pushes to `main` blocked. |
+| **1**  | **Formatting & Linting** | `prettier`, `eslint`, `ruff` | Zero ESLint errors (`--max-warnings=0`), zero Ruff violations.                                          |
+| **2**  | **Type Checking**        | `tsc --noEmit`, `mypy`       | Zero TypeScript errors across `@tenderpulse/api`, `@tenderpulse/web`, `@tenderpulse/ui`, and `shared-types`. |
+| **3**  | **Unit & Integration**   | `vitest`                     | 100% test pass rate across all domain entities, value objects, state machines, and E2E vertical slices. |
+| **4**  | **AI Evaluation Gates**  | `pytest`, `apps/ai/tests`    | **Strict Pass**: Candidate Recall $\ge 98\%$ (`test_candidate_detector_recall.py`), Groundedness = 1.0. |
+| **5**  | **Security Auditing**    | `gitleaks`, `npm audit`      | Zero detected secrets/API keys; zero high/critical vulnerabilities.                                     |
+| **6**  | **Container Packaging**  | Docker Buildx, Amazon ECR    | Builds and pushes 3 Docker images: `tenderpulse-web`, `tenderpulse-api`, and `tenderpulse-ai-worker`.   |
+| **7**  | **Deploy on AWS**        | AWS OIDC, ECS Fargate, S3    | Automated rolling update of ECS Fargate tasks (`tenderpulse-cluster-prod`) and S3 + CloudFront SPA sync. |
+| **8**  | **Smoke Testing**        | Synthetic Runner / curl      | Automated HTTP checks against `/api/v1/health` and CloudWatch task stability.                            |
 
 ---
 
