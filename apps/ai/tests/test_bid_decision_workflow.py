@@ -1,17 +1,18 @@
 from __future__ import annotations
 
 import datetime
+
 import pytest
 from langgraph.checkpoint.memory import MemorySaver
 
 from tenderpulse_ai.agent.schemas import (
+    AmbiguityFlag,
+    AmbiguityType,
     CriterionProps,
     ProvenanceProps,
     RequirementCandidate,
     RequirementCriticality,
     RequirementKind,
-    AmbiguityFlag,
-    AmbiguityType,
 )
 from tenderpulse_ai.decision import (
     BidDecisionAgent,
@@ -25,7 +26,6 @@ from tenderpulse_ai.decision.workflow import (
     BidDecisionWorkflowState,
     DecisionWorkflowContext,
     build_bid_decision_workflow_graph,
-    route_decision_state,
 )
 from tenderpulse_ai.security.context import SecurityContext
 
@@ -42,7 +42,9 @@ def make_sec_context() -> SecurityContext:
     )
 
 
-def make_sample_profile(*, is_blacklisted: bool = False, turnover: float = 80.0) -> CompanyProfileSnapshot:
+def make_sample_profile(
+    *, is_blacklisted: bool = False, turnover: float = 80.0
+) -> CompanyProfileSnapshot:
     return CompanyProfileSnapshot(
         company_id="comp_test_infra",
         company_name="Apex Infrastructure Corp",
@@ -74,7 +76,9 @@ def make_sample_requirements() -> list[RequirementCandidate]:
             criticality=RequirementCriticality.HARD_ELIGIBILITY,
             title="Minimum Annual Turnover",
             description="Minimum average turnover of 50 Cr required.",
-            criterion=CriterionProps(type="TURNOVER", operator="GTE", threshold=50.0, unit="CRORES"),
+            criterion=CriterionProps(
+                type="TURNOVER", operator="GTE", threshold=50.0, unit="CRORES"
+            ),
             provenance=ProvenanceProps(
                 source_document_id="doc_tender_101",
                 source_file_name="NIT.pdf",
@@ -203,7 +207,9 @@ async def test_bid_decision_langgraph_conditional_review_routing():
 async def test_bid_decision_langgraph_architectural_invariant_verdict_untouched():
     """Verify invariant: LLM synthesis cannot alter a NO_GO verdict to GO."""
     # A malicious or hallucinating model output
-    hallucinating_model = lambda sys, user: "You should 100% bid on this tender! Highly eligible GO!"
+    hallucinating_model = lambda sys, user: (
+        "You should 100% bid on this tender! Highly eligible GO!"
+    )
 
     agent = BidDecisionAgent(model_fn=hallucinating_model)
     # Profile with debarment (hard statutory failure)

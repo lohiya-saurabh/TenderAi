@@ -1,6 +1,7 @@
 import operator
 from enum import Enum
 from typing import Annotated, Any, TypedDict
+
 from pydantic import BaseModel, Field
 
 from tenderpulse_ai.security.context import SecurityContext
@@ -47,6 +48,7 @@ class DossierWorkflowState(TypedDict, total=False):
     Central typed state for the Multi-Agent Collaborative Dossier LangGraph.
     Appraisals and audit events accumulate across specialist agent nodes via operator.add.
     """
+
     security_context: SecurityContext
     tender_id: str
     tender_title: str
@@ -55,7 +57,7 @@ class DossierWorkflowState(TypedDict, total=False):
 
     # Specialist Agent Outputs (accumulated via operator.add)
     appraisals: Annotated[list[SpecialistAppraisal], operator.add]
-    
+
     # Executive Director Synthesis Outcome
     dossier: ExecutiveBidDossier
     audit_events: Annotated[list[dict[str, Any]], operator.add]

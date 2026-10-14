@@ -1,4 +1,3 @@
-import pytest
 from tenderpulse_ai.domain.docling_parser import DoclingParserEngine
 from tenderpulse_ai.domain.models import DoclingTable
 

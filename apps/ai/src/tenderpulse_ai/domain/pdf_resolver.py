@@ -10,6 +10,7 @@ import httpx
 
 try:
     import pypdfium2
+
     PYPDFIUM2_AVAILABLE = True
 except ImportError:
     pypdfium2 = None  # type: ignore[assignment]
@@ -78,7 +79,11 @@ async def resolve_pdf_to_pages(
 
         # 2. Download from real HTTP / HTTPS presigned URL
         if not resolved_path and is_http and not is_mock:
-            logger.info("Streaming PDF from presigned URL for doc_id=%s (url: %s...)", document_id, download_url[:60])
+            logger.info(
+                "Streaming PDF from presigned URL for doc_id=%s (url: %s...)",
+                document_id,
+                download_url[:60],
+            )
             with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp_file:
                 temp_path = Path(tmp_file.name)
 
@@ -142,7 +147,9 @@ async def resolve_pdf_to_pages(
                     )
                 )
 
-        logger.info("Successfully extracted %d non-empty pages from %s", len(pages), resolved_path.name)
+        logger.info(
+            "Successfully extracted %d non-empty pages from %s", len(pages), resolved_path.name
+        )
         return filter_candidate_pages(pages)
 
     finally:
@@ -155,43 +162,102 @@ async def resolve_pdf_to_pages(
 
 
 PROCUREMENT_KEYWORDS: tuple[str, ...] = (
-    "earnest money", "emd", "bid security", "tender security",
-    "performance security", "performance bank guarantee", "pbg", "bank guarantee",
-    "power of attorney", "consortium", "joint venture", "jv agreement",
-    "board resolution", "authorized signatory", "annual turnover", "net worth",
-    "financial capacity", "solvency", "working capital", "similar work",
-    "past experience", "technical capacity", "technical experience",
-    "personnel", "key expert", "project manager", "equipment", "machinery",
-    "validity of bids", "bid validity", "period of validity",
-    "liquidated damages", "delay damages", "defect liability",
-    "litigation", "debarment", "blacklisting", "integrity pact",
-    "conflict of interest", "stamp", "notary", "udin", "local content",
-    "make in india", "gst", "gstin", "taxes and duties",
-    "conditions precedent", "project milestone", "completion schedule",
-    "commercial operation date", "cod", "applicable permits",
-    "maintenance criteria", "maintenance manual", "rectification",
-    "pothole", "rescue post", "mobile crane", "ambulance", "medical aid",
-    "escrow account", "priority of payments", "co-insured", "all-risk",
-    "dispute resolution", "arbitration", "conciliation",
+    "earnest money",
+    "emd",
+    "bid security",
+    "tender security",
+    "performance security",
+    "performance bank guarantee",
+    "pbg",
+    "bank guarantee",
+    "power of attorney",
+    "consortium",
+    "joint venture",
+    "jv agreement",
+    "board resolution",
+    "authorized signatory",
+    "annual turnover",
+    "net worth",
+    "financial capacity",
+    "solvency",
+    "working capital",
+    "similar work",
+    "past experience",
+    "technical capacity",
+    "technical experience",
+    "personnel",
+    "key expert",
+    "project manager",
+    "equipment",
+    "machinery",
+    "validity of bids",
+    "bid validity",
+    "period of validity",
+    "liquidated damages",
+    "delay damages",
+    "defect liability",
+    "litigation",
+    "debarment",
+    "blacklisting",
+    "integrity pact",
+    "conflict of interest",
+    "stamp",
+    "notary",
+    "udin",
+    "local content",
+    "make in india",
+    "gst",
+    "gstin",
+    "taxes and duties",
+    "conditions precedent",
+    "project milestone",
+    "completion schedule",
+    "commercial operation date",
+    "cod",
+    "applicable permits",
+    "maintenance criteria",
+    "maintenance manual",
+    "rectification",
+    "pothole",
+    "rescue post",
+    "mobile crane",
+    "ambulance",
+    "medical aid",
+    "escrow account",
+    "priority of payments",
+    "co-insured",
+    "all-risk",
+    "dispute resolution",
+    "arbitration",
+    "conciliation",
 )
 
 
 def is_pure_toc_page(text: str) -> bool:
     """Detects whether a page is purely a Table of Contents / Index."""
     import re
+
     if not text or not text.strip():
         return True
     lines = [line.strip() for line in text.split("\n") if line.strip()]
     if not lines:
         return True
     text_lower = text.lower()
-    is_toc_title = any(kw in text_lower for kw in ("table of contents", "index of clauses", "brief contents"))
+    is_toc_title = any(
+        kw in text_lower for kw in ("table of contents", "index of clauses", "brief contents")
+    )
     toc_lines = 0
     for line in lines:
-        if re.search(r"\.{3,}|\u2026|\s+\d+$", line) or re.search(r"^(section|clause|chapter|part)\s+[\dIVXLCDM]+", line, re.IGNORECASE):
+        if re.search(r"\.{3,}|\u2026|\s+\d+$", line) or re.search(
+            r"^(section|clause|chapter|part)\s+[\dIVXLCDM]+", line, re.IGNORECASE
+        ):
             toc_lines += 1
     toc_ratio = toc_lines / len(lines)
-    has_operative = bool(re.search(r"\b(shall|must|is required to|will be forfeited|undertakes to)\b", text, re.IGNORECASE))
+    has_operative = bool(
+        re.search(
+            r"\b(shall|must|is required to|will be forfeited|undertakes to)\b", text, re.IGNORECASE
+        )
+    )
     if is_toc_title and toc_ratio > 0.2 and not has_operative:
         return True
     return toc_ratio > 0.5 and not has_operative
@@ -231,5 +297,9 @@ def filter_candidate_pages(
         page_map[p.page_number] = p
 
     filtered = sorted(page_map.values(), key=lambda p: p.page_number)
-    logger.info("Filtered %d raw pages to %d candidate pages for compliance extraction", len(pages), len(filtered))
+    logger.info(
+        "Filtered %d raw pages to %d candidate pages for compliance extraction",
+        len(pages),
+        len(filtered),
+    )
     return filtered

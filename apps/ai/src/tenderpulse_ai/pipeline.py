@@ -63,12 +63,14 @@ def extract_temporal_durations(text: str) -> list[dict[str, Any]]:
         unit = m.group(2).lower()
         if not unit.endswith("s"):
             unit = f"{unit}s"
-        results.append({
-            "value": val,
-            "unit": unit,
-            "source": m.group(0).strip(),
-            "meaning": "duration",
-        })
+        results.append(
+            {
+                "value": val,
+                "unit": unit,
+                "source": m.group(0).strip(),
+                "meaning": "duration",
+            }
+        )
 
     # Pattern 2: ordinal day from appointed/effective date (e.g. "910th (nine hundred and tenth) day")
     pattern_ordinal = re.compile(
@@ -81,12 +83,14 @@ def extract_temporal_durations(text: str) -> list[dict[str, Any]]:
         if not unit.endswith("s"):
             unit = f"{unit}s"
         if not any(r["value"] == val for r in results):
-            results.append({
-                "value": val,
-                "unit": unit,
-                "source": m.group(0).strip(),
-                "meaning": "milestone_day",
-            })
+            results.append(
+                {
+                    "value": val,
+                    "unit": unit,
+                    "source": m.group(0).strip(),
+                    "meaning": "milestone_day",
+                }
+            )
 
     return results
 
@@ -108,13 +112,15 @@ def extract_monetary_amounts(text: str) -> list[dict[str, Any]]:
         unit = m.group(2).lower()
         val = float(raw_num) if "." in raw_num else int(raw_num)
         norm_unit = "Crore" if "cr" in unit else ("Lakh" if "la" in unit else unit.capitalize())
-        results.append({
-            "value": val,
-            "unit": norm_unit.lower(),
-            "formatted": f"Rs. {val} {norm_unit}",
-            "currency": "INR",
-            "source": m.group(0).strip(),
-        })
+        results.append(
+            {
+                "value": val,
+                "unit": norm_unit.lower(),
+                "formatted": f"Rs. {val} {norm_unit}",
+                "currency": "INR",
+                "source": m.group(0).strip(),
+            }
+        )
 
     # Pattern 2: Standalone number + lakh/crore without currency prefix (e.g. "25 lakh", "50 lakh", "2 crore")
     pattern_standalone_unit = re.compile(
@@ -127,13 +133,15 @@ def extract_monetary_amounts(text: str) -> list[dict[str, Any]]:
         val = float(raw_num) if "." in raw_num else int(raw_num)
         norm_unit = "Crore" if "cr" in unit else "Lakh"
         if not any(abs(r["value"] - val) < 0.001 for r in results):
-            results.append({
-                "value": val,
-                "unit": norm_unit.lower(),
-                "formatted": f"Rs. {val} {norm_unit}",
-                "currency": "INR",
-                "source": m.group(0).strip(),
-            })
+            results.append(
+                {
+                    "value": val,
+                    "unit": norm_unit.lower(),
+                    "formatted": f"Rs. {val} {norm_unit}",
+                    "currency": "INR",
+                    "source": m.group(0).strip(),
+                }
+            )
 
     # Pattern 3: Indian comma-separated figures: e.g. "25,00,000", "10,00,00,000"
     pattern_raw_currency = re.compile(
@@ -151,13 +159,15 @@ def extract_monetary_amounts(text: str) -> list[dict[str, Any]]:
         else:
             formatted = f"Rs. {val:,}"
         if not any(r["formatted"] == formatted for r in results):
-            results.append({
-                "value": val,
-                "unit": "INR",
-                "formatted": formatted,
-                "currency": "INR",
-                "source": m.group(0).strip(),
-            })
+            results.append(
+                {
+                    "value": val,
+                    "unit": "INR",
+                    "formatted": formatted,
+                    "currency": "INR",
+                    "source": m.group(0).strip(),
+                }
+            )
 
     return results
 
@@ -174,12 +184,14 @@ def extract_percentages(text: str) -> list[dict[str, Any]]:
     )
     for m in pattern.finditer(text):
         val = float(m.group(1))
-        results.append({
-            "value": val,
-            "unit": "percent",
-            "formatted": f"{val}%",
-            "source": m.group(0).strip(),
-        })
+        results.append(
+            {
+                "value": val,
+                "unit": "percent",
+                "formatted": f"{val}%",
+                "source": m.group(0).strip(),
+            }
+        )
     return results
 
 
@@ -223,9 +235,7 @@ def _extract_sentence(pattern: str, text: str) -> str | None:
     if keyword:
         line_start = normalized_text.rfind("\n", 0, keyword.start()) + 1
         sentence_start = line_start
-        list_items = list(
-            re.finditer(r"(?m)^\s*\d+[.)]\s+", normalized_text[: keyword.start()])
-        )
+        list_items = list(re.finditer(r"(?m)^\s*\d+[.)]\s+", normalized_text[: keyword.start()]))
         if list_items:
             sentence_start = list_items[-1].start()
             punctuation_search_start = list_items[-1].end()
@@ -241,9 +251,7 @@ def _extract_sentence(pattern: str, text: str) -> str | None:
 
         period_position = normalized_text.find(".", keyword.end())
         paragraph_position = normalized_text.find("\n\n", keyword.end())
-        next_list_item = re.search(
-            r"(?m)^\s*\d+[.)]\s+", normalized_text[keyword.end() :]
-        )
+        next_list_item = re.search(r"(?m)^\s*\d+[.)]\s+", normalized_text[keyword.end() :])
         end_candidates = [
             position
             for position in (
@@ -292,9 +300,7 @@ def is_toc_or_definition(text: str) -> bool:
     ):
         return True
     return bool(
-        re.match(
-            r"^[“\"\'\s]*[A-Za-z\s]+[”\"\'\s]*(?:means|shall\s+mean)\b", clean, re.IGNORECASE
-        )
+        re.match(r"^[“\"\'\s]*[A-Za-z\s]+[”\"\'\s]*(?:means|shall\s+mean)\b", clean, re.IGNORECASE)
         and not re.search(
             r"\b(contractor shall|bidder shall|must furnish|within \d+ days|will be forfeited)\b",
             clean,
@@ -390,7 +396,11 @@ def _extract_operative_clause(
             re.IGNORECASE,
         ):
             score += 10
-        if re.search(r"\b(within \d+ days|not later than|\d+\s*(?:percent|%))\b", normalized_clause, re.IGNORECASE):
+        if re.search(
+            r"\b(within \d+ days|not later than|\d+\s*(?:percent|%))\b",
+            normalized_clause,
+            re.IGNORECASE,
+        ):
             score += 5
         if re.search(
             r"\b(bank guarantee|fdr|earnest money|performance security|turnover|solvency)\b",
@@ -535,15 +545,26 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 return None
             quote_text, specific_ref = res
             final_ref = specific_ref or _clause_ref
-            conf = 0.98 if any(m in quote_text.lower() for m in ("shall", "must", "required to", "will be")) else 0.95
+            conf = (
+                0.98
+                if any(m in quote_text.lower() for m in ("shall", "must", "required to", "will be"))
+                else 0.95
+            )
             return quote_text, final_ref, conf
 
         # 1. Financial: Bid Security / Earnest Money Deposit (EMD)
         is_bare_def_emd = bool(
             re.search(r"^[“\"\'\s]*bid security[”\"\'\s]*means\b", text_lower.strip())
-            or ("article 48" in text_lower and "definitions" in text_lower and "shall furnish" not in text_lower and "shall submit" not in text_lower)
+            or (
+                "article 48" in text_lower
+                and "definitions" in text_lower
+                and "shall furnish" not in text_lower
+                and "shall submit" not in text_lower
+            )
         )
-        if not is_bare_def_emd and any(k in text_lower for k in ("earnest money", "emd", "bid security", "tender security")):
+        if not is_bare_def_emd and any(
+            k in text_lower for k in ("earnest money", "emd", "bid security", "tender security")
+        ):
             res = get_clause_and_quote(
                 r"(?:earnest money|emd|bid security|tender security)",
                 "bid security",
@@ -575,15 +596,42 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 )
 
         # 2. Financial: Performance Security (PBG) & Security Deposit
-        is_pure_damages_citation = (
-            bool(re.search(r"\b0\.[12]%\s*(?:\([^\)]+\)\s*)?(?:of the\s*)?performance security\b", text_lower))
-            and not any(m in text_lower for m in ("provide to the authority", "shall provide", "shall furnish", "performance security for the due performance", "irrevocable and unconditional"))
+        is_pure_damages_citation = bool(
+            re.search(
+                r"\b0\.[12]%\s*(?:\([^\)]+\)\s*)?(?:of the\s*)?performance security\b", text_lower
+            )
+        ) and not any(
+            m in text_lower
+            for m in (
+                "provide to the authority",
+                "shall provide",
+                "shall furnish",
+                "performance security for the due performance",
+                "irrevocable and unconditional",
+            )
         )
-        if not is_pure_damages_citation and any(k in text_lower for k in ("performance security", "performance bank guarantee", "pbg", "contract performance security", "unconditional e-bank guarantee", "unconditional bank guarantee")):
+        if not is_pure_damages_citation and any(
+            k in text_lower
+            for k in (
+                "performance security",
+                "performance bank guarantee",
+                "pbg",
+                "contract performance security",
+                "unconditional e-bank guarantee",
+                "unconditional bank guarantee",
+            )
+        ):
             res = get_clause_and_quote(
                 r"(?:performance security|performance bank guarantee|pbg|unconditional e-bank guarantee|unconditional bank guarantee)",
                 "performance security",
-                ["performance security", "performance bank guarantee", "pbg", "contract performance security", "irrevocable and unconditional e-bank guarantee", "unconditional e-bank guarantee"],
+                [
+                    "performance security",
+                    "performance bank guarantee",
+                    "pbg",
+                    "contract performance security",
+                    "irrevocable and unconditional e-bank guarantee",
+                    "unconditional e-bank guarantee",
+                ],
             )
             if res:
                 quote, ref, conf = res
@@ -613,20 +661,55 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
         is_ca_firm_turnover = any(
             x in text_lower
             for x in (
-                "schedule t", "schedule-t", "panel of chartered", "chartered accountants",
-                "auditing firm", "empanelment of", "selection of chartered", "firms meeting the eligibility"
+                "schedule t",
+                "schedule-t",
+                "panel of chartered",
+                "chartered accountants",
+                "auditing firm",
+                "empanelment of",
+                "selection of chartered",
+                "firms meeting the eligibility",
             )
         )
-        is_equity_lockin = any(x in text_lower for x in ("change in ownership", "shall directly hold equity", "joint bidding agreement submitted in the bid", "was evaluated for the purposes of selection"))
-        if not is_ca_firm_turnover and not is_equity_lockin and any(k in text_lower for k in ("annual turnover", "net worth", "financial capacity", "financial situation and capabilities", "audited financial statements")):
+        is_equity_lockin = any(
+            x in text_lower
+            for x in (
+                "change in ownership",
+                "shall directly hold equity",
+                "joint bidding agreement submitted in the bid",
+                "was evaluated for the purposes of selection",
+            )
+        )
+        if (
+            not is_ca_firm_turnover
+            and not is_equity_lockin
+            and any(
+                k in text_lower
+                for k in (
+                    "annual turnover",
+                    "net worth",
+                    "financial capacity",
+                    "financial situation and capabilities",
+                    "audited financial statements",
+                )
+            )
+        ):
             res = get_clause_and_quote(
                 r"(?:annual turnover|net worth|financial capacity|financial situation)",
                 "turnover",
-                ["annual turnover", "net worth", "financial capacity", "financial situation and capabilities", "audited financial statements"],
+                [
+                    "annual turnover",
+                    "net worth",
+                    "financial capacity",
+                    "financial situation and capabilities",
+                    "audited financial statements",
+                ],
             )
             if res:
                 quote, ref, conf = res
-                udin_req = any(u in text_lower for u in ("udin", "chartered accountant", "ca", "audited"))
+                udin_req = any(
+                    u in text_lower for u in ("udin", "chartered accountant", "ca", "audited")
+                )
                 candidates.append(
                     CandidateComplianceItem(
                         category="TECHNICAL",
@@ -650,11 +733,22 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 )
 
         # 3b. Execution: Concessionaire Equity Lock-in & Consortium Shareholding (Article 7.1(k) / 5.3)
-        if any(k in text_lower for k in ("change in ownership", "shall directly hold equity")) and any(k in text_lower for k in ("consortium member", "paid up equity", "joint bidding agreement")):
+        if any(
+            k in text_lower for k in ("change in ownership", "shall directly hold equity")
+        ) and any(
+            k in text_lower
+            for k in ("consortium member", "paid up equity", "joint bidding agreement")
+        ):
             res = get_clause_and_quote(
                 r"(?:change in ownership|shall directly hold equity|minimum of 26%|74% \(seventy-four percent\))",
                 "equity",
-                ["change in ownership", "shall directly hold equity", "joint bidding agreement", "paid up equity", "74%"],
+                [
+                    "change in ownership",
+                    "shall directly hold equity",
+                    "joint bidding agreement",
+                    "paid up equity",
+                    "74%",
+                ],
             )
             if res:
                 quote, ref, conf = res
@@ -680,15 +774,43 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 )
 
         # 4. Financial: Bank Solvency & Working Capital
-        is_assignment_context = any(x in text_lower for x in ("permitted assignment", "assignment of rights", "security in favor of", "security in favour of"))
-        has_solvency_proof = bool(
-            re.search(r"\b(solvency certificate|banker'?s solvency|working capital certificate|cash flow requirement|liquid assets of not less|line of credit)\b", text_lower)
+        is_assignment_context = any(
+            x in text_lower
+            for x in (
+                "permitted assignment",
+                "assignment of rights",
+                "security in favor of",
+                "security in favour of",
+            )
         )
-        if not is_assignment_context and (has_solvency_proof or any(k in text_lower for k in ("solvency certificate", "bank solvency", "cash flow requirement", "liquid assets"))):
+        has_solvency_proof = bool(
+            re.search(
+                r"\b(solvency certificate|banker'?s solvency|working capital certificate|cash flow requirement|liquid assets of not less|line of credit)\b",
+                text_lower,
+            )
+        )
+        if not is_assignment_context and (
+            has_solvency_proof
+            or any(
+                k in text_lower
+                for k in (
+                    "solvency certificate",
+                    "bank solvency",
+                    "cash flow requirement",
+                    "liquid assets",
+                )
+            )
+        ):
             res = get_clause_and_quote(
                 r"(?:solvency certificate|bank solvency|working capital|cash flow requirement|liquid assets)",
                 "solvency",
-                ["solvency certificate", "bank solvency", "working capital", "cash flow requirement", "liquid assets"],
+                [
+                    "solvency certificate",
+                    "bank solvency",
+                    "working capital",
+                    "cash flow requirement",
+                    "liquid assets",
+                ],
             )
             if res:
                 quote, ref, conf = res
@@ -715,11 +837,22 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 )
 
         # 5. Execution: Power of Attorney & Authorized Signatory Authority
-        if any(k in text_lower for k in ("power of attorney", "poa for lead member", "written confirmation of authorization")):
+        if any(
+            k in text_lower
+            for k in (
+                "power of attorney",
+                "poa for lead member",
+                "written confirmation of authorization",
+            )
+        ):
             res = get_clause_and_quote(
                 r"(?:power of attorney|written confirmation of authorization)",
                 "power of attorney",
-                ["power of attorney", "poa for lead member", "written confirmation of authorization"],
+                [
+                    "power of attorney",
+                    "poa for lead member",
+                    "written confirmation of authorization",
+                ],
             )
             if res:
                 quote, ref, conf = res
@@ -746,7 +879,9 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 )
 
         # 6. Execution: Joint Venture / Consortium Agreement
-        if any(k in text_lower for k in ("joint venture", "jv agreement", "consortium", "jv must meet")):
+        if any(
+            k in text_lower for k in ("joint venture", "jv agreement", "consortium", "jv must meet")
+        ):
             res = get_clause_and_quote(
                 r"(?:joint venture|jv agreement|consortium)",
                 "joint venture",
@@ -777,11 +912,26 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 )
 
         # 7. Technical: Similar Work Experience
-        if any(k in text_lower for k in ("similar work", "past experience", "contracts of similar size", "specific construction experience", "historical contract non-performance")):
+        if any(
+            k in text_lower
+            for k in (
+                "similar work",
+                "past experience",
+                "contracts of similar size",
+                "specific construction experience",
+                "historical contract non-performance",
+            )
+        ):
             res = get_clause_and_quote(
                 r"(?:similar work|past experience|contracts of similar size)",
                 "similar work",
-                ["similar work", "past experience", "contracts of similar size", "specific construction experience", "historical contract non-performance"],
+                [
+                    "similar work",
+                    "past experience",
+                    "contracts of similar size",
+                    "specific construction experience",
+                    "historical contract non-performance",
+                ],
             )
             if res:
                 quote, ref, conf = res
@@ -808,18 +958,47 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 )
 
         # 8. Technical: Key Technical Personnel
-        is_toc_personnel = is_toc_or_definition(text) or bool(re.search(r"(\.{3,}|\s{4,})\s*\d+\s*$", text.strip(), re.MULTILINE))
-        has_positive_personnel = bool(
-            re.search(r"\b(minimum qualification of personnel|personnel capabilities|design-in-charge|project manager shall|key personnel shall)\b", text_lower)
-            or re.search(r"\bshall (?:deploy|employ|engage|appoint|assign|designate)\b.{0,60}\b(?:key personnel|technical personnel|qualified personnel|project manager|team leader)\b", text_lower)
-            or re.search(r"\b(?:key personnel|technical personnel|qualified personnel|project manager|team leader)\b.{0,60}\bshall (?:be deployed|be employed|be engaged|be appointed|be assigned|be designated)\b", text_lower)
+        is_toc_personnel = is_toc_or_definition(text) or bool(
+            re.search(r"(\.{3,}|\s{4,})\s*\d+\s*$", text.strip(), re.MULTILINE)
         )
-        is_ie_appointment = "independent engineer shall be" in text_lower or "appointment of independent engineer" in text_lower
-        if not is_toc_personnel and not is_ie_appointment and (has_positive_personnel or any(k in text_lower for k in ("personnel capabilities", "minimum qualification of personnel"))):
+        has_positive_personnel = bool(
+            re.search(
+                r"\b(minimum qualification of personnel|personnel capabilities|design-in-charge|project manager shall|key personnel shall)\b",
+                text_lower,
+            )
+            or re.search(
+                r"\bshall (?:deploy|employ|engage|appoint|assign|designate)\b.{0,60}\b(?:key personnel|technical personnel|qualified personnel|project manager|team leader)\b",
+                text_lower,
+            )
+            or re.search(
+                r"\b(?:key personnel|technical personnel|qualified personnel|project manager|team leader)\b.{0,60}\bshall (?:be deployed|be employed|be engaged|be appointed|be assigned|be designated)\b",
+                text_lower,
+            )
+        )
+        is_ie_appointment = (
+            "independent engineer shall be" in text_lower
+            or "appointment of independent engineer" in text_lower
+        )
+        if (
+            not is_toc_personnel
+            and not is_ie_appointment
+            and (
+                has_positive_personnel
+                or any(
+                    k in text_lower
+                    for k in ("personnel capabilities", "minimum qualification of personnel")
+                )
+            )
+        ):
             res = get_clause_and_quote(
                 r"(?:key personnel|project manager|personnel capabilities)",
                 "key personnel",
-                ["key personnel", "project manager", "personnel capabilities", "minimum qualification of personnel"],
+                [
+                    "key personnel",
+                    "project manager",
+                    "personnel capabilities",
+                    "minimum qualification of personnel",
+                ],
             )
             if res:
                 quote, ref, conf = res
@@ -847,19 +1026,51 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
 
         # 9. Technical: Essential Equipment & Machinery
         is_plant_exclusion = bool(
-            re.search(r"\b(shall not include|excluding|advances of any kind).{0,150}plant and machinery\b", text_lower, re.DOTALL)
-            or re.search(r"\bplant and machinery.{0,150}(shall not include|excluded)\b", text_lower, re.DOTALL)
+            re.search(
+                r"\b(shall not include|excluding|advances of any kind).{0,150}plant and machinery\b",
+                text_lower,
+                re.DOTALL,
+            )
+            or re.search(
+                r"\bplant and machinery.{0,150}(shall not include|excluded)\b",
+                text_lower,
+                re.DOTALL,
+            )
         )
         has_positive_equipment = bool(
-            re.search(r"\b(minimum essential equipment|equipment capabilities|availability of (?:essential )?equipment|availability of (?:plant|machinery))\b", text_lower)
-            or re.search(r"\bshall (?:deploy|furnish|provide|own|possess|mobilize)\b.{0,60}\b(?:plant and machinery|construction equipment|essential machinery|tools and plants?)\b", text_lower)
-            or re.search(r"\b(?:plant and machinery|construction equipment|essential machinery|tools and plants?)\b.{0,60}\bshall (?:be deployed|be furnished|be provided|be owned|be possessed|be mobilized)\b", text_lower)
+            re.search(
+                r"\b(minimum essential equipment|equipment capabilities|availability of (?:essential )?equipment|availability of (?:plant|machinery))\b",
+                text_lower,
+            )
+            or re.search(
+                r"\bshall (?:deploy|furnish|provide|own|possess|mobilize)\b.{0,60}\b(?:plant and machinery|construction equipment|essential machinery|tools and plants?)\b",
+                text_lower,
+            )
+            or re.search(
+                r"\b(?:plant and machinery|construction equipment|essential machinery|tools and plants?)\b.{0,60}\bshall (?:be deployed|be furnished|be provided|be owned|be possessed|be mobilized)\b",
+                text_lower,
+            )
         )
-        if not is_plant_exclusion and (has_positive_equipment or any(k in text_lower for k in ("equipment capabilities", "minimum essential equipment", "availability of equipment"))):
+        if not is_plant_exclusion and (
+            has_positive_equipment
+            or any(
+                k in text_lower
+                for k in (
+                    "equipment capabilities",
+                    "minimum essential equipment",
+                    "availability of equipment",
+                )
+            )
+        ):
             res = get_clause_and_quote(
                 r"(?:equipment capabilities|plant and machinery|minimum essential equipment)",
                 "plant and machinery",
-                ["equipment capabilities", "plant and machinery", "minimum essential equipment", "availability of equipment"],
+                [
+                    "equipment capabilities",
+                    "plant and machinery",
+                    "minimum essential equipment",
+                    "availability of equipment",
+                ],
             )
             if res:
                 quote, ref, conf = res
@@ -886,7 +1097,10 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 )
 
         # 10. Legal: Bid Validity Period
-        if any(k in text_lower for k in ("period of validity of bids", "bid validity", "bids shall remain valid")):
+        if any(
+            k in text_lower
+            for k in ("period of validity of bids", "bid validity", "bids shall remain valid")
+        ):
             res = get_clause_and_quote(
                 r"(?:period of validity of bids|bid validity|bids shall remain valid)",
                 "validity",
@@ -917,7 +1131,9 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 )
 
         # 11. Legal: Delay Damages & Liquidated Damages
-        if any(k in text_lower for k in ("delay damages", "liquidated damages", "time for completion")):
+        if any(
+            k in text_lower for k in ("delay damages", "liquidated damages", "time for completion")
+        ):
             res = get_clause_and_quote(
                 r"(?:delay damages|liquidated damages|time for completion)",
                 "damages",
@@ -948,7 +1164,9 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 )
 
         # 12. Legal: Defect Liability Period (DLP)
-        if any(k in text_lower for k in ("defect liability", "maintenance period", "guarantee period")):
+        if any(
+            k in text_lower for k in ("defect liability", "maintenance period", "guarantee period")
+        ):
             res = get_clause_and_quote(
                 r"(?:defect liability|maintenance period|guarantee period)",
                 "defect liability",
@@ -979,11 +1197,30 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 )
 
         # 13. Legal: Integrity Pact & Anti-Debarment
-        if any(k in text_lower for k in ("integrity pact", "litigation history", "non-performance", "debarment", "blacklisting", "debarred", "blacklisted")):
+        if any(
+            k in text_lower
+            for k in (
+                "integrity pact",
+                "litigation history",
+                "non-performance",
+                "debarment",
+                "blacklisting",
+                "debarred",
+                "blacklisted",
+            )
+        ):
             res = get_clause_and_quote(
                 r"(?:integrity pact|litigation history|non-performance|debarment|blacklisting|debarred|blacklisted)",
                 "debarment",
-                ["integrity pact", "litigation history", "non-performance", "debarment", "blacklisting", "debarred", "blacklisted"],
+                [
+                    "integrity pact",
+                    "litigation history",
+                    "non-performance",
+                    "debarment",
+                    "blacklisting",
+                    "debarred",
+                    "blacklisted",
+                ],
             )
             if res:
                 quote, ref, conf = res
@@ -1011,11 +1248,24 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 )
 
         # 14. Legal: Conflict of Interest & Non-Collusion
-        if any(k in text_lower for k in ("conflict of interest", "non-collusion", "non-engagement of any agent", "middleman or intermediary")):
+        if any(
+            k in text_lower
+            for k in (
+                "conflict of interest",
+                "non-collusion",
+                "non-engagement of any agent",
+                "middleman or intermediary",
+            )
+        ):
             res = get_clause_and_quote(
                 r"(?:conflict of interest|non-collusion|middleman or intermediary)",
                 "conflict of interest",
-                ["conflict of interest", "non-collusion", "non-engagement of any agent", "middleman or intermediary"],
+                [
+                    "conflict of interest",
+                    "non-collusion",
+                    "non-engagement of any agent",
+                    "middleman or intermediary",
+                ],
             )
             if res:
                 quote, ref, conf = res
@@ -1042,7 +1292,9 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 )
 
         # 15. Statutory: Make in India (PPP-MII) Local Content
-        if any(k in text_lower for k in ("make in india", "local content", "ppp-mii", "class-i local")):
+        if any(
+            k in text_lower for k in ("make in india", "local content", "ppp-mii", "class-i local")
+        ):
             res = get_clause_and_quote(
                 r"(?:make in india|local content|ppp-mii|class-i local)",
                 "local content",
@@ -1074,11 +1326,26 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 )
 
         # 16. Statutory: GSTIN & PAN Registration
-        if any(k in text_lower for k in ("goods and services tax", "gstin", "gst registration", "pan card", "taxes and duties")):
+        if any(
+            k in text_lower
+            for k in (
+                "goods and services tax",
+                "gstin",
+                "gst registration",
+                "pan card",
+                "taxes and duties",
+            )
+        ):
             res = get_clause_and_quote(
                 r"(?:goods and services tax|gstin|gst registration|taxes and duties)",
                 "gst",
-                ["goods and services tax", "gstin", "gst registration", "pan card", "taxes and duties"],
+                [
+                    "goods and services tax",
+                    "gstin",
+                    "gst registration",
+                    "pan card",
+                    "taxes and duties",
+                ],
             )
             if res:
                 quote, ref, conf = res
@@ -1105,7 +1372,9 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 )
 
         # 17. Execution: Conditions Precedent Concessionaire Satisfaction (Article 4.1.3)
-        if "conditions precedent" in text_lower and any(k in text_lower for k in ("4.1.3", "180 (one hundred and eighty) days", "180 days")):
+        if "conditions precedent" in text_lower and any(
+            k in text_lower for k in ("4.1.3", "180 (one hundred and eighty) days", "180 days")
+        ):
             res = get_clause_and_quote(
                 r"conditions precedent required to be satisfied by the concessionaire",
                 "conditions precedent",
@@ -1136,16 +1405,35 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 )
 
         # 18. Execution: Authority Conditions Precedent & Right of Way Handover
-        if "conditions precedent" in text_lower and any(k in text_lower for k in ("require the authority", "obligation of the authority", "right of way", "environmental clearance", "forest clearance", "satisfy the following conditions")):
+        if "conditions precedent" in text_lower and any(
+            k in text_lower
+            for k in (
+                "require the authority",
+                "obligation of the authority",
+                "right of way",
+                "environmental clearance",
+                "forest clearance",
+                "satisfy the following conditions",
+            )
+        ):
             res = get_clause_and_quote(
                 r"conditions precedent set forth in this clause|conditions precedent.*?authority|right of way",
                 "conditions precedent",
-                ["conditions precedent", "require the authority", "right of way", "environmental clearance"],
+                [
+                    "conditions precedent",
+                    "require the authority",
+                    "right of way",
+                    "environmental clearance",
+                ],
             )
             if res:
                 quote, ref, conf = res
                 durations = extract_temporal_durations(quote)
-                timeline_desc = f"within {durations[0]['value']} {durations[0]['unit']}" if durations else "within stipulated timeline"
+                timeline_desc = (
+                    f"within {durations[0]['value']} {durations[0]['unit']}"
+                    if durations
+                    else "within stipulated timeline"
+                )
                 candidates.append(
                     CandidateComplianceItem(
                         category="EXECUTION",
@@ -1168,7 +1456,11 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 )
 
         # 19. Financial: Performance Security Release Threshold
-        if "release of performance security" in text_lower or ("performance security" in text_lower and any(k in text_lower for k in ("release", "return", "discharge")) and any(k in text_lower for k in ("expending", "expenditure", "progress", "completion"))):
+        if "release of performance security" in text_lower or (
+            "performance security" in text_lower
+            and any(k in text_lower for k in ("release", "return", "discharge"))
+            and any(k in text_lower for k in ("expending", "expenditure", "progress", "completion"))
+        ):
             res = get_clause_and_quote(
                 r"release of performance security|(?:release|return|discharge).*?performance security",
                 "release of performance security",
@@ -1200,15 +1492,32 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 )
 
         # 20. Execution: Scheduled Project Completion Date / COD
-        is_cod_clause = (
-            any(k in text_lower for k in ("scheduled date for completion", "scheduled completion date", "commercial operation date", "scheduled cod"))
-            or (("appointed date" in text_lower or "effective date" in text_lower) and any(k in text_lower for k in ("shall be the scheduled date", "scheduled date for completion")))
+        is_cod_clause = any(
+            k in text_lower
+            for k in (
+                "scheduled date for completion",
+                "scheduled completion date",
+                "commercial operation date",
+                "scheduled cod",
+            )
+        ) or (
+            ("appointed date" in text_lower or "effective date" in text_lower)
+            and any(
+                k in text_lower
+                for k in ("shall be the scheduled date", "scheduled date for completion")
+            )
         )
         if is_cod_clause:
             res = get_clause_and_quote(
                 r"(?:scheduled date for completion|commercial operation date|\bcod\b|scheduled.*?date.*?completion)",
                 "scheduled date for completion",
-                ["scheduled date for completion", "scheduled completion date", "commercial operation date", "cod", "scheduled date"],
+                [
+                    "scheduled date for completion",
+                    "scheduled completion date",
+                    "commercial operation date",
+                    "cod",
+                    "scheduled date",
+                ],
             )
             if res:
                 quote, ref, conf = res
@@ -1217,11 +1526,17 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 day_target = durations[0]["source"] if durations else "stipulated timeline"
 
                 # Dynamically extract project scope/type from quote (e.g. Four-Laning, Two-Laning, Highway, Works)
-                named_scheduled = re.search(r"[“\"\']\s*Scheduled\s+([A-Za-z0-9\-]+)\s+Date\s*[”\"\']", quote, re.IGNORECASE)
+                named_scheduled = re.search(
+                    r"[“\"\']\s*Scheduled\s+([A-Za-z0-9\-]+)\s+Date\s*[”\"\']", quote, re.IGNORECASE
+                )
                 if named_scheduled:
                     clean_scope = named_scheduled.group(1).strip()
                 else:
-                    scope_m = re.search(r"completion of\s+(?:the\s+|this\s+)?([A-Za-z0-9\-]+(?:-[A-Za-z0-9]+)?)", quote, re.IGNORECASE)
+                    scope_m = re.search(
+                        r"completion of\s+(?:the\s+|this\s+)?([A-Za-z0-9\-]+(?:-[A-Za-z0-9]+)?)",
+                        quote,
+                        re.IGNORECASE,
+                    )
                     clean_scope = scope_m.group(1).strip() if scope_m else "Project"
 
                 title = f"Scheduled {clean_scope} Completion Date ({duration_label})"
@@ -1248,7 +1563,18 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 )
 
         # 21. Technical: Progressive Construction Milestones (Schedule G)
-        if any(k in text_lower for k in ("schedule –g", "schedule-g", "schedule g", "project completion schedule")) and any(k in text_lower for k in ("project completion schedule", "project milestone-i", "project milestone", "milestones")):
+        if any(
+            k in text_lower
+            for k in ("schedule –g", "schedule-g", "schedule g", "project completion schedule")
+        ) and any(
+            k in text_lower
+            for k in (
+                "project completion schedule",
+                "project milestone-i",
+                "project milestone",
+                "milestones",
+            )
+        ):
             res = get_clause_and_quote(
                 r"project completion schedule",
                 "project milestone",
@@ -1278,22 +1604,41 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 )
 
         # 22. Legal: Liquidated Damages for Delay
-        is_milestone_delay_ld = (
-            any(k in text_lower for k in ("liquidated damages", "damages for delay", "fails to achieve any project milestone", "fails to achieve milestone", "cod does not occur"))
-            and any(k in text_lower for k in ("performance security", "delay", "damages", "penalty"))
-        )
+        is_milestone_delay_ld = any(
+            k in text_lower
+            for k in (
+                "liquidated damages",
+                "damages for delay",
+                "fails to achieve any project milestone",
+                "fails to achieve milestone",
+                "cod does not occur",
+            )
+        ) and any(k in text_lower for k in ("performance security", "delay", "damages", "penalty"))
         if is_milestone_delay_ld:
             res = get_clause_and_quote(
                 r"(?:damages.*?performance security|liquidated damages|fails to achieve.*?milestone)",
                 "liquidated damages",
-                ["liquidated damages", "damages for delay", "performance security", "project milestone"],
+                [
+                    "liquidated damages",
+                    "damages for delay",
+                    "performance security",
+                    "project milestone",
+                ],
             )
             if res:
                 quote, ref, conf = res
                 pcts = extract_percentages(quote)
                 durs = extract_temporal_durations(quote)
-                rate_str = f"{pcts[0]['formatted']} of Performance Security" if pcts else "stipulated percentage of Performance Security"
-                grace_str = f"beyond {durs[0]['value']} {durs[0]['unit']}" if durs else "beyond stipulated grace period"
+                rate_str = (
+                    f"{pcts[0]['formatted']} of Performance Security"
+                    if pcts
+                    else "stipulated percentage of Performance Security"
+                )
+                grace_str = (
+                    f"beyond {durs[0]['value']} {durs[0]['unit']}"
+                    if durs
+                    else "beyond stipulated grace period"
+                )
                 candidates.append(
                     CandidateComplianceItem(
                         category="LEGAL",
@@ -1316,7 +1661,10 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 )
 
         # 23. Statutory: Statutory Permits (Schedule E)
-        if any(k in text_lower for k in ("schedule-e", "schedule e")) and any(k in text_lower for k in ("applicable permits", "quarry", "explosives", "batching plant")):
+        if any(k in text_lower for k in ("schedule-e", "schedule e")) and any(
+            k in text_lower
+            for k in ("applicable permits", "quarry", "explosives", "batching plant")
+        ):
             res = get_clause_and_quote(
                 r"applicable permits",
                 "applicable permits",
@@ -1347,11 +1695,23 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 )
 
         # 24. Technical: Maintenance SLAs (Schedule K & Clause 6.2.1)
-        if any(k in text_lower for k in ("table -1: maintenance criteria for pavements", "table-1: maintenance criteria", "maintenance criteria for pavements", "pothole free condition")):
+        if any(
+            k in text_lower
+            for k in (
+                "table -1: maintenance criteria for pavements",
+                "table-1: maintenance criteria",
+                "maintenance criteria for pavements",
+                "pothole free condition",
+            )
+        ):
             res = get_clause_and_quote(
                 r"table -1: maintenance criteria|pothole free condition",
                 "maintenance criteria",
-                ["table -1: maintenance criteria for pavements", "pothole free condition", "schedule k"],
+                [
+                    "table -1: maintenance criteria for pavements",
+                    "pothole free condition",
+                    "schedule k",
+                ],
             )
             if res:
                 quote, ref, conf = res
@@ -1377,7 +1737,14 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 )
 
         # 25. Execution: Round-the-Clock Emergency Rescue Post & Mobile Heavy Cranes
-        if "vehicle rescue post" in text_lower or ("rescue post" in text_lower and "mobile crane" in text_lower) or ("mobile crane" in text_lower and any(k in text_lower for k in ("capacity", "gross vehicle weight", "debris"))):
+        if (
+            "vehicle rescue post" in text_lower
+            or ("rescue post" in text_lower and "mobile crane" in text_lower)
+            or (
+                "mobile crane" in text_lower
+                and any(k in text_lower for k in ("capacity", "gross vehicle weight", "debris"))
+            )
+        ):
             res = get_clause_and_quote(
                 r"round-the-clock vehicle rescue post.*?mobile crane|rescue post.*?mobile crane",
                 "mobile crane",
@@ -1407,9 +1774,10 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 )
 
         # 26. Legal: Accident Fatality & Grievous Injury Strict Liabilities
-        is_accident_liability = (
-            any(k in text_lower for k in ("fatality", "fatal accident", "death of any person"))
-            and any(k in text_lower for k in ("grievous injury", "injury", "compensation", "liable to pay"))
+        is_accident_liability = any(
+            k in text_lower for k in ("fatality", "fatal accident", "death of any person")
+        ) and any(
+            k in text_lower for k in ("grievous injury", "injury", "compensation", "liable to pay")
         )
         if is_accident_liability:
             res = get_clause_and_quote(
@@ -1420,8 +1788,14 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
             if res:
                 quote, ref, conf = res
                 amounts = extract_monetary_amounts(quote)
-                fatality_amt = amounts[0]["formatted"] if len(amounts) >= 1 else "stipulated statutory compensation"
-                injury_amt = amounts[1]["formatted"] if len(amounts) >= 2 else "statutory compensation"
+                fatality_amt = (
+                    amounts[0]["formatted"]
+                    if len(amounts) >= 1
+                    else "stipulated statutory compensation"
+                )
+                injury_amt = (
+                    amounts[1]["formatted"] if len(amounts) >= 2 else "statutory compensation"
+                )
                 candidates.append(
                     CandidateComplianceItem(
                         category="LEGAL",
@@ -1444,7 +1818,10 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 )
 
         # 27. Statutory: 24/7 Basic Life Support Paramedic Ambulance Service
-        if "basic life support ambulance service" in text_lower or ("ambulance service" in text_lower and any(k in text_lower for k in ("paramedic", "medical", "emergency"))):
+        if "basic life support ambulance service" in text_lower or (
+            "ambulance service" in text_lower
+            and any(k in text_lower for k in ("paramedic", "medical", "emergency"))
+        ):
             res = get_clause_and_quote(
                 r"basic life support ambulance service|ambulance service.*?paramedic",
                 "ambulance",
@@ -1475,21 +1852,62 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
 
         # 28. Financial: State Construction Support Grant
         is_construction_grant = (
-            any(k in text_lower for k in ("construction support", "state support", "capital grant", "construction grant"))
-            or ("instalments" in text_lower and any(k in text_lower for k in ("due and payable", "payable to the concessionaire", "payable to the contractor", "construction period")))
-            or (("grant" in text_lower or "support" in text_lower) and any(k in text_lower for k in ("due and payable", "equal instalments", "equal installments", "tranches")) and any(k in text_lower for k in ("crore", "lakh", "million")))
+            any(
+                k in text_lower
+                for k in (
+                    "construction support",
+                    "state support",
+                    "capital grant",
+                    "construction grant",
+                )
+            )
+            or (
+                "instalments" in text_lower
+                and any(
+                    k in text_lower
+                    for k in (
+                        "due and payable",
+                        "payable to the concessionaire",
+                        "payable to the contractor",
+                        "construction period",
+                    )
+                )
+            )
+            or (
+                ("grant" in text_lower or "support" in text_lower)
+                and any(
+                    k in text_lower
+                    for k in (
+                        "due and payable",
+                        "equal instalments",
+                        "equal installments",
+                        "tranches",
+                    )
+                )
+                and any(k in text_lower for k in ("crore", "lakh", "million"))
+            )
         )
         if is_construction_grant:
             res = get_clause_and_quote(
                 r"(?:(?:due and payable.*?instalments)|(?:instalments.*?construction period)|(?:construction support)|(?:grant.*?instalments))",
                 "instalments",
-                ["equal instalments", "instalments", "due and payable", "construction support", "grant"],
+                [
+                    "equal instalments",
+                    "instalments",
+                    "due and payable",
+                    "construction support",
+                    "grant",
+                ],
             )
             if res:
                 quote, ref, conf = res
                 amounts = extract_monetary_amounts(quote)
                 amount_str = amounts[0]["formatted"] if amounts else "Stipulated Amount"
-                tranche_m = re.search(r"(\d+)\s*(?:\([^\)]+\)\s*)?equal\s+(?:instalments|installments|tranches)", quote, re.IGNORECASE)
+                tranche_m = re.search(
+                    r"(\d+)\s*(?:\([^\)]+\)\s*)?equal\s+(?:instalments|installments|tranches)",
+                    quote,
+                    re.IGNORECASE,
+                )
                 tranche_str = f"{tranche_m.group(1)} Tranches" if tranche_m else "Tranches"
                 candidates.append(
                     CandidateComplianceItem(
@@ -1513,7 +1931,10 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 )
 
         # 29. Financial: Escrow Account Withdrawal Priority Waterfall
-        if "escrow account shall be appropriated in the following order" in text_lower or ("deposits in the escrow account" in text_lower and "appropriated in the following order" in text_lower):
+        if "escrow account shall be appropriated in the following order" in text_lower or (
+            "deposits in the escrow account" in text_lower
+            and "appropriated in the following order" in text_lower
+        ):
             res = get_clause_and_quote(
                 r"deposits in the escrow account shall be appropriated in the following order",
                 "escrow account",
@@ -1551,7 +1972,11 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 )
 
         # 30. Legal: Comprehensive Project Insurances & Authority Co-Insured Mandate
-        if "co-insured" in text_lower or ("insurance" in text_lower and "escrow account" in text_lower and any(k in text_lower for k in ("article", "policy", "concessionaire shall effect"))):
+        if "co-insured" in text_lower or (
+            "insurance" in text_lower
+            and "escrow account" in text_lower
+            and any(k in text_lower for k in ("article", "policy", "concessionaire shall effect"))
+        ):
             res = get_clause_and_quote(
                 r"co-insured|concessionaire shall effect and maintain.*?insurance",
                 "co-insured",
@@ -1611,11 +2036,17 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 )
 
         # 32. Technical: Pre-Construction Drone Video Survey & RoW Status Recording
-        if "video recording of the condition and status" in text_lower or ("video recording" in text_lower and "right of way" in text_lower):
+        if "video recording of the condition and status" in text_lower or (
+            "video recording" in text_lower and "right of way" in text_lower
+        ):
             res = get_clause_and_quote(
                 r"video recording of the condition and status.*?right of way|video recording.*?right of way",
                 "video recording",
-                ["video recording of the condition and status of the project highway", "video recording", "right of way"],
+                [
+                    "video recording of the condition and status of the project highway",
+                    "video recording",
+                    "right of way",
+                ],
             )
             if res:
                 quote, ref, conf = res
@@ -1641,11 +2072,16 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 )
 
         # 33. Technical: Real-Time Construction Vehicle GPS Tracking & Server Telemetry
-        if "location tracking system is installed in each construction vehicle" in text_lower or ("location tracking" in text_lower and "construction vehicle" in text_lower):
+        if "location tracking system is installed in each construction vehicle" in text_lower or (
+            "location tracking" in text_lower and "construction vehicle" in text_lower
+        ):
             res = get_clause_and_quote(
                 r"location tracking system is installed in each construction vehicle|location tracking.*?construction vehicle",
                 "location tracking system",
-                ["functional location tracking system is installed in each construction vehicle", "location tracking system"],
+                [
+                    "functional location tracking system is installed in each construction vehicle",
+                    "location tracking system",
+                ],
             )
             if res:
                 quote, ref, conf = res
@@ -1671,7 +2107,15 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 )
 
         # 34. Financial: Change of Scope Mobilization Advance & Cumulative Cost Caps
-        is_change_of_scope = "change of scope" in text_lower and any(k in text_lower for k in ("advance payment", "mobilization advance", "cumulative cost", "cost of change of scope"))
+        is_change_of_scope = "change of scope" in text_lower and any(
+            k in text_lower
+            for k in (
+                "advance payment",
+                "mobilization advance",
+                "cumulative cost",
+                "cost of change of scope",
+            )
+        )
         if is_change_of_scope:
             res = get_clause_and_quote(
                 r"(?:advance payment.*?change of scope|cumulative costs.*?change of scope|change of scope)",
@@ -1705,7 +2149,16 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
 
         # 35. Legal: Toll Revenue Under-Reporting & Over-Charging Liquidated Damages
         is_toll_penalty = (
-            any(k in text_lower for k in ("under-reporting", "under-reported", "over-charging", "excess fee", "unauthorized fee"))
+            any(
+                k in text_lower
+                for k in (
+                    "under-reporting",
+                    "under-reported",
+                    "over-charging",
+                    "excess fee",
+                    "unauthorized fee",
+                )
+            )
             and any(k in text_lower for k in ("damages", "penalty", "user fee", "toll"))
         ) or any(k in text_lower for k in ("times such difference", "damages equal to 200%"))
         if is_toll_penalty:
@@ -1738,15 +2191,28 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 )
 
         # 36. Legal: Post-Termination Defect Liability & Escrow Retention
-        is_post_term_dlp = (
-            any(k in text_lower for k in ("defects and deficiencies", "defect liability", "rectification of defects"))
-            and any(k in text_lower for k in ("after termination", "post-termination", "termination of this agreement", "expiry of the concession period"))
+        is_post_term_dlp = any(
+            k in text_lower
+            for k in ("defects and deficiencies", "defect liability", "rectification of defects")
+        ) and any(
+            k in text_lower
+            for k in (
+                "after termination",
+                "post-termination",
+                "termination of this agreement",
+                "expiry of the concession period",
+            )
         )
         if is_post_term_dlp:
             res = get_clause_and_quote(
                 r"(?:defects and deficiencies.*?after termination|defects and deficiencies.*?period of \d+|defect liability.*?termination)",
                 "defect liability",
-                ["defects and deficiencies", "defect liability", "after termination", "post-termination"],
+                [
+                    "defects and deficiencies",
+                    "defect liability",
+                    "after termination",
+                    "post-termination",
+                ],
             )
             if res:
                 quote, ref, conf = res
@@ -1783,6 +2249,7 @@ class ProductionExtractionPipeline:
     Normalized content -> Scoped Retrieval -> LangGraph Compliance Workflow ->
     Deterministic Grounding -> Output formatting.
     """
+
     def __init__(self, llm_client: StructuredLLMClient | None = None):
         self.llm_client = llm_client or StructuredLLMClient(extractor_fn=default_tender_extractor)
 
@@ -1794,6 +2261,7 @@ class ProductionExtractionPipeline:
 
         if not request.pages and request.download_url:
             from tenderpulse_ai.domain.pdf_resolver import resolve_pdf_to_pages
+
             try:
                 request.pages = await resolve_pdf_to_pages(
                     download_url=request.download_url,
@@ -1816,13 +2284,14 @@ class ProductionExtractionPipeline:
 
         if len(request.pages) > 40:
             from tenderpulse_ai.domain.pdf_resolver import filter_candidate_pages
+
             request.pages = filter_candidate_pages(request.pages)
 
         # Hoist document parsing, structure building, candidate detection, and context assembly once upfront
-        from tenderpulse_ai.domain.docling_parser import DoclingParserEngine
-        from tenderpulse_ai.domain.structure_builder import DocumentStructureBuilder
         from tenderpulse_ai.domain.candidate_detector import CandidateDetector
         from tenderpulse_ai.domain.context_assembler import ContextAssembler
+        from tenderpulse_ai.domain.docling_parser import DoclingParserEngine
+        from tenderpulse_ai.domain.structure_builder import DocumentStructureBuilder
 
         doc_parser = DoclingParserEngine()
         docling_doc = doc_parser.parse_document(
@@ -1834,7 +2303,9 @@ class ProductionExtractionPipeline:
         doc_tree = doc_builder.build_structure(docling_doc)
 
         detector = CandidateDetector()
-        detected_candidates, unselected_passages = detector.detect_candidates_with_unselected(docling_doc, doc_tree)
+        detected_candidates, unselected_passages = detector.detect_candidates_with_unselected(
+            docling_doc, doc_tree
+        )
 
         assembler = ContextAssembler()
         assembled_contexts = assembler.assemble_contexts(docling_doc, doc_tree, detected_candidates)
@@ -1862,16 +2333,18 @@ class ProductionExtractionPipeline:
                 )
 
                 # Seed chunks for scoped retrieval of this page
-                retrieval_tool.seed_chunks([
-                    DocumentChunk(
-                        chunk_id=f"chk_{request.document_id}_{page.page_number}",
-                        tenant_id=sec_ctx.tenant_id,
-                        document_id=request.document_id,
-                        page_number=page.page_number,
-                        clause_reference=f"Page {page.page_number}",
-                        text=page.text,
-                    )
-                ])
+                retrieval_tool.seed_chunks(
+                    [
+                        DocumentChunk(
+                            chunk_id=f"chk_{request.document_id}_{page.page_number}",
+                            tenant_id=sec_ctx.tenant_id,
+                            document_id=request.document_id,
+                            page_number=page.page_number,
+                            clause_reference=f"Page {page.page_number}",
+                            text=page.text,
+                        )
+                    ]
+                )
 
                 node_ctx = WorkflowNodeContext(
                     retrieval_tool=retrieval_tool,
@@ -1879,6 +2352,7 @@ class ProductionExtractionPipeline:
                     llm_client=self.llm_client,
                 )
                 from tenderpulse_ai.workflow.graph import build_compliance_workflow_graph
+
                 graph = build_compliance_workflow_graph(node_ctx)
 
                 initial_state: ComplianceWorkflowState = {
@@ -1956,14 +2430,20 @@ class ProductionExtractionPipeline:
 
                 cur_quote = payload["provenance"]["verbatimQuote"] or ""
                 ex_quote = existing["provenance"]["verbatimQuote"] or ""
-                cur_has_numbers = bool(re.search(r"\b(rs\.?|inr|crore|lakh|\d+\.?\d*%)\b", cur_quote, re.IGNORECASE))
-                ex_has_numbers = bool(re.search(r"\b(rs\.?|inr|crore|lakh|\d+\.?\d*%)\b", ex_quote, re.IGNORECASE))
+                cur_has_numbers = bool(
+                    re.search(r"\b(rs\.?|inr|crore|lakh|\d+\.?\d*%)\b", cur_quote, re.IGNORECASE)
+                )
+                ex_has_numbers = bool(
+                    re.search(r"\b(rs\.?|inr|crore|lakh|\d+\.?\d*%)\b", ex_quote, re.IGNORECASE)
+                )
                 prefer_new_quote = (
-                    payload["provenance"]["confidenceScore"] > existing["provenance"]["confidenceScore"]
+                    payload["provenance"]["confidenceScore"]
+                    > existing["provenance"]["confidenceScore"]
                     or (cur_has_numbers and not ex_has_numbers)
                     or (len(ex_quote) < 60 and len(cur_quote) >= 60)
                     or (
-                        payload["provenance"]["confidenceScore"] == existing["provenance"]["confidenceScore"]
+                        payload["provenance"]["confidenceScore"]
+                        == existing["provenance"]["confidenceScore"]
                         and (cur_has_numbers == ex_has_numbers)
                         and len(cur_quote) > len(ex_quote)
                     )

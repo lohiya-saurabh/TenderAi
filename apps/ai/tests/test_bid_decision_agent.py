@@ -64,7 +64,11 @@ def make_company_profile(
         profile_version_id="prof_v2_active",
         is_active=True,
         is_blacklisted=is_blacklisted,
-        registrations={"GSTIN": "27AAACL1234F1Z1", "PAN": "AAACL1234F", "UDYAM": "UDYAM-MH-01-0001234"},
+        registrations={
+            "GSTIN": "27AAACL1234F1Z1",
+            "PAN": "AAACL1234F",
+            "UDYAM": "UDYAM-MH-01-0001234",
+        },
         turnover_records=[
             FinancialTurnover(
                 financial_year="FY24",
@@ -137,7 +141,9 @@ def make_standard_requirements() -> list[RequirementCandidate]:
             criticality=RequirementCriticality.HARD_ELIGIBILITY,
             title="Annual Average Financial Turnover",
             description="Bidder must have minimum annual turnover of INR 50 Crores in the last financial year.",
-            criterion=CriterionProps(type="TURNOVER", operator="GTE", threshold=50.0, unit="CRORES"),
+            criterion=CriterionProps(
+                type="TURNOVER", operator="GTE", threshold=50.0, unit="CRORES"
+            ),
             provenance=ProvenanceProps(
                 source_document_id="doc_tender_package_01",
                 source_file_name="NIT_Package.pdf",
@@ -232,7 +238,10 @@ async def test_bid_decision_go_when_all_criteria_comfortably_met():
     response = await agent.evaluate(request)
 
     # 1. Verdict and State
-    assert response.verdict == BidDecisionVerdict.CONDITIONAL_GO or response.verdict == BidDecisionVerdict.GO
+    assert (
+        response.verdict == BidDecisionVerdict.CONDITIONAL_GO
+        or response.verdict == BidDecisionVerdict.GO
+    )
     # Note: EMD is a mandatory submission item to procure, so it generates a GAP item
     assert response.state == DecisionState.AI_PROPOSED
     assert response.hard_disqualifiers == []
@@ -285,9 +294,7 @@ async def test_bid_decision_blacklisted_company_produces_hard_no_go():
 async def test_bid_decision_expired_mandatory_certification_produces_no_go():
     agent = BidDecisionAgent()
     # Certificate expired before submission deadline (2026-11-15)
-    expired_cert_company = make_company_profile(
-        cert_valid_to=datetime.date(2026, 9, 30)
-    )
+    expired_cert_company = make_company_profile(cert_valid_to=datetime.date(2026, 9, 30))
     request = make_request(company_profile=expired_cert_company)
 
     response = await agent.evaluate(request)

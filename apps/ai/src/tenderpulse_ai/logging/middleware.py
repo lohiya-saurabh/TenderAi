@@ -50,7 +50,11 @@ class TraceLoggingMiddleware(BaseHTTPMiddleware):
                 response.headers["X-Request-Id"] = request_id
 
                 status_code = response.status_code
-                log_level = logging.ERROR if status_code >= 500 else (logging.WARNING if status_code >= 400 else logging.INFO)
+                log_level = (
+                    logging.ERROR
+                    if status_code >= 500
+                    else (logging.WARNING if status_code >= 400 else logging.INFO)
+                )
 
                 logger.log(
                     log_level,

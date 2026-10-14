@@ -15,7 +15,6 @@ from tenderpulse_ai.decision.schemas import (
     DecisionState,
     ReviewTriggerReason,
     ReviewTriggerType,
-    RiskItem,
 )
 from tenderpulse_ai.decision.workflow.state import BidDecisionWorkflowState
 
@@ -43,6 +42,7 @@ def make_evidence_retrieval_node(ctx: DecisionWorkflowContext):
     Node 1: Evidence RAG & Profile Fact Matching.
     Synthesizes citations linking tender requirements to company evidence vault facts.
     """
+
     def evidence_retrieval_node(state: BidDecisionWorkflowState) -> dict[str, Any]:
         sec_ctx = state["security_context"]
         tender_id = state.get("tender_id", "")
@@ -81,6 +81,7 @@ def make_deterministic_evaluation_node(ctx: DecisionWorkflowContext):
     Pure arithmetic, count checks, and statutory eligibility gating.
     The LLM never computes or alters this outcome.
     """
+
     def deterministic_evaluation_node(state: BidDecisionWorkflowState) -> dict[str, Any]:
         sec_ctx = state["security_context"]
         tender_id = state.get("tender_id", "")
@@ -142,6 +143,7 @@ def make_commercial_risk_node(ctx: DecisionWorkflowContext):
     Node 3: Commercial & Contract Execution Risk Analysis.
     Evaluates submission timeline, EMD commitment, liquidated damages, and penalties.
     """
+
     def commercial_risk_node(state: BidDecisionWorkflowState) -> dict[str, Any]:
         sec_ctx = state["security_context"]
         tender_id = state.get("tender_id", "")
@@ -207,12 +209,12 @@ def make_review_routing_node(ctx: DecisionWorkflowContext):
     Node 4: Review Trigger Scanning & State Routing.
     Identifies ambiguities, missing mandatory details, and routes to review if needed.
     """
+
     def review_routing_node(state: BidDecisionWorkflowState) -> dict[str, Any]:
         sec_ctx = state["security_context"]
         tender_id = state.get("tender_id", "")
         requirements = state.get("requirements", [])
         hard_disqualifiers = state.get("hard_disqualifiers", [])
-        uncertain_areas = state.get("uncertain_areas", [])
         commercial_risks = state.get("commercial_risks", [])
         require_human_review = state.get("require_human_review", False)
         current_verdict = state.get("verdict", BidDecisionVerdict.CONDITIONAL_GO)
@@ -345,6 +347,7 @@ def make_executive_synthesis_node(ctx: DecisionWorkflowContext):
     The LLM generates structured strategic context explaining the deterministic verdict.
     It NEVER computes or alters the verdict.
     """
+
     async def executive_synthesis_node(state: BidDecisionWorkflowState) -> dict[str, Any]:
         sec_ctx = state["security_context"]
         tender_id = state.get("tender_id", "")
@@ -402,6 +405,7 @@ def make_human_review_gate_node(ctx: DecisionWorkflowContext):
     Node 6: Human Review Escalation Gate.
     Engages checkpoint when tender has ambiguities or triggers review.
     """
+
     def human_review_gate_node(state: BidDecisionWorkflowState) -> dict[str, Any]:
         sec_ctx = state["security_context"]
         tender_id = state.get("tender_id", "")

@@ -23,9 +23,11 @@ class ContextAssembler:
     - Referenced clauses
     """
 
-    DEF_PATTERN = re.compile(r'"([^"]+)"\s+(means|shall\s+mean|refers\s+to|is\s+defined\s+as)\b', re.IGNORECASE)
+    DEF_PATTERN = re.compile(
+        r'"([^"]+)"\s+(means|shall\s+mean|refers\s+to|is\s+defined\s+as)\b', re.IGNORECASE
+    )
     REF_PATTERN = re.compile(
-        r'\b(Clause|Sub-Clause|Section|Article|Part|Schedule|Annexure|Appendix)\s*[-–—]?\s*([A-Za-z\d]+(?:\.[A-Za-z\d]+)*)\b',
+        r"\b(Clause|Sub-Clause|Section|Article|Part|Schedule|Annexure|Appendix)\s*[-–—]?\s*([A-Za-z\d]+(?:\.[A-Za-z\d]+)*)\b",
         re.IGNORECASE,
     )
 
@@ -53,7 +55,11 @@ class ContextAssembler:
             idx = block_index_map.get(candidate.block_id)
 
             prev_text = block_list[idx - 1].text if (idx is not None and idx > 0) else None
-            next_text = block_list[idx + 1].text if (idx is not None and idx < len(block_list) - 1) else None
+            next_text = (
+                block_list[idx + 1].text
+                if (idx is not None and idx < len(block_list) - 1)
+                else None
+            )
 
             # Find referenced clauses in current text
             referenced: list[str] = []

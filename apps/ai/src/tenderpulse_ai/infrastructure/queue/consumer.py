@@ -3,6 +3,7 @@ import json
 import logging
 from abc import ABC, abstractmethod
 from typing import Any
+
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 from tenderpulse_ai.config import settings
@@ -14,17 +15,33 @@ class IngestionJobMessage(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     job_id: str = Field(..., validation_alias=AliasChoices("job_id", "jobId"))
-    organization_id: str = Field(..., validation_alias=AliasChoices("organization_id", "organizationId"))
-    company_id: str | None = Field(default=None, validation_alias=AliasChoices("company_id", "companyId"))
+    organization_id: str = Field(
+        ..., validation_alias=AliasChoices("organization_id", "organizationId")
+    )
+    company_id: str | None = Field(
+        default=None, validation_alias=AliasChoices("company_id", "companyId")
+    )
     bid_id: str = Field(..., validation_alias=AliasChoices("bid_id", "bidId"))
     document_id: str = Field(..., validation_alias=AliasChoices("document_id", "documentId"))
-    workflow_run_id: str | None = Field(default=None, validation_alias=AliasChoices("workflow_run_id", "workflowRunId"))
+    workflow_run_id: str | None = Field(
+        default=None, validation_alias=AliasChoices("workflow_run_id", "workflowRunId")
+    )
     trace_id: str | None = Field(default=None, validation_alias=AliasChoices("trace_id", "traceId"))
-    correlation_id: str | None = Field(default=None, validation_alias=AliasChoices("correlation_id", "correlationId"))
-    storage_reference: str | None = Field(default=None, validation_alias=AliasChoices("storage_reference", "storageReference"))
-    document_type: str = Field(default="NIT", validation_alias=AliasChoices("document_type", "documentType"))
-    file_name: str = Field(default="tender_document.pdf", validation_alias=AliasChoices("file_name", "fileName"))
-    download_url: str | None = Field(default=None, validation_alias=AliasChoices("download_url", "downloadUrl"))
+    correlation_id: str | None = Field(
+        default=None, validation_alias=AliasChoices("correlation_id", "correlationId")
+    )
+    storage_reference: str | None = Field(
+        default=None, validation_alias=AliasChoices("storage_reference", "storageReference")
+    )
+    document_type: str = Field(
+        default="NIT", validation_alias=AliasChoices("document_type", "documentType")
+    )
+    file_name: str = Field(
+        default="tender_document.pdf", validation_alias=AliasChoices("file_name", "fileName")
+    )
+    download_url: str | None = Field(
+        default=None, validation_alias=AliasChoices("download_url", "downloadUrl")
+    )
     timestamp: str | None = None
 
 
@@ -244,7 +261,9 @@ class GcpPubSubQueueConsumer(IQueueConsumer):
         except RuntimeError:
             raise
         except Exception as exc:  # noqa: BLE001
-            logger.error("Failed to pull messages from GCP PubSub %s: %s", self.subscription_name, exc)
+            logger.error(
+                "Failed to pull messages from GCP PubSub %s: %s", self.subscription_name, exc
+            )
             return []
 
     async def delete_message(self, receipt_handle: str) -> bool:
@@ -292,7 +311,9 @@ class GcpPubSubQueueConsumer(IQueueConsumer):
         reason: str,
         receive_count: int,
     ) -> bool:
-        logger.warning("DLQ routing for GCP PubSub not directly attached; acking poisoned message: %s", reason)
+        logger.warning(
+            "DLQ routing for GCP PubSub not directly attached; acking poisoned message: %s", reason
+        )
         return True
 
 
@@ -307,11 +328,13 @@ class MockQueueConsumer(IQueueConsumer):
 
     def enqueue(self, payload: IngestionJobMessage) -> str:
         msg_id = f"mock-msg-{len(self.messages) + 1}"
-        self.messages.append({
-            "message_id": msg_id,
-            "body": payload,
-            "receive_count": 0,
-        })
+        self.messages.append(
+            {
+                "message_id": msg_id,
+                "body": payload,
+                "receive_count": 0,
+            }
+        )
         return msg_id
 
     async def receive_messages(
@@ -325,11 +348,13 @@ class MockQueueConsumer(IQueueConsumer):
                 break
             item["receive_count"] += 1
             if item["receive_count"] > self.max_receive_count:
-                self.dead_letters.append({
-                    "message": item["body"],
-                    "reason": f"Exceeded max receive count of {self.max_receive_count}",
-                    "receive_count": item["receive_count"],
-                })
+                self.dead_letters.append(
+                    {
+                        "message": item["body"],
+                        "reason": f"Exceeded max receive count of {self.max_receive_count}",
+                        "receive_count": item["receive_count"],
+                    }
+                )
                 self.messages.remove(item)
                 continue
 
@@ -365,11 +390,13 @@ class MockQueueConsumer(IQueueConsumer):
         reason: str,
         receive_count: int,
     ) -> bool:
-        self.dead_letters.append({
-            "message": message,
-            "reason": reason,
-            "receive_count": receive_count,
-        })
+        self.dead_letters.append(
+            {
+                "message": message,
+                "reason": reason,
+                "receive_count": receive_count,
+            }
+        )
         return True
 
 

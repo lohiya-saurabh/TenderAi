@@ -9,11 +9,12 @@ class CorrigendumDiffEngine:
     Deterministic AST & Clause Diffing Engine.
     Compares original tender requirements against corrigendum clauses to isolate exact amendments.
     """
+
     DATE_PATTERNS = re.compile(
         r"(?:submission\s+date|last\s+date|closing\s+date|extended\s+up\s+to|validity)",
-        re.IGNORECASE
+        re.IGNORECASE,
     )
-    
+
     CRITICAL_KEYWORDS = {"turnover", "debarment", "blacklisting", "experience", "oem", "consortium"}
     HIGH_KEYWORDS = {"emd", "guarantee", "stamp", "notary", "udin", "submission date", "last date"}
 
@@ -27,10 +28,10 @@ class CorrigendumDiffEngine:
         original_clauses: { "Clause 4.1": "The bidder must have turnover of INR 50 Cr..." }
         """
         changes: list[ClauseChange] = []
-        
+
         # Split corrigendum text into logical clause blocks
         lines = [line.strip() for line in corrigendum_text.splitlines() if line.strip()]
-        
+
         current_ref = "General Corrigendum"
         current_lines: list[str] = []
         parsed_blocks: list[tuple[str, str]] = []
@@ -39,7 +40,7 @@ class CorrigendumDiffEngine:
             clause_match = re.match(
                 r"^(?:item\s+no\.?\s*\d+|clause\s+\d+(?:\.\d+)*|section\s+\d+|amendment\s+to\s+clause\s+\d+(?:\.\d+)*)",
                 line,
-                re.IGNORECASE
+                re.IGNORECASE,
             )
             if clause_match:
                 if current_lines:
@@ -59,15 +60,19 @@ class CorrigendumDiffEngine:
                 continue
 
             # Check if text mentions a specific original clause (e.g., "Amendment to Clause 3.1")
-            embedded_clause = re.search(r"(?:clause|section|item)\s+\d+(?:\.\d+)*", text, re.IGNORECASE)
+            embedded_clause = re.search(
+                r"(?:clause|section|item)\s+\d+(?:\.\d+)*", text, re.IGNORECASE
+            )
             effective_ref = embedded_clause.group(0).title() if embedded_clause else ref
 
             orig_text = None
             norm_ref = self._normalize_ref(effective_ref)
-            
+
             # Find best matching original clause
             for orig_key, orig_val in original_clauses.items():
-                if self._normalize_ref(orig_key) == norm_ref or norm_ref in self._normalize_ref(orig_key):
+                if self._normalize_ref(orig_key) == norm_ref or norm_ref in self._normalize_ref(
+                    orig_key
+                ):
                     orig_text = orig_val
                     break
 
@@ -86,12 +91,17 @@ class CorrigendumDiffEngine:
             text_lower = text.lower()
             if any(k in text_lower for k in self.CRITICAL_KEYWORDS):
                 severity = DriftSeverity.CRITICAL
-            elif any(k in text_lower for k in self.HIGH_KEYWORDS) or change_type == ChangeType.DEADLINE_CHANGE:
+            elif (
+                any(k in text_lower for k in self.HIGH_KEYWORDS)
+                or change_type == ChangeType.DEADLINE_CHANGE
+            ):
                 severity = DriftSeverity.HIGH
 
             # Extract delta if numbers present
             delta: dict[str, Any] = {}
-            num_matches = re.findall(r"(?:inr|rs\.?)\s*([\d,]+(?:\.\d+)?)\s*(?:cr|crores|lakhs)?", text, re.IGNORECASE)
+            num_matches = re.findall(
+                r"(?:inr|rs\.?)\s*([\d,]+(?:\.\d+)?)\s*(?:cr|crores|lakhs)?", text, re.IGNORECASE
+            )
             if num_matches:
                 delta["extracted_amounts"] = num_matches
 

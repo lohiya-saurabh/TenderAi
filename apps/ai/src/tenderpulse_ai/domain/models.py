@@ -33,12 +33,15 @@ class ProvenanceProps(BaseModel):
     source_file_name: str = Field(..., min_length=1)
     page_number: int = Field(..., ge=1)
     clause_reference: str = Field(..., min_length=1)
-    verbatim_quote: str = Field(..., min_length=1, description="Verbatim quote from source text for grounding")
+    verbatim_quote: str = Field(
+        ..., min_length=1, description="Verbatim quote from source text for grounding"
+    )
     confidence_score: float = Field(..., ge=0.0, le=1.0)
 
 
 class CandidateComplianceItem(BaseModel):
     """Structured output schema expected from LLM reasoning."""
+
     category: str = Field(..., min_length=1)
     title: str = Field(..., min_length=1)
     description: str = Field(..., min_length=1)
@@ -48,6 +51,7 @@ class CandidateComplianceItem(BaseModel):
 
 class VerifiedComplianceItem(BaseModel):
     """Compliance item that has passed deterministic verification."""
+
     category: str
     title: str
     description: str
@@ -78,7 +82,6 @@ class VerifiedComplianceItem(BaseModel):
                 "confidenceScore": self.provenance.confidence_score,
             },
         }
-
 
 
 class AuditEvent(BaseModel):
@@ -117,17 +120,21 @@ class DoclingTable(BaseModel):
         """Serializes the table into a standard GitHub-flavored Markdown table string."""
         if not self.headers and not self.rows:
             return ""
-        
-        headers = self.headers if self.headers else [f"Col {i+1}" for i in range(len(self.rows[0]) if self.rows else 0)]
+
+        headers = (
+            self.headers
+            if self.headers
+            else [f"Col {i + 1}" for i in range(len(self.rows[0]) if self.rows else 0)]
+        )
         header_row = "| " + " | ".join(headers) + " |"
         separator_row = "| " + " | ".join(["---"] * len(headers)) + " |"
-        
+
         row_lines: list[str] = []
         for row in self.rows:
             # Pad or truncate row to match header length
             padded = row + [""] * (len(headers) - len(row))
-            row_lines.append("| " + " | ".join(padded[:len(headers)]) + " |")
-        
+            row_lines.append("| " + " | ".join(padded[: len(headers)]) + " |")
+
         return "\n".join([header_row, separator_row] + row_lines)
 
     def to_dict_records(self) -> list[dict[str, str]]:
@@ -148,7 +155,6 @@ class DoclingTable(BaseModel):
         if 0 <= row_idx < len(records):
             return records[row_idx].get(col_name)
         return None
-
 
 
 class DoclingParsedDocument(BaseModel):
@@ -213,4 +219,3 @@ class ConfidenceTier(str, Enum):
     AUTO_ACCEPT = "AUTO_ACCEPT"  # >= 95%
     REVIEWER_VERIFICATION = "REVIEWER_VERIFICATION"  # 80-94%
     MANDATORY_HUMAN_REVIEW = "MANDATORY_HUMAN_REVIEW"  # < 80%
-

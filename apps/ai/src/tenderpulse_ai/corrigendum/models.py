@@ -1,5 +1,6 @@
 from enum import Enum
 from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -13,9 +14,9 @@ class ChangeType(str, Enum):
 
 class DriftSeverity(str, Enum):
     CRITICAL = "CRITICAL"  # Affects hard eligibility (disqualification risk)
-    HIGH = "HIGH"          # Changes dates/EMD/stamp paper
-    MEDIUM = "MEDIUM"      # Moderate procedural adjustment
-    LOW = "LOW"            # Non-binding clarification
+    HIGH = "HIGH"  # Changes dates/EMD/stamp paper
+    MEDIUM = "MEDIUM"  # Moderate procedural adjustment
+    LOW = "LOW"  # Non-binding clarification
 
 
 class ClauseChange(BaseModel):

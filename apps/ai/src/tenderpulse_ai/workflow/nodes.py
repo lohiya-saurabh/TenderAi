@@ -38,6 +38,7 @@ from tenderpulse_ai.workflow.state import ComplianceWorkflowState
 
 class WorkflowNodeContext:
     """Dependency container for LangGraph nodes."""
+
     def __init__(
         self,
         retrieval_tool: ScopedRetrievalTool,
@@ -186,7 +187,11 @@ def make_build_structure_node(ctx: WorkflowNodeContext):
         doc_id = state.get("document_id")
         sec_context = SecurityContext(**state["security_context"])
         docling_dict = state.get("docling_document")
-        docling_doc = DoclingParsedDocument(**docling_dict) if docling_dict else DoclingParsedDocument(document_id=state["document_id"])
+        docling_doc = (
+            DoclingParsedDocument(**docling_dict)
+            if docling_dict
+            else DoclingParsedDocument(document_id=state["document_id"])
+        )
 
         if state.get("document_structure"):
             return {
@@ -306,7 +311,11 @@ def make_context_assembly_node(ctx: WorkflowNodeContext):
 
         assembler = ContextAssembler()
         from tenderpulse_ai.domain.models import CandidatePassage
-        passages = [CandidatePassage(**c) if isinstance(c, dict) else c for c in state.get("detected_candidates", [])]
+
+        passages = [
+            CandidatePassage(**c) if isinstance(c, dict) else c
+            for c in state.get("detected_candidates", [])
+        ]
         assembled = assembler.assemble_contexts(docling_doc, tree, passages)
 
         duration_ms = round((time.perf_counter() - start_time) * 1000, 1)
@@ -434,7 +443,9 @@ def make_llm_extraction_node(ctx: WorkflowNodeContext):
 
         user_prompt = f"Analyze the following tender page chunks:\n\n{chunk_texts}"
         if state.get("error_feedback"):
-            user_prompt += f"\n\nPRIOR VERIFICATION FEEDBACK (CORRECT THIS):\n{state['error_feedback']}"
+            user_prompt += (
+                f"\n\nPRIOR VERIFICATION FEEDBACK (CORRECT THIS):\n{state['error_feedback']}"
+            )
 
         try:
             candidates = await ctx.llm_client.extract_compliance(system_prompt, user_prompt)
@@ -462,7 +473,10 @@ def make_llm_extraction_node(ctx: WorkflowNodeContext):
                 action="MODEL_EXTRACTION_COMPLETED",
                 entity_type="BidProject",
                 entity_id=state["bid_id"],
-                details={"candidates_count": len(candidates), "retry_count": state.get("retry_count", 0)},
+                details={
+                    "candidates_count": len(candidates),
+                    "retry_count": state.get("retry_count", 0),
+                },
             )
 
             return {
@@ -616,7 +630,9 @@ def make_validation_node(ctx: WorkflowNodeContext):
         page_no = state.get("page_number", 1)
         normalized_page = " ".join(raw_text.lower().split())
 
-        tree = DocumentStructureTree(**state.get("document_structure", {"document_id": state["document_id"], "nodes": []}))
+        tree = DocumentStructureTree(
+            **state.get("document_structure", {"document_id": state["document_id"], "nodes": []})
+        )
         all_assembled = [AssembledClauseContext(**c) for c in state.get("assembled_contexts", [])]
         page_assembled = [c for c in all_assembled if c.page_number == page_no]
         if not page_assembled:
@@ -637,7 +653,10 @@ def make_validation_node(ctx: WorkflowNodeContext):
 
             rules = candidate.execution_rules
             rules_valid = True
-            if rules.stamp_paper_required and (rules.stamp_paper_denomination_inr is None or rules.stamp_paper_denomination_inr <= 0):
+            if rules.stamp_paper_required and (
+                rules.stamp_paper_denomination_inr is None
+                or rules.stamp_paper_denomination_inr <= 0
+            ):
                 rules_valid = False
                 failure_reasons.append(f"Invalid stamp paper denomination for '{candidate.title}'")
 
@@ -792,7 +811,9 @@ def make_postgres_store_node(ctx: WorkflowNodeContext):
         sec_context = SecurityContext(**state["security_context"])
         items_to_persist = [item.to_api_payload() for item in state.get("verified_items", [])]
 
-        if ctx.api_persistence_sink and hasattr(ctx.api_persistence_sink, "persist_compliance_items"):
+        if ctx.api_persistence_sink and hasattr(
+            ctx.api_persistence_sink, "persist_compliance_items"
+        ):
             await ctx.api_persistence_sink.persist_compliance_items(
                 tenant_id=sec_context.tenant_id,
                 bid_id=state["bid_id"],
@@ -940,7 +961,10 @@ def make_human_review_node(ctx: WorkflowNodeContext):
             "bid_id": state["bid_id"],
             "document_id": state["document_id"],
             "page_number": state.get("page_number", 1),
-            "unverified_items": [i.model_dump() if hasattr(i, "model_dump") else i for i in state.get("unverified_items", [])],
+            "unverified_items": [
+                i.model_dump() if hasattr(i, "model_dump") else i
+                for i in state.get("unverified_items", [])
+            ],
             "failure_reasons": state.get("error_feedback"),
             "status": WorkflowStatus.AWAITING_HUMAN_REVIEW.value,
         }
@@ -977,15 +1001,15 @@ def make_human_review_node(ctx: WorkflowNodeContext):
         elif review_action.action == HumanReviewDecision.EDIT and review_action.edited_item:
             promoted_verified.append(
                 VerifiedComplianceItem(
-                        category=review_action.edited_item.category,
-                        title=review_action.edited_item.title,
-                        description=review_action.edited_item.description,
-                        execution_rules=review_action.edited_item.execution_rules,
-                        provenance=review_action.edited_item.provenance,
-                        is_verified=True,
-                        verification_method="HUMAN_EDITED",
-                    )
+                    category=review_action.edited_item.category,
+                    title=review_action.edited_item.title,
+                    description=review_action.edited_item.description,
+                    execution_rules=review_action.edited_item.execution_rules,
+                    provenance=review_action.edited_item.provenance,
+                    is_verified=True,
+                    verification_method="HUMAN_EDITED",
                 )
+            )
 
         duration_ms = round((time.perf_counter() - start_time) * 1000, 1)
         logger.info(
@@ -1035,11 +1059,14 @@ def make_human_review_node(ctx: WorkflowNodeContext):
 def make_scoped_retrieval_node(ctx: WorkflowNodeContext):
     return make_docling_parse_node(ctx)
 
+
 def make_model_extraction_node(ctx: WorkflowNodeContext):
     return make_llm_extraction_node(ctx)
 
+
 def make_deterministic_verification_node(ctx: WorkflowNodeContext):
     return make_validation_node(ctx)
+
 
 def make_persistence_node(ctx: WorkflowNodeContext):
     return make_postgres_store_node(ctx)

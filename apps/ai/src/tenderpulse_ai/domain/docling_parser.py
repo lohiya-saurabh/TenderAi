@@ -10,6 +10,7 @@ logger = logging.getLogger("tenderpulse_ai.docling")
 
 try:
     from docling.document_converter import DocumentConverter
+
     DOCLING_AVAILABLE = True
 except ImportError:
     DocumentConverter = None  # type: ignore[assignment,misc]
@@ -81,10 +82,12 @@ class DoclingParserEngine:
         # 1. Pages
         if hasattr(doc, "pages") and isinstance(doc.pages, dict):
             for page_no, page_obj in doc.pages.items():
-                parsed_pages.append({
-                    "page_number": int(page_no),
-                    "size": getattr(page_obj, "size", None),
-                })
+                parsed_pages.append(
+                    {
+                        "page_number": int(page_no),
+                        "size": getattr(page_obj, "size", None),
+                    }
+                )
         else:
             parsed_pages.append({"page_number": 1})
 
@@ -107,8 +110,18 @@ class DoclingParserEngine:
                 if bbox_obj and hasattr(bbox_obj, "as_tuple"):
                     bbox = list(bbox_obj.as_tuple())
 
-            block_type = "heading" if "heading" in label or "title" in label or "section" in label else "paragraph"
-            heading_level = 1 if "title" in label else (2 if "section" in label else 3) if block_type == "heading" else None
+            block_type = (
+                "heading"
+                if "heading" in label or "title" in label or "section" in label
+                else "paragraph"
+            )
+            heading_level = (
+                1
+                if "title" in label
+                else (2 if "section" in label else 3)
+                if block_type == "heading"
+                else None
+            )
 
             parsed_blocks.append(
                 DoclingBlock(
@@ -208,7 +221,9 @@ class DoclingParserEngine:
                     )
                 )
 
-                is_table_row = ("|" in line or "\t" in line) and not re.match(r"^\|?\s*[-:]+\s*\|", line)
+                is_table_row = ("|" in line or "\t" in line) and not re.match(
+                    r"^\|?\s*[-:]+\s*\|", line
+                )
                 is_table_separator = bool(re.match(r"^\|?\s*[-:]+[-| :]+\s*\|?$", line))
 
                 if is_table_separator:
@@ -229,8 +244,16 @@ class DoclingParserEngine:
                                 )
                             )
 
-                block_type = "heading" if is_heading else ("table_row" if is_table_row else "paragraph")
-                level = 1 if "PART" in line.upper() else (2 if "SECTION" in line.upper() else 3) if is_heading else None
+                block_type = (
+                    "heading" if is_heading else ("table_row" if is_table_row else "paragraph")
+                )
+                level = (
+                    1
+                    if "PART" in line.upper()
+                    else (2 if "SECTION" in line.upper() else 3)
+                    if is_heading
+                    else None
+                )
 
                 # Calculate standard A4 point coordinates (595.28 x 841.89)
                 y_top = float((block_counter % 40) * 20)

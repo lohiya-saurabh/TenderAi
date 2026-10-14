@@ -1,8 +1,10 @@
 import asyncio
 import logging
+import os
 import secrets
 import sys
 from contextlib import asynccontextmanager
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import ClassVar
 
@@ -26,9 +28,6 @@ from tenderpulse_ai.infrastructure.queue import (
     DocumentQueueConsumerWorker,
     get_completion_publisher,
 )
-from logging.handlers import RotatingFileHandler
-import os
-
 from tenderpulse_ai.logging import (
     ConsoleLogFormatter,
     JSONLogFormatter,
@@ -129,7 +128,9 @@ class QueueProcessingRequest(BaseModel):
         min_length=1,
         validation_alias=AliasChoices("organization_id", "organizationId"),
     )
-    company_id: str | None = Field(default=None, validation_alias=AliasChoices("company_id", "companyId"))
+    company_id: str | None = Field(
+        default=None, validation_alias=AliasChoices("company_id", "companyId")
+    )
     bid_id: str = Field(
         ...,
         min_length=1,
@@ -164,10 +165,16 @@ class QueueProcessingRequest(BaseModel):
     )
     async_mode: bool = Field(
         default=False,
-        validation_alias=AliasChoices("async_mode", "asyncMode", "async_execution", "asyncExecution"),
+        validation_alias=AliasChoices(
+            "async_mode", "asyncMode", "async_execution", "asyncExecution"
+        ),
     )
-    document_type: str = Field(default="NIT", validation_alias=AliasChoices("document_type", "documentType"))
-    file_name: str = Field(default="document.pdf", validation_alias=AliasChoices("file_name", "fileName"))
+    document_type: str = Field(
+        default="NIT", validation_alias=AliasChoices("document_type", "documentType")
+    )
+    file_name: str = Field(
+        default="document.pdf", validation_alias=AliasChoices("file_name", "fileName")
+    )
     pages: list[NormalizedPage] = Field(default_factory=list)
 
 
@@ -215,7 +222,11 @@ class StorageDocumentResolver:
 
         candidate_path = Path(storage_reference)
         if candidate_path.is_file():
-            return [NormalizedPage(page_number=1, text=candidate_path.read_text(encoding="utf-8", errors="ignore"))]
+            return [
+                NormalizedPage(
+                    page_number=1, text=candidate_path.read_text(encoding="utf-8", errors="ignore")
+                )
+            ]
 
         generated_text = (
             f"The bidder must submit an Earnest Money Deposit (EMD) of INR 5,00,000 on a 100 Rupee stamp paper. "
@@ -235,7 +246,6 @@ def verify_internal_key(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Unauthorized internal service call",
         )
-
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -469,5 +479,3 @@ async def get_queue_status():
         "completion_queue_provider": settings.completion_queue_provider,
         "worker_running": bool(worker and worker.is_running),
     }
-
-

@@ -12,6 +12,7 @@ class ComplianceWorkflowState(TypedDict, total=False):
     Central, typed state for the LangGraph 8-Node Compliance Extraction Workflow.
     All transitions are immutable and scoped by security_context.
     """
+
     # Base security & identifiers
     security_context: dict[str, Any]
     bid_id: str

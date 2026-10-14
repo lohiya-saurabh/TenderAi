@@ -90,7 +90,9 @@ async def test_emd_provenance_quote_includes_sentence_across_pdf_line_wrap(valid
         ),
     )
 
-    emd = next(item for item in response.items if item["title"] == "Tender & Bid Security (EMD) Guarantee")
+    emd = next(
+        item for item in response.items if item["title"] == "Tender & Bid Security (EMD) Guarantee"
+    )
     assert emd["provenance"]["verbatimQuote"] == (
         "The EMD shall be paid in the form of Bank Guarantee/FDR drawn in "
         "favour of the Executive Engineer National Highway Division Hassan, obtained "
@@ -231,7 +233,9 @@ def test_api_worker_process_message_fetches_document_from_storage_reference():
 
 
 @pytest.mark.asyncio
-async def test_toc_and_glossary_definitions_rejected_in_favor_of_operative_clauses(valid_sec_context):
+async def test_toc_and_glossary_definitions_rejected_in_favor_of_operative_clauses(
+    valid_sec_context,
+):
     toc_text = (
         "TABLE OF CONTENTS\n"
         "8 Defect Liability and Maintenance Period . . . . . . . . . . . . 15\n"
@@ -269,22 +273,35 @@ async def test_toc_and_glossary_definitions_rejected_in_favor_of_operative_claus
     assert response.status in ("REVIEW_READY", "HUMAN_REVIEW_REQUIRED")
 
     # Defect liability was only in TOC — should NOT be emitted
-    defect_item = next((i for i in response.items if i["title"] == "Defect Liability Period (DLP) & Maintenance Guarantee"), None)
+    defect_item = next(
+        (
+            i
+            for i in response.items
+            if i["title"] == "Defect Liability Period (DLP) & Maintenance Guarantee"
+        ),
+        None,
+    )
     assert defect_item is None
 
     # Performance security was in TOC (p3), Glossary (p9), and Substantive (p25)
-    pbg_item = next(i for i in response.items if i["title"] == "Performance Security (PBG) & Security Deposit")
+    pbg_item = next(
+        i for i in response.items if i["title"] == "Performance Security (PBG) & Security Deposit"
+    )
     assert pbg_item is not None
     quote = pbg_item["provenance"]["verbatimQuote"]
     assert "means the security(ies)" not in quote
     assert "TABLE OF CONTENTS" not in quote
-    assert "The Contractor shall, within 28 days of the Letter of Acceptance, provide a Performance Security" in quote
+    assert (
+        "The Contractor shall, within 28 days of the Letter of Acceptance, provide a Performance Security"
+        in quote
+    )
     assert pbg_item["provenance"]["pageNumber"] == 25
 
 
 @pytest.mark.asyncio
 async def test_presigned_download_url_handover(valid_sec_context):
     from pathlib import Path
+
     repo_root = Path(__file__).resolve().parents[3]
     sample_pdf = repo_root / "samples" / "work_975754" / "NIT8.pdf"
     if not sample_pdf.is_file():
@@ -310,4 +327,3 @@ async def test_presigned_download_url_handover(valid_sec_context):
     assert emd_item is not None
     assert "EMD" in emd_item["title"] or "Earnest" in emd_item["title"]
     assert emd_item["provenance"]["sourceDocumentId"] == "doc_nit_555"
-

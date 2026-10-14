@@ -91,9 +91,7 @@ class Settings(BaseSettings):
                 data["aws_region"] = region
 
             s3_bucket = (
-                data.get("aws_s3_bucket")
-                or data.get("AWS_S3_BUCKET")
-                or os.getenv("AWS_S3_BUCKET")
+                data.get("aws_s3_bucket") or data.get("AWS_S3_BUCKET") or os.getenv("AWS_S3_BUCKET")
             )
             if s3_bucket:
                 data["aws_s3_bucket"] = s3_bucket

@@ -63,10 +63,9 @@ def scan_ambiguities(title: str, verbatim_quote: str) -> list[AmbiguityFlag]:
             )
         )
 
-    if (
-        any(concept in haystack_lower for concept in _THRESHOLD_CONCEPTS)
-        and not _NUMBER_PATTERN.search(verbatim_quote)
-    ):
+    if any(
+        concept in haystack_lower for concept in _THRESHOLD_CONCEPTS
+    ) and not _NUMBER_PATTERN.search(verbatim_quote):
         flags.append(
             AmbiguityFlag(
                 type=AmbiguityType.MISSING_THRESHOLD,

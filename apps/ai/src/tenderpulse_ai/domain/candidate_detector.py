@@ -8,166 +8,166 @@ from tenderpulse_ai.domain.models import (
 )
 
 __all__ = [
-    "CandidateDetector",
     "CANDIDATE_DETECTION_RULES",
     "RULES",
+    "CandidateDetector",
 ]
 
 
 CANDIDATE_DETECTION_RULES: list[tuple[re.Pattern, str]] = [
-        # 1. Primary Deontic Modals & Mandatory Covenants
-        (
-            re.compile(
-                r"\b(shall|must|required\s+to|mandated\s+to|covenants?\s+to|undertakes?\s+to|obligated\s+to)\b",
-                re.IGNORECASE,
-            ),
-            "DEONTIC_MODAL",
+    # 1. Primary Deontic Modals & Mandatory Covenants
+    (
+        re.compile(
+            r"\b(shall|must|required\s+to|mandated\s+to|covenants?\s+to|undertakes?\s+to|obligated\s+to)\b",
+            re.IGNORECASE,
         ),
-        # 2. Eligibility & Disqualification Restrictions (P0)
-        (
-            re.compile(
-                r"\b(eligible\s+bidders?|eligibility\s+criteria|debarred|debarment|blacklisted|blacklisting|disqualif(ied|ication)|rejected|non-responsive|ineligible|conflict\s+of\s+interest|litigation\s+history|insolven(cy|t))\b",
-                re.IGNORECASE,
-            ),
-            "ELIGIBILITY_RESTRICTION",
+        "DEONTIC_MODAL",
+    ),
+    # 2. Eligibility & Disqualification Restrictions (P0)
+    (
+        re.compile(
+            r"\b(eligible\s+bidders?|eligibility\s+criteria|debarred|debarment|blacklisted|blacklisting|disqualif(ied|ication)|rejected|non-responsive|ineligible|conflict\s+of\s+interest|litigation\s+history|insolven(cy|t))\b",
+            re.IGNORECASE,
         ),
-        # 3. Mandatory Tender Submissions & Legal Documents (P0)
-        (
-            re.compile(
-                r"\b(power\s+of\s+attorney|PoA|board\s+resolution|affidavit|undertaking|integrity\s+pact|consortium|joint\s+venture|JV\s+agreement|lead\s+member|solvency\s+certificate|GSTIN|PAN)\b",
-                re.IGNORECASE,
-            ),
-            "MANDATORY_DOCUMENTS",
+        "ELIGIBILITY_RESTRICTION",
+    ),
+    # 3. Mandatory Tender Submissions & Legal Documents (P0)
+    (
+        re.compile(
+            r"\b(power\s+of\s+attorney|PoA|board\s+resolution|affidavit|undertaking|integrity\s+pact|consortium|joint\s+venture|JV\s+agreement|lead\s+member|solvency\s+certificate|GSTIN|PAN)\b",
+            re.IGNORECASE,
         ),
-        # 4. Financial Securities & Guarantees
-        (
-            re.compile(
-                r"\b(earnest\s+money|EMD|security\s+deposit|bank\s+guarantee|PBG|bid\s+security|performance\s+security)\b",
-                re.IGNORECASE,
-            ),
-            "FINANCIAL_SECURITY",
+        "MANDATORY_DOCUMENTS",
+    ),
+    # 4. Financial Securities & Guarantees
+    (
+        re.compile(
+            r"\b(earnest\s+money|EMD|security\s+deposit|bank\s+guarantee|PBG|bid\s+security|performance\s+security)\b",
+            re.IGNORECASE,
         ),
-        # 5. Financial Ratios & Minimum Thresholds
-        (
-            re.compile(
-                r"\b(turnover|net\s+worth|solvency|audit(ed)?\s+balance\s+sheet|working\s+capital|line\s+of\s+credit|cash\s+flow|annual\s+revenue)\b",
-                re.IGNORECASE,
-            ),
-            "FINANCIAL_THRESHOLD",
+        "FINANCIAL_SECURITY",
+    ),
+    # 5. Financial Ratios & Minimum Thresholds
+    (
+        re.compile(
+            r"\b(turnover|net\s+worth|solvency|audit(ed)?\s+balance\s+sheet|working\s+capital|line\s+of\s+credit|cash\s+flow|annual\s+revenue)\b",
+            re.IGNORECASE,
         ),
-        # 6. Statutory Execution Rules (Stamp paper, Notarization, UDIN)
-        (
-            re.compile(
-                r"\b(stamp\s+paper|notariz(ed|ation)|authorized\s+signatory|udin|attestation|oath\s+commissioner|consular\s+attestation)\b",
-                re.IGNORECASE,
-            ),
-            "EXECUTION_RULE",
+        "FINANCIAL_THRESHOLD",
+    ),
+    # 6. Statutory Execution Rules (Stamp paper, Notarization, UDIN)
+    (
+        re.compile(
+            r"\b(stamp\s+paper|notariz(ed|ation)|authorized\s+signatory|udin|attestation|oath\s+commissioner|consular\s+attestation)\b",
+            re.IGNORECASE,
         ),
-        # 7. Negative Covenants & Prohibitions (P1)
-        (
-            re.compile(
-                r"\b(shall\s+not|will\s+not\s+be\s+permitted|prohibited\s+from|under\s+no\s+circumstances|in\s+the\s+event\s+of\s+default|failure\s+to\s+comply|grounds\s+for\s+rejection)\b",
-                re.IGNORECASE,
-            ),
-            "NEGATIVE_COVENANTS",
+        "EXECUTION_RULE",
+    ),
+    # 7. Negative Covenants & Prohibitions (P1)
+    (
+        re.compile(
+            r"\b(shall\s+not|will\s+not\s+be\s+permitted|prohibited\s+from|under\s+no\s+circumstances|in\s+the\s+event\s+of\s+default|failure\s+to\s+comply|grounds\s+for\s+rejection)\b",
+            re.IGNORECASE,
         ),
-        # 8. Technical Capability & Past Experience (P1)
-        (
-            re.compile(
-                r"\b(similar\s+works?|qualifying\s+works?|completed\s+works?|experience\s+criteria|technical\s+capability|key\s+personnel|project\s+manager|plant\s+and\s+machinery|construction\s+equipment|tools\s+and\s+plants?)\b",
-                re.IGNORECASE,
-            ),
-            "TECHNICAL_CRITERIA",
+        "NEGATIVE_COVENANTS",
+    ),
+    # 8. Technical Capability & Past Experience (P1)
+    (
+        re.compile(
+            r"\b(similar\s+works?|qualifying\s+works?|completed\s+works?|experience\s+criteria|technical\s+capability|key\s+personnel|project\s+manager|plant\s+and\s+machinery|construction\s+equipment|tools\s+and\s+plants?)\b",
+            re.IGNORECASE,
         ),
-        # 9. Deadlines & Time limits
-        (
-            re.compile(
-                r"\b(within\s+\d+\s+days|deadline|due\s+date|closing\s+time|submission\s+date|bid\s+validity)\b",
-                re.IGNORECASE,
-            ),
-            "DEADLINE",
+        "TECHNICAL_CRITERIA",
+    ),
+    # 9. Deadlines & Time limits
+    (
+        re.compile(
+            r"\b(within\s+\d+\s+days|deadline|due\s+date|closing\s+time|submission\s+date|bid\s+validity)\b",
+            re.IGNORECASE,
         ),
-        # 10. Liquidated Damages & Penalties
-        (
-            re.compile(
-                r"\b(liquidated\s+damages|delay\s+damages|damages\s+for\s+delay|penalty|forfeit(ure)?\s+of\s+bid\s+security)\b",
-                re.IGNORECASE,
-            ),
-            "DAMAGES_PENALTY",
+        "DEADLINE",
+    ),
+    # 10. Liquidated Damages & Penalties
+    (
+        re.compile(
+            r"\b(liquidated\s+damages|delay\s+damages|damages\s+for\s+delay|penalty|forfeit(ure)?\s+of\s+bid\s+security)\b",
+            re.IGNORECASE,
         ),
-        # 11. Contract Lifecycle & Effective Dates
-        (
-            re.compile(
-                r"\b(conditions?\s+precedent|appointed\s+date|commercial\s+operation\s+date|COD|concession\s+period|defect\s+liability\s+period|DLP)\b",
-                re.IGNORECASE,
-            ),
-            "CONTRACT_LIFECYCLE",
+        "DAMAGES_PENALTY",
+    ),
+    # 11. Contract Lifecycle & Effective Dates
+    (
+        re.compile(
+            r"\b(conditions?\s+precedent|appointed\s+date|commercial\s+operation\s+date|COD|concession\s+period|defect\s+liability\s+period|DLP)\b",
+            re.IGNORECASE,
         ),
-        # 12. Escrow & Payment Waterfall
-        (
-            re.compile(
-                r"\b(escrow\s+account|waterfall|priority\s+of\s+payments|concessionaire\s+bank\s+account)\b",
-                re.IGNORECASE,
-            ),
-            "ESCROW_WATERFALL",
+        "CONTRACT_LIFECYCLE",
+    ),
+    # 12. Escrow & Payment Waterfall
+    (
+        re.compile(
+            r"\b(escrow\s+account|waterfall|priority\s+of\s+payments|concessionaire\s+bank\s+account)\b",
+            re.IGNORECASE,
         ),
-        # 13. Insurance Covenants
-        (
-            re.compile(
-                r"\b(insurance|indemnity|co-insured|all-risk|third\s+party\s+insurance)\b",
-                re.IGNORECASE,
-            ),
-            "INSURANCE_COVENANT",
+        "ESCROW_WATERFALL",
+    ),
+    # 13. Insurance Covenants
+    (
+        re.compile(
+            r"\b(insurance|indemnity|co-insured|all-risk|third\s+party\s+insurance)\b",
+            re.IGNORECASE,
         ),
-        # 14. Dispute Resolution
-        (
-            re.compile(
-                r"\b(dispute\s+resolution|arbitration|SAROD|conciliation|amicable\s+settlement)\b",
-                re.IGNORECASE,
-            ),
-            "DISPUTE_RESOLUTION",
+        "INSURANCE_COVENANT",
+    ),
+    # 14. Dispute Resolution
+    (
+        re.compile(
+            r"\b(dispute\s+resolution|arbitration|SAROD|conciliation|amicable\s+settlement)\b",
+            re.IGNORECASE,
         ),
-        # 15. Operational Safety
-        (
-            re.compile(
-                r"\b(mobile\s+crane|ambulance|medical\s+aid|rescue\s+post|traffic\s+census|weigh-in-motion)\b",
-                re.IGNORECASE,
-            ),
-            "SAFETY_OPERATIONS",
+        "DISPUTE_RESOLUTION",
+    ),
+    # 15. Operational Safety
+    (
+        re.compile(
+            r"\b(mobile\s+crane|ambulance|medical\s+aid|rescue\s+post|traffic\s+census|weigh-in-motion)\b",
+            re.IGNORECASE,
         ),
-        # 16. Statutory & Environmental Permits
-        (
-            re.compile(
-                r"\b(applicable\s+permits|schedule-e|schedule\s+e|clearance|environmental\s+clearance|forest\s+clearance)\b",
-                re.IGNORECASE,
-            ),
-            "STATUTORY_PERMITS",
+        "SAFETY_OPERATIONS",
+    ),
+    # 16. Statutory & Environmental Permits
+    (
+        re.compile(
+            r"\b(applicable\s+permits|schedule-e|schedule\s+e|clearance|environmental\s+clearance|forest\s+clearance)\b",
+            re.IGNORECASE,
         ),
-        # 17. Maintenance SLAs
-        (
-            re.compile(
-                r"\b(maintenance\s+requirements?|level\s+of\s+service|time\s+limit\s+for\s+rectification|schedule-k|schedule\s+k|roughness\s+index|pothole)\b",
-                re.IGNORECASE,
-            ),
-            "MAINTENANCE_SLA",
+        "STATUTORY_PERMITS",
+    ),
+    # 17. Maintenance SLAs
+    (
+        re.compile(
+            r"\b(maintenance\s+requirements?|level\s+of\s+service|time\s+limit\s+for\s+rectification|schedule-k|schedule\s+k|roughness\s+index|pothole)\b",
+            re.IGNORECASE,
         ),
-        # 18. Construction Milestones
-        (
-            re.compile(
-                r"\b(project\s+milestone|completion\s+schedule|schedule-g|schedule\s+g|milestone\s+\d+)\b",
-                re.IGNORECASE,
-            ),
-            "CONSTRUCTION_MILESTONES",
+        "MAINTENANCE_SLA",
+    ),
+    # 18. Construction Milestones
+    (
+        re.compile(
+            r"\b(project\s+milestone|completion\s+schedule|schedule-g|schedule\s+g|milestone\s+\d+)\b",
+            re.IGNORECASE,
         ),
-        # 19. Short Compact Instructions (P0)
-        (
-            re.compile(
-                r"\b(must\s+sign|shall\s+apply|submit\s+emd|furnish\s+pbg|mandatory|compulsory|stipulated)\b",
-                re.IGNORECASE,
-            ),
-            "SHORT_INSTRUCTION",
+        "CONSTRUCTION_MILESTONES",
+    ),
+    # 19. Short Compact Instructions (P0)
+    (
+        re.compile(
+            r"\b(must\s+sign|shall\s+apply|submit\s+emd|furnish\s+pbg|mandatory|compulsory|stipulated)\b",
+            re.IGNORECASE,
         ),
-    ]
+        "SHORT_INSTRUCTION",
+    ),
+]
 
 RULES = CANDIDATE_DETECTION_RULES
 
@@ -204,7 +204,10 @@ class CandidateDetector:
             if len(pages) >= 3:
                 # Confirm it looks like running header/footer (has RFP title, page label, or short metadata)
                 if (
-                    re.search(r"\b(page\s+\d+|request\s+for\s+proposal|rfp|tender\s+no|confidential|all\s+rights\s+reserved)\b", norm)
+                    re.search(
+                        r"\b(page\s+\d+|request\s+for\s+proposal|rfp|tender\s+no|confidential|all\s+rights\s+reserved)\b",
+                        norm,
+                    )
                     or len(norm) < 80
                 ):
                     boilerplate.add(norm)
@@ -250,7 +253,9 @@ class CandidateDetector:
             score += 0.10
 
         # Boost for concrete figures, currency, or durations
-        if re.search(r"(?:Rs\.?|INR|₹|\bcrore|\blakh|\b%|\bdays?\b|\byears?\b)", text, re.IGNORECASE):
+        if re.search(
+            r"(?:Rs\.?|INR|₹|\bcrore|\blakh|\b%|\bdays?\b|\byears?\b)", text, re.IGNORECASE
+        ):
             score += 0.05
 
         if is_table:
@@ -392,7 +397,9 @@ class CandidateDetector:
         for tbl in doc.tables:
             if not tbl.rows:
                 continue
-            headers = tbl.headers if tbl.headers else [f"Col {i+1}" for i in range(len(tbl.rows[0]))]
+            headers = (
+                tbl.headers if tbl.headers else [f"Col {i + 1}" for i in range(len(tbl.rows[0]))]
+            )
 
             for row_idx, row in enumerate(tbl.rows):
                 # Construct tabular row context
@@ -407,7 +414,13 @@ class CandidateDetector:
                         row_rules.append(rule_name)
 
                 # If table row contains numbers, currency, or percentages, mark as candidate
-                has_metrics = bool(re.search(r"(?:Rs\.?|INR|₹|\d+%|\d+\s*(?:days?|months?|years?))", row_text, re.IGNORECASE))
+                has_metrics = bool(
+                    re.search(
+                        r"(?:Rs\.?|INR|₹|\d+%|\d+\s*(?:days?|months?|years?))",
+                        row_text,
+                        re.IGNORECASE,
+                    )
+                )
                 if has_metrics and not row_rules:
                     row_rules.append("TABLE_METRIC_ROW")
 
@@ -421,12 +434,12 @@ class CandidateDetector:
                 if row_rules:
                     candidates.append(
                         CandidatePassage(
-                            candidate_id=f"cand_tbl_{tbl.table_id}_{row_idx+1}",
+                            candidate_id=f"cand_tbl_{tbl.table_id}_{row_idx + 1}",
                             section_number=f"Table {tbl.table_id}",
                             section_path=f"Document > Table {tbl.table_id}",
                             text=row_text,
                             page_number=tbl.page_number,
-                            block_id=f"{tbl.table_id}_r{row_idx+1}",
+                            block_id=f"{tbl.table_id}_r{row_idx + 1}",
                             matched_rules=row_rules,
                             priority_score=p_score,
                             is_table_cell=True,
@@ -438,12 +451,12 @@ class CandidateDetector:
                 else:
                     unselected.append(
                         CandidatePassage(
-                            candidate_id=f"unsel_tbl_{tbl.table_id}_{row_idx+1}",
+                            candidate_id=f"unsel_tbl_{tbl.table_id}_{row_idx + 1}",
                             section_number=f"Table {tbl.table_id}",
                             section_path=f"Document > Table {tbl.table_id}",
                             text=row_text,
                             page_number=tbl.page_number,
-                            block_id=f"{tbl.table_id}_r{row_idx+1}",
+                            block_id=f"{tbl.table_id}_r{row_idx + 1}",
                             matched_rules=[],
                             priority_score=p_score,
                             is_table_cell=True,

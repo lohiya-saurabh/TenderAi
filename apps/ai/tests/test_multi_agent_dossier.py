@@ -1,5 +1,6 @@
 import pytest
 from langgraph.checkpoint.memory import MemorySaver
+
 from tenderpulse_ai.dossier.graph import build_bid_dossier_workflow_graph
 from tenderpulse_ai.security.context import SecurityContext
 
@@ -49,7 +50,9 @@ def test_multi_agent_dossier_fully_qualified_case_ephemeral(mock_security_contex
     assert "dossier" in result
     dossier = result["dossier"]
     assert dossier.tender_id == "tnd_infra_101"
-    assert dossier.overall_verdict == "CONDITIONAL_GO"  # Has required action items (stamp paper, EMD)
+    assert (
+        dossier.overall_verdict == "CONDITIONAL_GO"
+    )  # Has required action items (stamp paper, EMD)
     assert len(dossier.specialist_appraisals) == 3
     assert len(dossier.hard_disqualifiers) == 0
     assert len(dossier.critical_action_items) >= 2

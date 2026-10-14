@@ -37,8 +37,13 @@ def test_false_positive_suppression_on_non_rfp_covenants():
         "The firm of Chartered Accountants shall furnish year-wise information relating to names of all companies "
         "with an annual turnover exceeding Rs. 100,00,00,000 (Rs. one hundred crore) whose annual accounts were audited by such firm."
     )
-    items_ca = default_tender_extractor("sys", f'<untrusted_document_data document_id="doc_1" page="315">\n{ca_firm_page}\n</untrusted_document_data>')
-    assert not any(i.title == "Technical Qualification & Annual Turnover" for i in items_ca), "CA firm turnover should not be extracted as bidder qualification"
+    items_ca = default_tender_extractor(
+        "sys",
+        f'<untrusted_document_data document_id="doc_1" page="315">\n{ca_firm_page}\n</untrusted_document_data>',
+    )
+    assert not any(i.title == "Technical Qualification & Annual Turnover" for i in items_ca), (
+        "CA firm turnover should not be extracted as bidder qualification"
+    )
 
     # 2. Schedule G: Capital spend exclusion on Plant and Machinery
     machinery_exclusion_page = (
@@ -47,8 +52,13 @@ def test_false_positive_suppression_on_non_rfp_covenants():
         "The Concessionaire shall have incurred expenditure on physical works which shall not include advances "
         "of any kind to any person or expenditure of any kind on plant and machinery."
     )
-    items_machinery = default_tender_extractor("sys", f'<untrusted_document_data document_id="doc_1" page="208">\n{machinery_exclusion_page}\n</untrusted_document_data>')
-    assert not any(i.title == "Essential Plant, Machinery & Equipment Undertaking" for i in items_machinery), "Expenditure exclusion should not trigger equipment undertaking"
+    items_machinery = default_tender_extractor(
+        "sys",
+        f'<untrusted_document_data document_id="doc_1" page="208">\n{machinery_exclusion_page}\n</untrusted_document_data>',
+    )
+    assert not any(
+        i.title == "Essential Plant, Machinery & Equipment Undertaking" for i in items_machinery
+    ), "Expenditure exclusion should not trigger equipment undertaking"
 
     # 3. Schedule K: Table of Contents for Key Personnel
     toc_personnel_page = (
@@ -58,8 +68,13 @@ def test_false_positive_suppression_on_non_rfp_covenants():
         "4.2 Key Personnel ........................................................ 239\n"
         "4.3 Operations Plan ...................................................... 240"
     )
-    items_personnel = default_tender_extractor("sys", f'<untrusted_document_data document_id="doc_1" page="239">\n{toc_personnel_page}\n</untrusted_document_data>')
-    assert not any(i.title == "Key Technical Personnel & Project Management Team" for i in items_personnel), "TOC line should not trigger Key Technical Personnel undertaking"
+    items_personnel = default_tender_extractor(
+        "sys",
+        f'<untrusted_document_data document_id="doc_1" page="239">\n{toc_personnel_page}\n</untrusted_document_data>',
+    )
+    assert not any(
+        i.title == "Key Technical Personnel & Project Management Team" for i in items_personnel
+    ), "TOC line should not trigger Key Technical Personnel undertaking"
 
     # 4. Article 40.2: Permitted assignment for working capital
     assignment_page = (
@@ -67,8 +82,13 @@ def test_false_positive_suppression_on_non_rfp_covenants():
         "40.2 Permitted Assignment: The Concessionaire shall not assign rights except as security only for "
         "indebtedness to the Senior Lenders under the Financing Agreements and/or for working capital arrangements for the Project Highway."
     )
-    items_solvency = default_tender_extractor("sys", f'<untrusted_document_data document_id="doc_1" page="153">\n{assignment_page}\n</untrusted_document_data>')
-    assert not any(i.title == "Bank Solvency & Working Capital Credit Facilities" for i in items_solvency), "Permitted assignment should not trigger banker solvency certificate"
+    items_solvency = default_tender_extractor(
+        "sys",
+        f'<untrusted_document_data document_id="doc_1" page="153">\n{assignment_page}\n</untrusted_document_data>',
+    )
+    assert not any(
+        i.title == "Bank Solvency & Working Capital Credit Facilities" for i in items_solvency
+    ), "Permitted assignment should not trigger banker solvency certificate"
 
     # 5. Article 48: Bare definition of Bid Security
     definition_page = (
@@ -76,8 +96,13 @@ def test_false_positive_suppression_on_non_rfp_covenants():
         "48.1 Definitions:\n"
         "“Bid Security” means the bid security provided by the Concessionaire to the Authority in accordance with the Request for Proposals for the Project, in the sum of Rs. 11.01 crore."
     )
-    items_bid_sec = default_tender_extractor("sys", f'<untrusted_document_data document_id="doc_1" page="180">\n{definition_page}\n</untrusted_document_data>')
-    assert not any(i.title == "Tender & Bid Security (EMD) Guarantee" for i in items_bid_sec), "Bare glossary definition should not trigger operative EMD guarantee"
+    items_bid_sec = default_tender_extractor(
+        "sys",
+        f'<untrusted_document_data document_id="doc_1" page="180">\n{definition_page}\n</untrusted_document_data>',
+    )
+    assert not any(i.title == "Tender & Bid Security (EMD) Guarantee" for i in items_bid_sec), (
+        "Bare glossary definition should not trigger operative EMD guarantee"
+    )
 
 
 def test_contract_execution_covenants_extraction():
@@ -231,7 +256,9 @@ def test_contract_execution_covenants_extraction():
         block = f'<untrusted_document_data document_id="doc_dca" page="{page_no}">\n{text}\n</untrusted_document_data>'
         items = default_tender_extractor("System Prompt", block)
         matched = next((i for i in items if i.title == expected_title), None)
-        assert matched is not None, f"Expected covenant '{expected_title}' not found on page {page_no}"
+        assert matched is not None, (
+            f"Expected covenant '{expected_title}' not found on page {page_no}"
+        )
         assert matched.category == expected_category
         assert len(matched.provenance.verbatim_quote) > 15
         assert matched.provenance.page_number == page_no
