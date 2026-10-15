@@ -3,7 +3,7 @@
  */
 import { Injectable, Inject, Optional } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
-import { eq, and, desc, asc, inArray } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import {
   DRIZZLE_TOKEN,
   type DrizzleDb,
@@ -13,8 +13,31 @@ import { STORAGE_TOKEN } from '@/infrastructure/storage/storage.module.js';
 import type { IStorageService } from '@/modules/bids/application/IStorageService.js';
 import * as schema from '@/common/database/schema.js';
 import { NotFoundError, BadRequestError } from '@/common/errors/errors.js';
-import type { DemoBid, DemoDocument } from '@/seed/data.js';
+import type { DemoBid } from '@/seed/data.js';
 import { TenantContextHolder } from '@/common/security/TenantContext.js';
+import {
+  fetchBidsWithRelations,
+  mapBidRecord,
+  resolveBidDocuments,
+  type ListBidsQuery,
+  type BidDecisionProjection,
+  type BidWithDecision,
+  type PaginatedBidsResult,
+} from './application/bids-query.builder.js';
+import {
+  calculateTenderDeadlines,
+  type TenderDeadlinesResult,
+  type TenderMilestone,
+} from './application/tender-deadlines.calculator.js';
+import {
+  calculateDashboardMetrics,
+  type DashboardMetricsResult,
+} from './application/bid-metrics.calculator.js';
+import {
+  buildTenderAmendments,
+  type TenderAmendmentItem,
+  type TenderAmendmentsResult,
+} from './application/tender-amendments.service.js';
 
 export interface CreateBidDto {
   companyId?: string;
@@ -32,70 +55,17 @@ export interface DeleteBidResult {
   deletedDocumentsCount: number;
 }
 
-export interface ListBidsQuery {
-  companyId?: string;
-  page?: string | number;
-  limit?: string | number;
-  sort?: string;
-  order?: 'asc' | 'desc';
-  status?: string;
-  search?: string;
-}
-
-export interface BidDecisionProjection {
-  decisionId: string;
-  verdict: 'GO' | 'CONDITIONAL_GO' | 'NO_GO' | 'REVIEW_REQUIRED';
-  state: 'AI_PROPOSED' | 'UNDER_REVIEW' | 'CONFIRMED' | 'OVERRIDDEN';
-  readinessScore: number;
-  evaluatedAt: string;
-}
-
-export interface BidWithDecision extends DemoBid {
-  decision?: BidDecisionProjection | null;
-}
-
-export interface PaginatedBidsResult {
-  items: BidWithDecision[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
-
-export interface TenderAmendmentItem {
-  id: string;
-  bidId: string;
-  tenderNumber: string;
-  tenderTitle: string;
-  tenderingAuthority: string;
-  corrigendumNumber: string;
-  documentId: string;
-  documentName: string;
-  publishedAt: string;
-  amendmentType:
-    | 'DEADLINE_EXTENSION'
-    | 'TECHNICAL_SPEC_CHANGE'
-    | 'EMD_AMENDMENT'
-    | 'ELIGIBILITY_REVISION'
-    | 'GENERAL_CLARIFICATION';
-  summary: string;
-  impact: {
-    deadlineChanged: boolean;
-    previousDeadline: string | null;
-    revisedDeadline: string | null;
-    daysExtended: number | null;
-    affectedRequirementsCount: number;
-    requiresReEvaluation: boolean;
-  };
-  status: 'PROCESSED' | 'EVALUATED' | 'REQUIRES_CONFIRMATION';
-}
-
-export interface TenderAmendmentsResult {
-  organizationId: string;
-  totalAmendments: number;
-  unreadCount: number;
-  amendments: TenderAmendmentItem[];
-}
+export type {
+  ListBidsQuery,
+  BidDecisionProjection,
+  BidWithDecision,
+  PaginatedBidsResult,
+  TenderMilestone,
+  TenderDeadlinesResult,
+  DashboardMetricsResult,
+  TenderAmendmentItem,
+  TenderAmendmentsResult,
+};
 
 @Injectable()
 export class BidsService {
@@ -109,168 +79,8 @@ export class BidsService {
   }
 
   public async listBids(query?: ListBidsQuery): Promise<PaginatedBidsResult | BidWithDecision[]> {
-    const orgId = TenantContextHolder.get()?.organizationId;
-    if (!orgId) {
-      if (query?.page && query?.limit) {
-        return {
-          items: [] as BidWithDecision[],
-          total: 0,
-          page: Number(query.page) || 1,
-          limit: Number(query.limit) || 10,
-          totalPages: 0,
-        };
-      }
-      return [];
-    }
-
-    let allBids = await this.db
-      .select()
-      .from(schema.bids)
-      .where(eq(schema.bids.organizationId, orgId));
-
-    if (query?.companyId && typeof query.companyId === 'string' && query.companyId.trim()) {
-      const targetCompanyId = query.companyId.trim();
-      allBids = allBids.filter((b) => b.companyId === targetCompanyId);
-    }
-
-    if (
-      query?.status &&
-      typeof query.status === 'string' &&
-      query.status.trim() &&
-      query.status !== 'ALL'
-    ) {
-      const targetStatus = query.status.trim().toUpperCase();
-      allBids = allBids.filter((b) => b.status.toUpperCase() === targetStatus);
-    }
-
-    if (query?.search && typeof query.search === 'string' && query.search.trim()) {
-      const q = query.search.trim().toLowerCase();
-      allBids = allBids.filter(
-        (b) =>
-          b.title.toLowerCase().includes(q) ||
-          b.tenderNumber.toLowerCase().includes(q) ||
-          b.tenderingAuthority.toLowerCase().includes(q) ||
-          (b.locationState && b.locationState.toLowerCase().includes(q)),
-      );
-    }
-
-    const sortField = query?.sort || 'createdAt';
-    const isAsc = query?.order === 'asc';
-
-    allBids.sort((a, b) => {
-      let comp = 0;
-      if (sortField === 'title') {
-        comp = a.title.localeCompare(b.title);
-      } else if (sortField === 'estimatedValueRupees') {
-        comp = (Number(a.estimatedValueRupees) || 0) - (Number(b.estimatedValueRupees) || 0);
-      } else if (sortField === 'submissionDeadline') {
-        const da = a.submissionDeadline ? new Date(a.submissionDeadline).getTime() : 0;
-        const db = b.submissionDeadline ? new Date(b.submissionDeadline).getTime() : 0;
-        comp = da - db;
-      } else {
-        const da =
-          a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
-        const db =
-          b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
-        comp = da - db;
-      }
-      return isAsc ? comp : -comp;
-    });
-
-    const total = allBids.length;
-    const isPaginated = query?.page !== undefined || query?.limit !== undefined;
-    const page = Math.max(
-      1,
-      typeof query?.page === 'number' ? query.page : parseInt(String(query?.page || 1), 10) || 1,
-    );
-    const limit = Math.max(
-      1,
-      typeof query?.limit === 'number'
-        ? query.limit
-        : parseInt(String(query?.limit || 10), 10) || 10,
-    );
-    const totalPages = Math.ceil(total / limit) || 1;
-
-    const pageBids = isPaginated ? allBids.slice((page - 1) * limit, page * limit) : allBids;
-    const bidIds = pageBids.map((b) => b.id);
-
-    const allDocs =
-      bidIds.length > 0
-        ? await this.db
-            .select()
-            .from(schema.tenderDocuments)
-            .where(
-              and(
-                eq(schema.tenderDocuments.organizationId, orgId),
-                inArray(schema.tenderDocuments.bidId, bidIds),
-              ),
-            )
-        : [];
-
-    const docsByBid = new Map<string, DemoDocument[]>();
-    for (const doc of allDocs) {
-      if (!docsByBid.has(doc.bidId)) {
-        docsByBid.set(doc.bidId, []);
-      }
-      docsByBid.get(doc.bidId)!.push({
-        id: doc.id,
-        fileName: doc.fileName,
-        fileSizeBytes: Number(doc.fileSizeBytes),
-        mimeType: doc.mimeType,
-        documentType: doc.documentType,
-        status: doc.status,
-        uploadedAt:
-          doc.uploadedAt instanceof Date ? doc.uploadedAt.toISOString() : String(doc.uploadedAt),
-      });
-    }
-
-    const allDecisions =
-      bidIds.length > 0
-        ? await this.db
-            .select()
-            .from(schema.bidDecisions)
-            .where(
-              and(
-                eq(schema.bidDecisions.organizationId, orgId),
-                inArray(schema.bidDecisions.bidId, bidIds),
-              ),
-            )
-            .orderBy(desc(schema.bidDecisions.createdAt))
-        : [];
-
-    const decisionByBid = new Map<string, BidDecisionProjection>();
-    for (const d of allDecisions) {
-      if (!decisionByBid.has(d.bidId)) {
-        decisionByBid.set(d.bidId, {
-          decisionId: d.id,
-          verdict: d.verdict as BidDecisionProjection['verdict'],
-          state: d.state as BidDecisionProjection['state'],
-          readinessScore: Number(d.readinessScore),
-          evaluatedAt:
-            d.createdAt instanceof Date ? d.createdAt.toISOString() : String(d.createdAt),
-        });
-      }
-    }
-
-    const items: BidWithDecision[] = pageBids.map((b) => {
-      const mapped = this.mapBidRecord(b, docsByBid.get(b.id) || []);
-      return {
-        ...mapped,
-        decision: decisionByBid.get(b.id) ?? null,
-      };
-    });
-
-    if (!isPaginated && !query?.status && !query?.search && !query?.sort) {
-      return items;
-    }
-
-    return {
-      items,
-      total,
-      page,
-      limit,
-      totalPages,
-    };
+    const orgId = TenantContextHolder.get()?.organizationId || '';
+    return fetchBidsWithRelations(this.db, orgId, query);
   }
 
   public async getBidById(bidId: string): Promise<DemoBid> {
@@ -290,74 +100,13 @@ export class BidsService {
     }
 
     const finalOrgId = orgId || bidRecord.organizationId;
-    const docs = await this.db
-      .select()
-      .from(schema.tenderDocuments)
-      .where(
-        and(
-          eq(schema.tenderDocuments.bidId, bidId),
-          eq(schema.tenderDocuments.organizationId, finalOrgId),
-        ),
-      )
-      .orderBy(asc(schema.tenderDocuments.uploadedAt));
-
-    const documents: DemoDocument[] = [];
-    for (const d of docs) {
-      let fileName = d.fileName;
-      let storagePath = d.storagePath;
-      let sizeBytes = Number(d.fileSizeBytes);
-
-      if (
-        this.storageService &&
-        (fileName === 'Uploaded_Tender_Document.pdf' || sizeBytes === 4000000 || sizeBytes === 0)
-      ) {
-        try {
-          if (
-            fileName === 'Uploaded_Tender_Document.pdf' &&
-            typeof (
-              this.storageService as unknown as {
-                findFilesByPrefix?: (p: string) => Promise<string[]>;
-              }
-            ).findFilesByPrefix === 'function'
-          ) {
-            const matched = await (
-              this.storageService as unknown as {
-                findFilesByPrefix: (p: string) => Promise<string[]>;
-              }
-            ).findFilesByPrefix(`tenants/${orgId}/bids/${bidId}/${d.id}/`);
-            if (matched && matched.length > 0) {
-              storagePath = matched[0]!;
-              fileName = storagePath.split('/').pop() || fileName;
-            }
-          }
-
-          const head = await this.storageService.headObject(storagePath);
-          if (head && head.exists && head.sizeBytes > 0) {
-            sizeBytes = head.sizeBytes;
-          }
-
-          void this.db
-            .update(schema.tenderDocuments)
-            .set({ fileName, storagePath, fileSizeBytes: sizeBytes })
-            .where(eq(schema.tenderDocuments.id, d.id));
-        } catch {
-          // ignore
-        }
-      }
-
-      documents.push({
-        id: d.id,
-        fileName,
-        fileSizeBytes: sizeBytes,
-        mimeType: d.mimeType,
-        documentType: d.documentType,
-        status: d.status,
-        uploadedAt:
-          d.uploadedAt instanceof Date ? d.uploadedAt.toISOString() : String(d.uploadedAt),
-      });
-    }
-
-    return this.mapBidRecord(bidRecord, documents);
+    const documents = await resolveBidDocuments(
+      this.db,
+      bidId,
+      finalOrgId,
+      this.storageService,
+    );
+    return mapBidRecord(bidRecord, documents);
   }
 
   public async createBid(dto: CreateBidDto): Promise<DemoBid> {
@@ -543,7 +292,7 @@ export class BidsService {
   /**
    * Calculates comprehensive tender lifecycle milestone deadlines for a bid.
    */
-  public async getTenderDeadlines(bidId: string) {
+  public async getTenderDeadlines(bidId: string): Promise<TenderDeadlinesResult> {
     const orgId = TenantContextHolder.get()?.organizationId;
     const [bid] = await this.db
       .select()
@@ -559,121 +308,13 @@ export class BidsService {
       throw new NotFoundError(`Bid project '${bidId}' not found.`);
     }
 
-    const now = new Date();
-    const submissionDate = bid.submissionDeadline ? new Date(bid.submissionDeadline) : null;
-    const isValidSubmissionDate = submissionDate && !Number.isNaN(submissionDate.getTime());
-
-    let daysRemaining: number | null = null;
-    if (isValidSubmissionDate && submissionDate) {
-      daysRemaining = Math.ceil((submissionDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    }
-
-    const formatMilestoneDate = (baseDate: Date | null, offsetDays: number): string | null => {
-      if (!baseDate) return null;
-      const target = new Date(baseDate.getTime() + offsetDays * 24 * 60 * 60 * 1000);
-      return target.toISOString().split('T')[0] ?? null;
-    };
-
-    const getMilestoneStatus = (
-      dateStr: string | null,
-    ): 'UPCOMING' | 'IMMINENT' | 'OVERDUE' | 'NOT_SET' => {
-      if (!dateStr) return 'NOT_SET';
-      const d = new Date(dateStr);
-      if (Number.isNaN(d.getTime())) return 'NOT_SET';
-      const days = Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-      if (days < 0) return 'OVERDUE';
-      if (days <= 7) return 'IMMINENT';
-      return 'UPCOMING';
-    };
-
-    const getDaysLeft = (dateStr: string | null): number | null => {
-      if (!dateStr) return null;
-      const d = new Date(dateStr);
-      if (Number.isNaN(d.getTime())) return null;
-      return Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    };
-
-    const preBidDate = isValidSubmissionDate ? formatMilestoneDate(submissionDate, -15) : null;
-    const clarificationDate = isValidSubmissionDate
-      ? formatMilestoneDate(submissionDate, -10)
-      : null;
-    const technicalOpeningDate = isValidSubmissionDate
-      ? formatMilestoneDate(submissionDate, 1)
-      : null;
-    const financialOpeningDate = isValidSubmissionDate
-      ? formatMilestoneDate(submissionDate, 8)
-      : null;
-
-    const milestones = [
-      {
-        milestoneKey: 'PRE_BID_MEETING',
-        label: 'Pre-Bid Meeting & Queries',
-        date: preBidDate,
-        daysRemaining: getDaysLeft(preBidDate),
-        status: getMilestoneStatus(preBidDate),
-        isMandatory: false,
-        notes: 'Submit technical and contractual queries before the cutoff window.',
-      },
-      {
-        milestoneKey: 'CLARIFICATION_CUTOFF',
-        label: 'Pre-Bid Clarification Window Closing',
-        date: clarificationDate,
-        daysRemaining: getDaysLeft(clarificationDate),
-        status: getMilestoneStatus(clarificationDate),
-        isMandatory: false,
-        notes: 'Procuring authority releases corrigenda & response to pre-bid queries.',
-      },
-      {
-        milestoneKey: 'EMD_SUBMISSION',
-        label: 'EMD & Tender Fee Physical / SFMS Submission',
-        date: bid.submissionDeadline,
-        daysRemaining,
-        status: getMilestoneStatus(bid.submissionDeadline),
-        isMandatory: true,
-        notes: 'Original BG / DD physical submission or SFMS transmission confirmation.',
-      },
-      {
-        milestoneKey: 'BID_SUBMISSION_FREEZE',
-        label: 'Online Bid Submission Deadline',
-        date: bid.submissionDeadline,
-        daysRemaining,
-        status: getMilestoneStatus(bid.submissionDeadline),
-        isMandatory: true,
-        notes: 'Hard portal cutoff. Encrypted packet lock on e-procurement portal.',
-      },
-      {
-        milestoneKey: 'TECHNICAL_BID_OPENING',
-        label: 'Technical Bid Opening Date',
-        date: technicalOpeningDate,
-        daysRemaining: getDaysLeft(technicalOpeningDate),
-        status: getMilestoneStatus(technicalOpeningDate),
-        isMandatory: false,
-        notes: 'Technical bid envelope decryption and qualification review.',
-      },
-      {
-        milestoneKey: 'FINANCIAL_BID_OPENING',
-        label: 'Financial Bid Opening Date (Estimated)',
-        date: financialOpeningDate,
-        daysRemaining: getDaysLeft(financialOpeningDate),
-        status: getMilestoneStatus(financialOpeningDate),
-        isMandatory: false,
-        notes: 'BOQ price discovery for technically qualified bidders.',
-      },
-    ];
-
-    return {
-      bidId: bid.id,
-      tenderNumber: bid.tenderNumber,
-      submissionDeadline: bid.submissionDeadline,
-      daysRemaining,
-      milestones,
-    };
+    return calculateTenderDeadlines(bid);
   }
 
   /**
    * Pre-aggregated tenant KPIs and pipeline analytics.
    */
-  public async getDashboardMetrics() {
+  public async getDashboardMetrics(): Promise<DashboardMetricsResult> {
     const orgId = TenantContextHolder.get()?.organizationId;
     if (!orgId) {
       return {
@@ -697,52 +338,7 @@ export class BidsService {
       .from(schema.bids)
       .where(eq(schema.bids.organizationId, orgId));
 
-    const now = new Date();
-    const activeBids = allBids.filter((b) => b.status !== 'ARCHIVED');
-
-    const activePipelineCount = activeBids.length;
-    const totalPipelineValueRupees = activeBids.reduce(
-      (sum, b) => sum + (Number(b.estimatedValueRupees) || 0),
-      0,
-    );
-    const totalFlaggedRequirements = activeBids.reduce(
-      (sum, b) => sum + (Number(b.flaggedRequirements) || 0),
-      0,
-    );
-
-    let imminentDeadlinesCount = 0;
-    const pipelineDistribution: Record<string, number> = {
-      DRAFT: 0,
-      ANALYZING: 0,
-      REVIEW_READY: 0,
-      SUBMITTED: 0,
-      ARCHIVED: 0,
-    };
-
-    for (const b of allBids) {
-      if (b.status in pipelineDistribution) {
-        pipelineDistribution[b.status] = (pipelineDistribution[b.status] ?? 0) + 1;
-      }
-      if (b.status !== 'ARCHIVED' && b.submissionDeadline) {
-        const d = new Date(b.submissionDeadline);
-        if (!Number.isNaN(d.getTime())) {
-          const days = Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-          if (days >= 0 && days <= 7) {
-            imminentDeadlinesCount += 1;
-          }
-        }
-      }
-    }
-
-    return {
-      activePipelineCount,
-      totalPipelineValueRupees,
-      totalFlaggedRequirements,
-      imminentDeadlinesCount,
-      pipelineDistribution,
-      totalTendersCount: allBids.length,
-      updatedAt: now.toISOString(),
-    };
+    return calculateDashboardMetrics(allBids);
   }
 
   /**
@@ -764,8 +360,6 @@ export class BidsService {
       .from(schema.bids)
       .where(eq(schema.bids.organizationId, orgId));
 
-    const bidsMap = new Map(allBids.map((b) => [b.id, b]));
-
     const corrDocs = await this.db
       .select()
       .from(schema.tenderDocuments)
@@ -777,90 +371,12 @@ export class BidsService {
       )
       .orderBy(desc(schema.tenderDocuments.uploadedAt));
 
-    const filteredDocs = bidIdFilter ? corrDocs.filter((d) => d.bidId === bidIdFilter) : corrDocs;
-
     const allCompliance = await this.db
       .select()
       .from(schema.complianceItems)
       .where(eq(schema.complianceItems.organizationId, orgId));
 
-    const amendments: TenderAmendmentItem[] = filteredDocs.map((doc, idx) => {
-      const parentBid = bidsMap.get(doc.bidId);
-      const corrNum = doc.fileName.toLowerCase().includes('02')
-        ? 'Corrigendum-02'
-        : 'Corrigendum-01';
-      const publishedAt =
-        doc.uploadedAt instanceof Date ? doc.uploadedAt.toISOString() : String(doc.uploadedAt);
-
-      const affectedItems = allCompliance.filter((item) => {
-        if (item.bidId !== doc.bidId) return false;
-        try {
-          const prov =
-            typeof item.provenance === 'string'
-              ? JSON.parse(item.provenance)
-              : (item.provenance as Record<string, unknown>);
-          return prov?.documentId === doc.id || prov?.documentName === doc.fileName;
-        } catch {
-          return false;
-        }
-      });
-
-      const isDeadlineExt =
-        doc.fileName.toLowerCase().includes('date') ||
-        doc.fileName.toLowerCase().includes('ext') ||
-        idx === 0;
-
-      return {
-        id: `amend-${doc.id}`,
-        bidId: doc.bidId,
-        tenderNumber: parentBid?.tenderNumber || 'N/A',
-        tenderTitle: parentBid?.title || 'Tender Opportunity',
-        tenderingAuthority: parentBid?.tenderingAuthority || 'Authority',
-        corrigendumNumber: corrNum,
-        documentId: doc.id,
-        documentName: doc.fileName,
-        publishedAt,
-        amendmentType: isDeadlineExt
-          ? ('DEADLINE_EXTENSION' as const)
-          : ('TECHNICAL_SPEC_CHANGE' as const),
-        summary: `Pre-bid queries answered and clarifications issued under ${corrNum} for ${parentBid?.tenderNumber || 'tender'}.`,
-        impact: {
-          deadlineChanged: isDeadlineExt,
-          previousDeadline: parentBid?.submissionDeadline || null,
-          revisedDeadline: parentBid?.submissionDeadline || null,
-          daysExtended: isDeadlineExt ? 10 : null,
-          affectedRequirementsCount: affectedItems.length > 0 ? affectedItems.length : 1,
-          requiresReEvaluation: affectedItems.length > 0,
-        },
-        status: 'PROCESSED' as const,
-      };
-    });
-
-    return {
-      organizationId: orgId,
-      totalAmendments: amendments.length,
-      unreadCount: amendments.filter((a) => a.status === 'PROCESSED').length,
-      amendments,
-    };
-  }
-
-  private mapBidRecord(b: schema.Bid, documents: DemoDocument[]): DemoBid {
-    return {
-      id: b.id,
-      companyId: b.companyId,
-      title: b.title,
-      tenderNumber: b.tenderNumber,
-      tenderingAuthority: b.tenderingAuthority,
-      estimatedValueRupees: Number(b.estimatedValueRupees),
-      submissionDeadline: b.submissionDeadline,
-      locationState: b.locationState,
-      status: b.status,
-      totalRequirements: b.totalRequirements,
-      flaggedRequirements: b.flaggedRequirements,
-      approvedRequirements: b.approvedRequirements,
-      createdAt: b.createdAt instanceof Date ? b.createdAt.toISOString() : String(b.createdAt),
-      updatedAt: b.updatedAt instanceof Date ? b.updatedAt.toISOString() : String(b.updatedAt),
-      documents,
-    };
+    return buildTenderAmendments(orgId, allBids, corrDocs, allCompliance, bidIdFilter);
   }
 }
+

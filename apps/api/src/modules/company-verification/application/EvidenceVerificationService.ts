@@ -103,7 +103,9 @@ export class EvidenceVerificationService {
     }
 
     const verificationStatus: schema.EvidenceVerificationStatus =
-      discrepancies.length > 0 ? 'NEEDS_REVIEW' : 'SOURCE_VERIFIED';
+      discrepancies.length > 0
+        ? schema.EvidenceVerificationStatus.NEEDS_REVIEW
+        : schema.EvidenceVerificationStatus.SOURCE_VERIFIED;
 
     const now = new Date();
 
@@ -189,7 +191,9 @@ export class EvidenceVerificationService {
     }
 
     const verificationStatus: schema.EvidenceVerificationStatus =
-      discrepancies.length > 0 ? 'NEEDS_REVIEW' : 'SOURCE_VERIFIED';
+      discrepancies.length > 0
+        ? schema.EvidenceVerificationStatus.NEEDS_REVIEW
+        : schema.EvidenceVerificationStatus.SOURCE_VERIFIED;
 
     const now = new Date();
 
@@ -265,7 +269,9 @@ export class EvidenceVerificationService {
     }
 
     const verificationStatus: schema.EvidenceVerificationStatus =
-      discrepancies.length > 0 ? 'NEEDS_REVIEW' : 'SOURCE_VERIFIED';
+      discrepancies.length > 0
+        ? schema.EvidenceVerificationStatus.NEEDS_REVIEW
+        : schema.EvidenceVerificationStatus.SOURCE_VERIFIED;
 
     const now = new Date();
 
@@ -424,7 +430,9 @@ export class EvidenceVerificationService {
 
     const previousStatus = evidence.verificationStatus;
     const newStatus: schema.EvidenceVerificationStatus =
-      decision === 'REJECT' ? 'REJECTED' : 'SOURCE_VERIFIED';
+      decision === 'REJECT'
+        ? schema.EvidenceVerificationStatus.REJECTED
+        : schema.EvidenceVerificationStatus.SOURCE_VERIFIED;
 
     const now = new Date();
     const [updated] = await this.db
