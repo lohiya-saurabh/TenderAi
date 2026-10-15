@@ -2,7 +2,7 @@
  * AppModule — Root NestJS module that imports all feature and infrastructure modules.
  */
 import { Module } from '@nestjs/common';
-import { DatabaseModule } from './common/database/database.module.js';
+import { DatabaseModule } from '@/common/database/database.module.js';
 import { SecurityModule } from './common/security/security.module.js';
 import { StorageModule } from './infrastructure/storage/storage.module.js';
 import { QueueModule } from './infrastructure/queue/queue.module.js';

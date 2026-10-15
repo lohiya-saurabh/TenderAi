@@ -169,7 +169,6 @@ describe('E2E: Bid/No-Bid Decision & Company Evidence Extraction Pipeline', () =
         category: 'FINANCIAL',
         title: 'Minimum Annual Financial Turnover',
         description: 'Bidder must have average annual turnover of at least INR 50 Crores in the last 3 financial years.',
-        requirementType: 'MANDATORY',
         status: 'UNREVIEWED',
         provenance: {
           pageNumber: 14,
@@ -191,7 +190,6 @@ describe('E2E: Bid/No-Bid Decision & Company Evidence Extraction Pipeline', () =
         category: 'TECHNICAL',
         title: 'Similar Past Work Experience',
         description: 'Experience in completing similar highway construction contract of value at least INR 70 Crores.',
-        requirementType: 'MANDATORY',
         status: 'UNREVIEWED',
         executionRules: {},
         provenance: {
@@ -226,14 +224,14 @@ describe('E2E: Bid/No-Bid Decision & Company Evidence Extraction Pipeline', () =
     expect(verdict.evidenceCitations.length).toBeGreaterThanOrEqual(2);
 
     const turnoverCitation = verdict.evidenceCitations.find((c) =>
-      /turnover/i.test(c.tenderRequirementTitle || ''),
+      /turnover/i.test(String(c.tenderRequirementTitle || '')),
     );
     expect(turnoverCitation).toBeDefined();
     expect(turnoverCitation?.documentName).toBe('CA_Audited_Turnover_FY25.pdf');
     expect(turnoverCitation?.companyEvidenceRef).toBe(turnoverDoc.id);
 
     const expCitation = verdict.evidenceCitations.find((c) =>
-      /experience|similar/i.test(c.tenderRequirementTitle || ''),
+      /experience|similar/i.test(String(c.tenderRequirementTitle || '')),
     );
     expect(expCitation).toBeDefined();
     expect(expCitation?.documentName).toBe('NHAI_STRR_Completion_Certificate.pdf');
@@ -274,7 +272,6 @@ describe('E2E: Bid/No-Bid Decision & Company Evidence Extraction Pipeline', () =
       category: 'FINANCIAL',
       title: 'Mega-Project Annual Financial Turnover',
       description: 'Minimum average annual turnover of INR 500 Crores required.',
-      requirementType: 'MANDATORY',
       status: 'UNREVIEWED',
       executionRules: {},
       provenance: {

@@ -1,4 +1,4 @@
-from .consumer import (
+from tenderpulse_ai.infrastructure.queue.consumer import (
     AwsSqsQueueConsumer,
     GcpPubSubQueueConsumer,
     IngestionJobMessage,
@@ -7,7 +7,7 @@ from .consumer import (
     QueueMessage,
     get_queue_consumer,
 )
-from .publisher import (
+from tenderpulse_ai.infrastructure.queue.publisher import (
     AwsSqsCompletionPublisher,
     CompletionPublisher,
     DocumentExtractionCompletedEvent,
@@ -16,7 +16,7 @@ from .publisher import (
     MockCompletionPublisher,
     get_completion_publisher,
 )
-from .worker import DocumentQueueConsumerWorker
+from tenderpulse_ai.infrastructure.queue.worker import DocumentQueueConsumerWorker
 
 __all__ = [
     "AwsSqsCompletionPublisher",
