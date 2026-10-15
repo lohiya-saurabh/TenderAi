@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../auth/useAuth.js';
-import { useCompany } from '../context/CompanyContext.js';
-import { Button } from '../components/ui/button.js';
-import { Label } from '../components/ui/label.js';
-import { Badge } from '../components/ui/badge.js';
+import { useAuth } from '@/auth/useAuth.js';
+import { useCompany } from '@/context/CompanyContext.js';
+import { Button } from '@/components/ui/button.js';
+import { Label } from '@/components/ui/label.js';
+import { Badge } from '@/components/ui/badge.js';
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
   CardDescription,
-} from '../components/ui/card.js';
+} from '@/components/ui/card.js';
 import {
   Building2,
   CheckCircle2,
@@ -21,7 +21,7 @@ import {
   ShieldCheck,
   Loader2,
 } from 'lucide-react';
-import { verifyGstin, createCompanyProfileVersion } from '../api/companies.js';
+import { verifyGstin, createCompanyProfileVersion } from '@/api/companies.js';
 
 const SECTORS = [
   'Civil Infrastructure & Highways',

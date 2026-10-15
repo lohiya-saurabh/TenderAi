@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { InvalidProvenanceException } from '../../../../common/domain/DomainException.js';
-import { Provenance } from './Provenance.js';
+import { InvalidProvenanceException } from '@/common/domain/DomainException.js';
+import { Provenance } from '@/modules/compliance/domain/value-objects/Provenance.js';
 
 describe('Provenance Value Object', () => {
   const validProps = {

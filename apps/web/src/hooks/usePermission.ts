@@ -1,4 +1,4 @@
-import { useAuth } from '../auth/useAuth.js';
+import { useAuth } from '@/auth/useAuth.js';
 
 /**
  * Hook to check if current user has a specific permission (for UX conditional rendering).

@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import type { BidSummary } from '../../api/bids.js';
-import { deleteBid } from '../../api/bids.js';
-import { Table, TableHead, TableBody, TableRow, TableHeader, TableCell } from '../ui/table.js';
-import { Button } from '../ui/button.js';
-import { Progress } from '../ui/progress.js';
-import { Skeleton } from '../ui/skeleton.js';
+import type { BidSummary } from '@/api/bids.js';
+import { deleteBid } from '@/api/bids.js';
+import { Table, TableHead, TableBody, TableRow, TableHeader, TableCell } from '@/components/ui/table.js';
+import { Button } from '@/components/ui/button.js';
+import { Progress } from '@/components/ui/progress.js';
+import { Skeleton } from '@/components/ui/skeleton.js';
 import {
   Dialog,
   DialogContent,
@@ -13,10 +13,10 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from '../ui/dialog.js';
-import { StatusBadge } from '../common/StatusBadge.js';
-import { RiskBadge } from '../common/RiskBadge.js';
-import { Tooltip } from '../common/Tooltip.js';
+} from '@/components/ui/dialog.js';
+import { StatusBadge } from '@/components/common/StatusBadge.js';
+import { RiskBadge } from '@/components/common/RiskBadge.js';
+import { Tooltip } from '@/components/common/Tooltip.js';
 import {
   ChevronRightIcon,
   ChevronLeftIcon,
@@ -24,12 +24,12 @@ import {
   ChevronDownIcon,
   MissingIcon,
   TrashIcon,
-} from '../common/Icons.js';
-import { ErrorBanner } from '../common/ErrorBanner.js';
-import { formatCurrency } from '../../utils/formatCurrency.js';
-import { formatDate } from '../../utils/formatDate.js';
-import { useBreakpoint } from '../../hooks/useBreakpoint.js';
-import { computeReadiness, computeRiskLevel } from '../../utils/readiness.js';
+} from '@/components/common/Icons.js';
+import { ErrorBanner } from '@/components/common/ErrorBanner.js';
+import { formatCurrency } from '@/utils/formatCurrency.js';
+import { formatDate } from '@/utils/formatDate.js';
+import { useBreakpoint } from '@/hooks/useBreakpoint.js';
+import { computeReadiness, computeRiskLevel } from '@/utils/readiness.js';
 import {
   getPageNumbers,
   getPaginationRange,
@@ -43,8 +43,8 @@ import {
   type SortDirection,
   type SortKey,
   SORTABLE_COLUMNS,
-} from './tenderListData.js';
-import { cn } from '../../lib/utils.js';
+} from '@/components/dashboard/tenderListData.js';
+import { cn } from '@/lib/utils.js';
 
 export interface TenderTableViewProps {
   bids: BidSummary[];

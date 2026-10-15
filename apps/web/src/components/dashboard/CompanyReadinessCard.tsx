@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui/card.js';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card.js';
 import {
   Building2,
   ShieldCheck,
@@ -17,8 +17,8 @@ import {
   getExpiringCertificates,
   type CompanyProfileView,
   type ExpiringCertificatesResponse,
-} from '../../api/companyProfile.js';
-import { Badge } from '../ui/badge.js';
+} from '@/api/companyProfile.js';
+import { Badge } from '@/components/ui/badge.js';
 
 /**
  * Company Readiness — Live Company Capability Profile aggregate

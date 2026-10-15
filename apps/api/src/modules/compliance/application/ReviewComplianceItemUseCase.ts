@@ -1,15 +1,15 @@
 import { v4 as uuidv4 } from 'uuid';
-import { IUnitOfWork } from '../../../common/database/IUnitOfWork.js';
+import { IUnitOfWork } from '@/common/database/IUnitOfWork.js';
 import {
   ConcurrencyConflictException,
   EntityNotFoundException,
   UnauthorizedTenantAccessException,
-} from '../../../common/domain/DomainException.js';
-import { AuditLog } from '../../audit/domain/entities/AuditLog.js';
-import { IAuditRepository } from '../../audit/domain/repositories/IAuditRepository.js';
-import { IComplianceItemRepository } from '../domain/repositories/IComplianceItemRepository.js';
-import { ComplianceStatus } from '../domain/value-objects/ComplianceStatus.js';
-import { IEventBus } from '../../../common/events/IEventBus.js';
+} from '@/common/domain/DomainException.js';
+import { AuditLog } from '@/modules/audit/domain/entities/AuditLog.js';
+import { IAuditRepository } from '@/modules/audit/domain/repositories/IAuditRepository.js';
+import { IComplianceItemRepository } from '@/modules/compliance/domain/repositories/IComplianceItemRepository.js';
+import { ComplianceStatus } from '@/modules/compliance/domain/value-objects/ComplianceStatus.js';
+import { IEventBus } from '@/common/events/IEventBus.js';
 
 export interface ReviewComplianceItemCommand {
   organizationId: string;

@@ -1,9 +1,9 @@
 import React from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '../ui/card.js';
-import { Badge } from '../ui/badge.js';
-import { TendersIcon, AlertCircleIcon } from '../common/Icons.js';
-import type { PipelineStage } from './dashboardData.js';
-import { cn } from '../../lib/utils.js';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card.js';
+import { Badge } from '@/components/ui/badge.js';
+import { TendersIcon, AlertCircleIcon } from '@/components/common/Icons.js';
+import type { PipelineStage } from '@/components/dashboard/dashboardData.js';
+import { cn } from '@/lib/utils.js';
 
 export interface BidPipelineCardProps {
   stages: PipelineStage[];

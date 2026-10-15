@@ -1,9 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { generateUploadUrl, confirmDocumentUpload } from '../../api/bids.js';
-import { resolveUrl } from '../../api/client.js';
-import { Button } from '../common/Button.js';
-import { ErrorBanner } from '../common/ErrorBanner.js';
-import { ProgressBar } from '../progress/ProgressBar.js';
+import { generateUploadUrl, confirmDocumentUpload } from '@/api/bids.js';
+import { resolveUrl } from '@/api/client.js';
+import { Button } from '@/components/common/Button.js';
+import { ErrorBanner } from '@/components/common/ErrorBanner.js';
+import { ProgressBar } from '@/components/progress/ProgressBar.js';
 import { Upload, X } from 'lucide-react';
 
 export interface DocumentUploaderProps {

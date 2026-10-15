@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Building2, Check, Plus } from 'lucide-react';
-import { useCompany } from '../../context/CompanyContext.js';
-import { cn } from '../../lib/utils.js';
+import { useCompany } from '@/context/CompanyContext.js';
+import { cn } from '@/lib/utils.js';
 
 export const CompanySelector: React.FC = () => {
   const { companies, selectedCompanyId, selectedCompany, setSelectedCompanyId, createCompany } =

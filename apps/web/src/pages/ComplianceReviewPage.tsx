@@ -1,18 +1,18 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getComplianceItem, reviewComplianceItem, type ComplianceItem } from '../api/compliance.js';
-import { useApi } from '../hooks/useApi.js';
-import { StatusBadge } from '../components/common/StatusBadge.js';
-import { RiskBadge } from '../components/common/RiskBadge.js';
-import { Badge } from '../components/common/Badge.js';
-import { Button } from '../components/common/Button.js';
-import { ReviewActions } from '../components/compliance/ReviewActions.js';
-import { ExecutionRulesCard } from '../components/compliance/ExecutionRulesCard.js';
-import { ErrorBanner } from '../components/common/ErrorBanner.js';
-import { Skeleton } from '../components/ui/skeleton.js';
-import { EvidenceDrawer } from '../components/compliance/EvidenceDrawer.js';
-import { SourceCitationDrawer } from '../components/compliance/SourceCitationDrawer.js';
-import { AssessmentPanel } from '../components/compliance/AssessmentPanel.js';
+import { getComplianceItem, reviewComplianceItem, type ComplianceItem } from '@/api/compliance.js';
+import { useApi } from '@/hooks/useApi.js';
+import { StatusBadge } from '@/components/common/StatusBadge.js';
+import { RiskBadge } from '@/components/common/RiskBadge.js';
+import { Badge } from '@/components/common/Badge.js';
+import { Button } from '@/components/common/Button.js';
+import { ReviewActions } from '@/components/compliance/ReviewActions.js';
+import { ExecutionRulesCard } from '@/components/compliance/ExecutionRulesCard.js';
+import { ErrorBanner } from '@/components/common/ErrorBanner.js';
+import { Skeleton } from '@/components/ui/skeleton.js';
+import { EvidenceDrawer } from '@/components/compliance/EvidenceDrawer.js';
+import { SourceCitationDrawer } from '@/components/compliance/SourceCitationDrawer.js';
+import { AssessmentPanel } from '@/components/compliance/AssessmentPanel.js';
 import {
   ArrowLeft,
   Check,
@@ -24,7 +24,7 @@ import {
   CheckCheck,
   ExternalLink,
 } from 'lucide-react';
-import { deriveGroundingMatch } from '../utils/grounding.js';
+import { deriveGroundingMatch } from '@/utils/grounding.js';
 
 export const ComplianceReviewPage: React.FC = () => {
   const { id: bidId = '', itemId = '' } = useParams<{ id: string; itemId: string }>();

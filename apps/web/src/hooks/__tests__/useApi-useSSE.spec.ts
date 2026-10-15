@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { SSEProgressEvent } from '../useSSE.js';
+import type { SSEProgressEvent } from '@/hooks/useSSE.js';
 
 describe('useApi & useSSE — SWR Background Revalidation and Terminal SSE Guards', () => {
   it('useApi maintains stale data and keeps isLoading false during refetch (stale-while-revalidate)', async () => {

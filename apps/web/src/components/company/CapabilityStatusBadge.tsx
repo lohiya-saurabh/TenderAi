@@ -5,8 +5,8 @@ import {
   MissingIcon,
   ReviewRequiredIcon,
   HighRiskIcon,
-} from '../common/Icons.js';
-import type { CapabilityStatus } from './companyProfileData.js';
+} from '@/components/common/Icons.js';
+import type { CapabilityStatus } from '@/components/company/companyProfileData.js';
 
 export interface CapabilityStatusBadgeProps {
   status: CapabilityStatus;

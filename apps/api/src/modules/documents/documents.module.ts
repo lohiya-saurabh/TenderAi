@@ -2,18 +2,18 @@
  * DocumentsModule — Document upload, download, and extraction feature module.
  */
 import { Module } from '@nestjs/common';
-import { DocumentsController } from './documents.controller.js';
-import { DocumentsService } from './documents.service.js';
-import { DocumentProcessingRuntime } from './DocumentProcessingRuntime.js';
+import { DocumentsController } from '@/modules/documents/documents.controller.js';
+import { DocumentsService } from '@/modules/documents/documents.service.js';
+import { DocumentProcessingRuntime } from '@/modules/documents/DocumentProcessingRuntime.js';
 import {
   INGESTION_QUEUE_TOKEN,
   COMPLETION_QUEUE_TOKEN,
-} from '../../infrastructure/queue/queue.module.js';
-import type { IJobQueue } from '../bids/application/IJobQueue.js';
-import { DRIZZLE_TOKEN, type DrizzleDb } from '../../common/database/database.module.js';
+} from '@/infrastructure/queue/queue.module.js';
+import type { IJobQueue } from '@/modules/bids/application/IJobQueue.js';
+import { DRIZZLE_TOKEN, type DrizzleDb } from '@/common/database/database.module.js';
 
-import { CompletionWebhookController } from './CompletionWebhookController.js';
-import { DocumentCompletionService } from './DocumentCompletionService.js';
+import { CompletionWebhookController } from '@/modules/documents/CompletionWebhookController.js';
+import { DocumentCompletionService } from '@/modules/documents/DocumentCompletionService.js';
 
 @Module({
   controllers: [DocumentsController, CompletionWebhookController],

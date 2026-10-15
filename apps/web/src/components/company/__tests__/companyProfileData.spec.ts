@@ -4,7 +4,7 @@ import {
   getDaysUntilExpiry,
   ENTERPRISE_COMPANY_PROFILE,
   type FullCompanyProfile,
-} from '../companyProfileData.js';
+} from '@/components/company/companyProfileData.js';
 
 describe('Company Profile Data & Derivations', () => {
   it('computes profile health accurately for complete enterprise profile', () => {

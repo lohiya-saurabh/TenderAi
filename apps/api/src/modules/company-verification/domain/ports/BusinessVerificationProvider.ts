@@ -3,7 +3,7 @@
  *
  * Implements provider-independent verification for GSTIN, PAN, and related tax identities.
  */
-import type { GstTaxpayerDetails } from './IGstVerificationPort.js';
+import type { GstTaxpayerDetails } from '@/modules/company-verification/domain/ports/IGstVerificationPort.js';
 
 export interface BusinessVerificationProvider {
   /**
@@ -13,4 +13,4 @@ export interface BusinessVerificationProvider {
 }
 
 export const BUSINESS_VERIFICATION_PROVIDER = Symbol('BusinessVerificationProvider');
-export type { GstTaxpayerDetails, GstTaxpayerAddress } from './IGstVerificationPort.js';
+export type { GstTaxpayerDetails, GstTaxpayerAddress } from '@/modules/company-verification/domain/ports/IGstVerificationPort.js';

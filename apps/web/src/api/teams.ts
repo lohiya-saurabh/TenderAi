@@ -1,7 +1,7 @@
 /**
  * Teams API Client
  */
-import { apiGet, apiPost, type ApiResult } from './client.js';
+import { apiGet, apiPost, type ApiResult } from '@/api/client.js';
 
 export interface TeamMember {
   id: string;

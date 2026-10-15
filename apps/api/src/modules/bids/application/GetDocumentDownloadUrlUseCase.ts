@@ -1,16 +1,16 @@
 import { v4 as uuidv4 } from 'uuid';
-import { IAuditRepository } from '../../audit/domain/repositories/IAuditRepository.js';
-import { AuditLog } from '../../audit/domain/entities/AuditLog.js';
+import { IAuditRepository } from '@/modules/audit/domain/repositories/IAuditRepository.js';
+import { AuditLog } from '@/modules/audit/domain/entities/AuditLog.js';
 import {
   EntityNotFoundException,
   ValidationException,
-} from '../../../common/domain/DomainException.js';
-import { TenantContextHolder } from '../../../common/security/TenantContext.js';
-import { Permissions } from '../../../common/security/permissions.js';
-import { IBidRepository } from '../domain/repositories/IBidRepository.js';
-import { ITenderDocumentRepository } from '../domain/repositories/ITenderDocumentRepository.js';
-import { IStorageService } from './IStorageService.js';
-import { DocumentStatus } from '../domain/value-objects/DocumentStatus.js';
+} from '@/common/domain/DomainException.js';
+import { TenantContextHolder } from '@/common/security/TenantContext.js';
+import { Permissions } from '@/common/security/permissions.js';
+import { IBidRepository } from '@/modules/bids/domain/repositories/IBidRepository.js';
+import { ITenderDocumentRepository } from '@/modules/bids/domain/repositories/ITenderDocumentRepository.js';
+import { IStorageService } from '@/modules/bids/application/IStorageService.js';
+import { DocumentStatus } from '@/modules/bids/domain/value-objects/DocumentStatus.js';
 
 export interface GetDocumentDownloadUrlCommand {
   organizationId: string;

@@ -1,5 +1,5 @@
-import { ValidationException } from '../../../../common/domain/DomainException.js';
-import { ExtractedComplianceItemInput } from '../../application/BulkIngestComplianceUseCase.js';
+import { ValidationException } from '@/common/domain/DomainException.js';
+import { ExtractedComplianceItemInput } from '@/modules/compliance/application/BulkIngestComplianceUseCase.js';
 
 export interface BulkIngestPayload {
   items: ExtractedComplianceItemInput[];

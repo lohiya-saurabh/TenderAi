@@ -1,17 +1,17 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { PGlite } from '@electric-sql/pglite';
 import { eq } from 'drizzle-orm';
-import { initDatabase } from '../../../common/database/database.provider.js';
-import { createDrizzle } from '../../../common/database/database.module.js';
-import * as schema from '../../../common/database/schema.js';
-import { TenantContextHolder } from '../../../common/security/TenantContext.js';
-import { GetBidDecisionUseCase } from './GetBidDecisionUseCase.js';
+import { initDatabase } from '@/common/database/database.provider.js';
+import { createDrizzle } from '@/common/database/database.module.js';
+import * as schema from '@/common/database/schema.js';
+import { TenantContextHolder } from '@/common/security/TenantContext.js';
+import { GetBidDecisionUseCase } from '@/modules/bids/application/GetBidDecisionUseCase.js';
 import {
   AiDecisionClient,
   type AiBidDecisionRequest,
   type AiBidDecisionResponse,
-} from './AiDecisionClient.js';
-import { NotFoundError, ConflictError } from '../../../common/errors/errors.js';
+} from '@/modules/bids/application/AiDecisionClient.js';
+import { NotFoundError, ConflictError } from '@/common/errors/errors.js';
 
 /** Fake engine: captures the request, returns a canned verdict. */
 class FakeAiDecisionClient {

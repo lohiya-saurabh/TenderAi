@@ -8,10 +8,10 @@ import { Controller, Get, Post, Put, Delete, Param, Body, Req, Res, Headers, Inj
 import { Request, Response } from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
-import { DocumentsService } from './documents.service.js';
-import { Public } from '../../common/security/decorators/public.decorator.js';
-import { RequirePermission } from '../../common/security/decorators/permissions.decorator.js';
-import { Permissions } from '../../common/security/permissions.js';
+import { DocumentsService } from '@/modules/documents/documents.service.js';
+import { Public } from '@/common/security/decorators/public.decorator.js';
+import { RequirePermission } from '@/common/security/decorators/permissions.decorator.js';
+import { Permissions } from '@/common/security/permissions.js';
 
 @Controller('api/v1')
 export class DocumentsController {

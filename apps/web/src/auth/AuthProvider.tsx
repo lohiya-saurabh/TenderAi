@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { AuthContext, type AuthContextValue } from './AuthContext.js';
+import { AuthContext, type AuthContextValue } from '@/auth/AuthContext.js';
 import {
   login as apiLogin,
   register as apiRegister,
   logout as apiLogout,
   type AuthUser,
   type RegisterRequest,
-} from '../api/auth.js';
-import { setTokens, setOnAuthExpired, coordinatedRefresh } from '../api/client.js';
+} from '@/api/auth.js';
+import { setTokens, setOnAuthExpired, coordinatedRefresh } from '@/api/client.js';
 
 interface AuthProviderProps {
   children: React.ReactNode;

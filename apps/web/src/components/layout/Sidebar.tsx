@@ -1,15 +1,15 @@
 import React, { useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { useAuth } from '../../auth/useAuth.js';
-import { PERMISSIONS } from '../../utils/permissions.js';
+import { useAuth } from '@/auth/useAuth.js';
+import { PERMISSIONS } from '@/utils/permissions.js';
 import {
   TendersIcon,
   PlusCircleIcon,
   BuildingOfficeIcon,
   CloseIcon,
   ShieldLockIcon,
-} from '../common/Icons.js';
-import { cn } from '../../lib/utils.js';
+} from '@/components/common/Icons.js';
+import { cn } from '@/lib/utils.js';
 import { Settings as SettingsIcon } from 'lucide-react';
 
 export interface SidebarProps {

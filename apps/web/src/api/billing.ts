@@ -1,7 +1,7 @@
 /**
  * TenderPulse AI — Billing & Subscription Web API Client
  */
-import { apiGet, apiPost, type ApiResult } from './client.js';
+import { apiGet, apiPost, type ApiResult } from '@/api/client.js';
 
 export type PlanTier = 'FREE' | 'STARTER' | 'GROWTH' | 'BUSINESS' | 'ENTERPRISE';
 export type BillingInterval = 'MONTHLY' | 'ANNUAL';

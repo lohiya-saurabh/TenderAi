@@ -29,17 +29,17 @@ import {
   DRIZZLE_TOKEN,
   type DrizzleDb,
   createDrizzle,
-} from '../../../common/database/database.module.js';
-import * as schema from '../../../common/database/schema.js';
-import { NotFoundError, ConflictError, BadRequestError } from '../../../common/errors/errors.js';
-import { TenantContextHolder } from '../../../common/security/TenantContext.js';
+} from '@/common/database/database.module.js';
+import * as schema from '@/common/database/schema.js';
+import { NotFoundError, ConflictError, BadRequestError } from '@/common/errors/errors.js';
+import { TenantContextHolder } from '@/common/security/TenantContext.js';
 import {
   AiDecisionClient,
   type AiBidDecisionRequest,
   type AiBidDecisionResponse,
   type AiCompanyProfileSnapshot,
-} from './AiDecisionClient.js';
-import { toRequirementCandidates, type RequirementSourceItem } from './RequirementMapper.js';
+} from '@/modules/bids/application/AiDecisionClient.js';
+import { toRequirementCandidates, type RequirementSourceItem } from '@/modules/bids/application/RequirementMapper.js';
 
 export interface BidDecisionEvaluationResult {
   decisionId: string;

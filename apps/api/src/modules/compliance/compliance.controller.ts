@@ -2,10 +2,10 @@
  * ComplianceController — NestJS controller for compliance item endpoints.
  */
 import { Controller, Get, Patch, Param, Body, Inject } from '@nestjs/common';
-import { ComplianceService } from './compliance.service.js';
-import type { DemoComplianceItem } from '../../seed/data.js';
-import { RequirePermission } from '../../common/security/decorators/permissions.decorator.js';
-import { Permissions } from '../../common/security/permissions.js';
+import { ComplianceService } from '@/modules/compliance/compliance.service.js';
+import type { DemoComplianceItem } from '@/seed/data.js';
+import { RequirePermission } from '@/common/security/decorators/permissions.decorator.js';
+import { Permissions } from '@/common/security/permissions.js';
 
 @Controller('api/v1/bids/:bidId/compliance-items')
 export class ComplianceController {

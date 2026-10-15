@@ -14,12 +14,12 @@ import {
   DRIZZLE_TOKEN,
   type DrizzleDb,
   createDrizzle,
-} from '../../common/database/database.module.js';
-import * as schema from '../../common/database/schema.js';
-import { NotFoundError, BadRequestError } from '../../common/errors/errors.js';
-import { TenantContextHolder } from '../../common/security/TenantContext.js';
-import type { CompanyProfilePayload } from './presentation/dto/CompanyProfilePayload.js';
-import { validateCompanyProfilePayload } from './presentation/dto/CompanyProfilePayload.js';
+} from '@/common/database/database.module.js';
+import * as schema from '@/common/database/schema.js';
+import { NotFoundError, BadRequestError } from '@/common/errors/errors.js';
+import { TenantContextHolder } from '@/common/security/TenantContext.js';
+import type { CompanyProfilePayload } from '@/modules/company-profile/presentation/dto/CompanyProfilePayload.js';
+import { validateCompanyProfilePayload } from '@/modules/company-profile/presentation/dto/CompanyProfilePayload.js';
 
 export interface CompanyProfileVersionView {
   id: string;

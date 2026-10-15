@@ -17,16 +17,16 @@ import {
   DRIZZLE_TOKEN,
   type DrizzleDb,
   createDrizzle,
-} from '../../../common/database/database.module.js';
-import * as schema from '../../../common/database/schema.js';
-import { NotFoundError, BadRequestError } from '../../../common/errors/errors.js';
-import { TenantContextHolder } from '../../../common/security/TenantContext.js';
-import { STORAGE_TOKEN } from '../../../infrastructure/storage/storage.module.js';
-import type { IStorageService } from '../../bids/application/IStorageService.js';
-import { GoogleDriveConnector } from '../infrastructure/GoogleDriveConnector.js';
-import { OneDriveConnector } from '../infrastructure/OneDriveConnector.js';
-import { LocalUploadConnector } from '../infrastructure/LocalUploadConnector.js';
-import { AiEvidenceExtractor } from './AiEvidenceExtractor.js';
+} from '@/common/database/database.module.js';
+import * as schema from '@/common/database/schema.js';
+import { NotFoundError, BadRequestError } from '@/common/errors/errors.js';
+import { TenantContextHolder } from '@/common/security/TenantContext.js';
+import { STORAGE_TOKEN } from '@/infrastructure/storage/storage.module.js';
+import type { IStorageService } from '@/modules/bids/application/IStorageService.js';
+import { GoogleDriveConnector } from '@/modules/company-verification/infrastructure/GoogleDriveConnector.js';
+import { OneDriveConnector } from '@/modules/company-verification/infrastructure/OneDriveConnector.js';
+import { LocalUploadConnector } from '@/modules/company-verification/infrastructure/LocalUploadConnector.js';
+import { AiEvidenceExtractor } from '@/modules/company-verification/application/AiEvidenceExtractor.js';
 
 export interface UploadEvidenceDto {
   fileName: string;

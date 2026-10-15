@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { InvalidExecutionRulesException } from '../../../../common/domain/DomainException.js';
-import { ExecutionRules } from './ExecutionRules.js';
+import { InvalidExecutionRulesException } from '@/common/domain/DomainException.js';
+import { ExecutionRules } from '@/modules/compliance/domain/value-objects/ExecutionRules.js';
 
 describe('ExecutionRules Value Object', () => {
   it('should successfully instantiate valid execution rules with stamp paper', () => {

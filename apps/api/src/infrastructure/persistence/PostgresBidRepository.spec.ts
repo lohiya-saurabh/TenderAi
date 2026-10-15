@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { PGlite } from '@electric-sql/pglite';
-import { PostgresBidRepository } from './PostgresBidRepository.js';
-import { initDatabase } from '../../common/database/database.provider.js';
-import { BidProject } from '../../modules/bids/domain/entities/BidProject.js';
-import { Money } from '../../modules/bids/domain/value-objects/Money.js';
-import { BidStatus } from '../../modules/bids/domain/value-objects/BidStatus.js';
-import { ConcurrencyConflictException } from '../../common/domain/DomainException.js';
-import { InMemoryEventBus } from '../../common/events/InMemoryEventBus.js';
+import { PostgresBidRepository } from '@/infrastructure/persistence/PostgresBidRepository.js';
+import { initDatabase } from '@/common/database/database.provider.js';
+import { BidProject } from '@/modules/bids/domain/entities/BidProject.js';
+import { Money } from '@/modules/bids/domain/value-objects/Money.js';
+import { BidStatus } from '@/modules/bids/domain/value-objects/BidStatus.js';
+import { ConcurrencyConflictException } from '@/common/domain/DomainException.js';
+import { InMemoryEventBus } from '@/common/events/InMemoryEventBus.js';
 
 describe('Infrastructure: PostgresBidRepository Unit & Integration Tests', () => {
   let db: PGlite;

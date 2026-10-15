@@ -8,8 +8,8 @@ import { Injectable } from '@nestjs/common';
 import type {
   IGstVerificationPort,
   GstTaxpayerDetails,
-} from '../domain/ports/IGstVerificationPort.js';
-import { BadRequestError, NotFoundError } from '../../../common/errors/errors.js';
+} from '@/modules/company-verification/domain/ports/IGstVerificationPort.js';
+import { BadRequestError, NotFoundError } from '@/common/errors/errors.js';
 
 const STATE_CODE_MAP: Record<string, string> = {
   '01': 'Jammu and Kashmir',

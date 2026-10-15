@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getBidDecision, type BidDecisionSummary, type ApiResult } from '../api/bids.js';
+import { getBidDecision, type BidDecisionSummary, type ApiResult } from '@/api/bids.js';
 
 /**
  * Fetches the persisted bid decision for a single tender.

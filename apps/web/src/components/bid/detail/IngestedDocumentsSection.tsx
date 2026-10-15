@@ -1,9 +1,9 @@
 import React from 'react';
-import type { BidDocument } from '../../../api/bids.js';
-import { formatFileSize } from '../../../utils/formatFileSize.js';
-import { DocumentUploader } from '../DocumentUploader.js';
+import type { BidDocument } from '@/api/bids.js';
+import { formatFileSize } from '@/utils/formatFileSize.js';
+import { DocumentUploader } from '@/components/bid/DocumentUploader.js';
 import { Plus, RefreshCw, Trash2, Download } from 'lucide-react';
-import { Button } from '../../ui/button.js';
+import { Button } from '@/components/ui/button.js';
 
 export interface IngestedDocumentsSectionProps {
   bidId: string;

@@ -8,12 +8,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import type {
   IGstVerificationPort,
   GstTaxpayerDetails,
-} from '../domain/ports/IGstVerificationPort.js';
+} from '@/modules/company-verification/domain/ports/IGstVerificationPort.js';
 import {
   BadRequestError,
   NotFoundError,
   InternalServerError,
-} from '../../../common/errors/errors.js';
+} from '@/common/errors/errors.js';
 
 interface IrisTaxpayerResponse {
   gstin?: string;

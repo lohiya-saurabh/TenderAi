@@ -6,10 +6,10 @@ import type {
   DocumentExtractionCompletedEvent,
   ExtractedComplianceItemDto,
 } from '@tenderpulse/shared-types';
-import { DRIZZLE_TOKEN, type DrizzleDb } from '../../common/database/database.module.js';
-import * as schema from '../../common/database/schema.js';
-import { StructuredLogger } from '../../common/logging/StructuredLogger.js';
-import { LoggingContextHolder } from '../../common/logging/LoggingContext.js';
+import { DRIZZLE_TOKEN, type DrizzleDb } from '@/common/database/database.module.js';
+import * as schema from '@/common/database/schema.js';
+import { StructuredLogger } from '@/common/logging/StructuredLogger.js';
+import { LoggingContextHolder } from '@/common/logging/LoggingContext.js';
 
 export interface CompletionProcessResult {
   processed: boolean;

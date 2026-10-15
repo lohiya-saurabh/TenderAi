@@ -4,7 +4,7 @@ import {
   IngestionJobMessage,
   QueueMessage,
   DeadLetterMessage,
-} from '../../modules/bids/application/IJobQueue.js';
+} from '@/modules/bids/application/IJobQueue.js';
 
 interface InternalQueueItem {
   id: string;

@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
-import { ActionRequiredCard } from '../ActionRequiredCard.js';
-import { buildActionItems } from '../dashboardData.js';
-import type { BidSummary } from '../../../api/bids.js';
-import type { ComplianceItem } from '../../../api/compliance.js';
+import { ActionRequiredCard } from '@/components/dashboard/ActionRequiredCard.js';
+import { buildActionItems } from '@/components/dashboard/dashboardData.js';
+import type { BidSummary } from '@/api/bids.js';
+import type { ComplianceItem } from '@/api/compliance.js';
 
 describe('ActionRequiredCard Suite', () => {
   it('instantiates ActionRequiredCard with empty bids cleanly', () => {

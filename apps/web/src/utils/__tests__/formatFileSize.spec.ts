@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatFileSize } from '../formatFileSize.js';
+import { formatFileSize } from '@/utils/formatFileSize.js';
 
 describe('formatFileSize', () => {
   it('should handle zero or null/undefined gracefully', () => {

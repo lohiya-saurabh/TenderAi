@@ -1,4 +1,4 @@
-import { IDomainEvent } from '../domain/DomainEvent.js';
+import { IDomainEvent } from '@/common/domain/DomainEvent.js';
 
 export type DomainEventHandler<T extends IDomainEvent = IDomainEvent> = (event: T) => Promise<void>;
 

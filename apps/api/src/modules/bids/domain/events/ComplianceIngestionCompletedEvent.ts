@@ -1,4 +1,4 @@
-import { DomainEvent } from '../../../../common/domain/DomainEvent.js';
+import { DomainEvent } from '@/common/domain/DomainEvent.js';
 
 export interface ComplianceIngestionCompletedPayload {
   jobId: string;

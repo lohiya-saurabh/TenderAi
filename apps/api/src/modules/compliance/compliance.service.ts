@@ -8,11 +8,11 @@ import {
   DRIZZLE_TOKEN,
   type DrizzleDb,
   createDrizzle,
-} from '../../common/database/database.module.js';
-import * as schema from '../../common/database/schema.js';
-import { NotFoundError, ConflictError } from '../../common/errors/errors.js';
-import type { DemoComplianceItem } from '../../seed/data.js';
-import { TenantContextHolder } from '../../common/security/TenantContext.js';
+} from '@/common/database/database.module.js';
+import * as schema from '@/common/database/schema.js';
+import { NotFoundError, ConflictError } from '@/common/errors/errors.js';
+import type { DemoComplianceItem } from '@/seed/data.js';
+import { TenantContextHolder } from '@/common/security/TenantContext.js';
 
 export interface ReviewComplianceDto {
   status?: DemoComplianceItem['status'];

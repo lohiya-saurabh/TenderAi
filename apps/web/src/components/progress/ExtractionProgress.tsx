@@ -1,8 +1,8 @@
 import React from 'react';
-import { useSSE } from '../../hooks/useSSE.js';
-import { ProgressBar } from './ProgressBar.js';
-import { Button } from '../common/Button.js';
-import { Card } from '../common/Card.js';
+import { useSSE } from '@/hooks/useSSE.js';
+import { ProgressBar } from '@/components/progress/ProgressBar.js';
+import { Button } from '@/components/common/Button.js';
+import { Card } from '@/components/common/Card.js';
 import {
   Download,
   FileText,

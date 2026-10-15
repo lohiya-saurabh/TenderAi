@@ -1,7 +1,7 @@
 import React from 'react';
-import type { BidSummary } from '../../api/bids.js';
-import { formatCurrency, formatCompactINR } from '../../utils/formatCurrency.js';
-import { TendersIcon, AlertCircleIcon, WarningIcon, CheckIcon } from '../common/Icons.js';
+import type { BidSummary } from '@/api/bids.js';
+import { formatCurrency, formatCompactINR } from '@/utils/formatCurrency.js';
+import { TendersIcon, AlertCircleIcon, WarningIcon, CheckIcon } from '@/components/common/Icons.js';
 
 export interface DashboardKpiStripProps {
   bids: BidSummary[];

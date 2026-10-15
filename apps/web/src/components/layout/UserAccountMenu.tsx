@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../../auth/useAuth.js';
+import { useAuth } from '@/auth/useAuth.js';
 import { LogOut, User, Settings } from 'lucide-react';
 import {
   DropdownMenu,
@@ -9,10 +9,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '../ui/dropdown-menu.js';
-import { Avatar, AvatarFallback } from '../ui/avatar.js';
-import { Badge } from '../ui/badge.js';
-import { Button } from '../ui/button.js';
+} from '@/components/ui/dropdown-menu.js';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar.js';
+import { Badge } from '@/components/ui/badge.js';
+import { Button } from '@/components/ui/button.js';
 
 export const UserAccountMenu: React.FC = () => {
   const { user, logout } = useAuth();

@@ -4,8 +4,8 @@ import { tap, catchError } from 'rxjs/operators';
 import { randomUUID } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
 import type { Request, Response } from 'express';
-import { LoggingContextHolder } from './LoggingContext.js';
-import { StructuredLogger } from './StructuredLogger.js';
+import { LoggingContextHolder } from '@/common/logging/LoggingContext.js';
+import { StructuredLogger } from '@/common/logging/StructuredLogger.js';
 
 @Injectable()
 export class HttpLoggingInterceptor implements NestInterceptor {

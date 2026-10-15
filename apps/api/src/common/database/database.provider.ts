@@ -16,8 +16,8 @@ import {
   DEMO_COMPANY_PROFILE_PAYLOAD,
   DEMO_COMPLIANCE_ITEMS,
   DEMO_BID_DECISION_SEED,
-} from '../../seed/data.js';
-import * as schema from './schema.js';
+} from '@/seed/data.js';
+import * as schema from '@/common/database/schema.js';
 
 let dbInstance: PGlite | null = null;
 

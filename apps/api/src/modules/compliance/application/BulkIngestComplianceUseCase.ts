@@ -1,17 +1,17 @@
 import { v4 as uuidv4 } from 'uuid';
-import { IUnitOfWork } from '../../../common/database/IUnitOfWork.js';
+import { IUnitOfWork } from '@/common/database/IUnitOfWork.js';
 import {
   EntityNotFoundException,
   ValidationException,
-} from '../../../common/domain/DomainException.js';
-import { AuditLog } from '../../audit/domain/entities/AuditLog.js';
-import { IAuditRepository } from '../../audit/domain/repositories/IAuditRepository.js';
-import { IBidRepository } from '../../bids/domain/repositories/IBidRepository.js';
-import { ComplianceItem } from '../domain/entities/ComplianceItem.js';
-import { IComplianceItemRepository } from '../domain/repositories/IComplianceItemRepository.js';
-import { BidStatus } from '../../bids/domain/value-objects/BidStatus.js';
-import { ExecutionRules, ExecutionRulesProps } from '../domain/value-objects/ExecutionRules.js';
-import { Provenance, ProvenanceProps } from '../domain/value-objects/Provenance.js';
+} from '@/common/domain/DomainException.js';
+import { AuditLog } from '@/modules/audit/domain/entities/AuditLog.js';
+import { IAuditRepository } from '@/modules/audit/domain/repositories/IAuditRepository.js';
+import { IBidRepository } from '@/modules/bids/domain/repositories/IBidRepository.js';
+import { ComplianceItem } from '@/modules/compliance/domain/entities/ComplianceItem.js';
+import { IComplianceItemRepository } from '@/modules/compliance/domain/repositories/IComplianceItemRepository.js';
+import { BidStatus } from '@/modules/bids/domain/value-objects/BidStatus.js';
+import { ExecutionRules, ExecutionRulesProps } from '@/modules/compliance/domain/value-objects/ExecutionRules.js';
+import { Provenance, ProvenanceProps } from '@/modules/compliance/domain/value-objects/Provenance.js';
 
 export interface ExtractedComplianceItemInput {
   category: string;

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { AwsSqsJobQueue } from './AwsSqsJobQueue.js';
+import { AwsSqsJobQueue } from '@/infrastructure/queue/AwsSqsJobQueue.js';
 import {
   SendMessageCommand,
   ReceiveMessageCommand,

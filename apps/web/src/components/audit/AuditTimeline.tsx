@@ -1,7 +1,7 @@
 import React from 'react';
-import type { AuditEvent } from '../../api/audit.js';
-import { formatDateTime } from '../../utils/formatDate.js';
-import { EmptyState } from '../common/EmptyState.js';
+import type { AuditEvent } from '@/api/audit.js';
+import { formatDateTime } from '@/utils/formatDate.js';
+import { EmptyState } from '@/components/common/EmptyState.js';
 import { History, ShieldCheck, User, Database, Terminal } from 'lucide-react';
 
 export interface AuditTimelineProps {

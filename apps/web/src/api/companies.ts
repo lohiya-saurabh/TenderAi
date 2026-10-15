@@ -5,13 +5,13 @@
  * (companies) scoped within the authenticated tenant boundary.
  */
 
-import { apiGet, apiPost, type ApiResult } from './client.js';
+import { apiGet, apiPost, type ApiResult } from '@/api/client.js';
 import type {
   CompanyProfilePayload,
   CompanyProfileVersion,
   CompanyProfileView,
   ExpiringCertificatesResponse,
-} from './companyProfile.js';
+} from '@/api/companyProfile.js';
 
 export interface CompanyItem {
   id: string;

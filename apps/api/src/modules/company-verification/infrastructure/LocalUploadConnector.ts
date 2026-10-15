@@ -8,8 +8,8 @@ import type {
   DocumentSourceConnector,
   ExternalSourceFile,
   DownloadedSourceFile,
-} from '../domain/ports/DocumentSourceConnector.js';
-import { BadRequestError } from '../../../common/errors/errors.js';
+} from '@/modules/company-verification/domain/ports/DocumentSourceConnector.js';
+import { BadRequestError } from '@/common/errors/errors.js';
 
 @Injectable()
 export class LocalUploadConnector implements DocumentSourceConnector {

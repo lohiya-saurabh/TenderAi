@@ -2,9 +2,9 @@
  * TeamsController — Endpoints for managing team members within a Tenant.
  */
 import { Controller, Get, Post, Body, HttpCode } from '@nestjs/common';
-import { TeamsService, type InviteMemberDto } from './teams.service.js';
-import { RequirePermission } from '../../common/security/decorators/permissions.decorator.js';
-import { Permissions } from '../../common/security/permissions.js';
+import { TeamsService, type InviteMemberDto } from '@/modules/teams/teams.service.js';
+import { RequirePermission } from '@/common/security/decorators/permissions.decorator.js';
+import { Permissions } from '@/common/security/permissions.js';
 
 @Controller('api/v1/teams')
 export class TeamsController {

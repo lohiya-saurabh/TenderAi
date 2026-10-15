@@ -1,4 +1,4 @@
-import { ValidationException } from '../../../../common/domain/DomainException.js';
+import { ValidationException } from '@/common/domain/DomainException.js';
 
 export interface CreateBidPayload {
   title: string;

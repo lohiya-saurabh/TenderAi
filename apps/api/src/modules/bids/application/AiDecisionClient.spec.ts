@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { AiDecisionClient, type AiBidDecisionRequest } from './AiDecisionClient.js';
+import { AiDecisionClient, type AiBidDecisionRequest } from '@/modules/bids/application/AiDecisionClient.js';
 
 describe('AiDecisionClient — Dynamic Deterministic Evaluation', () => {
   it('evaluates qualification dynamically based on tender value without hardcoded thresholds', async () => {

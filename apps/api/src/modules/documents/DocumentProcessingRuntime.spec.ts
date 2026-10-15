@@ -1,16 +1,16 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PGlite } from '@electric-sql/pglite';
 import { and, eq } from 'drizzle-orm';
-import { createDrizzle } from '../../common/database/database.module.js';
-import { initDatabase } from '../../common/database/database.provider.js';
-import * as schema from '../../common/database/schema.js';
+import { createDrizzle } from '@/common/database/database.module.js';
+import { initDatabase } from '@/common/database/database.provider.js';
+import * as schema from '@/common/database/schema.js';
 import type {
   IJobQueue,
   IngestionJobMessage,
   QueueMessage,
-} from '../bids/application/IJobQueue.js';
-import { DocumentProcessingRuntime } from './DocumentProcessingRuntime.js';
-import { DocumentCompletionService } from './DocumentCompletionService.js';
+} from '@/modules/bids/application/IJobQueue.js';
+import { DocumentProcessingRuntime } from '@/modules/documents/DocumentProcessingRuntime.js';
+import { DocumentCompletionService } from '@/modules/documents/DocumentCompletionService.js';
 import type { DocumentExtractionCompletedEvent } from '@tenderpulse/shared-types';
 
 describe('DocumentProcessingRuntime (Option B: Two-Queue Architecture)', () => {

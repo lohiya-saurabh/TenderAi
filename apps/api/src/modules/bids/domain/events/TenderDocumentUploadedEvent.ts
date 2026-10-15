@@ -1,5 +1,5 @@
-import { DomainEvent } from '../../../../common/domain/DomainEvent.js';
-import { DocumentType } from '../entities/TenderDocument.js';
+import { DomainEvent } from '@/common/domain/DomainEvent.js';
+import { DocumentType } from '@/modules/bids/domain/entities/TenderDocument.js';
 
 export interface TenderDocumentUploadedPayload {
   documentId: string;

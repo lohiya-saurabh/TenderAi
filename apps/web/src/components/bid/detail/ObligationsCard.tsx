@@ -1,14 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import type { ComplianceItem } from '../../../api/compliance.js';
-import { StatusBadge } from '../../common/StatusBadge.js';
-import { AlertCircleIcon, CheckIcon, ChevronRightIcon } from '../../common/Icons.js';
-import { formatCurrency } from '../../../utils/formatCurrency.js';
+import type { ComplianceItem } from '@/api/compliance.js';
+import { StatusBadge } from '@/components/common/StatusBadge.js';
+import { AlertCircleIcon, CheckIcon, ChevronRightIcon } from '@/components/common/Icons.js';
+import { formatCurrency } from '@/utils/formatCurrency.js';
 import {
   getObligationsSummary,
   getFlaggedItems,
   type ObligationsSummary,
-} from './bidDetailData.js';
+} from '@/components/bid/detail/bidDetailData.js';
 
 export interface ObligationsCardProps {
   items: ComplianceItem[];

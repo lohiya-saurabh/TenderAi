@@ -1,4 +1,4 @@
-import { IDomainEvent } from './DomainEvent.js';
+import { IDomainEvent } from '@/common/domain/DomainEvent.js';
 
 export abstract class AggregateRoot {
   protected readonly _id: string;

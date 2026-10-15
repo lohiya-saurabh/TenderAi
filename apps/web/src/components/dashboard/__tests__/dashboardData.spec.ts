@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import type { BidSummary } from '../../../api/bids.js';
-import type { ComplianceItem } from '../../../api/compliance.js';
+import type { BidSummary } from '@/api/bids.js';
+import type { ComplianceItem } from '@/api/compliance.js';
 import {
   computeReadiness,
   computeRiskLevel,
@@ -8,7 +8,7 @@ import {
   buildActionItems,
   daysUntil,
   DEADLINE_URGENT_WINDOW_MS,
-} from '../dashboardData.js';
+} from '@/components/dashboard/dashboardData.js';
 
 function makeBid(overrides: Partial<BidSummary> = {}): BidSummary {
   return {

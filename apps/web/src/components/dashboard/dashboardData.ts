@@ -11,14 +11,14 @@
  * missing API in MissingApiCallout instead of being simulated here.
  */
 
-import type { BidSummary } from '../../api/bids.js';
-import type { ComplianceItem } from '../../api/compliance.js';
-import { formatDate } from '../../utils/formatDate.js';
-import { computeReadiness, computeRiskLevel } from '../../utils/readiness.js';
+import type { BidSummary } from '@/api/bids.js';
+import type { ComplianceItem } from '@/api/compliance.js';
+import { formatDate } from '@/utils/formatDate.js';
+import { computeReadiness, computeRiskLevel } from '@/utils/readiness.js';
 
 // Re-exported for dashboard consumers (single source of truth lives in utils/)
 export { computeReadiness, computeRiskLevel };
-export type { ReadinessSummary, DashboardRiskLevel } from '../../utils/readiness.js';
+export type { ReadinessSummary, DashboardRiskLevel } from '@/utils/readiness.js';
 
 /** Submission-deadline urgency window used across dashboard sections. */
 export const DEADLINE_URGENT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;

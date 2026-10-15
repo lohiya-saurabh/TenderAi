@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { BidSummary } from '../../../api/bids.js';
+import type { BidSummary } from '@/api/bids.js';
 import {
   getBreakpoint,
   getVisibleColumns,
@@ -23,7 +23,7 @@ import {
   getDecisionTooltip,
   describeActiveFilters,
   type TenderListFilters,
-} from '../tenderListData.js';
+} from '@/components/dashboard/tenderListData.js';
 
 function makeBid(overrides: Partial<BidSummary> = {}): BidSummary {
   return {

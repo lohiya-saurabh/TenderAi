@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest';
 import {
   InvalidStateTransitionException,
   ValidationException,
-} from '../../../../common/domain/DomainException.js';
-import { BidProject } from './BidProject.js';
-import { Money } from '../value-objects/Money.js';
+} from '@/common/domain/DomainException.js';
+import { BidProject } from '@/modules/bids/domain/entities/BidProject.js';
+import { Money } from '@/modules/bids/domain/value-objects/Money.js';
 
 describe('BidProject Domain Aggregate & Value Objects', () => {
   const validProps = {

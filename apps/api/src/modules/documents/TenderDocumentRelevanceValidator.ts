@@ -14,7 +14,7 @@
  * Preserves strict multi-tenant isolation and avoids hardcoding specific tender IDs.
  */
 
-import { DocumentContentNormalizer } from '../bids/application/DocumentContentNormalizer.js';
+import { DocumentContentNormalizer } from '@/modules/bids/application/DocumentContentNormalizer.js';
 
 export interface TenderMetadataInput {
   id: string;

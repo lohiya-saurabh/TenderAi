@@ -16,11 +16,11 @@ import {
   markAllNotificationsAsRead,
   triggerNotificationScan,
   type NotificationItem,
-} from '../../api/notifications.js';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent } from '../ui/dropdown-menu.js';
-import { Button } from '../ui/button.js';
-import { Badge } from '../ui/badge.js';
-import { Spinner } from '../common/Spinner.js';
+} from '@/api/notifications.js';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent } from '@/components/ui/dropdown-menu.js';
+import { Button } from '@/components/ui/button.js';
+import { Badge } from '@/components/ui/badge.js';
+import { Spinner } from '@/components/common/Spinner.js';
 
 export const NotificationBell: React.FC = () => {
   const navigate = useNavigate();

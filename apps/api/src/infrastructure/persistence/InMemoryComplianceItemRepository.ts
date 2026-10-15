@@ -1,6 +1,6 @@
-import { ConcurrencyConflictException } from '../../common/domain/DomainException.js';
-import { ComplianceItem } from '../../modules/compliance/domain/entities/ComplianceItem.js';
-import { IComplianceItemRepository } from '../../modules/compliance/domain/repositories/IComplianceItemRepository.js';
+import { ConcurrencyConflictException } from '@/common/domain/DomainException.js';
+import { ComplianceItem } from '@/modules/compliance/domain/entities/ComplianceItem.js';
+import { IComplianceItemRepository } from '@/modules/compliance/domain/repositories/IComplianceItemRepository.js';
 
 interface StoredComplianceRecord {
   item: ComplianceItem;

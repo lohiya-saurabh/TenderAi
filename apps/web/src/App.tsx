@@ -1,26 +1,26 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from './auth/AuthProvider.js';
-import { CompanyProvider } from './context/CompanyContext.js';
-import { ThemeProvider } from './context/ThemeContext.js';
-import { ProtectedRoute } from './auth/ProtectedRoute.js';
-import { AppShell } from './components/layout/AppShell.js';
-import { LandingPage } from './pages/LandingPage.js';
-import { PricingPage } from './pages/PricingPage.js';
-import { SignupPage } from './pages/SignupPage.js';
-import { OnboardingPage } from './pages/OnboardingPage.js';
-import { LoginPage } from './pages/LoginPage.js';
-import { DashboardPage } from './pages/DashboardPage.js';
-import { CreateBidPage } from './pages/CreateBidPage.js';
-import { BidDetailPage } from './pages/BidDetailPage.js';
-import { ComplianceReviewPage } from './pages/ComplianceReviewPage.js';
-import { CompanyProfilePage } from './pages/CompanyProfilePage.js';
-import { ProfilePage } from './pages/ProfilePage.js';
-import { SettingsPage } from './pages/SettingsPage.js';
-import { AuditHistoryPage } from './pages/AuditHistoryPage.js';
-import { NotFoundPage } from './pages/NotFoundPage.js';
-import { PERMISSIONS } from './utils/permissions.js';
-import { ScrollToTop } from './components/common/ScrollToTop.js';
+import { AuthProvider } from '@/auth/AuthProvider.js';
+import { CompanyProvider } from '@/context/CompanyContext.js';
+import { ThemeProvider } from '@/context/ThemeContext.js';
+import { ProtectedRoute } from '@/auth/ProtectedRoute.js';
+import { AppShell } from '@/components/layout/AppShell.js';
+import { LandingPage } from '@/pages/LandingPage.js';
+import { PricingPage } from '@/pages/PricingPage.js';
+import { SignupPage } from '@/pages/SignupPage.js';
+import { OnboardingPage } from '@/pages/OnboardingPage.js';
+import { LoginPage } from '@/pages/LoginPage.js';
+import { DashboardPage } from '@/pages/DashboardPage.js';
+import { CreateBidPage } from '@/pages/CreateBidPage.js';
+import { BidDetailPage } from '@/pages/BidDetailPage.js';
+import { ComplianceReviewPage } from '@/pages/ComplianceReviewPage.js';
+import { CompanyProfilePage } from '@/pages/CompanyProfilePage.js';
+import { ProfilePage } from '@/pages/ProfilePage.js';
+import { SettingsPage } from '@/pages/SettingsPage.js';
+import { AuditHistoryPage } from '@/pages/AuditHistoryPage.js';
+import { NotFoundPage } from '@/pages/NotFoundPage.js';
+import { PERMISSIONS } from '@/utils/permissions.js';
+import { ScrollToTop } from '@/components/common/ScrollToTop.js';
 
 export const App: React.FC = () => {
   return (

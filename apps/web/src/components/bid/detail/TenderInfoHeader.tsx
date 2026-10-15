@@ -1,8 +1,8 @@
 import React from 'react';
-import type { BidDetail } from '../../../api/bids.js';
-import { formatDate } from '../../../utils/formatDate.js';
-import { getDeadlineInfo } from '../../../utils/deadline.js';
-import type { BidDecision } from './bidDetailData.js';
+import type { BidDetail } from '@/api/bids.js';
+import { formatDate } from '@/utils/formatDate.js';
+import { getDeadlineInfo } from '@/utils/deadline.js';
+import type { BidDecision } from '@/components/bid/detail/bidDetailData.js';
 
 export interface TenderInfoHeaderProps {
   bid: BidDetail;

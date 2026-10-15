@@ -32,7 +32,7 @@ import {
   PageHeader,
   SectionHeader,
   PageGrid,
-} from '../index.js';
+} from '@/components/common/index.js';
 
 describe('Design System Primitives & Tokens Suite', () => {
   describe('Semantic Status Badges', () => {

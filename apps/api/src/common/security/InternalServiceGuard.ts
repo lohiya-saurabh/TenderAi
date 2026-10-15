@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { UnauthorizedTenantAccessException } from '../domain/DomainException.js';
+import { UnauthorizedTenantAccessException } from '@/common/domain/DomainException.js';
 
 export class InternalServiceGuard {
   private readonly internalApiKey: string;

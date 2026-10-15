@@ -2,9 +2,9 @@
  * SettingsModule — NestJS module for workspace configuration and preferences.
  */
 import { Module } from '@nestjs/common';
-import { DatabaseModule } from '../../common/database/database.module.js';
-import { SettingsService } from './settings.service.js';
-import { SettingsController } from './settings.controller.js';
+import { DatabaseModule } from '@/common/database/database.module.js';
+import { SettingsService } from '@/modules/settings/settings.service.js';
+import { SettingsController } from '@/modules/settings/settings.controller.js';
 
 @Module({
   imports: [DatabaseModule],

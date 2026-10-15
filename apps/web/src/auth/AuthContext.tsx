@@ -1,5 +1,5 @@
 import { createContext } from 'react';
-import type { AuthUser, RegisterRequest } from '../api/auth.js';
+import type { AuthUser, RegisterRequest } from '@/api/auth.js';
 
 export interface AuthContextValue {
   user: AuthUser | null;

@@ -1,4 +1,4 @@
-import { InvalidProvenanceException } from '../../../../common/domain/DomainException.js';
+import { InvalidProvenanceException } from '@/common/domain/DomainException.js';
 
 export interface ProvenanceProps {
   sourceDocumentId: string;

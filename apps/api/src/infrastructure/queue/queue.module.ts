@@ -5,10 +5,10 @@
  * falling back to MockSqsJobQueue for local in-memory execution and testing.
  */
 import { Module, Global, Logger } from '@nestjs/common';
-import type { IJobQueue } from '../../modules/bids/application/IJobQueue.js';
-import { AwsSqsJobQueue } from './AwsSqsJobQueue.js';
-import { GcpPubSubJobQueue } from './GcpPubSubJobQueue.js';
-import { MockSqsJobQueue } from './MockSqsJobQueue.js';
+import type { IJobQueue } from '@/modules/bids/application/IJobQueue.js';
+import { AwsSqsJobQueue } from '@/infrastructure/queue/AwsSqsJobQueue.js';
+import { GcpPubSubJobQueue } from '@/infrastructure/queue/GcpPubSubJobQueue.js';
+import { MockSqsJobQueue } from '@/infrastructure/queue/MockSqsJobQueue.js';
 
 export const QUEUE_TOKEN = 'JOB_QUEUE';
 export const INGESTION_QUEUE_TOKEN = 'JOB_QUEUE';

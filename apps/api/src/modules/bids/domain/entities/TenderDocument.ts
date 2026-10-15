@@ -1,7 +1,7 @@
-import { AggregateRoot } from '../../../../common/domain/AggregateRoot.js';
-import { ValidationException } from '../../../../common/domain/DomainException.js';
-import { DocumentStatus } from '../value-objects/DocumentStatus.js';
-import { TenderDocumentUploadedEvent } from '../events/TenderDocumentUploadedEvent.js';
+import { AggregateRoot } from '@/common/domain/AggregateRoot.js';
+import { ValidationException } from '@/common/domain/DomainException.js';
+import { DocumentStatus } from '@/modules/bids/domain/value-objects/DocumentStatus.js';
+import { TenderDocumentUploadedEvent } from '@/modules/bids/domain/events/TenderDocumentUploadedEvent.js';
 
 export type DocumentType =
   'NIT' | 'RFP' | 'TECHNICAL_SPECS' | 'GCC' | 'SCC' | 'BOQ' | 'CORRIGENDUM' | 'OTHER';

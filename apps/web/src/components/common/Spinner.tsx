@@ -1,5 +1,5 @@
 import React from 'react';
-import { SpinnerIcon } from './Icons.js';
+import { SpinnerIcon } from '@/components/common/Icons.js';
 
 export interface SpinnerProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';

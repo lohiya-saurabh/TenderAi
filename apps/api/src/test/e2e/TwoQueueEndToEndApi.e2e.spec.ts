@@ -1,13 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
-import { AppModule } from '../../app.module.js';
-import { DocumentProcessingRuntime } from '../../modules/documents/DocumentProcessingRuntime.js';
-import { DRIZZLE_TOKEN, type DrizzleDb } from '../../common/database/database.module.js';
-import * as schema from '../../common/database/schema.js';
+import { AppModule } from '@/app.module.js';
+import { DocumentProcessingRuntime } from '@/modules/documents/DocumentProcessingRuntime.js';
+import { DRIZZLE_TOKEN, type DrizzleDb } from '@/common/database/database.module.js';
+import * as schema from '@/common/database/schema.js';
 import { eq } from 'drizzle-orm';
 import type { DocumentExtractionCompletedEvent } from '@tenderpulse/shared-types';
-import type { IngestionJobMessage } from '../../modules/bids/application/IJobQueue.js';
+import type { IngestionJobMessage } from '@/modules/bids/application/IJobQueue.js';
 
 describe('E2E Live HTTP API Verification: Two-Queue Option B Pipeline', () => {
   let app: INestApplication;
@@ -49,7 +49,7 @@ startxref
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    const { AllExceptionsFilter } = await import('../../common/filters/all-exceptions.filter.js');
+    const { AllExceptionsFilter } = await import('@/common/filters/all-exceptions.filter.js');
     app.useGlobalFilters(new AllExceptionsFilter());
     await app.init();
     await app.listen(0);

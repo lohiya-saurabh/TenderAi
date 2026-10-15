@@ -1,11 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { PublicNav } from '../components/layout/PublicNav.js';
-import { PublicFooter } from '../components/layout/PublicFooter.js';
-import { PlanCards } from '../components/billing/PlanCards.js';
-import { Button } from '../components/ui/button.js';
-import { Badge } from '../components/ui/badge.js';
-import { Card, CardContent } from '../components/ui/card.js';
+import { PublicNav } from '@/components/layout/PublicNav.js';
+import { PublicFooter } from '@/components/layout/PublicFooter.js';
+import { PlanCards } from '@/components/billing/PlanCards.js';
+import { Button } from '@/components/ui/button.js';
+import { Badge } from '@/components/ui/badge.js';
+import { Card, CardContent } from '@/components/ui/card.js';
 import {
   ArrowRight,
   ShieldCheck,

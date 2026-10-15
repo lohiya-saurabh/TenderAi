@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { listComplianceItems, type ComplianceItem } from '../api/compliance.js';
-import type { BidSummary } from '../api/bids.js';
+import { listComplianceItems, type ComplianceItem } from '@/api/compliance.js';
+import type { BidSummary } from '@/api/bids.js';
 
 export interface BidComplianceState {
   /** Compliance items keyed by bid ID */

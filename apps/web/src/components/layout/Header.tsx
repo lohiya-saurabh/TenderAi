@@ -1,12 +1,12 @@
 import React from 'react';
-import { Breadcrumbs } from './Breadcrumbs.js';
-import { UserAccountMenu } from './UserAccountMenu.js';
-import { MenuIcon, SidebarCollapseIcon, SidebarExpandIcon } from '../common/Icons.js';
-import { Button } from '../ui/button.js';
+import { Breadcrumbs } from '@/components/layout/Breadcrumbs.js';
+import { UserAccountMenu } from '@/components/layout/UserAccountMenu.js';
+import { MenuIcon, SidebarCollapseIcon, SidebarExpandIcon } from '@/components/common/Icons.js';
+import { Button } from '@/components/ui/button.js';
 
-import { CompanySelector } from './CompanySelector.js';
-import { NotificationBell } from './NotificationBell.js';
-import { useTheme } from '../../context/ThemeContext.js';
+import { CompanySelector } from '@/components/layout/CompanySelector.js';
+import { NotificationBell } from '@/components/layout/NotificationBell.js';
+import { useTheme } from '@/context/ThemeContext.js';
 import { Sun, Moon } from 'lucide-react';
 
 export interface HeaderProps {

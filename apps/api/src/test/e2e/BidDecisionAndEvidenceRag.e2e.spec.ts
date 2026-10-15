@@ -1,23 +1,23 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { PGlite } from '@electric-sql/pglite';
 import { eq } from 'drizzle-orm';
-import { initDatabase } from '../../common/database/database.provider.js';
-import { createDrizzle, type DrizzleDb } from '../../common/database/database.module.js';
-import * as schema from '../../common/database/schema.js';
-import { TenantContextHolder } from '../../common/security/TenantContext.js';
+import { initDatabase } from '@/common/database/database.provider.js';
+import { createDrizzle, type DrizzleDb } from '@/common/database/database.module.js';
+import * as schema from '@/common/database/schema.js';
+import { TenantContextHolder } from '@/common/security/TenantContext.js';
 import {
   CompanyEvidenceService,
   parseFlexibleDate,
-} from '../../modules/company-verification/application/CompanyEvidenceService.js';
-import { AiEvidenceExtractor } from '../../modules/company-verification/application/AiEvidenceExtractor.js';
-import { GetBidDecisionUseCase } from '../../modules/bids/application/GetBidDecisionUseCase.js';
+} from '@/modules/company-verification/application/CompanyEvidenceService.js';
+import { AiEvidenceExtractor } from '@/modules/company-verification/application/AiEvidenceExtractor.js';
+import { GetBidDecisionUseCase } from '@/modules/bids/application/GetBidDecisionUseCase.js';
 import {
   AiDecisionClient,
   type AiBidDecisionRequest,
-} from '../../modules/bids/application/AiDecisionClient.js';
-import { toRequirementCandidate } from '../../modules/bids/application/RequirementMapper.js';
-import { MockStorageService } from '../../infrastructure/storage/MockStorageService.js';
-import { NotFoundError } from '../../common/errors/errors.js';
+} from '@/modules/bids/application/AiDecisionClient.js';
+import { toRequirementCandidate } from '@/modules/bids/application/RequirementMapper.js';
+import { MockStorageService } from '@/infrastructure/storage/MockStorageService.js';
+import { NotFoundError } from '@/common/errors/errors.js';
 
 describe('E2E: Bid/No-Bid Decision & Company Evidence Extraction Pipeline', () => {
   let pglite: PGlite;

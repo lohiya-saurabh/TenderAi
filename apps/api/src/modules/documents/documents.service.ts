@@ -9,13 +9,13 @@ import {
   DRIZZLE_TOKEN,
   type DrizzleDb,
   createDrizzle,
-} from '../../common/database/database.module.js';
-import * as schema from '../../common/database/schema.js';
-import { STORAGE_TOKEN } from '../../infrastructure/storage/storage.module.js';
-import type { IStorageService } from '../bids/application/IStorageService.js';
-import { ConflictError, NotFoundError, BadRequestError } from '../../common/errors/errors.js';
-import { TenderDocumentRelevanceValidator } from './TenderDocumentRelevanceValidator.js';
-import { TenantContextHolder } from '../../common/security/TenantContext.js';
+} from '@/common/database/database.module.js';
+import * as schema from '@/common/database/schema.js';
+import { STORAGE_TOKEN } from '@/infrastructure/storage/storage.module.js';
+import type { IStorageService } from '@/modules/bids/application/IStorageService.js';
+import { ConflictError, NotFoundError, BadRequestError } from '@/common/errors/errors.js';
+import { TenderDocumentRelevanceValidator } from '@/modules/documents/TenderDocumentRelevanceValidator.js';
+import { TenantContextHolder } from '@/common/security/TenantContext.js';
 
 export interface UploadUrlResult {
   documentId: string;

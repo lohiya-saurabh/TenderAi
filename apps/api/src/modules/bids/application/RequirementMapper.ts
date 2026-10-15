@@ -24,7 +24,7 @@
  *                 the evaluator falls back to its
  *                 documented title/description heuristics)
  */
-import type { AiRequirementCandidate } from './AiDecisionClient.js';
+import type { AiRequirementCandidate } from '@/modules/bids/application/AiDecisionClient.js';
 
 /**
  * Structural shape of a stored compliance item.

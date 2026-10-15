@@ -1,8 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { FileQuestion, ArrowLeft } from 'lucide-react';
-import { Button } from '../components/ui/button.js';
-import { EmptyState } from '../components/common/EmptyState.js';
+import { Button } from '@/components/ui/button.js';
+import { EmptyState } from '@/components/common/EmptyState.js';
 
 export const NotFoundPage: React.FC = () => {
   return (

@@ -2,8 +2,8 @@
  * ComplianceModule — Compliance item management feature module.
  */
 import { Module } from '@nestjs/common';
-import { ComplianceController } from './compliance.controller.js';
-import { ComplianceService } from './compliance.service.js';
+import { ComplianceController } from '@/modules/compliance/compliance.controller.js';
+import { ComplianceService } from '@/modules/compliance/compliance.service.js';
 
 @Module({
   controllers: [ComplianceController],

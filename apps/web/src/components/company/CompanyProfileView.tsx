@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
-import { Card } from '../common/Card.js';
-import { Button } from '../common/Button.js';
-import { Badge } from '../common/Badge.js';
-import { Modal } from '../common/Modal.js';
-import { Drawer } from '../common/Drawer.js';
-import { CapabilityStatusBadge } from './CapabilityStatusBadge.js';
-import { CapabilityItemCard } from './CapabilityItemCard.js';
+import { Card } from '@/components/common/Card.js';
+import { Button } from '@/components/common/Button.js';
+import { Badge } from '@/components/common/Badge.js';
+import { Modal } from '@/components/common/Modal.js';
+import { Drawer } from '@/components/common/Drawer.js';
+import { CapabilityStatusBadge } from '@/components/company/CapabilityStatusBadge.js';
+import { CapabilityItemCard } from '@/components/company/CapabilityItemCard.js';
 import {
   type FullCompanyProfile,
   type CapabilitySectionId,
   type CapabilityStatus,
-} from './companyProfileData.js';
+} from '@/components/company/companyProfileData.js';
 import { Search, X, Check, CheckCircle2, Lock, FileText, FileSpreadsheet } from 'lucide-react';
 
 export interface CompanyProfileViewProps {

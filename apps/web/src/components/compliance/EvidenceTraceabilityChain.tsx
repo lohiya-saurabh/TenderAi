@@ -1,8 +1,8 @@
 import React from 'react';
-import { Badge } from '../common/Badge.js';
-import { StatusBadge } from '../common/StatusBadge.js';
-import type { ComplianceItem } from '../../api/compliance.js';
-import { deriveGroundingMatch } from '../../utils/grounding.js';
+import { Badge } from '@/components/common/Badge.js';
+import { StatusBadge } from '@/components/common/StatusBadge.js';
+import type { ComplianceItem } from '@/api/compliance.js';
+import { deriveGroundingMatch } from '@/utils/grounding.js';
 
 export interface EvidenceTraceabilityChainProps {
   item: ComplianceItem;

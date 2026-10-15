@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { UserRole, Permission, hasPermission } from './permissions.js';
-import { UnauthorizedTenantAccessException } from '../domain/DomainException.js';
+import { UserRole, Permission, hasPermission } from '@/common/security/permissions.js';
+import { UnauthorizedTenantAccessException } from '@/common/domain/DomainException.js';
 
 export interface TenantContext {
   organizationId: string;

@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
-import { Breadcrumbs } from '../Breadcrumbs.js';
-import { Sidebar } from '../Sidebar.js';
-import { Header } from '../Header.js';
-import { UserAccountMenu } from '../UserAccountMenu.js';
-import { AppShell } from '../AppShell.js';
+import { Breadcrumbs } from '@/components/layout/Breadcrumbs.js';
+import { Sidebar } from '@/components/layout/Sidebar.js';
+import { Header } from '@/components/layout/Header.js';
+import { UserAccountMenu } from '@/components/layout/UserAccountMenu.js';
+import { AppShell } from '@/components/layout/AppShell.js';
 
 describe('Application Shell Layout Suite', () => {
   describe('Breadcrumbs Navigation', () => {

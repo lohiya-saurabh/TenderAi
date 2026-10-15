@@ -2,9 +2,9 @@
  * SettingsController — Endpoints for workspace settings and notification preferences.
  */
 import { Controller, Get, Patch, Body } from '@nestjs/common';
-import { SettingsService, type UpdateWorkspaceSettingsDto } from './settings.service.js';
-import { RequirePermission } from '../../common/security/decorators/permissions.decorator.js';
-import { Permissions } from '../../common/security/permissions.js';
+import { SettingsService, type UpdateWorkspaceSettingsDto } from '@/modules/settings/settings.service.js';
+import { RequirePermission } from '@/common/security/decorators/permissions.decorator.js';
+import { Permissions } from '@/common/security/permissions.js';
 
 @Controller('api/v1/settings')
 export class SettingsController {

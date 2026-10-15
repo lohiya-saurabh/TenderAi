@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import type { CompanyCapabilityProfile } from '../../types/workflow.js';
-import { formatCurrency } from '../../utils/formatCurrency.js';
-import { Button } from '../common/Button.js';
+import type { CompanyCapabilityProfile } from '@/types/workflow.js';
+import { formatCurrency } from '@/utils/formatCurrency.js';
+import { Button } from '@/components/common/Button.js';
 import {
   Building2,
   Download,

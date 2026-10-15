@@ -1,22 +1,22 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { listBids, type BidSummary } from '../api/bids.js';
-import { useApi } from '../hooks/useApi.js';
-import { useBidComplianceItems } from '../hooks/useBidComplianceItems.js';
-import { useAuth } from '../auth/useAuth.js';
-import { PERMISSIONS } from '../utils/permissions.js';
-import { Button } from '../components/ui/button.js';
-import { Skeleton } from '../components/ui/skeleton.js';
-import { ErrorBanner, ErrorState } from '../components/common/ErrorBanner.js';
+import { listBids, type BidSummary } from '@/api/bids.js';
+import { useApi } from '@/hooks/useApi.js';
+import { useBidComplianceItems } from '@/hooks/useBidComplianceItems.js';
+import { useAuth } from '@/auth/useAuth.js';
+import { PERMISSIONS } from '@/utils/permissions.js';
+import { Button } from '@/components/ui/button.js';
+import { Skeleton } from '@/components/ui/skeleton.js';
+import { ErrorBanner, ErrorState } from '@/components/common/ErrorBanner.js';
 import { Plus } from 'lucide-react';
-import { DashboardKpiStrip } from '../components/dashboard/DashboardKpiStrip.js';
-import { ActionRequiredCard } from '../components/dashboard/ActionRequiredCard.js';
-import { CompanyReadinessCard } from '../components/dashboard/CompanyReadinessCard.js';
-import { UpcomingDeadlinesCard } from '../components/dashboard/UpcomingDeadlinesCard.js';
-import { BidPipelineCard } from '../components/dashboard/BidPipelineCard.js';
-import { TenderListSection } from '../components/dashboard/TenderListSection.js';
-import { MissingApiCallout } from '../components/dashboard/MissingApiCallout.js';
-import { computePipelineStages } from '../components/dashboard/dashboardData.js';
+import { DashboardKpiStrip } from '@/components/dashboard/DashboardKpiStrip.js';
+import { ActionRequiredCard } from '@/components/dashboard/ActionRequiredCard.js';
+import { CompanyReadinessCard } from '@/components/dashboard/CompanyReadinessCard.js';
+import { UpcomingDeadlinesCard } from '@/components/dashboard/UpcomingDeadlinesCard.js';
+import { BidPipelineCard } from '@/components/dashboard/BidPipelineCard.js';
+import { TenderListSection } from '@/components/dashboard/TenderListSection.js';
+import { MissingApiCallout } from '@/components/dashboard/MissingApiCallout.js';
+import { computePipelineStages } from '@/components/dashboard/dashboardData.js';
 
 export const DashboardPage: React.FC = () => {
   const { data: bids, isLoading, error, refetch } = useApi<BidSummary[]>(listBids);

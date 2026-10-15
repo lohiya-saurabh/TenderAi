@@ -4,9 +4,9 @@
  * CRUD operations and upload workflow for tender bid projects.
  */
 
-import { apiGet, apiPost, apiDelete, type ApiResult } from './client.js';
+import { apiGet, apiPost, apiDelete, type ApiResult } from '@/api/client.js';
 
-export type { ApiResult } from './client.js';
+export type { ApiResult } from '@/api/client.js';
 
 export interface BidSummary {
   id: string;

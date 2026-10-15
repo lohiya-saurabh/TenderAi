@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { PERMISSIONS, getPermissionsForRole, hasPermission } from '../permissions.js';
+import { PERMISSIONS, getPermissionsForRole, hasPermission } from '@/utils/permissions.js';
 
 describe('permissions utility', () => {
   it('returns appropriate permissions for ADMIN role', () => {

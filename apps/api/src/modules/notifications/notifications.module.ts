@@ -2,9 +2,9 @@
  * NotificationsModule — Module for notifications and deadline alerts.
  */
 import { Module } from '@nestjs/common';
-import { DatabaseModule } from '../../common/database/database.module.js';
-import { NotificationsService } from './notifications.service.js';
-import { NotificationsController } from './notifications.controller.js';
+import { DatabaseModule } from '@/common/database/database.module.js';
+import { NotificationsService } from '@/modules/notifications/notifications.service.js';
+import { NotificationsController } from '@/modules/notifications/notifications.controller.js';
 
 @Module({
   imports: [DatabaseModule],

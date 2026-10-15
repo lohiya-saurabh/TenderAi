@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { AiEvidenceExtractor } from './AiEvidenceExtractor.js';
-import type { CompanyEvidenceDocument } from '../../../common/database/schema.js';
+import { AiEvidenceExtractor } from '@/modules/company-verification/application/AiEvidenceExtractor.js';
+import type { CompanyEvidenceDocument } from '@/common/database/schema.js';
 
 describe('AiEvidenceExtractor', () => {
   const dummyDoc: CompanyEvidenceDocument = {

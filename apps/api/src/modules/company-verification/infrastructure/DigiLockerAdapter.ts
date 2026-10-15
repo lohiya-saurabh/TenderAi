@@ -11,8 +11,8 @@ import type {
   DigiLockerAuthRequest,
   DigiLockerTokenResponse,
   DigiLockerIssuedDocument,
-} from '../domain/ports/IDigitalLockerPort.js';
-import { BadRequestError, InternalServerError } from '../../../common/errors/errors.js';
+} from '@/modules/company-verification/domain/ports/IDigitalLockerPort.js';
+import { BadRequestError, InternalServerError } from '@/common/errors/errors.js';
 
 interface RawDigiLockerTokenPayload {
   access_token?: string;

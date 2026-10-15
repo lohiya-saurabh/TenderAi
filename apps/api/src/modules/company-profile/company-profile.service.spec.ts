@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { PGlite } from '@electric-sql/pglite';
-import { initDatabase } from '../../common/database/database.provider.js';
-import { createDrizzle } from '../../common/database/database.module.js';
+import { initDatabase } from '@/common/database/database.provider.js';
+import { createDrizzle } from '@/common/database/database.module.js';
 import { eq } from 'drizzle-orm';
-import * as schema from '../../common/database/schema.js';
-import { TenantContextHolder } from '../../common/security/TenantContext.js';
-import { CompanyProfileService } from './company-profile.service.js';
-import { NotFoundError, BadRequestError } from '../../common/errors/errors.js';
-import type { CompanyProfilePayload } from './presentation/dto/CompanyProfilePayload.js';
+import * as schema from '@/common/database/schema.js';
+import { TenantContextHolder } from '@/common/security/TenantContext.js';
+import { CompanyProfileService } from '@/modules/company-profile/company-profile.service.js';
+import { NotFoundError, BadRequestError } from '@/common/errors/errors.js';
+import type { CompanyProfilePayload } from '@/modules/company-profile/presentation/dto/CompanyProfilePayload.js';
 
 describe('CompanyProfileService — versioned capability profile', () => {
   let db: PGlite;

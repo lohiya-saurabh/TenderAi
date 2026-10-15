@@ -1,21 +1,21 @@
 import { v4 as uuidv4 } from 'uuid';
-import { IAuditRepository } from '../../audit/domain/repositories/IAuditRepository.js';
-import { AuditLog } from '../../audit/domain/entities/AuditLog.js';
+import { IAuditRepository } from '@/modules/audit/domain/repositories/IAuditRepository.js';
+import { AuditLog } from '@/modules/audit/domain/entities/AuditLog.js';
 import {
   EntityNotFoundException,
   ValidationException,
-} from '../../../common/domain/DomainException.js';
-import { TenantContextHolder } from '../../../common/security/TenantContext.js';
-import { Permissions } from '../../../common/security/permissions.js';
-import { IBidRepository } from '../domain/repositories/IBidRepository.js';
-import { ITenderDocumentRepository } from '../domain/repositories/ITenderDocumentRepository.js';
-import { IIngestionJobRepository } from '../domain/repositories/IIngestionJobRepository.js';
-import { IStorageService } from './IStorageService.js';
-import { IJobQueue } from './IJobQueue.js';
-import { IEventBus } from '../../../common/events/IEventBus.js';
-import { IUnitOfWork, DirectUnitOfWork } from '../../../common/database/IUnitOfWork.js';
-import { BidStatus } from '../domain/value-objects/BidStatus.js';
-import { IngestionJob } from '../domain/entities/IngestionJob.js';
+} from '@/common/domain/DomainException.js';
+import { TenantContextHolder } from '@/common/security/TenantContext.js';
+import { Permissions } from '@/common/security/permissions.js';
+import { IBidRepository } from '@/modules/bids/domain/repositories/IBidRepository.js';
+import { ITenderDocumentRepository } from '@/modules/bids/domain/repositories/ITenderDocumentRepository.js';
+import { IIngestionJobRepository } from '@/modules/bids/domain/repositories/IIngestionJobRepository.js';
+import { IStorageService } from '@/modules/bids/application/IStorageService.js';
+import { IJobQueue } from '@/modules/bids/application/IJobQueue.js';
+import { IEventBus } from '@/common/events/IEventBus.js';
+import { IUnitOfWork, DirectUnitOfWork } from '@/common/database/IUnitOfWork.js';
+import { BidStatus } from '@/modules/bids/domain/value-objects/BidStatus.js';
+import { IngestionJob } from '@/modules/bids/domain/entities/IngestionJob.js';
 
 export interface ConfirmDocumentUploadCommand {
   organizationId: string;

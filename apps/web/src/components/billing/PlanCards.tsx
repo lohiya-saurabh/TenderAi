@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getPlans, type PlanDefinition, type BillingInterval } from '../../api/billing.js';
-import { Button } from '../ui/button.js';
-import { Badge } from '../ui/badge.js';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card.js';
+import { getPlans, type PlanDefinition, type BillingInterval } from '@/api/billing.js';
+import { Button } from '@/components/ui/button.js';
+import { Badge } from '@/components/ui/badge.js';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card.js';
 import { Check, ArrowRight, Building2, Users, FileText, HardDrive, Sparkles } from 'lucide-react';
 
 export const CANONICAL_PLANS: PlanDefinition[] = [

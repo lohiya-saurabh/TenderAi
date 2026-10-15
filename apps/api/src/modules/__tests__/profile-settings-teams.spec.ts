@@ -3,13 +3,13 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { PGlite } from '@electric-sql/pglite';
-import { initDatabase } from '../../common/database/database.provider.js';
-import { createDrizzle, type DrizzleDb } from '../../common/database/database.module.js';
-import { TenantContextHolder } from '../../common/security/TenantContext.js';
-import { UsersService } from '../users/users.service.js';
-import { SettingsService } from '../settings/settings.service.js';
-import { TeamsService } from '../teams/teams.service.js';
-import { UnauthorizedError } from '../../common/errors/errors.js';
+import { initDatabase } from '@/common/database/database.provider.js';
+import { createDrizzle, type DrizzleDb } from '@/common/database/database.module.js';
+import { TenantContextHolder } from '@/common/security/TenantContext.js';
+import { UsersService } from '@/modules/users/users.service.js';
+import { SettingsService } from '@/modules/settings/settings.service.js';
+import { TeamsService } from '@/modules/teams/teams.service.js';
+import { UnauthorizedError } from '@/common/errors/errors.js';
 
 describe('Profile, Settings & Teams Integration Suite', () => {
   let db: PGlite;

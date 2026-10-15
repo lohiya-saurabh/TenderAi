@@ -3,7 +3,7 @@
  *
  * Implements retrieval of government-issued digital certificates (DigiLocker, API Setu).
  */
-import type { IDigitalLockerPort } from './IDigitalLockerPort.js';
+import type { IDigitalLockerPort } from '@/modules/company-verification/domain/ports/IDigitalLockerPort.js';
 
 export type DigitalDocumentProvider = IDigitalLockerPort;
 export const DIGITAL_DOCUMENT_PROVIDER = Symbol('DigitalDocumentProvider');
@@ -12,4 +12,4 @@ export type {
   DigiLockerAuthRequest,
   DigiLockerTokenResponse,
   DigiLockerIssuedDocument,
-} from './IDigitalLockerPort.js';
+} from '@/modules/company-verification/domain/ports/IDigitalLockerPort.js';

@@ -15,10 +15,10 @@
  * PURSUE/DO_NOT_PURSUE/REVIEW_REQUIRED framework.
  */
 
-import type { BidDetail } from '../../../api/bids.js';
-import type { ComplianceItem } from '../../../api/compliance.js';
-import type { BidDecisionSummary, BidVerdict, BidDecisionState } from '../../../api/bids.js';
-import { computeReadiness, type ReadinessSummary } from '../../../utils/readiness.js';
+import type { BidDetail } from '@/api/bids.js';
+import type { ComplianceItem } from '@/api/compliance.js';
+import type { BidDecisionSummary, BidVerdict, BidDecisionState } from '@/api/bids.js';
+import { computeReadiness, type ReadinessSummary } from '@/utils/readiness.js';
 
 // ---------------------------------------------------------------------------
 // Bid decision types (mapped from API)

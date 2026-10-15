@@ -1,9 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import type { BidSummary } from '../../api/bids.js';
-import { BidStatusBadge } from './BidStatusBadge.js';
-import { formatCurrency } from '../../utils/formatCurrency.js';
-import { formatDate } from '../../utils/formatDate.js';
+import type { BidSummary } from '@/api/bids.js';
+import { BidStatusBadge } from '@/components/bid/BidStatusBadge.js';
+import { formatCurrency } from '@/utils/formatCurrency.js';
+import { formatDate } from '@/utils/formatDate.js';
 
 export interface BidCardProps {
   bid: BidSummary;

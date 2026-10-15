@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { getAccessToken, resolveUrl } from '../api/client.js';
+import { getAccessToken, resolveUrl } from '@/api/client.js';
 
 export interface SSEProgressEvent {
   step: string;

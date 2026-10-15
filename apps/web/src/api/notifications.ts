@@ -1,7 +1,7 @@
 /**
  * Notifications API Client
  */
-import { apiGet, apiPatch, apiPost, type ApiResult } from './client.js';
+import { apiGet, apiPatch, apiPost, type ApiResult } from '@/api/client.js';
 
 export type NotificationCategory =
   'DEADLINE' | 'EVIDENCE_EXPIRY' | 'REVIEW_REQUEST' | 'HIGH_RISK_FLAG' | 'SYSTEM';

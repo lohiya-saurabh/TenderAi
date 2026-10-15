@@ -1,12 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import type { BidSummary } from '../../api/bids.js';
-import { Card, CardHeader, CardTitle, CardContent } from '../ui/card.js';
-import { Badge } from '../ui/badge.js';
-import { WarningIcon, ChevronRightIcon } from '../common/Icons.js';
-import { formatDate } from '../../utils/formatDate.js';
-import { formatCurrency } from '../../utils/formatCurrency.js';
-import { cn } from '../../lib/utils.js';
+import type { BidSummary } from '@/api/bids.js';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card.js';
+import { Badge } from '@/components/ui/badge.js';
+import { WarningIcon, ChevronRightIcon } from '@/components/common/Icons.js';
+import { formatDate } from '@/utils/formatDate.js';
+import { formatCurrency } from '@/utils/formatCurrency.js';
+import { cn } from '@/lib/utils.js';
 
 export interface UpcomingDeadlinesCardProps {
   bids: BidSummary[];

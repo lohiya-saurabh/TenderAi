@@ -1,10 +1,10 @@
-import { TenderDocument } from '../domain/entities/TenderDocument.js';
-import { IStorageService } from './IStorageService.js';
-import { DocumentContentNormalizer, NormalizedDocumentPage } from './DocumentContentNormalizer.js';
-import { IDocumentExtractor, ExtractedComplianceItem } from './IngestionWorker.js';
+import { TenderDocument } from '@/modules/bids/domain/entities/TenderDocument.js';
+import { IStorageService } from '@/modules/bids/application/IStorageService.js';
+import { DocumentContentNormalizer, NormalizedDocumentPage } from '@/modules/bids/application/DocumentContentNormalizer.js';
+import { IDocumentExtractor, ExtractedComplianceItem } from '@/modules/bids/application/IngestionWorker.js';
 export type { ExtractedComplianceItem };
-import { StructuredLogger } from '../../../common/logging/StructuredLogger.js';
-import { LoggingContextHolder } from '../../../common/logging/LoggingContext.js';
+import { StructuredLogger } from '@/common/logging/StructuredLogger.js';
+import { LoggingContextHolder } from '@/common/logging/LoggingContext.js';
 import { SecurityContextDto } from '@tenderpulse/shared-types';
 
 export interface RawExtractedItem {

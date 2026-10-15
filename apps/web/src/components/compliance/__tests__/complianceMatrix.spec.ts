@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { ComplianceItem } from '../../../api/compliance.js';
+import type { ComplianceItem } from '@/api/compliance.js';
 
 describe('Requirement / Compliance Matrix Data & Logic', () => {
   const mockItems: ComplianceItem[] = [

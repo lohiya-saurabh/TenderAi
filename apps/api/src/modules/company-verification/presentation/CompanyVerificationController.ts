@@ -11,10 +11,10 @@
  * - POST /api/v1/companies/:companyId/verification/review-discrepancy (Human review action)
  */
 import { Controller, Get, Post, Param, Body, Query, HttpCode } from '@nestjs/common';
-import { EvidenceVerificationService } from '../application/EvidenceVerificationService.js';
-import { RequirePermission } from '../../../common/security/decorators/permissions.decorator.js';
-import { Permissions } from '../../../common/security/permissions.js';
-import { BadRequestError } from '../../../common/errors/errors.js';
+import { EvidenceVerificationService } from '@/modules/company-verification/application/EvidenceVerificationService.js';
+import { RequirePermission } from '@/common/security/decorators/permissions.decorator.js';
+import { Permissions } from '@/common/security/permissions.js';
+import { BadRequestError } from '@/common/errors/errors.js';
 
 @Controller('api/v1/companies/:companyId/verification')
 export class CompanyVerificationController {

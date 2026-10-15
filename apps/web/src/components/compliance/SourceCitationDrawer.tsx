@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Drawer } from '../common/Drawer.js';
-import { Button } from '../common/Button.js';
-import { Badge } from '../common/Badge.js';
-import { Card } from '../common/Card.js';
-import { CopyIcon, CheckIcon } from '../common/Icons.js';
-import type { SourceCitation, Provenance } from '../../api/compliance.js';
+import { Drawer } from '@/components/common/Drawer.js';
+import { Button } from '@/components/common/Button.js';
+import { Badge } from '@/components/common/Badge.js';
+import { Card } from '@/components/common/Card.js';
+import { CopyIcon, CheckIcon } from '@/components/common/Icons.js';
+import type { SourceCitation, Provenance } from '@/api/compliance.js';
 
 export interface SourceCitationDrawerProps {
   citation: SourceCitation;

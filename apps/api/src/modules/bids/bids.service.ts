@@ -8,13 +8,13 @@ import {
   DRIZZLE_TOKEN,
   type DrizzleDb,
   createDrizzle,
-} from '../../common/database/database.module.js';
-import { STORAGE_TOKEN } from '../../infrastructure/storage/storage.module.js';
-import type { IStorageService } from './application/IStorageService.js';
-import * as schema from '../../common/database/schema.js';
-import { NotFoundError, BadRequestError } from '../../common/errors/errors.js';
-import type { DemoBid, DemoDocument } from '../../seed/data.js';
-import { TenantContextHolder } from '../../common/security/TenantContext.js';
+} from '@/common/database/database.module.js';
+import { STORAGE_TOKEN } from '@/infrastructure/storage/storage.module.js';
+import type { IStorageService } from '@/modules/bids/application/IStorageService.js';
+import * as schema from '@/common/database/schema.js';
+import { NotFoundError, BadRequestError } from '@/common/errors/errors.js';
+import type { DemoBid, DemoDocument } from '@/seed/data.js';
+import { TenantContextHolder } from '@/common/security/TenantContext.js';
 
 export interface CreateBidDto {
   companyId?: string;

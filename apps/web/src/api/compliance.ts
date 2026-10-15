@@ -5,7 +5,7 @@
  * Updated to support the enhanced Requirement/Compliance Matrix.
  */
 
-import { apiGet, apiPatch, type ApiResult } from './client.js';
+import { apiGet, apiPatch, type ApiResult } from '@/api/client.js';
 
 /** Execution/statutory rules specific to Indian tender compliance */
 export interface ExecutionRules {

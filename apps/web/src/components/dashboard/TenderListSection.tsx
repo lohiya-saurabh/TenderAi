@@ -1,14 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import type { BidSummary } from '../../api/bids.js';
-import { useAuth } from '../../auth/useAuth.js';
-import { PERMISSIONS } from '../../utils/permissions.js';
-import { Button } from '../ui/button.js';
-import { Input } from '../ui/input.js';
-import { EmptyState } from '../common/EmptyState.js';
-import { PlusCircleIcon, SearchIcon, TendersIcon, CloseIcon } from '../common/Icons.js';
-import { TenderTableView, TenderTableSkeleton } from './TenderTableView.js';
-import { useBreakpoint } from '../../hooks/useBreakpoint.js';
+import type { BidSummary } from '@/api/bids.js';
+import { useAuth } from '@/auth/useAuth.js';
+import { PERMISSIONS } from '@/utils/permissions.js';
+import { Button } from '@/components/ui/button.js';
+import { Input } from '@/components/ui/input.js';
+import { EmptyState } from '@/components/common/EmptyState.js';
+import { PlusCircleIcon, SearchIcon, TendersIcon, CloseIcon } from '@/components/common/Icons.js';
+import { TenderTableView, TenderTableSkeleton } from '@/components/dashboard/TenderTableView.js';
+import { useBreakpoint } from '@/hooks/useBreakpoint.js';
 import {
   compareBids,
   filterBids,
@@ -18,8 +18,8 @@ import {
   type SortDirection,
   type SortKey,
   DEFAULT_SORT_DIRECTION,
-} from './tenderListData.js';
-import { cn } from '../../lib/utils.js';
+} from '@/components/dashboard/tenderListData.js';
+import { cn } from '@/lib/utils.js';
 
 export interface TenderListSectionProps {
   bids: BidSummary[];

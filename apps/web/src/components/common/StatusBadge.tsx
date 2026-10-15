@@ -7,7 +7,7 @@ import {
   NotApplicableIcon,
   SpinnerIcon,
   IconProps,
-} from './Icons.js';
+} from '@/components/common/Icons.js';
 
 export type SemanticStatusVariant =
   'PASS' | 'FAIL' | 'MISSING' | 'REVIEW_REQUIRED' | 'NOT_APPLICABLE';

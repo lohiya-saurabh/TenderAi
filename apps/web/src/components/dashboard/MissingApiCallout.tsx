@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Card } from '../ui/card.js';
+import { Card } from '@/components/ui/card.js';
 import { Info, ChevronDown } from 'lucide-react';
-import { cn } from '../../lib/utils.js';
+import { cn } from '@/lib/utils.js';
 
 interface EndpointStatus {
   method: string;

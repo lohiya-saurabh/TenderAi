@@ -1,5 +1,5 @@
-import { IngestionJob } from '../../modules/bids/domain/entities/IngestionJob.js';
-import { IIngestionJobRepository } from '../../modules/bids/domain/repositories/IIngestionJobRepository.js';
+import { IngestionJob } from '@/modules/bids/domain/entities/IngestionJob.js';
+import { IIngestionJobRepository } from '@/modules/bids/domain/repositories/IIngestionJobRepository.js';
 
 export class InMemoryIngestionJobRepository implements IIngestionJobRepository {
   private readonly jobs: Map<string, IngestionJob> = new Map();

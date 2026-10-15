@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
-import { ProfilePage } from '../ProfilePage.js';
-import { SettingsPage } from '../SettingsPage.js';
-import { AuthProvider } from '../../auth/AuthProvider.js';
-import { CompanyProvider } from '../../context/CompanyContext.js';
+import { ProfilePage } from '@/pages/ProfilePage.js';
+import { SettingsPage } from '@/pages/SettingsPage.js';
+import { AuthProvider } from '@/auth/AuthProvider.js';
+import { CompanyProvider } from '@/context/CompanyContext.js';
 
 describe('Profile & Settings Pages Suite', () => {
   describe('ProfilePage', () => {

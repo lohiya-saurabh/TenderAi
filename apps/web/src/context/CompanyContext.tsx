@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { useAuth } from '../auth/useAuth.js';
+import { useAuth } from '@/auth/useAuth.js';
 import {
   listCompanies,
   type CompanyItem,
   createCompany as apiCreateCompany,
   type CreateCompanyInput,
-} from '../api/companies.js';
+} from '@/api/companies.js';
 
 export interface CompanyContextValue {
   companies: CompanyItem[];

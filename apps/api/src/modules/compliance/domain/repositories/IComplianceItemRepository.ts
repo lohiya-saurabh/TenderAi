@@ -1,4 +1,4 @@
-import { ComplianceItem } from '../entities/ComplianceItem.js';
+import { ComplianceItem } from '@/modules/compliance/domain/entities/ComplianceItem.js';
 
 export interface IComplianceItemRepository {
   findById(id: string, organizationId: string): Promise<ComplianceItem | null>;

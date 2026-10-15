@@ -10,12 +10,12 @@ import type {
   MsmeEnterpriseDetails,
   MsmeClassification,
   MsmeMajorActivity,
-} from '../domain/ports/IMsmeVerificationPort.js';
+} from '@/modules/company-verification/domain/ports/IMsmeVerificationPort.js';
 import {
   BadRequestError,
   NotFoundError,
   InternalServerError,
-} from '../../../common/errors/errors.js';
+} from '@/common/errors/errors.js';
 
 interface RawUdyamResponse {
   udyamRegistrationNumber?: string;

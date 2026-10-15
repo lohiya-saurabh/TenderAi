@@ -10,33 +10,33 @@ import {
   evaluateBidDecision,
   type BidDetail,
   type BidDocument,
-} from '../api/bids.js';
+} from '@/api/bids.js';
 import {
   listComplianceItems,
   reviewComplianceItem,
   type ComplianceItem,
-} from '../api/compliance.js';
-import { useApi } from '../hooks/useApi.js';
-import { useAuth } from '../auth/useAuth.js';
-import { PERMISSIONS } from '../utils/permissions.js';
-import { Button } from '../components/common/Button.js';
-import { ErrorBanner } from '../components/common/ErrorBanner.js';
-import { LoadingSkeleton } from '../components/common/LoadingSkeleton.js';
-import { Modal } from '../components/common/Modal.js';
-import { PlusCircleIcon, ChevronRightIcon } from '../components/common/Icons.js';
-import { ExtractionProgress } from '../components/progress/ExtractionProgress.js';
-import { ComplianceTable } from '../components/compliance/ComplianceTable.js';
-import { TenderInfoHeader } from '../components/bid/detail/TenderInfoHeader.js';
-import { BidVerdictCard } from '../components/bid/detail/BidVerdictCard.js';
-import { ObligationsCard } from '../components/bid/detail/ObligationsCard.js';
-import { IngestedDocumentsSection } from '../components/bid/detail/IngestedDocumentsSection.js';
-import { BidSignoffDock } from '../components/bid/detail/BidSignoffDock.js';
-import { MissingDataCallout } from '../components/bid/detail/MissingDataCallout.js';
-import { formatCurrency, formatCompactINR } from '../utils/formatCurrency.js';
+} from '@/api/compliance.js';
+import { useApi } from '@/hooks/useApi.js';
+import { useAuth } from '@/auth/useAuth.js';
+import { PERMISSIONS } from '@/utils/permissions.js';
+import { Button } from '@/components/common/Button.js';
+import { ErrorBanner } from '@/components/common/ErrorBanner.js';
+import { LoadingSkeleton } from '@/components/common/LoadingSkeleton.js';
+import { Modal } from '@/components/common/Modal.js';
+import { PlusCircleIcon, ChevronRightIcon } from '@/components/common/Icons.js';
+import { ExtractionProgress } from '@/components/progress/ExtractionProgress.js';
+import { ComplianceTable } from '@/components/compliance/ComplianceTable.js';
+import { TenderInfoHeader } from '@/components/bid/detail/TenderInfoHeader.js';
+import { BidVerdictCard } from '@/components/bid/detail/BidVerdictCard.js';
+import { ObligationsCard } from '@/components/bid/detail/ObligationsCard.js';
+import { IngestedDocumentsSection } from '@/components/bid/detail/IngestedDocumentsSection.js';
+import { BidSignoffDock } from '@/components/bid/detail/BidSignoffDock.js';
+import { MissingDataCallout } from '@/components/bid/detail/MissingDataCallout.js';
+import { formatCurrency, formatCompactINR } from '@/utils/formatCurrency.js';
 import {
   mapApiDecisionToBidDecision,
   type ApiBidDecisionSummary,
-} from '../components/bid/detail/bidDetailData.js';
+} from '@/components/bid/detail/bidDetailData.js';
 
 /**
  * Tender Detail — "Should I bid on this tender?"

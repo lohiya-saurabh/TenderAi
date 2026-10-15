@@ -1,11 +1,11 @@
 import { Controller, Get, Post, Body } from '@nestjs/common';
-import { BillingService } from './billing.service.js';
-import { Public } from '../../common/security/decorators/public.decorator.js';
-import { RequirePermission } from '../../common/security/decorators/permissions.decorator.js';
-import { Permissions } from '../../common/security/permissions.js';
-import { TenantContextHolder } from '../../common/security/TenantContext.js';
-import { BadRequestError } from '../../common/errors/errors.js';
-import type { ChangePlanDto } from './billing.types.js';
+import { BillingService } from '@/modules/billing/billing.service.js';
+import { Public } from '@/common/security/decorators/public.decorator.js';
+import { RequirePermission } from '@/common/security/decorators/permissions.decorator.js';
+import { Permissions } from '@/common/security/permissions.js';
+import { TenantContextHolder } from '@/common/security/TenantContext.js';
+import { BadRequestError } from '@/common/errors/errors.js';
+import type { ChangePlanDto } from '@/modules/billing/billing.types.js';
 
 @Controller('api/v1/billing')
 export class BillingController {

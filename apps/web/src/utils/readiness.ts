@@ -6,7 +6,7 @@
  * tender list and the tender detail page.
  */
 
-import type { BidSummary } from '../api/bids.js';
+import type { BidSummary } from '@/api/bids.js';
 
 export interface ReadinessSummary {
   total: number;

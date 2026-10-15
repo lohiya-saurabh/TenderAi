@@ -4,11 +4,11 @@
  * All endpoints enforce TenantContextHolder isolation and anti-IDOR checks.
  */
 import { Controller, Get, Post, Param, Query, Body, HttpCode } from '@nestjs/common';
-import { CompaniesService, type CreateCompanyDto } from './companies.service.js';
-import { RequirePermission } from '../../common/security/decorators/permissions.decorator.js';
-import { Permissions } from '../../common/security/permissions.js';
-import { BadRequestError } from '../../common/errors/errors.js';
-import type { CompanyProfilePayload } from '../company-profile/presentation/dto/CompanyProfilePayload.js';
+import { CompaniesService, type CreateCompanyDto } from '@/modules/companies/companies.service.js';
+import { RequirePermission } from '@/common/security/decorators/permissions.decorator.js';
+import { Permissions } from '@/common/security/permissions.js';
+import { BadRequestError } from '@/common/errors/errors.js';
+import type { CompanyProfilePayload } from '@/modules/company-profile/presentation/dto/CompanyProfilePayload.js';
 
 @Controller('api/v1/companies')
 export class CompaniesController {

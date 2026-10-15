@@ -5,7 +5,7 @@
  * The profile is the factual basis for all bid/no-bid evaluations.
  */
 
-import { apiGet, apiPost, type ApiResult } from './client.js';
+import { apiGet, apiPost, type ApiResult } from '@/api/client.js';
 
 export interface CompanyProfilePayload {
   company_name: string;

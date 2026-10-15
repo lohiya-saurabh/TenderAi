@@ -1,19 +1,19 @@
-import { CreateBidUseCase, CreateBidResult } from '../application/CreateBidUseCase.js';
+import { CreateBidUseCase, CreateBidResult } from '@/modules/bids/application/CreateBidUseCase.js';
 import {
   GenerateUploadUrlUseCase,
   GenerateUploadUrlResult,
-} from '../application/GenerateUploadUrlUseCase.js';
+} from '@/modules/bids/application/GenerateUploadUrlUseCase.js';
 import {
   ConfirmDocumentUploadUseCase,
   ConfirmDocumentUploadResult,
-} from '../application/ConfirmDocumentUploadUseCase.js';
+} from '@/modules/bids/application/ConfirmDocumentUploadUseCase.js';
 import {
   GetDocumentDownloadUrlUseCase,
   GetDocumentDownloadUrlResult,
-} from '../application/GetDocumentDownloadUrlUseCase.js';
-import { CreateBidDto, CreateBidPayload } from './dto/CreateBidDto.js';
-import { GenerateUploadUrlDto, GenerateUploadUrlPayload } from './dto/GenerateUploadUrlDto.js';
-import { ConfirmUploadDto, ConfirmUploadPayload } from './dto/ConfirmUploadDto.js';
+} from '@/modules/bids/application/GetDocumentDownloadUrlUseCase.js';
+import { CreateBidDto, CreateBidPayload } from '@/modules/bids/presentation/dto/CreateBidDto.js';
+import { GenerateUploadUrlDto, GenerateUploadUrlPayload } from '@/modules/bids/presentation/dto/GenerateUploadUrlDto.js';
+import { ConfirmUploadDto, ConfirmUploadPayload } from '@/modules/bids/presentation/dto/ConfirmUploadDto.js';
 
 export class BidsController {
   constructor(

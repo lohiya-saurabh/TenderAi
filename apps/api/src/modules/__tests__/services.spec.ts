@@ -1,20 +1,20 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
 import { PGlite } from '@electric-sql/pglite';
 import { eq } from 'drizzle-orm';
-import { initDatabase } from '../../common/database/database.provider.js';
-import { createDrizzle } from '../../common/database/database.module.js';
-import * as schema from '../../common/database/schema.js';
-import { AuthService } from '../auth/auth.service.js';
-import { BidsService } from '../bids/bids.service.js';
-import { DocumentsService } from '../documents/documents.service.js';
-import { DocumentCompletionService } from '../documents/DocumentCompletionService.js';
-import { ComplianceService } from '../compliance/compliance.service.js';
-import { AuditService } from '../audit/audit.service.js';
-import { CompanyProfileService } from '../company-profile/company-profile.service.js';
-import { MockStorageService } from '../../infrastructure/storage/MockStorageService.js';
-import type { IStorageService } from '../bids/application/IStorageService.js';
-import { UnauthorizedError, NotFoundError, ConflictError } from '../../common/errors/errors.js';
-import { TenantContextHolder } from '../../common/security/TenantContext.js';
+import { initDatabase } from '@/common/database/database.provider.js';
+import { createDrizzle } from '@/common/database/database.module.js';
+import * as schema from '@/common/database/schema.js';
+import { AuthService } from '@/modules/auth/auth.service.js';
+import { BidsService } from '@/modules/bids/bids.service.js';
+import { DocumentsService } from '@/modules/documents/documents.service.js';
+import { DocumentCompletionService } from '@/modules/documents/DocumentCompletionService.js';
+import { ComplianceService } from '@/modules/compliance/compliance.service.js';
+import { AuditService } from '@/modules/audit/audit.service.js';
+import { CompanyProfileService } from '@/modules/company-profile/company-profile.service.js';
+import { MockStorageService } from '@/infrastructure/storage/MockStorageService.js';
+import type { IStorageService } from '@/modules/bids/application/IStorageService.js';
+import { UnauthorizedError, NotFoundError, ConflictError } from '@/common/errors/errors.js';
+import { TenantContextHolder } from '@/common/security/TenantContext.js';
 
 describe('NestJS Feature Modules: Services Unit Tests', () => {
   let db: PGlite;

@@ -3,8 +3,8 @@
  * feature module.
  */
 import { Module } from '@nestjs/common';
-import { CompanyProfileService } from './company-profile.service.js';
-import { CompanyProfileController } from './presentation/CompanyProfileController.js';
+import { CompanyProfileService } from '@/modules/company-profile/company-profile.service.js';
+import { CompanyProfileController } from '@/modules/company-profile/presentation/CompanyProfileController.js';
 
 @Module({
   controllers: [CompanyProfileController],

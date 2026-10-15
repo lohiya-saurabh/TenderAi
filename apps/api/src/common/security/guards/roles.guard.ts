@@ -7,11 +7,11 @@
 
 import { Injectable, CanActivate, ExecutionContext, Inject } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { REQUIRED_PERMISSIONS_KEY } from '../decorators/permissions.decorator.js';
-import { IS_PUBLIC_KEY } from '../decorators/public.decorator.js';
-import { hasPermission, type Permission } from '../permissions.js';
-import type { UserTokenPayload } from '../TokenService.js';
-import { UnauthorizedError, ForbiddenError } from '../../errors/errors.js';
+import { REQUIRED_PERMISSIONS_KEY } from '@/common/security/decorators/permissions.decorator.js';
+import { IS_PUBLIC_KEY } from '@/common/security/decorators/public.decorator.js';
+import { hasPermission, type Permission } from '@/common/security/permissions.js';
+import type { UserTokenPayload } from '@/common/security/TokenService.js';
+import { UnauthorizedError, ForbiddenError } from '@/common/errors/errors.js';
 
 @Injectable()
 export class RolesGuard implements CanActivate {

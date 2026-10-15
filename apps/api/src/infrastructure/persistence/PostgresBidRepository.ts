@@ -9,14 +9,14 @@
  */
 import { PGlite } from '@electric-sql/pglite';
 import { eq, and, desc } from 'drizzle-orm';
-import { IBidRepository } from '../../modules/bids/domain/repositories/IBidRepository.js';
-import { BidProject } from '../../modules/bids/domain/entities/BidProject.js';
-import { BidStatus } from '../../modules/bids/domain/value-objects/BidStatus.js';
-import { Money } from '../../modules/bids/domain/value-objects/Money.js';
-import { ConcurrencyConflictException } from '../../common/domain/DomainException.js';
-import { IEventBus } from '../../common/events/IEventBus.js';
-import { createDrizzle, type DrizzleDb } from '../../common/database/database.module.js';
-import * as schema from '../../common/database/schema.js';
+import { IBidRepository } from '@/modules/bids/domain/repositories/IBidRepository.js';
+import { BidProject } from '@/modules/bids/domain/entities/BidProject.js';
+import { BidStatus } from '@/modules/bids/domain/value-objects/BidStatus.js';
+import { Money } from '@/modules/bids/domain/value-objects/Money.js';
+import { ConcurrencyConflictException } from '@/common/domain/DomainException.js';
+import { IEventBus } from '@/common/events/IEventBus.js';
+import { createDrizzle, type DrizzleDb } from '@/common/database/database.module.js';
+import * as schema from '@/common/database/schema.js';
 
 export class PostgresBidRepository implements IBidRepository {
   private readonly db: DrizzleDb;

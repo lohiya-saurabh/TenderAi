@@ -4,7 +4,7 @@
  * Login, refresh, and logout API calls.
  */
 
-import { apiPost, clearTokens, type ApiResult } from './client.js';
+import { apiPost, clearTokens, type ApiResult } from '@/api/client.js';
 
 export interface AuthUser {
   id: string;

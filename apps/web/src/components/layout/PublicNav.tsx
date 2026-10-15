@@ -1,9 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../../auth/useAuth.js';
-import { Button } from '../ui/button.js';
+import { useAuth } from '@/auth/useAuth.js';
+import { Button } from '@/components/ui/button.js';
 import { ShieldCheck, ArrowRight, Layers, FileCheck2, Cpu, Sun, Moon } from 'lucide-react';
-import { useTheme } from '../../context/ThemeContext.js';
+import { useTheme } from '@/context/ThemeContext.js';
 
 export const PublicNav: React.FC = () => {
   const { isAuthenticated } = useAuth();

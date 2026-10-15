@@ -1,4 +1,4 @@
-import { InvalidStateTransitionException } from '../../../../common/domain/DomainException.js';
+import { InvalidStateTransitionException } from '@/common/domain/DomainException.js';
 
 export type ComplianceStatusEnum = 'PENDING' | 'READY' | 'FLAGGED' | 'WAIVED';
 

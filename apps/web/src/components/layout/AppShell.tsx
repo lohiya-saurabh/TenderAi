@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import { Sidebar } from './Sidebar.js';
-import { Header } from './Header.js';
+import { Sidebar } from '@/components/layout/Sidebar.js';
+import { Header } from '@/components/layout/Header.js';
 
 export const AppShell: React.FC = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);

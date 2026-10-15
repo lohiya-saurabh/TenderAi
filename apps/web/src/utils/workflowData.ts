@@ -5,8 +5,8 @@
  * generators for all 13 stages of the MSME contractor bidding journey.
  */
 
-import type { BidDetail } from '../api/bids.js';
-import type { ComplianceItem } from '../api/compliance.js';
+import type { BidDetail } from '@/api/bids.js';
+import type { ComplianceItem } from '@/api/compliance.js';
 import type {
   CompanyCapabilityProfile,
   TenderDeadline,
@@ -19,7 +19,7 @@ import type {
   BidReadinessPillars,
   SubmissionChecklistItem,
   WorkflowStageMeta,
-} from '../types/workflow.js';
+} from '@/types/workflow.js';
 
 // ------------------------------------------------------------------
 // Workflow Stages Metadata

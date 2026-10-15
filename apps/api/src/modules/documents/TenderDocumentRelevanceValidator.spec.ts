@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { TenderDocumentRelevanceValidator } from './TenderDocumentRelevanceValidator.js';
+import { TenderDocumentRelevanceValidator } from '@/modules/documents/TenderDocumentRelevanceValidator.js';
 
 describe('TenderDocumentRelevanceValidator — Pre-Ingestion Integrity Verification', () => {
   const validator = new TenderDocumentRelevanceValidator();

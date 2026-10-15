@@ -12,8 +12,8 @@ import type {
   DigiLockerAuthRequest,
   DigiLockerTokenResponse,
   DigiLockerIssuedDocument,
-} from '../domain/ports/IDigitalLockerPort.js';
-import { BadRequestError } from '../../../common/errors/errors.js';
+} from '@/modules/company-verification/domain/ports/IDigitalLockerPort.js';
+import { BadRequestError } from '@/common/errors/errors.js';
 
 @Injectable()
 export class MockDigitalLockerAdapter implements IDigitalLockerPort {

@@ -1,14 +1,14 @@
 import React from 'react';
-import { FailIcon, InfoIcon } from '../../common/Icons.js';
-import type { BidDetail } from '../../../api/bids.js';
-import type { ComplianceItem } from '../../../api/compliance.js';
+import { FailIcon, InfoIcon } from '@/components/common/Icons.js';
+import type { BidDetail } from '@/api/bids.js';
+import type { ComplianceItem } from '@/api/compliance.js';
 import {
   getComplianceRollup,
   getDeadlineBufferDays,
   formatCommercialRiskItem,
   type BidDecision,
-} from './bidDetailData.js';
-import { CompanyDocumentChecklist } from './CompanyDocumentChecklist.js';
+} from '@/components/bid/detail/bidDetailData.js';
+import { CompanyDocumentChecklist } from '@/components/bid/detail/CompanyDocumentChecklist.js';
 
 export interface BidVerdictCardProps {
   bid: BidDetail;

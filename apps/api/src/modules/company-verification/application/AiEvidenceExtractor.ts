@@ -7,10 +7,10 @@
  * and semantic chunking for the RAG Bid/No-Bid decision engine.
  */
 import { Injectable, Optional } from '@nestjs/common';
-import { StructuredLogger } from '../../../common/logging/StructuredLogger.js';
-import { LoggingContextHolder } from '../../../common/logging/LoggingContext.js';
+import { StructuredLogger } from '@/common/logging/StructuredLogger.js';
+import { LoggingContextHolder } from '@/common/logging/LoggingContext.js';
 import type { SecurityContextDto } from '@tenderpulse/shared-types';
-import type { CompanyEvidenceDocument } from '../../../common/database/schema.js';
+import type { CompanyEvidenceDocument } from '@/common/database/schema.js';
 
 export interface ExtractedEvidenceChunk {
   chunk_id?: string;

@@ -10,15 +10,15 @@ import {
   DRIZZLE_TOKEN,
   type DrizzleDb,
   createDrizzle,
-} from '../../common/database/database.module.js';
-import * as schema from '../../common/database/schema.js';
-import { UnauthorizedError, ConflictError, BadRequestError } from '../../common/errors/errors.js';
-import { TokenService } from '../../common/security/TokenService.js';
+} from '@/common/database/database.module.js';
+import * as schema from '@/common/database/schema.js';
+import { UnauthorizedError, ConflictError, BadRequestError } from '@/common/errors/errors.js';
+import { TokenService } from '@/common/security/TokenService.js';
 import {
   ROLE_PERMISSIONS,
   type UserRole,
   type Permission,
-} from '../../common/security/permissions.js';
+} from '@/common/security/permissions.js';
 
 // Precomputed cost-10 bcrypt hash used to normalize timing and defend against user enumeration
 const DUMMY_BCRYPT_HASH = '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';

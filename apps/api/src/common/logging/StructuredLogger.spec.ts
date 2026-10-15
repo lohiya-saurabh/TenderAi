@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { StructuredLogger } from './StructuredLogger.js';
-import { LoggingContextHolder } from './LoggingContext.js';
-import { LogSanitizer } from './LogSanitizer.js';
+import { StructuredLogger } from '@/common/logging/StructuredLogger.js';
+import { LoggingContextHolder } from '@/common/logging/LoggingContext.js';
+import { LogSanitizer } from '@/common/logging/LogSanitizer.js';
 
 describe('StructuredLogger & LogSanitizer', () => {
   let stdoutWriteSpy: ReturnType<typeof vi.spyOn>;
@@ -166,7 +166,7 @@ describe('StructuredLogger & LogSanitizer', () => {
     const fs = await import('node:fs');
     const path = await import('node:path');
     const os = await import('node:os');
-    const { RotatingLogStream } = await import('./RotatingLogStream.js');
+    const { RotatingLogStream } = await import('@/common/logging/RotatingLogStream.js');
 
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'log-test-'));
     const logFile = path.join(tempDir, 'test.log');
