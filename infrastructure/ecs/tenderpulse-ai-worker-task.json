@@ -1,0 +1,45 @@
+{
+  "family": "tenderpulse-ai-worker-task",
+  "taskRoleArn": "arn:aws:iam::364740865830:role/tenderpulse-ecs-task-role",
+  "executionRoleArn": "arn:aws:iam::364740865830:role/ecsTaskExecutionRole",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "1024",
+  "memory": "2048",
+  "containerDefinitions": [
+    {
+      "name": "tenderpulse-ai-worker",
+      "image": "364740865830.dkr.ecr.ap-south-1.amazonaws.com/tenderpulse-ai-worker:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "hostPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "PYTHONUNBUFFERED",
+          "value": "1"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "INTERNAL_SERVICE_KEY",
+          "valueFrom": "arn:aws:secretsmanager:ap-south-1:364740865830:secret:tenderpulse/production/api-kKPgFT:INTERNAL_SERVICE_KEY::"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/tenderpulse-prod",
+          "awslogs-region": "ap-south-1",
+          "awslogs-stream-prefix": "ai-worker"
+        }
+      }
+    }
+  ]
+}

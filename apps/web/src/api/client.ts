@@ -109,10 +109,6 @@ export function getApiBaseUrl(): string {
     if (win.__API_BASE_URL__) {
       return win.__API_BASE_URL__;
     }
-    const hostname = win.location?.hostname || '';
-    if (hostname.includes('.s3-website.') || hostname.includes('s3.amazonaws.com')) {
-      return 'http://tenderpulse-alb-199908380.ap-south-1.elb.amazonaws.com';
-    }
   }
   return '';
 }

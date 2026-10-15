@@ -30,7 +30,7 @@ env:
   AI_WORKER_SERVICE: ${{ vars.AI_WORKER_SERVICE || 'tenderpulse-ai-worker-service-prod' }}
   WEB_SERVICE: ${{ vars.WEB_SERVICE || 'tenderpulse-web-service-prod' }}
   S3_WEB_SPA_BUCKET: ${{ vars.S3_WEB_SPA_BUCKET || 'tenderpulse-web-spa-prod' }}
-  CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
+  CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID || vars.CLOUDFRONT_DISTRIBUTION_ID || 'EWCMKENKJ46H1' }}
 
 jobs:
   # ============================================================================
@@ -257,7 +257,7 @@ jobs:
 
       - name: Build Web SPA Artifacts (Vite dist/)
         env:
-          VITE_API_URL: ${{ vars.VITE_API_URL || 'http://tenderpulse-alb-199908380.ap-south-1.elb.amazonaws.com' }}
+          VITE_API_URL: ${{ vars.VITE_API_URL || '' }}
         run: |
           npm ci
           npm run build
@@ -435,19 +435,47 @@ jobs:
       - name: Deploy ECS Fargate Services (NestJS API & FastAPI AI Worker)
         run: |
           IMAGE_TAG="${GITHUB_SHA::8}"
-          echo "🚀 Updating ECS Service '${API_SERVICE}' on cluster '${ECS_CLUSTER}' (Image Tag: ${IMAGE_TAG})..."
-          aws ecs update-service \
-            --cluster "${ECS_CLUSTER}" \
-            --service "${API_SERVICE}" \
-            --force-new-deployment \
-            --region ${{ env.AWS_REGION }} || echo "⚠️ Notice: API ECS service update command completed (verify service status)."
+          echo "🚀 Updating ECS Services on cluster '${ECS_CLUSTER}' (Image Tag: ${IMAGE_TAG})..."
 
-          echo "🚀 Updating ECS Service '${AI_WORKER_SERVICE}' on cluster '${ECS_CLUSTER}' (Image Tag: ${IMAGE_TAG})..."
-          aws ecs update-service \
-            --cluster "${ECS_CLUSTER}" \
-            --service "${AI_WORKER_SERVICE}" \
-            --force-new-deployment \
-            --region ${{ env.AWS_REGION }} || echo "⚠️ Notice: AI Worker ECS service update command completed (verify service status)."
+          # 1. NestJS API Service Deployment
+          if [ -f "infrastructure/ecs/tenderpulse-api-task.json" ]; then
+            echo "Registering tenderpulse-api task definition from Git..."
+            sed -i "s|tenderpulse-api:latest|tenderpulse-api:${IMAGE_TAG}|g" infrastructure/ecs/tenderpulse-api-task.json || true
+            API_TASK_ARN=$(aws ecs register-task-definition --cli-input-json file://infrastructure/ecs/tenderpulse-api-task.json --region ${{ env.AWS_REGION }} --query 'taskDefinition.taskDefinitionArn' --output text)
+            echo "Registered API Task Definition: ${API_TASK_ARN}"
+            aws ecs update-service \
+              --cluster "${ECS_CLUSTER}" \
+              --service "${API_SERVICE}" \
+              --task-definition "${API_TASK_ARN}" \
+              --force-new-deployment \
+              --region ${{ env.AWS_REGION }} || echo "⚠️ Notice: API ECS service update command completed."
+          else
+            aws ecs update-service \
+              --cluster "${ECS_CLUSTER}" \
+              --service "${API_SERVICE}" \
+              --force-new-deployment \
+              --region ${{ env.AWS_REGION }} || echo "⚠️ Notice: API ECS service update command completed."
+          fi
+
+          # 2. FastAPI AI Worker Service Deployment
+          if [ -f "infrastructure/ecs/tenderpulse-ai-worker-task.json" ]; then
+            echo "Registering tenderpulse-ai-worker task definition from Git..."
+            sed -i "s|tenderpulse-ai-worker:latest|tenderpulse-ai-worker:${IMAGE_TAG}|g" infrastructure/ecs/tenderpulse-ai-worker-task.json || true
+            AI_TASK_ARN=$(aws ecs register-task-definition --cli-input-json file://infrastructure/ecs/tenderpulse-ai-worker-task.json --region ${{ env.AWS_REGION }} --query 'taskDefinition.taskDefinitionArn' --output text)
+            echo "Registered AI Worker Task Definition: ${AI_TASK_ARN}"
+            aws ecs update-service \
+              --cluster "${ECS_CLUSTER}" \
+              --service "${AI_WORKER_SERVICE}" \
+              --task-definition "${AI_TASK_ARN}" \
+              --force-new-deployment \
+              --region ${{ env.AWS_REGION }} || echo "⚠️ Notice: AI Worker ECS service update command completed."
+          else
+            aws ecs update-service \
+              --cluster "${ECS_CLUSTER}" \
+              --service "${AI_WORKER_SERVICE}" \
+              --force-new-deployment \
+              --region ${{ env.AWS_REGION }} || echo "⚠️ Notice: AI Worker ECS service update command completed."
+          fi
 
           # Optional: Update Web Nginx service if running on ECS
           if aws ecs describe-services --cluster "${ECS_CLUSTER}" --services "${WEB_SERVICE}" --region ${{ env.AWS_REGION }} >/dev/null 2>&1; then
