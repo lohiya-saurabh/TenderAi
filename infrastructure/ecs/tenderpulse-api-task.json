@@ -1,0 +1,89 @@
+{
+  "family": "tenderpulse-api-task",
+  "taskRoleArn": "arn:aws:iam::364740865830:role/tenderpulse-ecs-task-role",
+  "executionRoleArn": "arn:aws:iam::364740865830:role/ecsTaskExecutionRole",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "512",
+  "memory": "1024",
+  "containerDefinitions": [
+    {
+      "name": "tenderpulse-api",
+      "image": "364740865830.dkr.ecr.ap-south-1.amazonaws.com/tenderpulse-api:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 3000,
+          "hostPort": 3000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "NODE_ENV",
+          "value": "production"
+        },
+        {
+          "name": "PORT",
+          "value": "3000"
+        },
+        {
+          "name": "AWS_REGION",
+          "value": "ap-south-1"
+        },
+        {
+          "name": "AWS_S3_BUCKET",
+          "value": "tenderai-ap-south-1-1029"
+        },
+        {
+          "name": "STORAGE_PROVIDER",
+          "value": "mock"
+        },
+        {
+          "name": "QUEUE_PROVIDER",
+          "value": "mock"
+        },
+        {
+          "name": "AWS_SQS_QUEUE_URL",
+          "value": "https://sqs.ap-south-1.amazonaws.com/364740865830/tenderai-dociq"
+        },
+        {
+          "name": "AWS_SQS_DLQ_URL",
+          "value": "https://sqs.ap-south-1.amazonaws.com/364740865830/tenderai-docidlq"
+        },
+        {
+          "name": "AWS_SQS_COMPLETION_QUEUE_URL",
+          "value": "https://sqs.ap-south-1.amazonaws.com/364740865830/tenderai-compq"
+        },
+        {
+          "name": "AWS_SQS_COMPLETION_DLQ_URL",
+          "value": "https://sqs.ap-south-1.amazonaws.com/364740865830/tenderai-compdlq"
+        },
+        {
+          "name": "SEED_DEMO_DATA",
+          "value": "true"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "JWT_SECRET",
+          "valueFrom": "arn:aws:secretsmanager:ap-south-1:364740865830:secret:tenderpulse/production/api-kKPgFT:JWT_SECRET::"
+        },
+        {
+          "name": "INTERNAL_SERVICE_KEY",
+          "valueFrom": "arn:aws:secretsmanager:ap-south-1:364740865830:secret:tenderpulse/production/api-kKPgFT:INTERNAL_SERVICE_KEY::"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/tenderpulse-prod",
+          "awslogs-region": "ap-south-1",
+          "awslogs-stream-prefix": "api"
+        }
+      }
+    }
+  ]
+}
