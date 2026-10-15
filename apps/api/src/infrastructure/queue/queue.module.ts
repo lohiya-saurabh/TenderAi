@@ -49,6 +49,10 @@ export const COMPLETION_QUEUE_TOKEN = 'COMPLETION_QUEUE';
           return service;
         }
 
+        if (process.env.QUEUE_PROVIDER === 'mock' || process.env.ALLOW_MOCK_SERVICES === 'true') {
+          return new MockSqsJobQueue();
+        }
+
         if (process.env.NODE_ENV === 'production') {
           throw new Error(
             'A production message queue must be configured with AWS_SQS_QUEUE_URL or GCP Pub/Sub settings.',
