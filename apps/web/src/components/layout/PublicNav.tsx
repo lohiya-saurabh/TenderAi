@@ -18,8 +18,8 @@ export const PublicNav: React.FC = () => {
             TP
           </div>
           <div className="flex flex-col">
-            <span className="text-base font-bold tracking-tight text-foreground group-hover:text-primary transition-colors">
-              TenderPulse AI
+            <span className="text-base font-bold tracking-tight text-foreground transition-colors">
+              TenderPulse<span className="text-vermilion">.ai</span>
             </span>
             <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-mono">
               Bid Readiness SaaS

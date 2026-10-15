@@ -26,10 +26,11 @@ export const TenderInfoHeader: React.FC<TenderInfoHeaderProps> = ({ bid, decisio
   const verdictStyles =
     verdict === 'PURSUE'
       ? {
-          bg: 'bg-primary/10',
-          text: 'text-primary',
-          border: 'border-primary/30',
+          bg: 'bg-vermilion',
+          text: 'text-white',
+          border: 'border-transparent',
           label: 'DETERMINISTIC VERDICT: PURSUE BID',
+          dot: 'bg-white animate-pulse',
         }
       : verdict === 'DO_NOT_PURSUE'
         ? {
@@ -37,12 +38,14 @@ export const TenderInfoHeader: React.FC<TenderInfoHeaderProps> = ({ bid, decisio
             text: 'text-destructive',
             border: 'border-destructive/30',
             label: 'DETERMINISTIC VERDICT: DO NOT PURSUE',
+            dot: 'bg-destructive',
           }
         : {
-            bg: 'bg-orange-500/10',
-            text: 'text-orange-500',
-            border: 'border-orange-500/30',
+            bg: 'bg-amber-500/10',
+            text: 'text-amber-500',
+            border: 'border-amber-500/30',
             label: 'DETERMINISTIC VERDICT: REVIEW REQUIRED',
+            dot: 'bg-amber-500 animate-pulse',
           };
 
   return (
@@ -51,8 +54,9 @@ export const TenderInfoHeader: React.FC<TenderInfoHeaderProps> = ({ bid, decisio
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <span
-            className={`mono text-xs font-bold px-2.5 py-0.5 rounded border ${verdictStyles.bg} ${verdictStyles.text} ${verdictStyles.border}`}
+            className={`mono text-xs font-bold px-2.5 py-0.5 rounded inline-flex items-center gap-1.5 shadow-xs border ${verdictStyles.bg} ${verdictStyles.text} ${verdictStyles.border}`}
           >
+            <span className={`w-1.5 h-1.5 rounded-full ${verdictStyles.dot}`} />
             {verdictStyles.label}
           </span>
           <span className="mono text-xs text-muted-foreground">
@@ -85,13 +89,19 @@ export const TenderInfoHeader: React.FC<TenderInfoHeaderProps> = ({ bid, decisio
           {formatDate(bid.createdAt)}
         </p>
 
-        <span className="inline-flex items-center gap-1.5 text-xs mono font-bold px-2.5 py-0.5 rounded border border-border bg-card text-foreground">
+        <span
+          className={`inline-flex items-center gap-1.5 text-xs mono font-bold px-2.5 py-0.5 rounded border ${
+            bid.status === 'REVIEW_READY'
+              ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+              : 'border-border bg-card text-foreground'
+          }`}
+        >
           <span
             className={`w-1.5 h-1.5 rounded-full ${
               bid.status === 'REVIEW_READY'
-                ? 'bg-primary'
+                ? 'bg-emerald-500'
                 : bid.status === 'ANALYZING'
-                  ? 'bg-orange-500 animate-pulse'
+                  ? 'bg-amber-500 animate-pulse'
                   : 'bg-muted-foreground'
             }`}
           />

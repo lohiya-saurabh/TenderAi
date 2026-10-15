@@ -270,3 +270,99 @@ class ScopedRetrievalTool:
             return self.reranker.rerank(query=query, candidates=candidate_pool, top_k=top_k)
 
         return candidate_pool[:top_k]
+
+    def retrieve_evidence_vault(
+        self,
+        security_context: SecurityContext,
+        query: str,
+        top_k: int = 5,
+        query_embedding: list[float] | None = None,
+        category: str | None = None,
+    ) -> list[DocumentChunk]:
+        """
+        Executes tenant-scoped hybrid retrieval across all evidence vault chunks:
+        1. Rate limit check.
+        2. Strict tenant isolation (all chunks must belong to security_context.tenant_id).
+        3. Sparse lexical (BM25 term overlap) + dense vector ranking + Reciprocal Rank Fusion.
+        4. JEV Calibrated Cross-Encoder Reranking.
+        """
+        run_id = security_context.workflow_run_id
+        current_calls = self._call_counts.get(run_id, 0) + 1
+        if current_calls > self.max_calls_per_run:
+            raise ToolRateLimitExceededException(
+                f"Rate limit exceeded: Max {self.max_calls_per_run} retrieval calls allowed per run."
+            )
+        self._call_counts[run_id] = current_calls
+
+        scoped_chunks: list[DocumentChunk] = []
+        for key, chunks in self._store.items():
+            if key.startswith(f"{security_context.tenant_id}:"):
+                scoped_chunks.extend(
+                    [c for c in chunks if c.tenant_id == security_context.tenant_id]
+                )
+
+        if not scoped_chunks:
+            return []
+
+        if category:
+            cat_lower = category.lower()
+            cat_filtered = [
+                c
+                for c in scoped_chunks
+                if str(c.metadata.get("category", "")).lower() == cat_lower
+                or str(c.metadata.get("evidence_type", "")).lower() == cat_lower
+                or (
+                    cat_lower == "financial"
+                    and any(
+                        k in c.text.lower()
+                        for k in ("turnover", "financial", "balance sheet", "ca_cert", "udin")
+                    )
+                )
+                or (
+                    cat_lower == "technical"
+                    and any(
+                        k in c.text.lower()
+                        for k in ("completion", "work order", "experience", "contract")
+                    )
+                )
+                or (
+                    cat_lower in ("statutory", "quality")
+                    and any(
+                        k in c.text.lower() for k in ("iso", "cmmi", "gstin", "pan", "certificate")
+                    )
+                )
+            ]
+            if cat_filtered:
+                scoped_chunks = cat_filtered
+
+        query_terms = set(re.findall(r"\w+", query.lower()))
+        sparse_scored: list[tuple[float, DocumentChunk]] = []
+        for chunk in scoped_chunks:
+            chunk_words = set(re.findall(r"\w+", chunk.text.lower()))
+            overlap = len(query_terms.intersection(chunk_words))
+            score = overlap / max(len(query_terms), 1) if query_terms else 0.0
+            sparse_scored.append((score, chunk))
+        sparse_scored.sort(key=lambda x: x[0], reverse=True)
+        sparse_ranks = {chunk.chunk_id: rank + 1 for rank, (_, chunk) in enumerate(sparse_scored)}
+
+        dense_scored: list[tuple[float, DocumentChunk]] = []
+        for chunk in scoped_chunks:
+            if query_embedding is not None and chunk.embedding is not None:
+                sim = compute_cosine_similarity(query_embedding, chunk.embedding)
+            else:
+                sim = sparse_ranks.get(chunk.chunk_id, len(scoped_chunks))
+                sim = 1.0 / (sim + 1.0)
+            dense_scored.append((sim, chunk))
+        dense_scored.sort(key=lambda x: x[0], reverse=True)
+        dense_ranks = {chunk.chunk_id: rank + 1 for rank, (_, chunk) in enumerate(dense_scored)}
+
+        fused_scores = reciprocal_rank_fusion(dense_ranks, sparse_ranks, k=60)
+        chunk_map = {c.chunk_id: c for c in scoped_chunks}
+        fused_sorted = sorted(fused_scores.items(), key=lambda x: x[1], reverse=True)
+
+        candidate_pool = [chunk_map[cid] for cid, _ in fused_sorted[: self.rerank_top_n]]
+
+        if self.enable_jev_rerank and self.reranker:
+            return self.reranker.rerank(query=query, candidates=candidate_pool, top_k=top_k)
+
+        return candidate_pool[:top_k]

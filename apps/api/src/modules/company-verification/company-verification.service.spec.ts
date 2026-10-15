@@ -138,7 +138,7 @@ describe('Company Evidence & Third-Party Verification Layer', () => {
 
       expect(uploaded.id).toMatch(/^ev_/);
       expect(uploaded.sha256Hash).toBe(expectedHash);
-      expect(uploaded.verificationStatus).toBe('IMPORTED');
+      expect(uploaded.verificationStatus).toBe('EXTRACTED');
       expect(uploaded.sourceProvider).toBe('LOCAL_UPLOAD');
       expect(uploaded.storagePath).toContain(
         `tenants/${TEST_ORG_ID}/companies/${TEST_COMPANY_ID}/evidence/`,
@@ -148,6 +148,14 @@ describe('Company Evidence & Third-Party Verification Layer', () => {
       const existsInStorage = await storageService.headObject(uploaded.storagePath);
       expect(existsInStorage.exists).toBe(true);
       expect(existsInStorage.sizeBytes).toBe(samplePdfContent.byteLength);
+
+      // Verify chunks were automatically persisted into company_evidence_chunks
+      const persistedChunks = await db
+        .select()
+        .from(schema.companyEvidenceChunks)
+        .where(eq(schema.companyEvidenceChunks.evidenceDocumentId, uploaded.id));
+      expect(persistedChunks.length).toBeGreaterThan(0);
+      expect(persistedChunks[0]?.chunkType).toBe('FINANCIAL_TURNOVER');
     });
 
     it('should reject evidence upload for a company belonging to a different tenant (Anti-IDOR)', async () => {
@@ -174,7 +182,7 @@ describe('Company Evidence & Third-Party Verification Layer', () => {
 
       expect(imported.fileName).toBe('NHAI_STRR_Completion.pdf');
       expect(imported.evidenceType).toBe('COMPLETION_CERT');
-      expect(imported.verificationStatus).toBe('IMPORTED');
+      expect(imported.verificationStatus).toBe('EXTRACTED');
     });
   });
 

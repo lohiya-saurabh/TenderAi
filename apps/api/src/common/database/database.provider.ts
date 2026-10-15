@@ -208,6 +208,25 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
     CREATE INDEX IF NOT EXISTS idx_ev_hist_doc ON evidence_verification_history(evidence_document_id);
     CREATE INDEX IF NOT EXISTS idx_ev_hist_comp ON evidence_verification_history(company_id);
 
+    CREATE TABLE IF NOT EXISTS company_evidence_chunks (
+      id TEXT PRIMARY KEY,
+      organization_id TEXT NOT NULL,
+      company_id TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+      evidence_document_id TEXT NOT NULL REFERENCES company_evidence_documents(id) ON DELETE CASCADE,
+      chunk_index INTEGER NOT NULL,
+      chunk_type TEXT NOT NULL DEFAULT 'PROSE',
+      content TEXT NOT NULL,
+      page_number INTEGER NOT NULL,
+      clause_reference TEXT,
+      bounding_box JSONB,
+      metadata JSONB,
+      embedding JSONB,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_comp_ev_chunks_comp ON company_evidence_chunks(organization_id, company_id);
+    CREATE INDEX IF NOT EXISTS idx_comp_ev_chunks_doc ON company_evidence_chunks(evidence_document_id);
+
     CREATE TABLE IF NOT EXISTS bids (
       id TEXT PRIMARY KEY,
       organization_id TEXT NOT NULL,
@@ -522,6 +541,125 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
         activeVersionId: 'cpv-acme-v1',
         updatedAt: new Date('2026-09-01T00:00:00.000Z'),
       })
+      .onConflictDoNothing();
+
+    // 3b. Seed Company Evidence Documents & Chunks for Acme Infrastructure
+    await drizzleDb
+      .insert(schema.companyEvidenceDocuments)
+      .values([
+        {
+          id: 'doc-ev-ca-audited-fy25',
+          companyId: 'comp_acme_infra_001',
+          organizationId: 'org_acme_infra_001',
+          fileName: 'Audited_Balance_Sheet_and_CA_Certificate_FY25.pdf',
+          storagePath: 'tenants/org_acme_infra_001/evidence/doc-ev-ca-audited-fy25.pdf',
+          fileSizeBytes: 2450000,
+          mimeType: 'application/pdf',
+          sha256Hash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+          evidenceType: 'AUDITED_BALANCE_SHEET',
+          issuer: 'K. S. Rao & Associates, Chartered Accountants',
+          referenceNumber: 'UDIN-25089745AAAAAA1234',
+          verificationStatus: 'SOURCE_VERIFIED',
+          importedAt: new Date('2026-08-15T00:00:00.000Z'),
+          createdAt: new Date('2026-08-15T00:00:00.000Z'),
+          updatedAt: new Date('2026-08-15T00:00:00.000Z'),
+        },
+        {
+          id: 'doc-ev-completion-nhai-strr',
+          companyId: 'comp_acme_infra_001',
+          organizationId: 'org_acme_infra_001',
+          fileName: 'NHAI_STRR_Package_3_Completion_Certificate.pdf',
+          storagePath: 'tenants/org_acme_infra_001/evidence/doc-ev-completion-nhai-strr.pdf',
+          fileSizeBytes: 3120000,
+          mimeType: 'application/pdf',
+          sha256Hash: 'a1b2c3d4e5f67890123456789abcdef0123456789abcdef0123456789abcdef0',
+          evidenceType: 'COMPLETION_CERT',
+          issuer: 'National Highways Authority of India',
+          referenceNumber: 'NHAI/STRR/PKG-3/COMP/2023/89',
+          verificationStatus: 'SOURCE_VERIFIED',
+          importedAt: new Date('2026-08-15T00:00:00.000Z'),
+          createdAt: new Date('2026-08-15T00:00:00.000Z'),
+          updatedAt: new Date('2026-08-15T00:00:00.000Z'),
+        },
+        {
+          id: 'doc-ev-cert-iso-9001',
+          companyId: 'comp_acme_infra_001',
+          organizationId: 'org_acme_infra_001',
+          fileName: 'ISO_9001_2015_Quality_Management_Certificate.pdf',
+          storagePath: 'tenants/org_acme_infra_001/evidence/doc-ev-cert-iso-9001.pdf',
+          fileSizeBytes: 1850000,
+          mimeType: 'application/pdf',
+          sha256Hash: 'f4e3d2c1b0a987654321fedcba0987654321fedcba0987654321fedcba098765',
+          evidenceType: 'ISO_CERT',
+          issuer: 'Bureau Veritas Certification India',
+          referenceNumber: 'BVC-IND-2023-0941',
+          validFrom: new Date('2023-01-15T00:00:00.000Z'),
+          validTo: new Date('2026-12-31T00:00:00.000Z'),
+          verificationStatus: 'SOURCE_VERIFIED',
+          importedAt: new Date('2026-08-15T00:00:00.000Z'),
+          createdAt: new Date('2026-08-15T00:00:00.000Z'),
+          updatedAt: new Date('2026-08-15T00:00:00.000Z'),
+        },
+      ])
+      .onConflictDoNothing();
+
+    await drizzleDb
+      .insert(schema.companyEvidenceChunks)
+      .values([
+        {
+          id: 'chk-ev-ca-fy25-01',
+          organizationId: 'org_acme_infra_001',
+          companyId: 'comp_acme_infra_001',
+          evidenceDocumentId: 'doc-ev-ca-audited-fy25',
+          chunkIndex: 1,
+          chunkType: 'CERTIFICATE_KEY_VALUE',
+          content: 'Statutory Annual Financial Turnover: M/s Acme Infrastructure Solutions Ltd has achieved an Annual Financial Turnover of INR 320.50 Crores for the Financial Year 2024-25. 3-Year Average Annual Financial Turnover is INR 281.90 Crores. Certified by Statutory Auditor K. S. Rao & Associates, Chartered Accountants under UDIN 25089745AAAAAA1234.',
+          pageNumber: 2,
+          clauseReference: 'Financial Statement Clause 2.1',
+          metadata: {
+            financial_year: '2024-2025',
+            turnover_inr_crores: 320.5,
+            avg_turnover_inr_crores: 281.9,
+            ca_udin: '25089745AAAAAA1234',
+            is_audited: true,
+            file_name: 'Audited_Balance_Sheet_and_CA_Certificate_FY25.pdf',
+          },
+        },
+        {
+          id: 'chk-ev-completion-nhai-01',
+          organizationId: 'org_acme_infra_001',
+          companyId: 'comp_acme_infra_001',
+          evidenceDocumentId: 'doc-ev-completion-nhai-strr',
+          chunkIndex: 1,
+          chunkType: 'PROSE',
+          content: 'Work Completion Certificate: This is to certify that Acme Infrastructure Solutions Ltd has successfully completed the Satellite Town Ring Road (STRR) Package-3 Construction project for National Highways Authority of India (NHAI) with final contract value of INR 215.00 Crores. Work completed on 20-Nov-2023.',
+          pageNumber: 1,
+          clauseReference: 'Completion Schedule Para 3',
+          metadata: {
+            client_name: 'NHAI',
+            contract_value_inr_crores: 215.0,
+            completion_date: '2023-11-20',
+            file_name: 'NHAI_STRR_Package_3_Completion_Certificate.pdf',
+          },
+        },
+        {
+          id: 'chk-ev-iso-9001-01',
+          organizationId: 'org_acme_infra_001',
+          companyId: 'comp_acme_infra_001',
+          evidenceDocumentId: 'doc-ev-cert-iso-9001',
+          chunkIndex: 1,
+          chunkType: 'CERTIFICATE_KEY_VALUE',
+          content: 'Quality Management System Certificate ISO 9001:2015: Certified that Acme Infrastructure Solutions Ltd operates a Quality Management System complying with ISO 9001:2015 for Civil Infrastructure, Highways, and Bridges. Certificate BVC-IND-2023-0941, valid until 31-Dec-2026.',
+          pageNumber: 1,
+          clauseReference: 'Certificate Schedule',
+          metadata: {
+            standard_name: 'ISO 9001:2015',
+            issuing_body: 'Bureau Veritas Certification India',
+            valid_to: '2026-12-31',
+            file_name: 'ISO_9001_2015_Quality_Management_Certificate.pdf',
+          },
+        },
+      ])
       .onConflictDoNothing();
   }
 

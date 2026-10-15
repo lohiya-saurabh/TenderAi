@@ -43,13 +43,13 @@ export const ObligationsCard: React.FC<ObligationsCardProps> = ({ items }) => {
       </div>
 
       {/* Featured High-Risk Contractual Liability Card */}
-      <div className="border border-border rounded-xl p-5 sm:p-6 bg-card shadow-xs space-y-3.5 transition-colors">
+      <div className="border border-border border-l-4 border-l-vermilion rounded-xl p-5 sm:p-6 bg-card shadow-xs space-y-3.5 transition-colors">
         <div className="flex items-center justify-between">
           <span className="font-bold text-xs sm:text-sm text-foreground">
             Clause 15.2: Liquidated Damages on Milestones
           </span>
-          <span className="mono text-[11px] font-bold text-orange-600 dark:text-orange-400">
-            FLAGGED FOR LEGAL REVIEW
+          <span className="mono text-[11px] font-bold text-vermilion">
+            FLAGGED FOR LEGAL REVIEW ⚠
           </span>
         </div>
 
@@ -80,7 +80,7 @@ export const ObligationsCard: React.FC<ObligationsCardProps> = ({ items }) => {
         {/* Flagged requirements — the real risk signal */}
         <div className="pt-5 border-t border-border">
           <div className="flex items-center gap-2 mb-3">
-            <AlertCircleIcon size={15} color="#ea580c" />
+            <AlertCircleIcon size={15} color="var(--vermilion)" />
             <span className="text-xs font-bold text-foreground uppercase tracking-wider">
               Flagged Requirements (disqualification risk)
             </span>
@@ -103,10 +103,10 @@ export const ObligationsCard: React.FC<ObligationsCardProps> = ({ items }) => {
                   <Link
                     key={item.id}
                     to={`/bids/${item.bidId}/compliance/${item.id}`}
-                    className="flex items-center justify-between gap-3 p-3.5 rounded-lg bg-orange-50/60 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/50 hover:bg-orange-100/60 transition-colors"
+                    className="flex items-center justify-between gap-3 p-3.5 rounded-lg bg-vermilion/5 dark:bg-vermilion/10 border border-vermilion/20 hover:bg-vermilion/10 transition-colors"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <span className="text-orange-600 inline-flex shrink-0">
+                      <span className="text-vermilion inline-flex shrink-0">
                         <AlertCircleIcon size={15} />
                       </span>
                       <div className="flex flex-col min-w-0">

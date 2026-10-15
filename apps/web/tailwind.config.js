@@ -56,6 +56,13 @@ export default {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
+        vermilion: {
+          DEFAULT: '#f0441c',
+          hover: '#d83812',
+          subtle: 'rgba(240, 68, 28, 0.08)',
+          border: 'rgba(240, 68, 28, 0.25)',
+          glow: 'rgba(240, 68, 28, 0.15)',
+        },
         success: {
           DEFAULT: 'hsl(var(--success))',
           foreground: 'hsl(var(--success-foreground))',

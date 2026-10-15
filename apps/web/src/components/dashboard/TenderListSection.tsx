@@ -149,7 +149,7 @@ export const TenderListSection: React.FC<TenderListSectionProps> = ({
                 className={cn(
                   'text-[10px] px-1.5 py-0.5 rounded-full font-semibold',
                   isSelected
-                    ? 'bg-primary text-primary-foreground'
+                    ? 'bg-vermilion text-white'
                     : 'bg-muted text-muted-foreground',
                 )}
               >

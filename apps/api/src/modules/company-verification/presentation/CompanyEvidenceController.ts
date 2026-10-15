@@ -115,4 +115,14 @@ export class CompanyEvidenceController {
   ) {
     await this.companyEvidenceService.deleteEvidence(companyId, evidenceId);
   }
+
+  @Post(':evidenceId/extract')
+  @HttpCode(200)
+  @RequirePermission(Permissions.COMPANY_PROFILE_MANAGE)
+  async extractEvidence(
+    @Param('companyId') companyId: string,
+    @Param('evidenceId') evidenceId: string,
+  ) {
+    return this.companyEvidenceService.extractAndPersistChunks(companyId, evidenceId);
+  }
 }

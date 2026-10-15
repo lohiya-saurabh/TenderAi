@@ -438,3 +438,143 @@ def test_api_bid_decision_endpoint_authorized():
     assert "reasons_to_pursue" in data
     assert "hard_disqualifiers" in data
     assert "missing_information" in data
+
+
+def test_evidence_chunk_wire_aliases_and_null_metadata():
+    from tenderpulse_ai.decision.schemas import EvidenceChunkWire
+
+    # Wire payload using aliases from Drizzle ORM
+    wire_dict = {
+        "id": "chk_turnover_01",
+        "evidenceDocumentId": "doc_ca_cert_01",
+        "fileName": "Turnover_Cert.pdf",
+        "pageNumber": 2,
+        "chunkType": "FINANCIAL_TURNOVER",
+        "content": "Turnover for FY24 is 120 Cr.",
+        "clauseReference": "Page 2",
+        "metadata": None,
+    }
+
+    chunk = EvidenceChunkWire.model_validate(wire_dict)
+    assert chunk.chunk_id == "chk_turnover_01"
+    assert chunk.document_id == "doc_ca_cert_01"
+    assert chunk.metadata is None  # Allowed to be None without validation error
+
+    # Metadata omitted uses default_factory=dict
+    chunk_no_meta = EvidenceChunkWire.model_validate(
+        {
+            "id": "chk_03",
+            "evidenceDocumentId": "doc_03",
+            "content": "Sample content",
+        }
+    )
+    assert chunk_no_meta.metadata == {}
+
+    # Wire payload with snake_case aliases
+    wire_dict_snake = {
+        "chunk_id": "chk_02",
+        "evidence_document_id": "doc_02",
+        "content": "Content string",
+    }
+    chunk_snake = EvidenceChunkWire.model_validate(wire_dict_snake)
+    assert chunk_snake.chunk_id == "chk_02"
+    assert chunk_snake.document_id == "doc_02"
+
+
+@pytest.mark.asyncio
+async def test_bid_decision_with_empty_allowed_document_ids_in_security_context():
+    # Security context with empty allowed_document_ids (manual bid before document upload)
+    sec_ctx = SecurityContext(
+        tenant_id="org_test",
+        user_id="usr_test",
+        workflow_run_id="run_test",
+        allowed_document_ids=[],
+        purpose="BID_DECISION",
+    )
+    assert sec_ctx.allowed_document_ids == []
+
+
+@pytest.mark.asyncio
+async def test_bid_decision_unspecified_and_pan_india_geography_neutral():
+    agent = BidDecisionAgent()
+
+    # 1. Unspecified location: should NOT generate a geographic GapItem
+    req_unspec = make_request(project_location_state="UNSPECIFIED")
+    resp_unspec = await agent.evaluate(req_unspec)
+    assert not any(
+        "geographic" in g.requirement_title.lower() for g in resp_unspec.missing_information
+    )
+
+    # 2. All India tender: company operational presence qualifies
+    req_pan = make_request(project_location_state="PAN India")
+    resp_pan = await agent.evaluate(req_pan)
+    assert not any(
+        "geographic" in g.requirement_title.lower() for g in resp_pan.missing_information
+    )
+    assert any(r.category == "GEOGRAPHY" for r in resp_pan.reasons_to_pursue)
+
+
+@pytest.mark.asyncio
+async def test_bid_decision_turnover_statutory_average_and_forty_percent_fallback():
+    agent = BidDecisionAgent()
+
+    # Company with 3-year turnover records: 100, 120, 140 -> Average = 120 Cr
+    profile = make_company_profile()
+    profile.turnover_records = [
+        FinancialTurnover(
+            financial_year="FY22", turnover_inr_crores=100.0, evidence_document_id="doc1"
+        ),
+        FinancialTurnover(
+            financial_year="FY23", turnover_inr_crores=120.0, evidence_document_id="doc2"
+        ),
+        FinancialTurnover(
+            financial_year="FY24", turnover_inr_crores=140.0, evidence_document_id="doc3"
+        ),
+    ]
+
+    # Tender without explicit turnover requirement criterion: falls back to 40% of estimated value
+    # Tender estimated value = 250 Cr -> 40% = 100 Cr threshold
+    req = make_request(
+        estimated_value_inr_crores=250.0,
+        company_profile=profile,
+    )
+    resp = await agent.evaluate(req)
+
+    # 120 Cr average exceeds 50 Cr criterion in standard requirements and 100 Cr tender 40% threshold
+    turnover_pursue = [r for r in resp.reasons_to_pursue if r.category == "FINANCIAL"]
+    assert len(turnover_pursue) >= 1
+    assert "120.00 Cr" in turnover_pursue[0].detail
+
+
+@pytest.mark.asyncio
+async def test_bid_decision_experience_thirty_five_percent_threshold():
+    agent = BidDecisionAgent()
+
+    # Tender value = 500 Cr -> 35% threshold = 175 Cr
+    # Company largest project is 120 Cr (from make_company_profile)
+    # Experience requirement with HARD_ELIGIBILITY
+    exp_req = RequirementCandidate(
+        category="TECHNICAL",
+        kind=RequirementKind.ELIGIBILITY_THRESHOLD,
+        criticality=RequirementCriticality.HARD_ELIGIBILITY,
+        title="Similar Past Project Experience",
+        description="Similar work execution track record required.",
+        provenance=ProvenanceProps(
+            source_document_id="doc_nit_01",
+            source_file_name="NIT.pdf",
+            page_number=1,
+            clause_reference="Clause 5.1",
+            verbatim_quote="Similar work execution track record required.",
+            confidence_score=0.98,
+        ),
+    )
+
+    req = make_request(
+        estimated_value_inr_crores=500.0,
+        requirements=[exp_req],
+    )
+    resp = await agent.evaluate(req)
+
+    # 120 Cr < 175 Cr (35% of 500 Cr) -> Hard disqualifier
+    assert resp.verdict == BidDecisionVerdict.NO_GO
+    assert any("experience" in d.requirement_title.lower() for d in resp.hard_disqualifiers)

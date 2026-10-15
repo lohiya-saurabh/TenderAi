@@ -34,6 +34,7 @@ import { MockDigitalLockerAdapter } from './infrastructure/MockDigitalLockerAdap
 import { LocalUploadConnector } from './infrastructure/LocalUploadConnector.js';
 import { GoogleDriveConnector } from './infrastructure/GoogleDriveConnector.js';
 import { OneDriveConnector } from './infrastructure/OneDriveConnector.js';
+import { AiEvidenceExtractor } from './application/AiEvidenceExtractor.js';
 
 // Controllers
 import { CompanyEvidenceController } from './presentation/CompanyEvidenceController.js';
@@ -45,6 +46,7 @@ import { CompanyVerificationController } from './presentation/CompanyVerificatio
   providers: [
     CompanyEvidenceService,
     EvidenceVerificationService,
+    AiEvidenceExtractor,
     LocalUploadConnector,
     GoogleDriveConnector,
     OneDriveConnector,
@@ -83,6 +85,6 @@ import { CompanyVerificationController } from './presentation/CompanyVerificatio
           : MockDigitalLockerAdapter,
     },
   ],
-  exports: [CompanyEvidenceService, EvidenceVerificationService],
+  exports: [CompanyEvidenceService, EvidenceVerificationService, AiEvidenceExtractor],
 })
 export class CompanyVerificationModule {}

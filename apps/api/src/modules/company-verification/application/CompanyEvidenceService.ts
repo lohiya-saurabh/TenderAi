@@ -26,6 +26,7 @@ import type { IStorageService } from '../../bids/application/IStorageService.js'
 import { GoogleDriveConnector } from '../infrastructure/GoogleDriveConnector.js';
 import { OneDriveConnector } from '../infrastructure/OneDriveConnector.js';
 import { LocalUploadConnector } from '../infrastructure/LocalUploadConnector.js';
+import { AiEvidenceExtractor } from './AiEvidenceExtractor.js';
 
 export interface UploadEvidenceDto {
   fileName: string;
@@ -51,6 +52,47 @@ export interface ImportCloudEvidenceDto {
   validTo?: string;
 }
 
+/**
+ * Robust date parser supporting Indian formats (DD/MM/YYYY, DD-MM-YYYY)
+ * as well as ISO-8601 (YYYY-MM-DD), avoiding Invalid Date exceptions in PostgreSQL.
+ */
+export function parseFlexibleDate(dateInput?: string | Date | null): Date | null {
+  if (!dateInput) return null;
+  if (dateInput instanceof Date) {
+    return isNaN(dateInput.getTime()) ? null : dateInput;
+  }
+  if (typeof dateInput !== 'string') return null;
+  const trimmed = dateInput.trim();
+  if (!trimmed) return null;
+
+  // 1. Indian formats: DD/MM/YYYY, DD-MM-YYYY, DD.MM.YYYY (with optional time)
+  const ddmmyyyyMatch = trimmed.match(
+    /^(\d{1,2})[./-](\d{1,2})[./-](\d{4})(?:[\sT](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/,
+  );
+  if (ddmmyyyyMatch && ddmmyyyyMatch[1] && ddmmyyyyMatch[2] && ddmmyyyyMatch[3]) {
+    const day = parseInt(ddmmyyyyMatch[1], 10);
+    const month = parseInt(ddmmyyyyMatch[2], 10) - 1;
+    const year = parseInt(ddmmyyyyMatch[3], 10);
+    const hour = ddmmyyyyMatch[4] ? parseInt(ddmmyyyyMatch[4], 10) : 0;
+    const min = ddmmyyyyMatch[5] ? parseInt(ddmmyyyyMatch[5], 10) : 0;
+    const sec = ddmmyyyyMatch[6] ? parseInt(ddmmyyyyMatch[6], 10) : 0;
+    if (month >= 0 && month <= 11 && day >= 1 && day <= 31) {
+      const d = new Date(Date.UTC(year, month, day, hour, min, sec));
+      if (!isNaN(d.getTime()) && d.getUTCDate() === day && d.getUTCMonth() === month) {
+        return d;
+      }
+    }
+  }
+
+  // 2. Standard ISO 8601 or other parseable formats
+  const parsed = new Date(trimmed);
+  if (!isNaN(parsed.getTime())) {
+    return parsed;
+  }
+
+  return null;
+}
+
 @Injectable()
 export class CompanyEvidenceService {
   private readonly db: DrizzleDb;
@@ -61,6 +103,7 @@ export class CompanyEvidenceService {
     @Optional() private readonly googleDriveConnector?: GoogleDriveConnector,
     @Optional() private readonly oneDriveConnector?: OneDriveConnector,
     @Optional() private readonly localUploadConnector?: LocalUploadConnector,
+    @Optional() private readonly aiEvidenceExtractor?: AiEvidenceExtractor,
   ) {
     this.db = 'select' in db ? (db as DrizzleDb) : createDrizzle(db as PGlite);
   }
@@ -107,8 +150,8 @@ export class CompanyEvidenceService {
         evidenceType: dto.evidenceType || 'OTHER',
         issuer: dto.issuer ?? null,
         referenceNumber: dto.referenceNumber ?? null,
-        validFrom: dto.validFrom ? new Date(dto.validFrom) : null,
-        validTo: dto.validTo ? new Date(dto.validTo) : null,
+        validFrom: parseFlexibleDate(dto.validFrom),
+        validTo: parseFlexibleDate(dto.validTo),
         sourceProvider: 'LOCAL_UPLOAD',
         sourceReference: null,
         importedAt: now,
@@ -124,7 +167,9 @@ export class CompanyEvidenceService {
       })
       .returning();
 
-    return inserted!;
+    // Automatically trigger AI extraction and chunking
+    const extracted = await this.extractAndPersistChunks(companyId, inserted!.id, dto.buffer);
+    return extracted ?? inserted!;
   }
 
   /**
@@ -220,6 +265,111 @@ export class CompanyEvidenceService {
     await this.db
       .delete(schema.companyEvidenceDocuments)
       .where(eq(schema.companyEvidenceDocuments.id, evidenceId));
+  }
+
+  /**
+   * Extract attributes (UDIN, turnover, contract values, ISO accreditations)
+   * and semantic chunks from company evidence document and persist to company_evidence_chunks.
+   */
+  public async extractAndPersistChunks(
+    companyId: string,
+    evidenceId: string,
+    rawBuffer?: Buffer,
+  ): Promise<schema.CompanyEvidenceDocument | null> {
+    const orgId = this.requireOrg();
+    await this.verifyCompanyOwnership(companyId, orgId);
+
+    const doc = await this.getEvidenceById(companyId, evidenceId);
+    if (!doc) return null;
+
+    let downloadUrl: string | undefined;
+    if (this.storageService?.generatePresignedDownloadUrl && doc.storagePath) {
+      try {
+        downloadUrl = await this.storageService.generatePresignedDownloadUrl(
+          doc.storagePath,
+          doc.fileName,
+          900,
+        );
+      } catch {
+        // Fallback to inline or mock
+      }
+    }
+
+    let bufferText: string | undefined;
+    if (rawBuffer) {
+      bufferText = rawBuffer.toString('utf-8', 0, Math.min(rawBuffer.length, 32768));
+    }
+
+    const extractor = this.aiEvidenceExtractor ?? new AiEvidenceExtractor();
+    try {
+      const result = await extractor.extractEvidence(doc, undefined, downloadUrl, bufferText);
+
+      if (result.chunks && result.chunks.length > 0) {
+        // Idempotently replace existing chunks for this evidence document
+        await this.db
+          .delete(schema.companyEvidenceChunks)
+          .where(eq(schema.companyEvidenceChunks.evidenceDocumentId, doc.id));
+
+        for (let i = 0; i < result.chunks.length; i++) {
+          const c = result.chunks[i]!;
+          await this.db.insert(schema.companyEvidenceChunks).values({
+            id: `chk_${doc.id}_${i}`,
+            organizationId: orgId,
+            companyId,
+            evidenceDocumentId: doc.id,
+            chunkIndex: c.chunk_index ?? i,
+            chunkType: c.chunk_type || 'GENERAL',
+            content: c.content,
+            pageNumber: c.page_number ?? 1,
+            clauseReference: c.clause_reference ?? `Page ${c.page_number ?? 1}`,
+            boundingBox: c.bounding_box ?? null,
+            metadata: c.metadata ?? null,
+            embedding: null,
+          });
+        }
+      }
+
+      const extractedAttrs = result.extracted_attributes ?? {};
+      const updates: Partial<schema.CompanyEvidenceDocument> = {
+        extractedAttributes: {
+          ...((doc.extractedAttributes as Record<string, unknown>) || {}),
+          ...extractedAttrs,
+        },
+        verificationStatus: 'EXTRACTED',
+        updatedAt: new Date(),
+      };
+      if (!doc.issuer && extractedAttrs.issuer) {
+        updates.issuer = String(extractedAttrs.issuer);
+      }
+      if (!doc.referenceNumber && extractedAttrs.reference_number) {
+        updates.referenceNumber = String(extractedAttrs.reference_number);
+      }
+      if (!doc.validFrom && extractedAttrs.valid_from) {
+        const parsed = parseFlexibleDate(String(extractedAttrs.valid_from));
+        if (parsed) updates.validFrom = parsed;
+      }
+      if (!doc.validTo && extractedAttrs.valid_to) {
+        const parsed = parseFlexibleDate(String(extractedAttrs.valid_to));
+        if (parsed) updates.validTo = parsed;
+      }
+
+      const [updated] = await this.db
+        .update(schema.companyEvidenceDocuments)
+        .set(updates)
+        .where(
+          and(
+            eq(schema.companyEvidenceDocuments.id, doc.id),
+            eq(schema.companyEvidenceDocuments.organizationId, orgId),
+            eq(schema.companyEvidenceDocuments.companyId, companyId),
+          ),
+        )
+        .returning();
+
+      return updated ?? doc;
+    } catch {
+      // Graceful degradation: never crash evidence management if AI service is temporarily offline
+      return doc;
+    }
   }
 
   private async verifyCompanyOwnership(companyId: string, orgId: string): Promise<schema.Company> {

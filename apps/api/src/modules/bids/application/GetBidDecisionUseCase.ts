@@ -49,10 +49,34 @@ export interface BidDecisionEvaluationResult {
   state: AiBidDecisionResponse['state'];
   readinessScore: number;
   evaluatedAt: string;
+  reasonsToPursue: AiBidDecisionResponse['reasons_to_pursue'];
+  reasonsNotToPursue: AiBidDecisionResponse['reasons_not_to_pursue'];
+  hardDisqualifiers: AiBidDecisionResponse['hard_disqualifiers'];
+  missingInformation: AiBidDecisionResponse['missing_information'];
+  uncertainAreas: AiBidDecisionResponse['uncertain_areas'];
+  commercialRisks: AiBidDecisionResponse['commercial_risks'];
+  evidenceCitations: AiBidDecisionResponse['evidence_citations'];
   response: AiBidDecisionResponse;
 }
 
 export const AI_DECISION_CLIENT_TOKEN = 'AI_DECISION_CLIENT';
+
+function normalizeCitations(
+  citations: Array<Record<string, unknown>>,
+): Array<Record<string, unknown>> {
+  return (citations ?? []).map((c) => ({
+    ...c,
+    tenderRequirementTitle: (c.tenderRequirementTitle ?? c.tender_requirement_title) as string,
+    tenderClauseReference: (c.tenderClauseReference ?? c.tender_clause_reference) as string,
+    tenderPageNumber: (c.tenderPageNumber ?? c.tender_page_number) as number,
+    tenderVerbatimQuote: (c.tenderVerbatimQuote ?? c.tender_verbatim_quote) as string,
+    companyEvidenceRef: (c.companyEvidenceRef ?? c.company_evidence_ref) as string,
+    companyEntryId: (c.companyEntryId ?? c.company_entry_id) as string,
+    documentName: (c.documentName ?? c.document_name) as string,
+    evidenceType: (c.evidenceType ?? c.evidence_type) as string,
+    pageNumber: (c.pageNumber ?? c.page_number) as number,
+  }));
+}
 
 @Injectable()
 export class GetBidDecisionUseCase {
@@ -173,6 +197,52 @@ export class GetBidDecisionUseCase {
         ),
       );
 
+    // 3b. Company evidence vault documents & chunks
+    const targetCompId = pointer.companyId || orgId;
+    const evidenceDocuments = await this.db
+      .select()
+      .from(schema.companyEvidenceDocuments)
+      .where(
+        and(
+          eq(schema.companyEvidenceDocuments.organizationId, orgId),
+          eq(schema.companyEvidenceDocuments.companyId, targetCompId),
+        ),
+      )
+      .orderBy(desc(schema.companyEvidenceDocuments.createdAt));
+
+    const evidenceChunks = await this.db
+      .select()
+      .from(schema.companyEvidenceChunks)
+      .where(
+        and(
+          eq(schema.companyEvidenceChunks.organizationId, orgId),
+          eq(schema.companyEvidenceChunks.companyId, targetCompId),
+        ),
+      )
+      .orderBy(desc(schema.companyEvidenceChunks.createdAt));
+
+    const docFileNameMap = new Map(evidenceDocuments.map((d) => [d.id, d.fileName]));
+    const mappedEvidenceChunks = evidenceChunks.map((chunk) => ({
+      chunk_id: chunk.id,
+      id: chunk.id,
+      document_id: chunk.evidenceDocumentId,
+      evidence_document_id: chunk.evidenceDocumentId,
+      evidenceDocumentId: chunk.evidenceDocumentId,
+      file_name: docFileNameMap.get(chunk.evidenceDocumentId) ?? null,
+      fileName: docFileNameMap.get(chunk.evidenceDocumentId) ?? null,
+      page_number: chunk.pageNumber ?? 1,
+      pageNumber: chunk.pageNumber ?? 1,
+      chunk_type: chunk.chunkType ?? 'PROSE',
+      chunkType: chunk.chunkType ?? 'PROSE',
+      content: chunk.content,
+      clause_reference: chunk.clauseReference ?? null,
+      clauseReference: chunk.clauseReference ?? null,
+      bounding_box: chunk.boundingBox ?? null,
+      boundingBox: chunk.boundingBox ?? null,
+      metadata: (chunk.metadata as Record<string, unknown>) ?? {},
+      embedding: (chunk.embedding as number[]) ?? null,
+    }));
+
     // 4. Assemble the engine request
     const companyProfile: AiCompanyProfileSnapshot = {
       company_id: pointer.companyId || orgId,
@@ -209,6 +279,8 @@ export class GetBidDecisionUseCase {
       requirements,
       company_profile: companyProfile,
       require_human_review: true,
+      evidence_chunks: mappedEvidenceChunks as unknown as Array<Record<string, unknown>>,
+      evidence_documents: evidenceDocuments as unknown as Array<Record<string, unknown>>,
     };
 
     // 5. Call the deterministic engine
@@ -240,6 +312,13 @@ export class GetBidDecisionUseCase {
       state: response.state,
       readinessScore: response.readiness_score,
       evaluatedAt: now.toISOString(),
+      reasonsToPursue: response.reasons_to_pursue ?? [],
+      reasonsNotToPursue: response.reasons_not_to_pursue ?? [],
+      hardDisqualifiers: response.hard_disqualifiers ?? [],
+      missingInformation: response.missing_information ?? [],
+      uncertainAreas: response.uncertain_areas ?? [],
+      commercialRisks: response.commercial_risks ?? [],
+      evidenceCitations: normalizeCitations(response.evidence_citations ?? []),
       response,
     };
   }
@@ -258,20 +337,28 @@ export class GetBidDecisionUseCase {
   }
 
   private mapDecisionRecord(record: schema.BidDecision): BidDecisionEvaluationResult {
-    const response =
-      typeof record.response === 'string' ? JSON.parse(record.response) : record.response;
+    const response = (
+      typeof record.response === 'string' ? JSON.parse(record.response) : record.response
+    ) as AiBidDecisionResponse;
     return {
       decisionId: record.id,
       bidId: record.bidId,
       profileVersionId: record.profileVersionId,
-      verdict: (response as AiBidDecisionResponse).verdict,
-      state: (response as AiBidDecisionResponse).state,
+      verdict: response.verdict,
+      state: response.state,
       readinessScore: record.readinessScore,
       evaluatedAt:
         record.createdAt instanceof Date
           ? record.createdAt.toISOString()
           : String(record.createdAt),
-      response: response as AiBidDecisionResponse,
+      reasonsToPursue: response.reasons_to_pursue ?? [],
+      reasonsNotToPursue: response.reasons_not_to_pursue ?? [],
+      hardDisqualifiers: response.hard_disqualifiers ?? [],
+      missingInformation: response.missing_information ?? [],
+      uncertainAreas: response.uncertain_areas ?? [],
+      commercialRisks: response.commercial_risks ?? [],
+      evidenceCitations: normalizeCitations(response.evidence_citations ?? []),
+      response,
     };
   }
 

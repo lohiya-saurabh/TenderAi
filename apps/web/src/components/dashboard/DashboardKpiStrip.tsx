@@ -38,8 +38,8 @@ export const DashboardKpiStrip: React.FC<DashboardKpiStripProps> = ({ bids }) =>
           {String(activeBids.length).padStart(2, '0')}
         </div>
         <div className="text-xs font-medium text-foreground/80 flex items-center gap-1.5 mt-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-foreground inline-block" />
-          <span>
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+          <span className="text-emerald-700 dark:text-emerald-400 font-semibold mono">
             {bids.filter((b) => b.status === 'REVIEW_READY').length} of {activeBids.length || 1}{' '}
             evaluated
           </span>
@@ -52,7 +52,7 @@ export const DashboardKpiStrip: React.FC<DashboardKpiStripProps> = ({ bids }) =>
           <span className="mono text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
             PIPELINE CONTRACT VALUE
           </span>
-          <span className="text-foreground">
+          <span className="text-emerald-600 dark:text-emerald-400">
             <CheckIcon size={15} />
           </span>
         </div>
@@ -78,20 +78,30 @@ export const DashboardKpiStrip: React.FC<DashboardKpiStripProps> = ({ bids }) =>
           </span>
           <span
             className={
-              totalFlagged > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-foreground'
+              totalFlagged > 0 ? 'text-vermilion' : 'text-emerald-600 dark:text-emerald-400'
             }
           >
             <AlertCircleIcon size={15} />
           </span>
         </div>
-        <div className="text-3xl font-bold tracking-tight text-foreground">
+        <div
+          className={`text-3xl font-bold tracking-tight ${totalFlagged > 0 ? 'text-vermilion' : 'text-emerald-600 dark:text-emerald-400'}`}
+        >
           {totalFlagged > 0 ? `${totalFlagged} Flags` : 'Verified'}
         </div>
         <div className="text-xs font-medium text-foreground/80 flex items-center gap-1.5 mt-2">
           <span
-            className={`w-1.5 h-1.5 rounded-full ${totalFlagged > 0 ? 'bg-orange-500' : 'bg-foreground'} inline-block`}
+            className={`w-1.5 h-1.5 rounded-full ${totalFlagged > 0 ? 'bg-vermilion' : 'bg-emerald-500'} inline-block`}
           />
-          <span>{totalFlagged > 0 ? 'Requires proof or waiver' : 'IRIS GST & MCA RoC Active'}</span>
+          <span
+            className={
+              totalFlagged > 0
+                ? 'text-vermilion'
+                : 'text-emerald-700 dark:text-emerald-400 font-medium'
+            }
+          >
+            {totalFlagged > 0 ? 'Requires proof or waiver' : 'IRIS GST & MCA RoC Active'}
+          </span>
         </div>
       </div>
 
@@ -104,15 +114,15 @@ export const DashboardKpiStrip: React.FC<DashboardKpiStripProps> = ({ bids }) =>
           <span
             className={
               urgentDeadlines.length > 0
-                ? 'text-orange-600 dark:text-orange-400'
-                : 'text-foreground'
+                ? 'text-vermilion'
+                : 'text-emerald-600 dark:text-emerald-400'
             }
           >
             <WarningIcon size={15} />
           </span>
         </div>
         <div
-          className={`text-2xl font-bold tracking-tight ${urgentDeadlines.length > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-foreground'}`}
+          className={`text-2xl font-bold tracking-tight ${urgentDeadlines.length > 0 ? 'text-vermilion' : 'text-emerald-600 dark:text-emerald-400'}`}
         >
           {urgentDeadlines.length > 0 ? `${urgentDeadlines.length} Closing Soon` : 'PURSUE READY'}
         </div>

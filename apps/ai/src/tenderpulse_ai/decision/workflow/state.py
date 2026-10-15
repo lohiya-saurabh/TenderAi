@@ -39,6 +39,8 @@ class BidDecisionWorkflowState(TypedDict, total=False):
     requirements: list[RequirementCandidate]
     company_profile: CompanyProfileSnapshot
     require_human_review: bool
+    evidence_chunks: list[Any]
+    evidence_documents: list[dict[str, Any]]
 
     # 2. Node 1: Evidence RAG & Retrieval Citations
     matched_citations: list[EvidenceCitation]

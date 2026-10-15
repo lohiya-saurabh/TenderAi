@@ -373,6 +373,29 @@ export const evidenceVerificationHistory = pgTable('evidence_verification_histor
 export type EvidenceVerificationHistoryRecord = typeof evidenceVerificationHistory.$inferSelect;
 export type NewEvidenceVerificationHistoryRecord = typeof evidenceVerificationHistory.$inferInsert;
 
+export const companyEvidenceChunks = pgTable('company_evidence_chunks', {
+  id: text('id').primaryKey(),
+  organizationId: text('organization_id').notNull(),
+  companyId: text('company_id')
+    .notNull()
+    .references(() => companies.id, { onDelete: 'cascade' }),
+  evidenceDocumentId: text('evidence_document_id')
+    .notNull()
+    .references(() => companyEvidenceDocuments.id, { onDelete: 'cascade' }),
+  chunkIndex: integer('chunk_index').notNull(),
+  chunkType: text('chunk_type').notNull().default('PROSE'),
+  content: text('content').notNull(),
+  pageNumber: integer('page_number').notNull(),
+  clauseReference: text('clause_reference'),
+  boundingBox: jsonb('bounding_box'),
+  metadata: jsonb('metadata'),
+  embedding: jsonb('embedding'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type CompanyEvidenceChunk = typeof companyEvidenceChunks.$inferSelect;
+export type NewCompanyEvidenceChunk = typeof companyEvidenceChunks.$inferInsert;
+
 export const refreshTokens = pgTable('refresh_tokens', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull(),

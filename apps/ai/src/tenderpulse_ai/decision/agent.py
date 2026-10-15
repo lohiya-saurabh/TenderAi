@@ -85,6 +85,8 @@ class BidDecisionAgent:
             "requirements": request.requirements,
             "company_profile": request.company_profile,
             "require_human_review": request.require_human_review,
+            "evidence_chunks": request.evidence_chunks,
+            "evidence_documents": request.evidence_documents,
             "audit_events": [start_audit_event],
         }
 

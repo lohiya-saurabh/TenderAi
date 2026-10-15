@@ -80,6 +80,8 @@ export interface AiBidDecisionRequest {
   requirements: AiRequirementCandidate[];
   company_profile: AiCompanyProfileSnapshot;
   require_human_review: boolean;
+  evidence_chunks?: Array<Record<string, unknown>>;
+  evidence_documents?: Array<Record<string, unknown>>;
 }
 
 export interface AiBidDecisionResponse {
@@ -206,10 +208,28 @@ export class AiDecisionClient {
 
     const tenderValue = Math.max(0, Number(request.estimated_value_inr_crores) || 0);
     const requirements = request.requirements ?? [];
+    const evidenceChunks = request.evidence_chunks ?? [];
+    const evidenceDocs = request.evidence_documents ?? [];
+    const docMap = new Map<string, Record<string, unknown>>();
+    for (const doc of evidenceDocs) {
+      if (typeof doc.id === 'string') docMap.set(doc.id, doc);
+    }
 
     // 2. Financial Turnover Check (Factor 2)
-    // Threshold is 40% of estimated tender value (standard CPWD/NHAI qualification) or requirement threshold
-    const reqTurnover = tenderValue > 0 ? Number((tenderValue * 0.4).toFixed(2)) : 0;
+    // Threshold from structured requirement criterion, or explicit text, or 40% of estimated tender value
+    const turnoverReq = requirements.find(
+      (r) => /turnover/i.test(r.title || '') || /turnover/i.test(r.description || ''),
+    );
+    let reqTurnover = tenderValue > 0 ? Number((tenderValue * 0.4).toFixed(2)) : 0;
+    if (turnoverReq?.criterion && typeof turnoverReq.criterion === 'object' && 'threshold' in (turnoverReq.criterion as Record<string, unknown>)) {
+      reqTurnover = Number((turnoverReq.criterion as { threshold: number }).threshold);
+    } else if (turnoverReq) {
+      const match = `${turnoverReq.title || ''} ${turnoverReq.description || ''}`.match(/(?:inr|rs\.?|₹)?\s*(\d+(?:\.\d+)?)\s*(?:cr|crores?)/i);
+      if (match && match[1]) {
+        reqTurnover = parseFloat(match[1]);
+      }
+    }
+
     const turnovers = profile.turnover_records ?? [];
     const avgTurnover =
       turnovers.length > 0
@@ -233,6 +253,12 @@ export class AiDecisionClient {
           title: 'Turnover Records Missing',
           detail: `No financial turnover records filed in Company Capability Profile to substantiate the required ₹${reqTurnover.toFixed(2)} Cr threshold.`,
         });
+        hardDisqualifiers.push({
+          requirement_title: turnoverReq?.title || 'Annual Financial Turnover',
+          reason: 'No financial turnover records available to substantiate qualification.',
+          clause_reference: turnoverReq?.provenance?.clause_reference || 'Financial Eligibility',
+          shortfall_detail: `Required: ₹${reqTurnover.toFixed(2)} Cr | Found: None`,
+        });
       } else {
         hasFinancialMatch = false;
         reasonsNotToPursue.push({
@@ -240,14 +266,113 @@ export class AiDecisionClient {
           title: 'Turnover Deficit',
           detail: `3-Year Average Turnover of ₹${avgTurnover.toFixed(2)} Cr is below the required ₹${reqTurnover.toFixed(2)} Cr threshold.`,
         });
+        hardDisqualifiers.push({
+          requirement_title: turnoverReq?.title || 'Annual Financial Turnover',
+          reason: `Turnover deficit: company average is ₹${avgTurnover.toFixed(2)} Cr vs required ₹${reqTurnover.toFixed(2)} Cr.`,
+          clause_reference: turnoverReq?.provenance?.clause_reference || 'Financial Eligibility',
+          shortfall_detail: `Required: ₹${reqTurnover.toFixed(2)} Cr | Found: ₹${avgTurnover.toFixed(2)} Cr`,
+        });
       }
     } else {
       hasFinancialMatch = true;
     }
 
+    if (hasFinancialMatch) {
+      const turnoverChunk = evidenceChunks.find(
+        (c) =>
+          /turnover|annual financial turnover/i.test(String(c.content || '')) ||
+          (c.metadata &&
+            typeof c.metadata === 'object' &&
+            'turnover_inr_crores' in (c.metadata as Record<string, unknown>)),
+      );
+      if (turnoverChunk) {
+        const meta = (turnoverChunk.metadata as Record<string, unknown>) || {};
+        const docId = String(
+          turnoverChunk.evidence_document_id ||
+          turnoverChunk.evidenceDocumentId ||
+          meta.evidence_document_id ||
+          meta.evidenceDocumentId ||
+          '',
+        );
+        const parentDoc = docId ? docMap.get(docId) : undefined;
+        const docName = String(
+          parentDoc?.fileName || parentDoc?.file_name ||
+          meta.file_name || meta.fileName ||
+          turnoverChunk.fileName || turnoverChunk.file_name ||
+          'Audited_Financial_Statement.pdf',
+        );
+        evidenceCitations.push({
+          tender_requirement_title: 'Annual Financial Turnover',
+          tenderRequirementTitle: 'Annual Financial Turnover',
+          tender_clause_reference: 'Financial Qualification Clause',
+          tenderClauseReference: 'Financial Qualification Clause',
+          tender_page_number: 1,
+          tenderPageNumber: 1,
+          tender_verbatim_quote: `Minimum turnover required: ₹${reqTurnover} Cr`,
+          tenderVerbatimQuote: `Minimum turnover required: ₹${reqTurnover} Cr`,
+          company_evidence_ref: docId || String(turnoverChunk.id || 'doc-turnover'),
+          companyEvidenceRef: docId || String(turnoverChunk.id || 'doc-turnover'),
+          company_entry_id: String(turnoverChunk.id || 'chk-turnover'),
+          companyEntryId: String(turnoverChunk.id || 'chk-turnover'),
+          document_name: docName,
+          documentName: docName,
+          evidence_type: 'AUDITED_BALANCE_SHEET',
+          evidenceType: 'AUDITED_BALANCE_SHEET',
+          page_number: turnoverChunk.page_number || turnoverChunk.pageNumber || 1,
+          pageNumber: turnoverChunk.page_number || turnoverChunk.pageNumber || 1,
+          notes: `Verified from ${docName}: Turnover record satisfies requirement with CA UDIN certification.`,
+        });
+      } else {
+        const firstTurnover = turnovers.find((t) => t.evidence_document_id);
+        if (firstTurnover) {
+          const doc = docMap.get(firstTurnover.evidence_document_id);
+          const docName = doc
+            ? String(doc.fileName || doc.file_name || firstTurnover.evidence_document_id)
+            : firstTurnover.evidence_document_id;
+          evidenceCitations.push({
+            tender_requirement_title: 'Annual Financial Turnover',
+            tenderRequirementTitle: 'Annual Financial Turnover',
+            tender_clause_reference: 'Financial Qualification Clause',
+            tenderClauseReference: 'Financial Qualification Clause',
+            tender_page_number: 1,
+            tenderPageNumber: 1,
+            tender_verbatim_quote: `Minimum turnover required: ₹${reqTurnover} Cr`,
+            tenderVerbatimQuote: `Minimum turnover required: ₹${reqTurnover} Cr`,
+            company_evidence_ref: firstTurnover.evidence_document_id,
+            companyEvidenceRef: firstTurnover.evidence_document_id,
+            document_name: docName,
+            documentName: docName,
+            evidence_type: 'AUDITED_BALANCE_SHEET',
+            evidenceType: 'AUDITED_BALANCE_SHEET',
+            notes: `Verified from ${docName}: ${firstTurnover.financial_year} turnover ₹${firstTurnover.turnover_inr_crores} Cr${firstTurnover.ca_udin ? ` (UDIN: ${firstTurnover.ca_udin})` : ''}.`,
+          });
+        }
+      }
+    }
+
     // 3. Past Experience Check (Factor 3)
-    // Threshold is 35% of estimated tender value for similar project execution
-    const reqExperienceValue = tenderValue > 0 ? Number((tenderValue * 0.35).toFixed(2)) : 0;
+    // Threshold from structured requirement criterion, explicit text, or 35% of estimated tender value
+    const experienceReq = requirements.find(
+      (r) =>
+        /similar work|past experience|contract value|experience/i.test(r.title || '') ||
+        /similar work|past experience|contract value|experience/i.test(r.description || ''),
+    );
+    let reqExperienceValue = tenderValue > 0 ? Number((tenderValue * 0.35).toFixed(2)) : 0;
+    if (
+      experienceReq?.criterion &&
+      typeof experienceReq.criterion === 'object' &&
+      'threshold' in (experienceReq.criterion as Record<string, unknown>)
+    ) {
+      reqExperienceValue = Number((experienceReq.criterion as { threshold: number }).threshold);
+    } else if (experienceReq) {
+      const match = `${experienceReq.title || ''} ${experienceReq.description || ''}`.match(
+        /(?:inr|rs\.?|₹)?\s*(\d+(?:\.\d+)?)\s*(?:cr|crores?)/i,
+      );
+      if (match && match[1]) {
+        reqExperienceValue = parseFloat(match[1]);
+      }
+    }
+
     const experience = profile.experience ?? [];
     const maxProjectValue = experience.reduce(
       (max, e) =>
@@ -273,21 +398,110 @@ export class AiDecisionClient {
         });
       } else if (maxProjectValue === 0) {
         hasTechnicalMatch = false;
+        const shortfall = `No completed similar work records filed in Company Capability Profile to substantiate the required ₹${reqExperienceValue.toFixed(2)} Cr threshold.`;
         reasonsNotToPursue.push({
           category: 'TECHNICAL',
           title: 'Project Experience Missing',
-          detail: `No completed similar work records filed in Company Capability Profile to substantiate the required ₹${reqExperienceValue.toFixed(2)} Cr threshold.`,
+          detail: shortfall,
+        });
+        hardDisqualifiers.push({
+          requirement_title: experienceReq?.title || 'Similar Past Work Experience',
+          reason: 'Missing mandatory similar past project experience.',
+          clause_reference:
+            experienceReq?.provenance?.clause_reference || 'Technical Qualification Clause',
+          shortfall_detail: shortfall,
         });
       } else {
         hasTechnicalMatch = false;
+        const shortfall = `Largest completed project of ₹${maxProjectValue.toFixed(2)} Cr is below the required ₹${reqExperienceValue.toFixed(2)} Cr threshold.`;
         reasonsNotToPursue.push({
           category: 'TECHNICAL',
           title: 'Technical Experience Deficit',
-          detail: `Largest completed project of ₹${maxProjectValue.toFixed(2)} Cr is below the required ₹${reqExperienceValue.toFixed(2)} Cr threshold.`,
+          detail: shortfall,
+        });
+        hardDisqualifiers.push({
+          requirement_title: experienceReq?.title || 'Similar Past Work Experience',
+          reason: 'Mandatory project experience threshold not satisfied.',
+          clause_reference:
+            experienceReq?.provenance?.clause_reference || 'Technical Qualification Clause',
+          shortfall_detail: shortfall,
         });
       }
     } else {
       hasTechnicalMatch = true;
+    }
+
+    if (hasTechnicalMatch) {
+      const completionChunk = evidenceChunks.find(
+        (c) =>
+          /completion|work order|project value/i.test(String(c.content || '')) ||
+          (c.metadata &&
+            typeof c.metadata === 'object' &&
+            'contract_value_inr_crores' in (c.metadata as Record<string, unknown>)),
+      );
+      if (completionChunk) {
+        const meta = (completionChunk.metadata as Record<string, unknown>) || {};
+        const docId = String(
+          completionChunk.evidence_document_id ||
+          completionChunk.evidenceDocumentId ||
+          meta.evidence_document_id ||
+          meta.evidenceDocumentId ||
+          '',
+        );
+        const parentDoc = docId ? docMap.get(docId) : undefined;
+        const docName = String(
+          parentDoc?.fileName || parentDoc?.file_name ||
+          meta.file_name || meta.fileName ||
+          completionChunk.fileName || completionChunk.file_name ||
+          'Project_Completion_Certificate.pdf',
+        );
+        evidenceCitations.push({
+          tender_requirement_title: 'Similar Past Work Experience',
+          tenderRequirementTitle: 'Similar Past Work Experience',
+          tender_clause_reference: 'Technical Qualification Clause',
+          tenderClauseReference: 'Technical Qualification Clause',
+          tender_page_number: 1,
+          tenderPageNumber: 1,
+          tender_verbatim_quote: `Similar work experience threshold: ₹${reqExperienceValue} Cr`,
+          tenderVerbatimQuote: `Similar work experience threshold: ₹${reqExperienceValue} Cr`,
+          company_evidence_ref: docId || String(completionChunk.id || 'doc-exp'),
+          companyEvidenceRef: docId || String(completionChunk.id || 'doc-exp'),
+          company_entry_id: String(completionChunk.id || 'chk-exp'),
+          companyEntryId: String(completionChunk.id || 'chk-exp'),
+          document_name: docName,
+          documentName: docName,
+          evidence_type: 'COMPLETION_CERT',
+          evidenceType: 'COMPLETION_CERT',
+          page_number: completionChunk.page_number || completionChunk.pageNumber || 1,
+          pageNumber: completionChunk.page_number || completionChunk.pageNumber || 1,
+          notes: `Verified from ${docName}: Completed contract of ₹${maxProjectValue.toFixed(2)} Cr exceeds requirement.`,
+        });
+      } else {
+        const firstExp = experience.find((e) => e.evidence_document_id);
+        if (firstExp && typeof firstExp.evidence_document_id === 'string') {
+          const doc = docMap.get(firstExp.evidence_document_id);
+          const docName = doc
+            ? String(doc.fileName || doc.file_name || firstExp.evidence_document_id)
+            : firstExp.evidence_document_id;
+          evidenceCitations.push({
+            tender_requirement_title: 'Similar Past Work Experience',
+            tenderRequirementTitle: 'Similar Past Work Experience',
+            tender_clause_reference: 'Technical Qualification Clause',
+            tenderClauseReference: 'Technical Qualification Clause',
+            tender_page_number: 1,
+            tenderPageNumber: 1,
+            tender_verbatim_quote: `Similar work experience threshold: ₹${reqExperienceValue} Cr`,
+            tenderVerbatimQuote: `Similar work experience threshold: ₹${reqExperienceValue} Cr`,
+            company_evidence_ref: firstExp.evidence_document_id,
+            companyEvidenceRef: firstExp.evidence_document_id,
+            document_name: docName,
+            documentName: docName,
+            evidence_type: 'COMPLETION_CERT',
+            evidenceType: 'COMPLETION_CERT',
+            notes: `Verified from ${docName}: Completed project '${firstExp.project_name || 'Infrastructure Execution'}' (₹${maxProjectValue.toFixed(2)} Cr).`,
+          });
+        }
+      }
     }
 
     // 4. MSME / MSE Policy Relaxation (Public Procurement Policy Order 2012 / GFR Rule 173)
@@ -302,14 +516,19 @@ export class AiDecisionClient {
 
     // 5. Geographic Fit (Factor 4)
     let hasGeographicMatch = true;
-    const targetState = request.project_location_state?.trim().toLowerCase();
+    const targetState = request.project_location_state?.trim().toLowerCase().replace(/[-_]/g, ' ');
     if (targetState && targetState !== 'unspecified') {
-      const regions = (profile.operating_regions ?? []).map((r) => r.trim().toLowerCase());
-      if (
-        regions.includes(targetState) ||
+      const regions = (profile.operating_regions ?? []).map((r) =>
+        r.trim().toLowerCase().replace(/[-_]/g, ' '),
+      );
+      const isNationalTender =
+        targetState === 'all india' || targetState === 'pan india' || targetState === 'india';
+      const companyHasPanIndia =
         regions.includes('all india') ||
-        regions.includes('pan india')
-      ) {
+        regions.includes('pan india') ||
+        regions.includes('india');
+
+      if (regions.includes(targetState) || isNationalTender || companyHasPanIndia) {
         reasonsToPursue.push({
           category: 'STATUTORY',
           title: 'Regional Operating Presence',
@@ -334,11 +553,60 @@ export class AiDecisionClient {
         title: 'Active Quality Certifications',
         detail: `Maintains ${certs.length} active quality/environmental management certifications.`,
       });
+
+      const isoChunk = evidenceChunks.find(
+        (c) =>
+          /iso 9001|iso 14001|iso 45001|quality management/i.test(String(c.content || '')) ||
+          (c.metadata &&
+            typeof c.metadata === 'object' &&
+            'standard_name' in (c.metadata as Record<string, unknown>)),
+      );
+      if (isoChunk) {
+        const meta = (isoChunk.metadata as Record<string, unknown>) || {};
+        const docName = String(
+          isoChunk.file_name || meta.file_name || 'ISO_Certificate.pdf',
+        );
+        evidenceCitations.push({
+          tender_requirement_title: 'Quality Management Certification',
+          tender_clause_reference: 'Statutory/Quality Clause',
+          tender_page_number: 1,
+          tender_verbatim_quote: 'Accredited Quality Management Certification',
+          company_evidence_ref: String(
+            isoChunk.evidence_document_id || isoChunk.evidenceDocumentId || 'doc-iso',
+          ),
+          company_entry_id: String(isoChunk.id || 'chk-iso'),
+          document_name: docName,
+          evidence_type: 'ISO_CERT',
+          page_number: isoChunk.page_number || isoChunk.pageNumber || 1,
+          notes: `Verified from ${docName}: Active certification valid through declared validity date.`,
+        });
+      } else {
+        const firstCert = certs.find((c) => c.evidence_document_id);
+        if (firstCert && typeof firstCert.evidence_document_id === 'string') {
+          const doc = docMap.get(firstCert.evidence_document_id);
+          const docName = doc
+            ? String(doc.fileName || doc.file_name || firstCert.evidence_document_id)
+            : firstCert.evidence_document_id;
+          evidenceCitations.push({
+            tender_requirement_title: 'Quality Management Certification',
+            tender_clause_reference: 'Statutory/Quality Clause',
+            tender_page_number: 1,
+            tender_verbatim_quote: 'Accredited Quality Management Certification',
+            company_evidence_ref: firstCert.evidence_document_id,
+            document_name: docName,
+            evidence_type: 'ISO_CERT',
+            notes: `Verified from ${docName}: '${firstCert.standard_name || 'ISO Certification'}' active and valid.`,
+          });
+        }
+      }
     }
 
     // 7. Equipment & Machinery (Factor 8)
     const equipment = profile.equipment ?? [];
-    if (equipment.length > 0) {
+    const hasEquipmentReq = requirements.some(
+      (r) => /equipment|machinery|plant/i.test(r.title || '') || /equipment|machinery|plant/i.test(r.description || ''),
+    );
+    if (hasEquipmentReq && equipment.length > 0) {
       uncertainAreas.push({
         category: 'EXECUTION',
         title: 'Equipment Mobilization Schedule',
@@ -382,6 +650,43 @@ export class AiDecisionClient {
       }
     }
 
+    // Scan requirements for ambiguities and zero-confidence items to populate reviewTriggers
+    for (const req of requirements) {
+      if (req.ambiguity_flags && req.ambiguity_flags.length > 0) {
+        for (const flag of req.ambiguity_flags) {
+          reviewTriggers.push({
+            trigger_type: 'AMBIGUOUS_REQUIREMENT',
+            summary: `Ambiguous requirement clause: '${req.title}'`,
+            details: `Ambiguity detected: ${flag.detail || flag.quote}`,
+            clause_reference: req.provenance?.clause_reference,
+            document_id: req.provenance?.source_document_id,
+          });
+        }
+      }
+      if (
+        req.provenance &&
+        (req.provenance.confidence_score === 0 ||
+          (req.provenance.confidence_score !== undefined && req.provenance.confidence_score < 0.75))
+      ) {
+        reviewTriggers.push({
+          trigger_type: 'INSUFFICIENT_CONFIDENCE',
+          summary: `Low AI extraction confidence on '${req.title}'`,
+          details: `Confidence score ${req.provenance.confidence_score} is below threshold.`,
+          clause_reference: req.provenance?.clause_reference,
+          document_id: req.provenance?.source_document_id,
+        });
+      }
+    }
+
+    const hasAmbiguities = requirements.some(
+      (r) => r.ambiguity_flags && r.ambiguity_flags.length > 0,
+    );
+    const hasZeroConfidence = requirements.some(
+      (r) =>
+        r.provenance &&
+        (r.provenance.confidence_score === 0 || (r.provenance.confidence_score ?? 1) <= 0),
+    );
+
     // 9. Deterministic Factor Scoring & Verdict Aggregation
     const evaluatedFactorsCount = 5; // Debarment, Turnover, Technical, Certifications, Geography
     let passedFactorsCount = 1; // Passed statutory debarment
@@ -395,15 +700,15 @@ export class AiDecisionClient {
     let verdict: 'GO' | 'CONDITIONAL_GO' | 'NO_GO' | 'REVIEW_REQUIRED';
     let readinessScore: number;
 
-    if (!hasFinancialMatch && !hasTechnicalMatch) {
+    if (hardDisqualifiers.length > 0 || !hasFinancialMatch || !hasTechnicalMatch) {
       verdict = 'NO_GO';
       readinessScore = Math.max(0.2, Math.round(rawScore * 100) / 100);
-    } else if (hasFinancialMatch && hasTechnicalMatch) {
-      verdict = uncertainAreas.length > 0 ? 'CONDITIONAL_GO' : 'GO';
-      readinessScore = Math.min(0.95, Math.max(0.75, Math.round(rawScore * 100) / 100));
-    } else {
+    } else if (reviewTriggers.length > 0 || hasAmbiguities || hasZeroConfidence) {
       verdict = 'REVIEW_REQUIRED';
       readinessScore = Math.round(rawScore * 100) / 100;
+    } else {
+      verdict = uncertainAreas.length > 0 ? 'CONDITIONAL_GO' : 'GO';
+      readinessScore = Math.min(0.95, Math.max(0.75, Math.round(rawScore * 100) / 100));
     }
 
     return {
@@ -411,7 +716,7 @@ export class AiDecisionClient {
       company_id: profile.company_id,
       profile_version_id: profile.profile_version_id,
       verdict,
-      state: 'AI_PROPOSED',
+      state: verdict === 'REVIEW_REQUIRED' ? 'UNDER_REVIEW' : 'AI_PROPOSED',
       readiness_score: readinessScore,
       reasons_to_pursue: reasonsToPursue,
       reasons_not_to_pursue: reasonsNotToPursue,

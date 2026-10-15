@@ -59,7 +59,7 @@ export const LandingPage: React.FC = () => {
                 <Link to="/signup">
                   <Button
                     size="lg"
-                    className="w-full sm:w-auto gap-2 text-sm font-semibold shadow-md"
+                    className="w-full sm:w-auto gap-2 text-sm font-semibold shadow-md bg-vermilion hover:bg-vermilion-hover text-white border-transparent"
                   >
                     <span>Start Free Workspace</span>
                     <ArrowRight className="h-4 w-4" />
@@ -105,7 +105,7 @@ export const LandingPage: React.FC = () => {
                       </Badge>
                       <Badge
                         variant="outline"
-                        className="bg-foreground text-background text-[10px] font-bold"
+                        className="bg-vermilion text-white border-transparent text-[10px] font-bold"
                       >
                         BID RECOMMENDED
                       </Badge>
@@ -123,7 +123,7 @@ export const LandingPage: React.FC = () => {
                 <div className="grid grid-cols-3 gap-2.5 p-3 rounded-lg bg-muted/40 border border-border/60 text-center">
                   <div>
                     <span className="text-[10px] text-muted-foreground uppercase">Fit Score</span>
-                    <p className="text-lg font-bold text-foreground">88.5%</p>
+                    <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">88.5%</p>
                   </div>
                   <div>
                     <span className="text-[10px] text-muted-foreground uppercase">
@@ -133,7 +133,7 @@ export const LandingPage: React.FC = () => {
                   </div>
                   <div>
                     <span className="text-[10px] text-muted-foreground uppercase">Risk Level</span>
-                    <p className="text-lg font-bold text-orange-600 dark:text-orange-400">Medium</p>
+                    <p className="text-lg font-bold text-amber-500">Medium</p>
                   </div>
                 </div>
 
@@ -145,7 +145,7 @@ export const LandingPage: React.FC = () => {
 
                   <div className="p-2.5 rounded border border-border bg-muted/30 flex items-start justify-between gap-2">
                     <div className="flex items-start gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-foreground shrink-0 mt-0.5" />
+                      <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
                       <div>
                         <p className="font-medium text-foreground text-[11px]">
                           3-Year Average Annual Turnover
@@ -157,7 +157,7 @@ export const LandingPage: React.FC = () => {
                     </div>
                     <Badge
                       variant="outline"
-                      className="text-[9px] text-foreground bg-muted shrink-0"
+                      className="text-[9px] text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30 shrink-0 font-bold"
                     >
                       PASS
                     </Badge>
@@ -165,7 +165,7 @@ export const LandingPage: React.FC = () => {
 
                   <div className="p-2.5 rounded border border-border bg-muted/30 flex items-start justify-between gap-2">
                     <div className="flex items-start gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-foreground shrink-0 mt-0.5" />
+                      <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
                       <div>
                         <p className="font-medium text-foreground text-[11px]">
                           Similar Highway Completion Proof
@@ -177,15 +177,15 @@ export const LandingPage: React.FC = () => {
                     </div>
                     <Badge
                       variant="outline"
-                      className="text-[9px] text-foreground bg-muted shrink-0"
+                      className="text-[9px] text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30 shrink-0 font-bold"
                     >
                       PASS
                     </Badge>
                   </div>
 
-                  <div className="p-2.5 rounded border border-orange-500/25 bg-orange-500/5 flex items-start justify-between gap-2">
+                  <div className="p-2.5 rounded border border-vermilion/30 bg-vermilion/5 flex items-start justify-between gap-2">
                     <div className="flex items-start gap-2">
-                      <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400 shrink-0 mt-0.5" />
+                      <AlertTriangle className="h-4 w-4 text-vermilion shrink-0 mt-0.5" />
                       <div>
                         <p className="font-medium text-foreground text-[11px]">
                           Liquidated Damages Clause (Sec 14.2)
@@ -197,7 +197,7 @@ export const LandingPage: React.FC = () => {
                     </div>
                     <Badge
                       variant="outline"
-                      className="text-[9px] text-orange-600 dark:text-orange-400 border-orange-500/30 bg-orange-500/10 shrink-0"
+                      className="text-[9px] text-vermilion border-vermilion/30 bg-vermilion/10 shrink-0 font-bold"
                     >
                       REVIEW
                     </Badge>
