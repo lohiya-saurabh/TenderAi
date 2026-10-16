@@ -43,6 +43,10 @@ describe('E2E: Bid/No-Bid Decision & Company Evidence Extraction Pipeline', () =
     });
     db = createDrizzle(pglite);
 
+    // Clear pre-seeded evidence vault documents & chunks so tests verify their own uploads cleanly
+    await db.delete(schema.companyEvidenceChunks);
+    await db.delete(schema.companyEvidenceDocuments);
+
     storageService = new MockStorageService();
     evidenceExtractor = new AiEvidenceExtractor();
     evidenceService = new CompanyEvidenceService(db, storageService, undefined, undefined, undefined, evidenceExtractor);

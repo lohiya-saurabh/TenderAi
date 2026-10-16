@@ -37,6 +37,20 @@ export interface CompanyProfilePayload {
     valid_to?: string | null;
     evidence_document_id: string;
   }>;
+  solvency_records?: Array<{
+    entry_id: string;
+    bank_name: string;
+    solvency_limit_inr_crores: number;
+    sanction_date?: string | null;
+    valid_until?: string | null;
+    account_number_masked?: string | null;
+    evidence_document_id?: string | null;
+  }>;
+  credit_rating?: {
+    agency: string;
+    rating: string;
+    valid_until?: string | null;
+  };
   oem_authorizations?: Array<{
     entry_id: string;
     oem_name: string;

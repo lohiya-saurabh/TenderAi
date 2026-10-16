@@ -28,6 +28,7 @@ async function inspectDatabase() {
     'company_profiles',
     'company_profile_versions',
     'company_evidence_documents',
+    'company_evidence_chunks',
     'evidence_verification_history',
     'document_processing_outbox',
     'audit_logs',

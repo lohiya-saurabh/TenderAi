@@ -45,6 +45,7 @@ export interface RegisterDto {
   companyName?: string;
   gstin?: string;
   pan?: string;
+  cin?: string;
   udyamId?: string;
   locationState?: string;
 }
@@ -91,19 +92,22 @@ export class AuthService {
       throw new UnauthorizedError('Invalid email or password.');
     }
 
-    const permissions: Permission[] =
+    const rawPermissions: Permission[] =
       typeof matched.permissions === 'string'
         ? JSON.parse(matched.permissions)
-        : matched.permissions;
+        : (matched.permissions ?? []);
     const normalizedRole = String(matched.role ?? 'BID_MANAGER')
       .toUpperCase()
-      .replace(/\s+/g, '_');
+      .replace(/\s+/g, '_') as UserRole;
+
+    const defaultRolePerms = ROLE_PERMISSIONS[normalizedRole] ? Array.from(ROLE_PERMISSIONS[normalizedRole]) : [];
+    const permissions: Permission[] = Array.from(new Set([...rawPermissions, ...defaultRolePerms]));
 
     const userProfile = {
       id: matched.id,
       email: matched.email,
       name: matched.name,
-      role: normalizedRole as UserRole,
+      role: normalizedRole,
       permissions,
       organizationId: matched.organizationId,
       organizationName: matched.organizationName,
@@ -174,17 +178,22 @@ export class AuthService {
       );
     }
 
-    const permissions: Permission[] =
-      typeof user.permissions === 'string' ? JSON.parse(user.permissions) : user.permissions;
+    const rawPermissions: Permission[] =
+      typeof user.permissions === 'string'
+        ? JSON.parse(user.permissions)
+        : (user.permissions ?? []);
     const normalizedRole = String(user.role ?? 'BID_MANAGER')
       .toUpperCase()
-      .replace(/\s+/g, '_');
+      .replace(/\s+/g, '_') as UserRole;
+
+    const defaultRolePerms = ROLE_PERMISSIONS[normalizedRole] ? Array.from(ROLE_PERMISSIONS[normalizedRole]) : [];
+    const permissions: Permission[] = Array.from(new Set([...rawPermissions, ...defaultRolePerms]));
 
     const userProfile = {
       id: user.id,
       email: user.email,
       name: user.name,
-      role: normalizedRole as UserRole,
+      role: normalizedRole,
       permissions,
       organizationId: user.organizationId,
       organizationName: user.organizationName,
@@ -335,8 +344,9 @@ export class AuthService {
           .replace(/(^-|-$)/g, ''),
         gstin: dto.gstin?.trim() || null,
         pan: dto.pan?.trim() || null,
+        cin: dto.cin?.trim() || null,
         udyamId: dto.udyamId?.trim() || null,
-        constitution: 'PRIVATE_LIMITED',
+        constitution: 'PUBLIC_LIMITED',
         createdAt: now,
         updatedAt: now,
       })
@@ -355,7 +365,7 @@ export class AuthService {
         payload: {
           company_name: companyName,
           legal_entity_name: companyName,
-          cin_number: null,
+          cin_number: dto.cin?.trim() || null,
           incorporation_date: null,
           msme_category: 'MICRO',
           is_blacklisted: false,

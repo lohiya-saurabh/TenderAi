@@ -59,16 +59,15 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
   const deadlineBufferDays = getDeadlineBufferDays(bid, Date.now());
 
   // Derive score number
-  const scoreNum = decision?.readinessScore
+  const scoreNum = decision?.readinessScore !== undefined && decision?.readinessScore !== null
     ? Math.round(
         Number(decision.readinessScore) > 1
           ? Number(decision.readinessScore)
           : Number(decision.readinessScore) * 100,
       )
-    : 84;
+    : null;
 
-  const verdict =
-    decision?.verdict || (bid.status === 'REVIEW_READY' ? 'PURSUE' : 'REVIEW_REQUIRED');
+  const verdict = decision?.verdict || 'REVIEW_REQUIRED';
 
   const verdictTextColor =
     verdict === 'PURSUE'
@@ -79,8 +78,59 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
 
   // Summary statement
   const summaryText = decision?.reasons?.[0]
-    ? decision.reasons.join(' ')
-    : 'Company profile satisfies 3-year minimum average annual turnover and similar highway execution threshold. Statutory GSTIN and MCA incorporation active without debarment history.';
+    ? decision.reasons[0]
+    : decision
+      ? 'Deterministic eligibility qualification evaluation completed.'
+      : 'Deterministic eligibility evaluation has not yet been executed for this tender. Run evaluation to verify company credentials against tender thresholds.';
+
+  const findReasonText = (...keywords: string[]): { title: string; detail: string; pass: boolean } | null => {
+    // 1. Search positive reasons to pursue first
+    for (const r of (decision?.reasonsToPursue || [])) {
+      if (!r) continue;
+      const rObj = typeof r === 'object' && r !== null ? (r as Record<string, unknown>) : null;
+      const str = typeof r === 'string' ? r : String(rObj?.detail || rObj?.title || JSON.stringify(r));
+      const matches = keywords.some((kw) => new RegExp(`\\b${kw}\\b`, 'i').test(str));
+      if (matches) {
+        return {
+          title: String(rObj?.title || keywords[0]),
+          detail: String(rObj?.detail || rObj?.reason || rObj?.summary || rObj?.title || str),
+          pass: true,
+        };
+      }
+    }
+
+    // 2. Search negative reasons and hard disqualifiers
+    const negativeReasons = [
+      ...(decision?.reasonsNotToPursue || []),
+      ...(decision?.hardDisqualifiers || []),
+    ];
+    for (const r of negativeReasons) {
+      if (!r) continue;
+      const rObj = typeof r === 'object' && r !== null ? (r as Record<string, unknown>) : null;
+      const str = typeof r === 'string' ? r : String(rObj?.detail || rObj?.title || rObj?.reason || JSON.stringify(r));
+      const matches = keywords.some((kw) => new RegExp(`\\b${kw}\\b`, 'i').test(str));
+      if (matches) {
+        return {
+          title: String(rObj?.title || keywords[0]),
+          detail: String(rObj?.detail || rObj?.reason || rObj?.summary || rObj?.title || str),
+          pass: false,
+        };
+      }
+    }
+    return null;
+  };
+
+  const turnoverGate = findReasonText('turnover');
+  const techGate = findReasonText('contract', 'experience', 'railway', 'bridge', 'highway', 'technical');
+  const solvencyGate = findReasonText('solvency', 'credit');
+  const emdAmount = bid.estimatedValueRupees
+    ? `₹${((Number(bid.estimatedValueRupees) * 0.01) / 10000000).toFixed(2)} Cr (1% Bank Guarantee)`
+    : 'Not Specified';
+
+  const ldRisk = (decision?.commercialRisks || []).find((r) => {
+    const s = typeof r === 'string' ? r : JSON.stringify(r);
+    return s.toLowerCase().includes('liquidated') || s.toLowerCase().includes('delay');
+  });
 
   return (
     <section className="border border-border rounded-lg p-6 bg-card shadow-xs space-y-6 transition-colors">
@@ -88,16 +138,16 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
         <div className="mono text-xs font-semibold uppercase tracking-wider mb-2 text-muted-foreground flex items-center justify-between">
           <span>1. DETERMINISTIC ELIGIBILITY VERDICT</span>
           <span className="mono text-[11px] font-bold text-muted-foreground">
-            {decision ? formatDecisionStateText(decision.state) : 'EVALUATED'}
+            {decision ? formatDecisionStateText(decision.state) : 'EVALUATION PENDING'}
           </span>
         </div>
 
         <div className="flex items-baseline gap-3">
           <span className={`text-4xl mono font-bold tracking-tight ${verdictTextColor}`}>
-            {scoreNum}
+            {scoreNum !== null ? scoreNum : '—'}
           </span>
           <span className="text-xs mono font-semibold text-muted-foreground">
-            / 100 Readiness Score
+            {scoreNum !== null ? '/ 100 Readiness Score' : 'Readiness Score Pending'}
           </span>
         </div>
 
@@ -106,43 +156,66 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
         </p>
       </div>
 
-      {/* 4 Key Core Threshold Gates */}
+      {/* Core Threshold Evaluation Gates */}
       <div className="space-y-3 pt-4 border-t border-border text-xs">
         <div className="flex justify-between items-center py-0.5">
-          <span className="text-muted-foreground">Required 3-Year Avg Turnover</span>
+          <span className="text-muted-foreground">3-Year Average Turnover Threshold</span>
           <div className="text-right">
             <span className="text-foreground mono font-semibold">
-              ≥ ₹250.00 Cr (Satisfied: ₹320 Cr)
+              {turnoverGate ? turnoverGate.detail : 'Evaluation pending'}
             </span>
-            <span className="text-emerald-600 dark:text-emerald-400 mono font-bold ml-1.5">✓ PASS (1.78x)</span>
+            {turnoverGate && (
+              <span className="text-emerald-600 dark:text-emerald-400 mono font-bold ml-1.5">
+                {turnoverGate.pass ? '✓ PASS' : '✗ SHORTFALL'}
+              </span>
+            )}
           </div>
         </div>
+
         <div className="flex justify-between items-center py-0.5">
           <span className="text-muted-foreground">Earnest Money Deposit (EMD)</span>
           <div className="text-right">
-            <span className="text-foreground mono font-semibold">
-              {bid.estimatedValueRupees
-                ? `₹${((Number(bid.estimatedValueRupees) * 0.01) / 10000000).toFixed(2)} Cr (Bank Guarantee)`
-                : '₹12.50 Cr (Bank Guarantee)'}
-            </span>
-            <span className="text-emerald-600 dark:text-emerald-400 mono font-bold ml-1.5">✓ PASS</span>
+            <span className="text-foreground mono font-semibold">{emdAmount}</span>
+            {bid.estimatedValueRupees && (
+              <span className="text-emerald-600 dark:text-emerald-400 mono font-bold ml-1.5">✓ PASS</span>
+            )}
           </div>
         </div>
+
         <div className="flex justify-between items-center py-0.5">
-          <span className="text-muted-foreground">Liquidated Damages Cap</span>
-          <span className="text-vermilion mono font-bold">
-            10% Maximum Exposure (FLAGGED) ⚠
+          <span className="text-muted-foreground">Liquidated Damages / Contract Risk</span>
+          <span className={ldRisk ? 'text-amber-500 mono font-bold' : 'text-foreground mono'}>
+            {ldRisk
+              ? typeof ldRisk === 'object' && 'penaltySummary' in (ldRisk as Record<string, unknown>)
+                ? String((ldRisk as Record<string, unknown>).penaltySummary)
+                : 'Exposure Flagged ⚠'
+              : 'Clean / Standard GCC Terms'}
           </span>
         </div>
+
         <div className="flex justify-between items-center py-0.5">
-          <span className="text-muted-foreground">Past Similar Highway Works</span>
+          <span className="text-muted-foreground">Technical Qualification Criteria</span>
           <div className="text-right">
             <span className="text-foreground mono font-semibold">
-              2 Works &gt; ₹500 Cr (Verified)
+              {techGate ? techGate.detail : 'Technical capacity check'}
             </span>
-            <span className="text-emerald-600 dark:text-emerald-400 mono font-bold ml-1.5">✓ PASS</span>
+            {techGate && (
+              <span className="text-emerald-600 dark:text-emerald-400 mono font-bold ml-1.5">
+                {techGate.pass ? '✓ PASS' : '✗ SHORTFALL'}
+              </span>
+            )}
           </div>
         </div>
+
+        {solvencyGate && (
+          <div className="flex justify-between items-center py-0.5">
+            <span className="text-muted-foreground">Bank Solvency &amp; Credit Facilities</span>
+            <div className="text-right">
+              <span className="text-foreground mono font-semibold">{solvencyGate.detail}</span>
+              <span className="text-emerald-600 dark:text-emerald-400 mono font-bold ml-1.5">✓ PASS</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Direct Action Link to Compliance Matrix */}
@@ -151,7 +224,7 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
           href="#compliance-matrix"
           className="w-full block py-2.5 px-4 text-center text-xs font-semibold rounded-md border border-border bg-muted/30 hover:bg-muted/70 text-foreground transition-colors shadow-2xs"
         >
-          Open Full Compliance Matrix ({complianceItems.length || 27} Clauses)
+          Open Full Compliance Matrix ({complianceItems.length} Clauses)
         </a>
       </div>
 

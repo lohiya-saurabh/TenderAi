@@ -9,6 +9,8 @@ logs/
 .DS_Store
 data/
 **/data/
+uploads/
+**/uploads/
 
 # Environment Variables & Keys
 .env

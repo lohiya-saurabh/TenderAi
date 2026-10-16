@@ -543,9 +543,12 @@ export function deriveEvidenceCitations(
         : item.executionRules.stampPaperRequired
           ? `Undertaking on ₹${item.executionRules.stampPaperDenominationInr} Stamp Paper`
           : 'Company Statutory Registration Certificate',
-      companyEvidenceRef: item.executionRules.udinRequired
-        ? 'CA_Audited_Turnover_FY2023-24.pdf'
-        : 'GST_PAN_Registration_Kit.pdf',
+      companyEvidenceRef:
+        item.companyEvidence?.documentName ||
+        item.companyEvidence?.title ||
+        (item.executionRules.udinRequired
+          ? company.turnoverRecords[0]?.evidenceDocName || 'Audited_Balance_Sheet.pdf'
+          : 'Company_Registration.pdf'),
       companyEvidenceDocType: item.executionRules.udinRequired
         ? 'FINANCIAL_AUDIT'
         : 'LEGAL_UNDERTAKING',
@@ -555,55 +558,7 @@ export function deriveEvidenceCitations(
     }));
   }
 
-  // Fallback realistic citations
-  return [
-    {
-      id: 'cite_01',
-      requirementTitle: 'Annual Financial Turnover & Solvency',
-      requirementCategory: 'FINANCIAL_CRITERIA',
-      tenderClauseRef: 'Section III, Clause 2.1',
-      tenderPageNumber: 14,
-      tenderDocName: 'Tender_Document_Vol_1.pdf',
-      tenderVerbatimQuote:
-        'The average annual turnover of the tenderer during the last 3 financial years must not be less than 50% of the advertised tender value. The certificate must be issued by a practicing Chartered Accountant and bear a valid UDIN.',
-      companyEvidenceTitle: 'CA Audited Balance Sheet & Turnover Certificate',
-      companyEvidenceRef: 'CA_Audited_Turnover_FY2023-24.pdf',
-      companyEvidenceDocType: 'CA_CERTIFICATE',
-      verificationStatus: 'VERIFIED',
-      udinNumber: '24089123AAAAA1234',
-      notes: 'Company turnover of ₹ 18.5 Cr satisfies the ₹ 12.25 Cr threshold.',
-    },
-    {
-      id: 'cite_02',
-      requirementTitle: 'Power of Attorney & Board Resolution',
-      requirementCategory: 'ANNEXURE_DECLARATION',
-      tenderClauseRef: 'ITB Clause 4.2',
-      tenderPageNumber: 9,
-      tenderDocName: 'Instructions_To_Bidders.pdf',
-      tenderVerbatimQuote:
-        'The bid shall be signed by the legally authorized representative holding a Power of Attorney executed on non-judicial stamp paper of ₹ 100 denomination, duly notarized by an authorized Notary Public.',
-      companyEvidenceTitle: 'Board Resolution & Executed Power of Attorney',
-      companyEvidenceRef: 'Board_Resolution_PoA_Ramesh_Sharma.pdf',
-      companyEvidenceDocType: 'LEGAL_AFFIDAVIT',
-      verificationStatus: 'VERIFIED',
-      notes: 'Executed on ₹ 100 stamp paper with registered notary stamp.',
-    },
-    {
-      id: 'cite_03',
-      requirementTitle: 'Past Similar Work Completion Certificate',
-      requirementCategory: 'TECHNICAL_EXPERIENCE',
-      tenderClauseRef: 'Section III, Clause 3.2',
-      tenderPageNumber: 16,
-      tenderDocName: 'Tender_Document_Vol_1.pdf',
-      tenderVerbatimQuote:
-        'Tenderer should have completed at least one work of similar nature having value not less than 40% of the advertised tender value during the last 7 years ending the last day of the month prior to the tender opening.',
-      companyEvidenceTitle: 'Central Railway Completion Certificate (ROB Project)',
-      companyEvidenceRef: 'CR_ROB_Completion_Cert.pdf',
-      companyEvidenceDocType: 'COMPLETION_CERTIFICATE',
-      verificationStatus: 'VERIFIED',
-      notes: 'Value ₹ 12.80 Cr exceeds the 40% requirement.',
-    },
-  ];
+  return [];
 }
 
 export function deriveCommercialRisks(): CommercialRiskItem[] {

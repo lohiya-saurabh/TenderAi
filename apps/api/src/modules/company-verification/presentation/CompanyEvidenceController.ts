@@ -3,7 +3,8 @@
  *
  * Enforces Zero-Trust TenantContextHolder isolation and Anti-IDOR boundary validation.
  */
-import { Controller, Get, Post, Delete, Param, Body, Query, HttpCode } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Body, Query, HttpCode, Res, Req, Headers } from '@nestjs/common';
+import type { Response, Request } from 'express';
 import { CompanyEvidenceService } from '@/modules/company-verification/application/CompanyEvidenceService.js';
 import { GoogleDriveConnector } from '@/modules/company-verification/infrastructure/GoogleDriveConnector.js';
 import { OneDriveConnector } from '@/modules/company-verification/infrastructure/OneDriveConnector.js';
@@ -104,6 +105,37 @@ export class CompanyEvidenceController {
     @Param('evidenceId') evidenceId: string,
   ) {
     return this.companyEvidenceService.getEvidenceById(companyId, evidenceId);
+  }
+
+  @Get(':evidenceId/download-url')
+  @RequirePermission(Permissions.BIDS_READ)
+  async getEvidenceDownloadUrl(
+    @Param('companyId') companyId: string,
+    @Param('evidenceId') evidenceId: string,
+    @Headers('host') host?: string,
+    @Req() req?: Request,
+  ) {
+    const authHeader = (req?.headers?.['authorization'] as string) || '';
+    const token = authHeader.replace(/^Bearer\s+/i, '') || (req?.query?.['token'] as string);
+    return this.companyEvidenceService.getEvidenceDownloadUrl(companyId, evidenceId, host, token);
+  }
+
+  @Get([':evidenceId/download', ':evidenceId/download/:fileName'])
+  @RequirePermission(Permissions.BIDS_READ)
+  async downloadEvidence(
+    @Param('companyId') companyId: string,
+    @Param('evidenceId') evidenceId: string,
+    @Query('disposition') disposition: 'inline' | 'attachment' = 'attachment',
+    @Res() res: Response,
+  ) {
+    const file = await this.companyEvidenceService.getEvidenceFileBuffer(companyId, evidenceId);
+    res.set({
+      'Content-Type': file.mimeType || 'application/pdf',
+      'Content-Disposition': `${disposition === 'inline' ? 'inline' : 'attachment'}; filename="${encodeURIComponent(file.fileName)}"`,
+      'Content-Length': String(file.buffer.length),
+      'Cache-Control': 'private, max-age=3600',
+    });
+    res.status(200).send(file.buffer);
   }
 
   @Delete(':evidenceId')

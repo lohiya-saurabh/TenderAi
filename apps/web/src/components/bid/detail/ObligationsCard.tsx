@@ -43,30 +43,47 @@ export const ObligationsCard: React.FC<ObligationsCardProps> = ({ items }) => {
       </div>
 
       {/* Featured High-Risk Contractual Liability Card */}
-      <div className="border border-border border-l-4 border-l-vermilion rounded-xl p-5 sm:p-6 bg-card shadow-xs space-y-3.5 transition-colors">
-        <div className="flex items-center justify-between">
-          <span className="font-bold text-xs sm:text-sm text-foreground">
-            Clause 15.2: Liquidated Damages on Milestones
-          </span>
-          <span className="mono text-[11px] font-bold text-vermilion">
-            FLAGGED FOR LEGAL REVIEW ⚠
-          </span>
+      {flagged.length > 0 ? (
+        <div className="border border-border border-l-4 border-l-vermilion rounded-xl p-5 sm:p-6 bg-card shadow-xs space-y-3.5 transition-colors">
+          <div className="flex items-center justify-between">
+            <span className="font-bold text-xs sm:text-sm text-foreground">
+              {(flagged[0]!.tenderClauseRef || flagged[0]!.provenance?.sectionOrClause)
+                ? `${flagged[0]!.tenderClauseRef || flagged[0]!.provenance?.sectionOrClause}: `
+                : ''}
+              {flagged[0]!.requirement}
+            </span>
+            <span className="mono text-[11px] font-bold text-vermilion">
+              FLAGGED FOR REVIEW ⚠
+            </span>
+          </div>
+
+          {/* Verbatim Quote Box */}
+          {flagged[0]!.provenance?.verbatimQuote && (
+            <p className="text-xs leading-relaxed mono p-4 rounded-lg border border-border bg-muted/40 text-foreground">
+              &quot;{flagged[0]!.provenance.verbatimQuote}&quot;
+            </p>
+          )}
+
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            <strong className="text-foreground">Executive Note:</strong>{' '}
+            {flagged[0]!.description || 'High-risk obligation requires clarification or mitigating evidence before submission deadline.'}
+          </p>
         </div>
-
-        {/* Verbatim Quote Box */}
-        <p className="text-xs leading-relaxed mono p-4 rounded-lg border border-border bg-muted/40 text-foreground">
-          &quot;If the Concessionaire fails to achieve any Project Milestone within the period set
-          forth in Schedule-G, it shall pay Damages at the rate of 0.1% per day... provided Damages
-          shall not exceed 10% of total Contract Price.&quot;
-        </p>
-
-        <p className="text-xs leading-relaxed text-muted-foreground">
-          <strong className="text-foreground">Executive Note:</strong> Standard NHAI EPC models cap
-          liquidated damages at 5%. This BOT toll concession enforces a 10% cap (₹125 Cr exposure).
-          Recommend submitting a formal pre-bid query to align with standard model concession
-          agreements.
-        </p>
-      </div>
+      ) : (
+        <div className="border border-border border-l-4 border-l-emerald-500 rounded-xl p-5 sm:p-6 bg-card shadow-xs space-y-2 transition-colors">
+          <div className="flex items-center justify-between">
+            <span className="font-bold text-xs sm:text-sm text-foreground">
+              Contractual Risk Assessment: Clean &amp; Standard Model Terms
+            </span>
+            <span className="mono text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+              ✓ ZERO CONTRACTUAL RED FLAGS
+            </span>
+          </div>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            No onerous liability clauses, uncapped liquidated damages, or non-standard contractual covenants detected in extracted tender clauses.
+          </p>
+        </div>
+      )}
 
       <div className="border border-border rounded-xl p-5 sm:p-6 bg-card shadow-xs space-y-6 transition-colors">
         {/* Statutory Execution Rules */}

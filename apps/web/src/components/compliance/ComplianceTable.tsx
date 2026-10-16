@@ -92,23 +92,32 @@ export const ComplianceTable: React.FC<ComplianceTableProps> = ({
     return result;
   }, [items]);
 
+  // Helper to map DB/API statuses (APPROVED, FLAGGED, etc.) to UI filter values
+  const mapToFilterStatus = (status: string): ComplianceStatusFilterValue => {
+    const s = (status || '').toUpperCase();
+    if (s === 'PASS' || s === 'APPROVED' || s === 'COMPLIANT') return 'PASS';
+    if (s === 'FAIL' || s === 'FLAGGED' || s === 'REJECTED' || s === 'NON_COMPLIANT') return 'FAIL';
+    if (s === 'MISSING') return 'MISSING';
+    if (s === 'REVIEW_REQUIRED' || s === 'PENDING_REVIEW' || s === 'UNDER_REVIEW') return 'REVIEW_REQUIRED';
+    if (s === 'NOT_APPLICABLE' || s === 'NA') return 'NOT_APPLICABLE';
+    return 'ALL';
+  };
+
   // Status counts for filter tabs
   const counts = useMemo(() => {
-    const allStatuses: ComplianceStatusFilterValue[] = [
-      'ALL',
-      'PASS',
-      'FAIL',
-      'MISSING',
-      'REVIEW_REQUIRED',
-      'NOT_APPLICABLE',
-    ];
-    const result: Record<ComplianceStatusFilterValue, number> = {} as Record<
-      ComplianceStatusFilterValue,
-      number
-    >;
-    result.ALL = dedupedItems.length;
-    allStatuses.slice(1).forEach((status) => {
-      result[status] = dedupedItems.filter((i) => i.status === status).length;
+    const result: Record<ComplianceStatusFilterValue, number> = {
+      ALL: dedupedItems.length,
+      PASS: 0,
+      FAIL: 0,
+      MISSING: 0,
+      REVIEW_REQUIRED: 0,
+      NOT_APPLICABLE: 0,
+    };
+    dedupedItems.forEach((i) => {
+      const fs = mapToFilterStatus(i.status);
+      if (fs !== 'ALL') {
+        result[fs] = (result[fs] || 0) + 1;
+      }
     });
     return result;
   }, [dedupedItems]);
@@ -134,7 +143,7 @@ export const ComplianceTable: React.FC<ComplianceTableProps> = ({
 
     let result = dedupedItems.filter((item) => {
       // Status filter
-      if (statusFilter !== 'ALL' && item.status !== statusFilter) {
+      if (statusFilter !== 'ALL' && mapToFilterStatus(item.status) !== statusFilter) {
         return false;
       }
 

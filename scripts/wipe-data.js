@@ -29,6 +29,7 @@ async function wipeDatabase() {
     'tender_documents',
     'bids',
     'evidence_verification_history',
+    'company_evidence_chunks',
     'company_evidence_documents',
     'company_profiles',
     'company_profile_versions',
@@ -54,6 +55,15 @@ async function wipeDatabase() {
       totalRows += count;
     }
     console.log(`   ✅ Database verification: Total records across all tables = ${totalRows}.`);
+
+    // Clean transient uploads directory
+    const uploadsDir = path.join(rootDir, 'apps/api/uploads');
+    const fs = await import('node:fs');
+    if (fs.existsSync(uploadsDir)) {
+      fs.rmSync(uploadsDir, { recursive: true, force: true });
+      fs.mkdirSync(uploadsDir, { recursive: true });
+      console.log('   ✅ Cleared transient uploads directory.');
+    }
   } catch (err) {
     console.error('   ❌ Database wipe error:', err.message);
     throw err;

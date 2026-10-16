@@ -62,6 +62,16 @@ export interface CompanyEquipmentEntry {
   evidence_document_id: string;
 }
 
+export interface CompanySolvencyRecord {
+  entry_id: string;
+  bank_name: string;
+  solvency_limit_inr_crores: number;
+  sanction_date?: string | null;
+  valid_until?: string | null;
+  account_number_masked?: string | null;
+  evidence_document_id?: string | null;
+}
+
 export interface CompanyProfilePayload {
   company_name: string;
   is_blacklisted?: boolean;
@@ -70,6 +80,12 @@ export interface CompanyProfilePayload {
   turnover_records?: CompanyTurnoverRecord[];
   experience?: CompanyExperienceEntry[];
   certifications?: CompanyCertificationEntry[];
+  solvency_records?: CompanySolvencyRecord[];
+  credit_rating?: {
+    agency: string;
+    rating: string;
+    valid_until?: string | null;
+  };
   oem_authorizations?: CompanyOemAuthEntry[];
   staff?: CompanyStaffEntry[];
   equipment?: CompanyEquipmentEntry[];
@@ -107,6 +123,7 @@ export function validateCompanyProfilePayload(payload: unknown): string[] {
     ['turnover_records', []],
     ['experience', []],
     ['certifications', []],
+    ['solvency_records', []],
     ['oem_authorizations', []],
     ['staff', []],
     ['equipment', []],

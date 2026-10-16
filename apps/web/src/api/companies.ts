@@ -252,6 +252,7 @@ export function uploadCompanyEvidence(
     referenceNumber?: string;
     validFrom?: string;
     validTo?: string;
+    extractedAttributes?: Record<string, unknown>;
   },
 ): Promise<ApiResult<EvidenceDocumentItem>> {
   return apiPost<EvidenceDocumentItem>(
@@ -289,3 +290,21 @@ export function listCloudFiles(
     `/api/v1/companies/${encodeURIComponent(companyId)}/evidence/cloud-files?provider=${provider}${query}`,
   );
 }
+
+export interface EvidenceDownloadUrlResponse {
+  downloadUrl: string;
+  expiresInSeconds: number;
+  fileName: string;
+  mimeType?: string;
+}
+
+/** Get download URL for an uploaded company evidence document */
+export function getCompanyEvidenceDownloadUrl(
+  companyId: string,
+  evidenceId: string,
+): Promise<ApiResult<EvidenceDownloadUrlResponse>> {
+  return apiGet<EvidenceDownloadUrlResponse>(
+    `/api/v1/companies/${encodeURIComponent(companyId)}/evidence/${encodeURIComponent(evidenceId)}/download-url`,
+  );
+}
+

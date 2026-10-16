@@ -35,10 +35,13 @@ export interface CompanyView {
   slug: string | null;
   gstin: string | null;
   pan: string | null;
+  cin?: string | null;
   udyamId: string | null;
   constitution: string | null;
   gstinVerifiedAt?: string | null;
   gstinVerificationData?: Record<string, unknown> | null;
+  mcaVerifiedAt?: string | null;
+  mcaVerificationData?: Record<string, unknown> | null;
   udyamVerifiedAt?: string | null;
   udyamVerificationData?: Record<string, unknown> | null;
   digilockerLinkedAt?: string | null;
@@ -176,6 +179,7 @@ export class CompaniesService {
       slug: r.slug,
       gstin: r.gstin,
       pan: r.pan,
+      cin: r.cin ?? null,
       udyamId: r.udyamId,
       constitution: r.constitution,
       gstinVerifiedAt: r.gstinVerifiedAt
@@ -184,6 +188,12 @@ export class CompaniesService {
           : String(r.gstinVerifiedAt)
         : null,
       gstinVerificationData: (r.gstinVerificationData as Record<string, unknown>) ?? null,
+      mcaVerifiedAt: r.mcaVerifiedAt
+        ? r.mcaVerifiedAt instanceof Date
+          ? r.mcaVerifiedAt.toISOString()
+          : String(r.mcaVerifiedAt)
+        : null,
+      mcaVerificationData: (r.mcaVerificationData as Record<string, unknown>) ?? null,
       udyamVerifiedAt: r.udyamVerifiedAt
         ? r.udyamVerifiedAt instanceof Date
           ? r.udyamVerifiedAt.toISOString()
