@@ -2,7 +2,7 @@
  * MockBillingAdapter — Local deterministic billing adapter implementing BillingPort.
  */
 import { Injectable } from '@nestjs/common';
-import type { BillingPort, CreateSubscriptionParams, BillingPortResult } from './billing.port.js';
+import type { BillingPort, CreateSubscriptionParams, BillingPortResult } from '@/modules/billing/billing.port.js';
 
 @Injectable()
 export class MockBillingAdapter implements BillingPort {

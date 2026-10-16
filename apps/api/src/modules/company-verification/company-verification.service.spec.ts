@@ -14,22 +14,22 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { PGlite } from '@electric-sql/pglite';
 import { eq } from 'drizzle-orm';
 import crypto from 'node:crypto';
-import { initDatabase } from '../../common/database/database.provider.js';
-import { createDrizzle, type DrizzleDb } from '../../common/database/database.module.js';
-import * as schema from '../../common/database/schema.js';
-import { TenantContextHolder } from '../../common/security/TenantContext.js';
-import { CompanyProfileService } from '../company-profile/company-profile.service.js';
-import { CompanyEvidenceService } from './application/CompanyEvidenceService.js';
-import { EvidenceVerificationService } from './application/EvidenceVerificationService.js';
-import { MockGstVerificationAdapter } from './infrastructure/MockGstVerificationAdapter.js';
-import { MockMcaRegistryAdapter } from './infrastructure/MockMcaRegistryAdapter.js';
-import { MockMsmeVerificationAdapter } from './infrastructure/MockMsmeVerificationAdapter.js';
-import { MockDigitalLockerAdapter } from './infrastructure/MockDigitalLockerAdapter.js';
-import { GoogleDriveConnector } from './infrastructure/GoogleDriveConnector.js';
-import { OneDriveConnector } from './infrastructure/OneDriveConnector.js';
-import { LocalUploadConnector } from './infrastructure/LocalUploadConnector.js';
-import { MockStorageService } from '../../infrastructure/storage/MockStorageService.js';
-import { NotFoundError, BadRequestError } from '../../common/errors/errors.js';
+import { initDatabase } from '@/common/database/database.provider.js';
+import { createDrizzle, type DrizzleDb } from '@/common/database/database.module.js';
+import * as schema from '@/common/database/schema.js';
+import { TenantContextHolder } from '@/common/security/TenantContext.js';
+import { CompanyProfileService } from '@/modules/company-profile/company-profile.service.js';
+import { CompanyEvidenceService } from '@/modules/company-verification/application/CompanyEvidenceService.js';
+import { EvidenceVerificationService } from '@/modules/company-verification/application/EvidenceVerificationService.js';
+import { MockGstVerificationAdapter } from '@/modules/company-verification/infrastructure/MockGstVerificationAdapter.js';
+import { MockMcaRegistryAdapter } from '@/modules/company-verification/infrastructure/MockMcaRegistryAdapter.js';
+import { MockMsmeVerificationAdapter } from '@/modules/company-verification/infrastructure/MockMsmeVerificationAdapter.js';
+import { MockDigitalLockerAdapter } from '@/modules/company-verification/infrastructure/MockDigitalLockerAdapter.js';
+import { GoogleDriveConnector } from '@/modules/company-verification/infrastructure/GoogleDriveConnector.js';
+import { OneDriveConnector } from '@/modules/company-verification/infrastructure/OneDriveConnector.js';
+import { LocalUploadConnector } from '@/modules/company-verification/infrastructure/LocalUploadConnector.js';
+import { MockStorageService } from '@/infrastructure/storage/MockStorageService.js';
+import { NotFoundError, BadRequestError } from '@/common/errors/errors.js';
 
 describe('Company Evidence & Third-Party Verification Layer', () => {
   let pglite: PGlite;
@@ -138,7 +138,7 @@ describe('Company Evidence & Third-Party Verification Layer', () => {
 
       expect(uploaded.id).toMatch(/^ev_/);
       expect(uploaded.sha256Hash).toBe(expectedHash);
-      expect(uploaded.verificationStatus).toBe('IMPORTED');
+      expect(uploaded.verificationStatus).toBe('EXTRACTED');
       expect(uploaded.sourceProvider).toBe('LOCAL_UPLOAD');
       expect(uploaded.storagePath).toContain(
         `tenants/${TEST_ORG_ID}/companies/${TEST_COMPANY_ID}/evidence/`,
@@ -148,6 +148,14 @@ describe('Company Evidence & Third-Party Verification Layer', () => {
       const existsInStorage = await storageService.headObject(uploaded.storagePath);
       expect(existsInStorage.exists).toBe(true);
       expect(existsInStorage.sizeBytes).toBe(samplePdfContent.byteLength);
+
+      // Verify chunks were automatically persisted into company_evidence_chunks
+      const persistedChunks = await db
+        .select()
+        .from(schema.companyEvidenceChunks)
+        .where(eq(schema.companyEvidenceChunks.evidenceDocumentId, uploaded.id));
+      expect(persistedChunks.length).toBeGreaterThan(0);
+      expect(persistedChunks[0]?.chunkType).toBe('FINANCIAL_TURNOVER');
     });
 
     it('should reject evidence upload for a company belonging to a different tenant (Anti-IDOR)', async () => {
@@ -174,7 +182,7 @@ describe('Company Evidence & Third-Party Verification Layer', () => {
 
       expect(imported.fileName).toBe('NHAI_STRR_Completion.pdf');
       expect(imported.evidenceType).toBe('COMPLETION_CERT');
-      expect(imported.verificationStatus).toBe('IMPORTED');
+      expect(imported.verificationStatus).toBe('EXTRACTED');
     });
   });
 

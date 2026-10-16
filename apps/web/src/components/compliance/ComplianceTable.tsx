@@ -1,14 +1,14 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import type { ComplianceItem } from '../../api/compliance.js';
-import { ComplianceRow } from './ComplianceRow.js';
-import { StatusFilter, type ComplianceStatusFilterValue } from './StatusFilter.js';
-import { EvidenceDrawer } from './EvidenceDrawer.js';
-import { SourceCitationDrawer } from './SourceCitationDrawer.js';
-import { AssessmentPanel } from './AssessmentPanel.js';
-import { EmptyState } from '../common/EmptyState.js';
-import { ColumnSorter, type SortConfig } from '../common/ColumnSorter.js';
-import { Button } from '../common/Button.js';
-import { SearchIcon, CloseIcon, FilterIcon } from '../common/Icons.js';
+import type { ComplianceItem } from '@/api/compliance.js';
+import { ComplianceRow } from '@/components/compliance/ComplianceRow.js';
+import { StatusFilter, type ComplianceStatusFilterValue } from '@/components/compliance/StatusFilter.js';
+import { EvidenceDrawer } from '@/components/compliance/EvidenceDrawer.js';
+import { SourceCitationDrawer } from '@/components/compliance/SourceCitationDrawer.js';
+import { AssessmentPanel } from '@/components/compliance/AssessmentPanel.js';
+import { EmptyState } from '@/components/common/EmptyState.js';
+import { ColumnSorter, type SortConfig } from '@/components/common/ColumnSorter.js';
+import { Button } from '@/components/common/Button.js';
+import { SearchIcon, CloseIcon, FilterIcon } from '@/components/common/Icons.js';
 
 export interface ComplianceTableProps {
   items: ComplianceItem[];

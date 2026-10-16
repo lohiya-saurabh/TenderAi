@@ -1,5 +1,5 @@
 import React from 'react';
-import { StatusBadge } from '../common/StatusBadge.js';
+import { StatusBadge } from '@/components/common/StatusBadge.js';
 
 export interface BidStatusBadgeProps {
   status: 'DRAFT' | 'ANALYZING' | 'REVIEW_READY' | 'SUBMITTED' | 'ARCHIVED';

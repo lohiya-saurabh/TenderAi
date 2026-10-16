@@ -5,7 +5,7 @@ import {
   formatReasonItem,
   formatCommercialRiskItem,
   type ApiBidDecisionSummary,
-} from '../bidDetailData.js';
+} from '@/components/bid/detail/bidDetailData.js';
 
 describe('bidDetailData — Robust Reason & Decision Formatting', () => {
   describe('formatCommercialRiskItem', () => {

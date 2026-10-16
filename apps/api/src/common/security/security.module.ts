@@ -6,10 +6,10 @@
 
 import { Global, Module } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR, Reflector } from '@nestjs/core';
-import { TokenService } from './TokenService.js';
-import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
-import { RolesGuard } from './guards/roles.guard.js';
-import { TenantContextInterceptor } from './interceptors/tenant-context.interceptor.js';
+import { TokenService } from '@/common/security/TokenService.js';
+import { JwtAuthGuard } from '@/common/security/guards/jwt-auth.guard.js';
+import { RolesGuard } from '@/common/security/guards/roles.guard.js';
+import { TenantContextInterceptor } from '@/common/security/interceptors/tenant-context.interceptor.js';
 
 @Global()
 @Module({

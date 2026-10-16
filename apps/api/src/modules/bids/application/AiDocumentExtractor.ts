@@ -1,10 +1,10 @@
-import { TenderDocument } from '../domain/entities/TenderDocument.js';
-import { IStorageService } from './IStorageService.js';
-import { DocumentContentNormalizer, NormalizedDocumentPage } from './DocumentContentNormalizer.js';
-import { IDocumentExtractor, ExtractedComplianceItem } from './IngestionWorker.js';
+import { TenderDocument } from '@/modules/bids/domain/entities/TenderDocument.js';
+import { IStorageService } from '@/modules/bids/application/IStorageService.js';
+import { DocumentContentNormalizer, NormalizedDocumentPage } from '@/modules/bids/application/DocumentContentNormalizer.js';
+import { IDocumentExtractor, ExtractedComplianceItem } from '@/modules/bids/application/IngestionWorker.js';
 export type { ExtractedComplianceItem };
-import { StructuredLogger } from '../../../common/logging/StructuredLogger.js';
-import { LoggingContextHolder } from '../../../common/logging/LoggingContext.js';
+import { StructuredLogger } from '@/common/logging/StructuredLogger.js';
+import { LoggingContextHolder } from '@/common/logging/LoggingContext.js';
 import { SecurityContextDto } from '@tenderpulse/shared-types';
 
 export interface RawExtractedItem {
@@ -13,7 +13,7 @@ export interface RawExtractedItem {
   description?: string;
   executionRules?: {
     stampPaperRequired?: boolean;
-    stampPaperDenominationInr?: number;
+    stampPaperDenominationInr?: number | null;
     notarizationRequired?: boolean;
     udinRequired?: boolean;
     signingAuthorityRank?: string;
@@ -31,6 +31,9 @@ export interface AiServiceExtractResponse {
   document_id?: string;
   status?: string;
   items?: RawExtractedItem[];
+  error?: string | null;
+  detail?: string | null;
+  [key: string]: unknown;
 }
 
 export type ExtractableDocument = Pick<
@@ -63,7 +66,7 @@ export interface AiExtractorConfig {
   customFetch?: (
     url: string,
     init: RequestInit,
-  ) => Promise<{ ok: boolean; status: number; json: () => Promise<AiServiceExtractResponse> }>;
+  ) => Promise<{ ok: boolean; status: number; json: () => Promise<unknown> }>;
 }
 
 export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtractionPort {
@@ -74,7 +77,7 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
   private readonly customFetch?: (
     url: string,
     init: RequestInit,
-  ) => Promise<{ ok: boolean; status: number; json: () => Promise<AiServiceExtractResponse> }>;
+  ) => Promise<{ ok: boolean; status: number; json: () => Promise<unknown> }>;
 
   constructor(
     private readonly storageService: IStorageService,
@@ -214,7 +217,7 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
         );
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as AiServiceExtractResponse;
       const rawItems = data.items ?? [];
       this.logger.log(
         `AI extraction service responded with ${rawItems.length} raw compliance items for doc ${document.id}.`,

@@ -10,33 +10,33 @@ import {
   evaluateBidDecision,
   type BidDetail,
   type BidDocument,
-} from '../api/bids.js';
+} from '@/api/bids.js';
 import {
   listComplianceItems,
   reviewComplianceItem,
   type ComplianceItem,
-} from '../api/compliance.js';
-import { useApi } from '../hooks/useApi.js';
-import { useAuth } from '../auth/useAuth.js';
-import { PERMISSIONS } from '../utils/permissions.js';
-import { Button } from '../components/common/Button.js';
-import { ErrorBanner } from '../components/common/ErrorBanner.js';
-import { LoadingSkeleton } from '../components/common/LoadingSkeleton.js';
-import { Modal } from '../components/common/Modal.js';
-import { PlusCircleIcon, ChevronRightIcon } from '../components/common/Icons.js';
-import { ExtractionProgress } from '../components/progress/ExtractionProgress.js';
-import { ComplianceTable } from '../components/compliance/ComplianceTable.js';
-import { TenderInfoHeader } from '../components/bid/detail/TenderInfoHeader.js';
-import { BidVerdictCard } from '../components/bid/detail/BidVerdictCard.js';
-import { ObligationsCard } from '../components/bid/detail/ObligationsCard.js';
-import { IngestedDocumentsSection } from '../components/bid/detail/IngestedDocumentsSection.js';
-import { BidSignoffDock } from '../components/bid/detail/BidSignoffDock.js';
-import { MissingDataCallout } from '../components/bid/detail/MissingDataCallout.js';
-import { formatCurrency, formatCompactINR } from '../utils/formatCurrency.js';
+} from '@/api/compliance.js';
+import { useApi } from '@/hooks/useApi.js';
+import { useAuth } from '@/auth/useAuth.js';
+import { PERMISSIONS } from '@/utils/permissions.js';
+import { Button } from '@/components/common/Button.js';
+import { ErrorBanner } from '@/components/common/ErrorBanner.js';
+import { LoadingSkeleton } from '@/components/common/LoadingSkeleton.js';
+import { Modal } from '@/components/common/Modal.js';
+import { PlusCircleIcon, ChevronRightIcon } from '@/components/common/Icons.js';
+import { ExtractionProgress } from '@/components/progress/ExtractionProgress.js';
+import { ComplianceTable } from '@/components/compliance/ComplianceTable.js';
+import { TenderInfoHeader } from '@/components/bid/detail/TenderInfoHeader.js';
+import { BidVerdictCard } from '@/components/bid/detail/BidVerdictCard.js';
+import { ObligationsCard } from '@/components/bid/detail/ObligationsCard.js';
+import { IngestedDocumentsSection } from '@/components/bid/detail/IngestedDocumentsSection.js';
+import { BidSignoffDock } from '@/components/bid/detail/BidSignoffDock.js';
+import { MissingDataCallout } from '@/components/bid/detail/MissingDataCallout.js';
+import { formatCurrency, formatCompactINR } from '@/utils/formatCurrency.js';
 import {
   mapApiDecisionToBidDecision,
   type ApiBidDecisionSummary,
-} from '../components/bid/detail/bidDetailData.js';
+} from '@/components/bid/detail/bidDetailData.js';
 
 /**
  * Tender Detail — "Should I bid on this tender?"
@@ -378,8 +378,8 @@ export const BidDetailPage: React.FC = () => {
       : 'REVIEW REQUIRED';
   const verdictColor =
     verdictLabel.includes('PURSUE') || verdictLabel === 'GO'
-      ? 'text-foreground'
-      : 'text-orange-600 dark:text-orange-400';
+      ? 'text-emerald-600 dark:text-emerald-400'
+      : 'text-vermilion';
 
   return (
     <div className="space-y-6">
@@ -483,8 +483,10 @@ export const BidDetailPage: React.FC = () => {
               </div>
               <div className="mt-2 text-3xl font-bold tracking-tight text-foreground">01</div>
               <div className="mt-2 text-xs font-medium text-foreground/80 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-foreground inline-block" />
-                <span>100% evaluated</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                <span className="text-emerald-700 dark:text-emerald-400 font-semibold mono">
+                  100% evaluated
+                </span>
               </div>
             </div>
 
@@ -514,10 +516,14 @@ export const BidDetailPage: React.FC = () => {
               <div className="mono text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
                 EVIDENCE STATUS
               </div>
-              <div className="mt-2 text-3xl font-bold tracking-tight text-foreground">Verified</div>
+              <div className="mt-2 text-3xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
+                Verified
+              </div>
               <div className="mt-2 text-xs font-medium text-foreground/80 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-foreground inline-block" />
-                <span>IRIS GST &amp; MCA RoC Active</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                <span className="text-emerald-700 dark:text-emerald-400 font-medium">
+                  IRIS GST &amp; MCA RoC Active
+                </span>
               </div>
             </div>
 
@@ -529,7 +535,10 @@ export const BidDetailPage: React.FC = () => {
                 {verdictLabel}
               </div>
               <div className="mt-2 text-xs font-medium text-foreground/80">
-                Readiness Score: {scoreNum} / 100
+                Readiness Score:{' '}
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                  {scoreNum} / 100
+                </span>
               </div>
             </div>
           </div>

@@ -1,7 +1,7 @@
 import React from 'react';
-import { Button } from '../common/Button.js';
-import { CapabilityStatusBadge } from './CapabilityStatusBadge.js';
-import { type BaseCapabilityItem, getDaysUntilExpiry } from './companyProfileData.js';
+import { Button } from '@/components/common/Button.js';
+import { CapabilityStatusBadge } from '@/components/company/CapabilityStatusBadge.js';
+import { type BaseCapabilityItem, getDaysUntilExpiry } from '@/components/company/companyProfileData.js';
 import { AlertTriangle, FileText } from 'lucide-react';
 
 export interface KeyValueField {

@@ -13,8 +13,8 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import {
   IStorageService,
   HeadObjectResult,
-} from '../../modules/bids/application/IStorageService.js';
-import { StructuredLogger } from '../../common/logging/StructuredLogger.js';
+} from '@/modules/bids/application/IStorageService.js';
+import { StructuredLogger } from '@/common/logging/StructuredLogger.js';
 
 export interface AwsS3StorageConfig {
   bucketName: string;

@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest';
 import {
   InvalidStateTransitionException,
   ValidationException,
-} from '../../../../common/domain/DomainException.js';
-import { TenderDocument } from './TenderDocument.js';
-import { DocumentStatus } from '../value-objects/DocumentStatus.js';
+} from '@/common/domain/DomainException.js';
+import { TenderDocument } from '@/modules/bids/domain/entities/TenderDocument.js';
+import { DocumentStatus } from '@/modules/bids/domain/value-objects/DocumentStatus.js';
 
 describe('TenderDocument Domain Entity & DocumentStatus Value Object', () => {
   const validProps = {

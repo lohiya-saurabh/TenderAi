@@ -1,10 +1,10 @@
 import React, { useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { listAuditEvents, type AuditEvent } from '../api/audit.js';
-import { useApi } from '../hooks/useApi.js';
-import { AuditTimeline } from '../components/audit/AuditTimeline.js';
-import { ErrorBanner } from '../components/common/ErrorBanner.js';
-import { Skeleton } from '../components/ui/skeleton.js';
+import { listAuditEvents, type AuditEvent } from '@/api/audit.js';
+import { useApi } from '@/hooks/useApi.js';
+import { AuditTimeline } from '@/components/audit/AuditTimeline.js';
+import { ErrorBanner } from '@/components/common/ErrorBanner.js';
+import { Skeleton } from '@/components/ui/skeleton.js';
 import { ArrowLeft, ShieldCheck, History } from 'lucide-react';
 
 export const AuditHistoryPage: React.FC = () => {

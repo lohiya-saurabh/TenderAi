@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { apiGet, setTokens, clearTokens, getAccessToken, setOnAuthExpired } from '../client.js';
+import { apiGet, setTokens, clearTokens, getAccessToken, setOnAuthExpired } from '@/api/client.js';
 
 describe('API Client', () => {
   beforeEach(() => {

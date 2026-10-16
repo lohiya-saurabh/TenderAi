@@ -28,7 +28,7 @@ class SecurityContext(BaseModel):
     roles: list[str] = Field(default_factory=list, description="Assigned tenant RBAC roles")
     permissions: list[str] = Field(default_factory=list, description="Explicit caller permissions")
     allowed_document_ids: list[str] = Field(
-        ..., min_length=1, description="Explicit whitelist of authorized document IDs"
+        default_factory=list, description="Explicit whitelist of authorized document IDs"
     )
     allowed_source_ids: list[str] = Field(
         default_factory=list, description="Whitelisted public procurement portal sources"

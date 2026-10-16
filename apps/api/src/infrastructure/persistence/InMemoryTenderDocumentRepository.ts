@@ -1,5 +1,5 @@
-import { TenderDocument } from '../../modules/bids/domain/entities/TenderDocument.js';
-import { ITenderDocumentRepository } from '../../modules/bids/domain/repositories/ITenderDocumentRepository.js';
+import { TenderDocument } from '@/modules/bids/domain/entities/TenderDocument.js';
+import { ITenderDocumentRepository } from '@/modules/bids/domain/repositories/ITenderDocumentRepository.js';
 
 export class InMemoryTenderDocumentRepository implements ITenderDocumentRepository {
   private readonly documents: Map<string, TenderDocument> = new Map();

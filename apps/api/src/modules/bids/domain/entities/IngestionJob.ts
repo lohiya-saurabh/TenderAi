@@ -1,5 +1,5 @@
-import { AggregateRoot } from '../../../../common/domain/AggregateRoot.js';
-import { ValidationException } from '../../../../common/domain/DomainException.js';
+import { AggregateRoot } from '@/common/domain/AggregateRoot.js';
+import { ValidationException } from '@/common/domain/DomainException.js';
 
 export type JobStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'DEAD_LETTER';
 

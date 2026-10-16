@@ -10,8 +10,8 @@ import type {
   MsmeEnterpriseDetails,
   MsmeClassification,
   MsmeMajorActivity,
-} from '../domain/ports/IMsmeVerificationPort.js';
-import { BadRequestError, NotFoundError } from '../../../common/errors/errors.js';
+} from '@/modules/company-verification/domain/ports/IMsmeVerificationPort.js';
+import { BadRequestError, NotFoundError } from '@/common/errors/errors.js';
 
 const KNOWN_UDYAM_DATABASE: Record<string, Partial<MsmeEnterpriseDetails>> = {
   'UDYAM-MH-01-0012345': {

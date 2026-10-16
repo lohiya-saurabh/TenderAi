@@ -1,14 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { PGlite } from '@electric-sql/pglite';
-import { initDatabase } from '../../common/database/database.provider.js';
-import { AuthService } from '../auth/auth.service.js';
-import { BillingService } from '../billing/billing.service.js';
-import { EntitlementService } from '../billing/entitlement.service.js';
-import { CompaniesService } from '../companies/companies.service.js';
-import { CompanyProfileService } from '../company-profile/company-profile.service.js';
-import { TeamsService } from '../teams/teams.service.js';
-import { TenantContextHolder } from '../../common/security/TenantContext.js';
-import { ForbiddenError, ConflictError } from '../../common/errors/errors.js';
+import { initDatabase } from '@/common/database/database.provider.js';
+import { AuthService } from '@/modules/auth/auth.service.js';
+import { BillingService } from '@/modules/billing/billing.service.js';
+import { EntitlementService } from '@/modules/billing/entitlement.service.js';
+import { CompaniesService } from '@/modules/companies/companies.service.js';
+import { CompanyProfileService } from '@/modules/company-profile/company-profile.service.js';
+import { TeamsService } from '@/modules/teams/teams.service.js';
+import { TenantContextHolder } from '@/common/security/TenantContext.js';
+import { ForbiddenError, ConflictError } from '@/common/errors/errors.js';
 
 describe('Tenant Registration, Billing & Entitlements Engine Suite', () => {
   let pglite: PGlite;

@@ -2,10 +2,10 @@
  * NotificationsController — REST endpoints for user notifications & alerts.
  */
 import { Controller, Get, Post, Patch, Param, Query, Body, HttpCode } from '@nestjs/common';
-import { NotificationsService } from './notifications.service.js';
-import { RequirePermission } from '../../common/security/decorators/permissions.decorator.js';
-import { Permissions } from '../../common/security/permissions.js';
-import type { SendNotificationDto } from './notifications.types.js';
+import { NotificationsService } from '@/modules/notifications/notifications.service.js';
+import { RequirePermission } from '@/common/security/decorators/permissions.decorator.js';
+import { Permissions } from '@/common/security/permissions.js';
+import type { SendNotificationDto } from '@/modules/notifications/notifications.types.js';
 
 @Controller('api/v1/notifications')
 export class NotificationsController {

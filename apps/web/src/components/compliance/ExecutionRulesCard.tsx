@@ -1,6 +1,6 @@
 import React from 'react';
-import type { ExecutionRules } from '../../api/compliance.js';
-import { formatCurrency } from '../../utils/formatCurrency.js';
+import type { ExecutionRules } from '@/api/compliance.js';
+import { formatCurrency } from '@/utils/formatCurrency.js';
 import { FileText, Scale, Search, FileSignature, Landmark, type LucideIcon } from 'lucide-react';
 
 export interface ExecutionRulesCardProps {

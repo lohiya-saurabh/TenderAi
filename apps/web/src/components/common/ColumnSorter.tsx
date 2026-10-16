@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronUpIcon, ChevronDownIcon } from '../common/Icons.js';
+import { ChevronUpIcon, ChevronDownIcon } from '@/components/common/Icons.js';
 export interface SortConfig {
   key: string;
   direction: 'asc' | 'desc';

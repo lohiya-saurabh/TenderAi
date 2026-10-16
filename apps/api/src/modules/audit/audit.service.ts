@@ -8,10 +8,10 @@ import {
   DRIZZLE_TOKEN,
   type DrizzleDb,
   createDrizzle,
-} from '../../common/database/database.module.js';
-import * as schema from '../../common/database/schema.js';
-import type { DemoAuditEvent } from '../../seed/data.js';
-import { TenantContextHolder } from '../../common/security/TenantContext.js';
+} from '@/common/database/database.module.js';
+import * as schema from '@/common/database/schema.js';
+import type { DemoAuditEvent } from '@/seed/data.js';
+import { TenantContextHolder } from '@/common/security/TenantContext.js';
 
 @Injectable()
 export class AuditService {

@@ -1,10 +1,10 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import type { BidSummary } from '../../api/bids.js';
-import type { ComplianceItem } from '../../api/compliance.js';
-import { Card, CardHeader, CardTitle, CardContent } from '../ui/card.js';
-import { Badge } from '../ui/badge.js';
-import { Skeleton } from '../ui/skeleton.js';
+import type { BidSummary } from '@/api/bids.js';
+import type { ComplianceItem } from '@/api/compliance.js';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card.js';
+import { Badge } from '@/components/ui/badge.js';
+import { Skeleton } from '@/components/ui/skeleton.js';
 import {
   AlertCircleIcon,
   WarningIcon,
@@ -13,9 +13,9 @@ import {
   SpinnerIcon,
   ReviewRequiredIcon,
   MissingIcon,
-} from '../common/Icons.js';
-import { buildActionItems, type ActionItem, type ActionItemType } from './dashboardData.js';
-import { cn } from '../../lib/utils.js';
+} from '@/components/common/Icons.js';
+import { buildActionItems, type ActionItem, type ActionItemType } from '@/components/dashboard/dashboardData.js';
+import { cn } from '@/lib/utils.js';
 
 export interface ActionRequiredCardProps {
   bids: BidSummary[];

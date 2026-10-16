@@ -6,10 +6,10 @@ import type {
   DocumentExtractionCompletedEvent,
   ExtractedComplianceItemDto,
 } from '@tenderpulse/shared-types';
-import { DRIZZLE_TOKEN, type DrizzleDb } from '../../common/database/database.module.js';
-import * as schema from '../../common/database/schema.js';
-import { StructuredLogger } from '../../common/logging/StructuredLogger.js';
-import { LoggingContextHolder } from '../../common/logging/LoggingContext.js';
+import { DRIZZLE_TOKEN, type DrizzleDb } from '@/common/database/database.module.js';
+import * as schema from '@/common/database/schema.js';
+import { StructuredLogger } from '@/common/logging/StructuredLogger.js';
+import { LoggingContextHolder } from '@/common/logging/LoggingContext.js';
 
 export interface CompletionProcessResult {
   processed: boolean;
@@ -89,6 +89,7 @@ export class DocumentCompletionService {
             .set({
               status: 'FAILED',
               processingStartedAt: null,
+              processingCompletedAt: now,
               lastProcessingError: event.error || 'Document extraction failed in AI worker.',
             })
             .where(
@@ -111,6 +112,39 @@ export class DocumentCompletionService {
               itemsCount: 0,
               reason: 'Document not found or ownership changed before completion persistence',
             };
+          }
+
+          // Verify whether all tender documents for this bid have reached a terminal status
+          const allBidDocs = await this.db
+            .select({
+              id: schema.tenderDocuments.id,
+              status: schema.tenderDocuments.status,
+            })
+            .from(schema.tenderDocuments)
+            .where(
+              and(
+                eq(schema.tenderDocuments.bidId, event.bidId),
+                eq(schema.tenderDocuments.organizationId, event.organizationId),
+              ),
+            );
+
+          const terminalStatuses = new Set(['COMPLETED', 'FAILED']);
+          const allDocsTerminal =
+            allBidDocs.length > 0 && allBidDocs.every((d) => terminalStatuses.has(d.status));
+
+          if (allDocsTerminal) {
+            await this.db
+              .update(schema.bids)
+              .set({
+                status: 'REVIEW_READY',
+                updatedAt: now,
+              })
+              .where(
+                and(
+                  eq(schema.bids.id, event.bidId),
+                  eq(schema.bids.organizationId, event.organizationId),
+                ),
+              );
           }
 
           return {
@@ -324,22 +358,7 @@ export class DocumentCompletionService {
             (item) => item.status === 'READY' || item.status === 'PASS',
           ).length;
 
-          await tx
-            .update(schema.bids)
-            .set({
-              status: 'REVIEW_READY',
-              totalRequirements,
-              flaggedRequirements,
-              approvedRequirements,
-              updatedAt: now,
-            })
-            .where(
-              and(
-                eq(schema.bids.id, event.bidId),
-                eq(schema.bids.organizationId, event.organizationId),
-              ),
-            );
-
+          // First update this document to COMPLETED
           await tx
             .update(schema.tenderDocuments)
             .set({
@@ -352,6 +371,51 @@ export class DocumentCompletionService {
               and(
                 eq(schema.tenderDocuments.id, event.documentId),
                 eq(schema.tenderDocuments.organizationId, event.organizationId),
+              ),
+            );
+
+          // Verify whether all tender documents for this bid have reached a terminal status
+          const allBidDocs = await tx
+            .select({
+              id: schema.tenderDocuments.id,
+              status: schema.tenderDocuments.status,
+            })
+            .from(schema.tenderDocuments)
+            .where(
+              and(
+                eq(schema.tenderDocuments.bidId, event.bidId),
+                eq(schema.tenderDocuments.organizationId, event.organizationId),
+              ),
+            );
+
+          const terminalStatuses = new Set(['COMPLETED', 'FAILED']);
+          const allDocsTerminal =
+            allBidDocs.length > 0 && allBidDocs.every((d) => terminalStatuses.has(d.status));
+
+          const bidUpdatePayload: {
+            totalRequirements: number;
+            flaggedRequirements: number;
+            approvedRequirements: number;
+            updatedAt: Date;
+            status?: string;
+          } = {
+            totalRequirements,
+            flaggedRequirements,
+            approvedRequirements,
+            updatedAt: now,
+          };
+
+          if (allDocsTerminal) {
+            bidUpdatePayload.status = 'REVIEW_READY';
+          }
+
+          await tx
+            .update(schema.bids)
+            .set(bidUpdatePayload)
+            .where(
+              and(
+                eq(schema.bids.id, event.bidId),
+                eq(schema.bids.organizationId, event.organizationId),
               ),
             );
 

@@ -1,4 +1,4 @@
-import { BidProject } from '../entities/BidProject.js';
+import { BidProject } from '@/modules/bids/domain/entities/BidProject.js';
 
 export const BID_REPOSITORY_TOKEN = 'BID_REPOSITORY';
 

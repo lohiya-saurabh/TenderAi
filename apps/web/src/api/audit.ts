@@ -4,7 +4,7 @@
  * Immutable audit trail event logs.
  */
 
-import { apiGet, type ApiResult } from './client.js';
+import { apiGet, type ApiResult } from '@/api/client.js';
 
 export interface AuditEvent {
   id: string;

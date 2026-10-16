@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
-import { NotificationBell } from '../NotificationBell.js';
+import { NotificationBell } from '@/components/layout/NotificationBell.js';
 
 describe('NotificationBell Component Suite', () => {
   it('should instantiate NotificationBell component within Router context', () => {

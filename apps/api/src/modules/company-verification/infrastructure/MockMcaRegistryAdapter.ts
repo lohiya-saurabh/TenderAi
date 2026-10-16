@@ -8,8 +8,8 @@ import { Injectable } from '@nestjs/common';
 import type {
   CompanyRegistryProvider,
   McaCompanyMasterDetails,
-} from '../domain/ports/CompanyRegistryProvider.js';
-import { BadRequestError, NotFoundError } from '../../../common/errors/errors.js';
+} from '@/modules/company-verification/domain/ports/CompanyRegistryProvider.js';
+import { BadRequestError, NotFoundError } from '@/common/errors/errors.js';
 
 const KNOWN_MCA_DATABASE: Record<string, Partial<McaCompanyMasterDetails>> = {
   U72900MH2018PTC123456: {

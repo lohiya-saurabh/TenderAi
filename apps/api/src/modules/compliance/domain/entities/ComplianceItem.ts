@@ -1,9 +1,9 @@
-import { AggregateRoot } from '../../../../common/domain/AggregateRoot.js';
-import { ValidationException } from '../../../../common/domain/DomainException.js';
-import { ComplianceStatus } from '../value-objects/ComplianceStatus.js';
-import { ExecutionRules } from '../value-objects/ExecutionRules.js';
-import { Provenance } from '../value-objects/Provenance.js';
-import { ComplianceItemReviewedEvent } from '../events/ComplianceItemReviewedEvent.js';
+import { AggregateRoot } from '@/common/domain/AggregateRoot.js';
+import { ValidationException } from '@/common/domain/DomainException.js';
+import { ComplianceStatus } from '@/modules/compliance/domain/value-objects/ComplianceStatus.js';
+import { ExecutionRules } from '@/modules/compliance/domain/value-objects/ExecutionRules.js';
+import { Provenance } from '@/modules/compliance/domain/value-objects/Provenance.js';
+import { ComplianceItemReviewedEvent } from '@/modules/compliance/domain/events/ComplianceItemReviewedEvent.js';
 
 export interface CreateComplianceItemProps {
   id: string;

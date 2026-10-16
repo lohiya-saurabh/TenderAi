@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { useAuth } from '../auth/useAuth.js';
-import { Button } from '../components/ui/button.js';
-import { Input } from '../components/ui/input.js';
-import { Label } from '../components/ui/label.js';
-import { ErrorBanner } from '../components/common/ErrorBanner.js';
+import { useAuth } from '@/auth/useAuth.js';
+import { Button } from '@/components/ui/button.js';
+import { Input } from '@/components/ui/input.js';
+import { Label } from '@/components/ui/label.js';
+import { ErrorBanner } from '@/components/common/ErrorBanner.js';
 import { ShieldCheck, ArrowLeft, Lock, Mail } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {

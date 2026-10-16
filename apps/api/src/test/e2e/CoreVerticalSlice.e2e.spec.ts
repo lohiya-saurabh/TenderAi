@@ -1,21 +1,21 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { DirectUnitOfWork } from '../../common/database/IUnitOfWork.js';
+import { DirectUnitOfWork } from '@/common/database/IUnitOfWork.js';
 import {
   ConcurrencyConflictException,
   UnauthorizedTenantAccessException,
-} from '../../common/domain/DomainException.js';
-import { InternalServiceGuard } from '../../common/security/InternalServiceGuard.js';
-import { TenantContextHolder } from '../../common/security/TenantContext.js';
-import { InMemoryAuditRepository } from '../../modules/audit/infrastructure/InMemoryAuditRepository.js';
-import { CreateBidUseCase } from '../../modules/bids/application/CreateBidUseCase.js';
-import { BidsController } from '../../modules/bids/presentation/BidsController.js';
-import { BulkIngestComplianceUseCase } from '../../modules/compliance/application/BulkIngestComplianceUseCase.js';
-import { ListComplianceItemsUseCase } from '../../modules/compliance/application/ListComplianceItemsUseCase.js';
-import { ReviewComplianceItemUseCase } from '../../modules/compliance/application/ReviewComplianceItemUseCase.js';
-import { ComplianceController } from '../../modules/compliance/presentation/ComplianceController.js';
-import { InternalWorkerController } from '../../modules/compliance/presentation/InternalWorkerController.js';
-import { InMemoryBidRepository } from '../../infrastructure/persistence/InMemoryBidRepository.js';
-import { InMemoryComplianceItemRepository } from '../../infrastructure/persistence/InMemoryComplianceItemRepository.js';
+} from '@/common/domain/DomainException.js';
+import { InternalServiceGuard } from '@/common/security/InternalServiceGuard.js';
+import { TenantContextHolder } from '@/common/security/TenantContext.js';
+import { InMemoryAuditRepository } from '@/modules/audit/infrastructure/InMemoryAuditRepository.js';
+import { CreateBidUseCase } from '@/modules/bids/application/CreateBidUseCase.js';
+import { BidsController } from '@/modules/bids/presentation/BidsController.js';
+import { BulkIngestComplianceUseCase } from '@/modules/compliance/application/BulkIngestComplianceUseCase.js';
+import { ListComplianceItemsUseCase } from '@/modules/compliance/application/ListComplianceItemsUseCase.js';
+import { ReviewComplianceItemUseCase } from '@/modules/compliance/application/ReviewComplianceItemUseCase.js';
+import { ComplianceController } from '@/modules/compliance/presentation/ComplianceController.js';
+import { InternalWorkerController } from '@/modules/compliance/presentation/InternalWorkerController.js';
+import { InMemoryBidRepository } from '@/infrastructure/persistence/InMemoryBidRepository.js';
+import { InMemoryComplianceItemRepository } from '@/infrastructure/persistence/InMemoryComplianceItemRepository.js';
 
 describe('E2E: Tender Ingestion & Compliance Review Core Vertical Slice', () => {
   let bidRepo: InMemoryBidRepository;

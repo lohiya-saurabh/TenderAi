@@ -1,20 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../auth/useAuth.js';
-import { getMe, updateMe, changePassword, type UserProfile } from '../api/users.js';
-import { Avatar, AvatarFallback } from '../components/ui/avatar.js';
-import { Badge } from '../components/ui/badge.js';
-import { Button } from '../components/ui/button.js';
+import { useAuth } from '@/auth/useAuth.js';
+import { getMe, updateMe, changePassword, type UserProfile } from '@/api/users.js';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar.js';
+import { Badge } from '@/components/ui/badge.js';
+import { Button } from '@/components/ui/button.js';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '../components/ui/card.js';
-import { Input } from '../components/ui/input.js';
-import { Label } from '../components/ui/label.js';
-import { Separator } from '../components/ui/separator.js';
+} from '@/components/ui/card.js';
+import { Input } from '@/components/ui/input.js';
+import { Label } from '@/components/ui/label.js';
+import { Separator } from '@/components/ui/separator.js';
 import {
   ShieldCheck,
   Building2,

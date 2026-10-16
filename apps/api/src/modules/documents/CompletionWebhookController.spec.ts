@@ -2,15 +2,15 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { PGlite } from '@electric-sql/pglite';
 import { eq, and } from 'drizzle-orm';
 import type { DocumentExtractionCompletedEvent } from '@tenderpulse/shared-types';
-import { createDrizzle } from '../../common/database/database.module.js';
-import { initDatabase } from '../../common/database/database.provider.js';
-import * as schema from '../../common/database/schema.js';
-import { UnauthorizedTenantAccessException } from '../../common/domain/DomainException.js';
-import { DocumentCompletionService } from './DocumentCompletionService.js';
-import { CompletionWebhookController } from './CompletionWebhookController.js';
-import { AiDocumentExtractor } from '../bids/application/AiDocumentExtractor.js';
-import { MockStorageService } from '../../infrastructure/storage/MockStorageService.js';
-import { DocumentContentNormalizer } from '../bids/application/DocumentContentNormalizer.js';
+import { createDrizzle } from '@/common/database/database.module.js';
+import { initDatabase } from '@/common/database/database.provider.js';
+import * as schema from '@/common/database/schema.js';
+import { UnauthorizedTenantAccessException } from '@/common/domain/DomainException.js';
+import { DocumentCompletionService } from '@/modules/documents/DocumentCompletionService.js';
+import { CompletionWebhookController } from '@/modules/documents/CompletionWebhookController.js';
+import { AiDocumentExtractor } from '@/modules/bids/application/AiDocumentExtractor.js';
+import { MockStorageService } from '@/infrastructure/storage/MockStorageService.js';
+import { DocumentContentNormalizer } from '@/modules/bids/application/DocumentContentNormalizer.js';
 
 describe('CompletionWebhookController & DocumentCompletionService (Design B)', () => {
   let database: PGlite | undefined;

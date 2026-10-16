@@ -1,20 +1,20 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { DirectUnitOfWork } from '../../common/database/IUnitOfWork.js';
+import { DirectUnitOfWork } from '@/common/database/IUnitOfWork.js';
 import {
   EntityNotFoundException,
   UnauthorizedTenantAccessException,
   ValidationException,
-} from '../../common/domain/DomainException.js';
-import { TenantContextHolder } from '../../common/security/TenantContext.js';
-import { InMemoryAuditRepository } from '../../modules/audit/infrastructure/InMemoryAuditRepository.js';
-import { CreateBidUseCase } from '../../modules/bids/application/CreateBidUseCase.js';
-import { GenerateUploadUrlUseCase } from '../../modules/bids/application/GenerateUploadUrlUseCase.js';
-import { ConfirmDocumentUploadUseCase } from '../../modules/bids/application/ConfirmDocumentUploadUseCase.js';
-import { GetDocumentDownloadUrlUseCase } from '../../modules/bids/application/GetDocumentDownloadUrlUseCase.js';
-import { BidsController } from '../../modules/bids/presentation/BidsController.js';
-import { InMemoryBidRepository } from '../../infrastructure/persistence/InMemoryBidRepository.js';
-import { InMemoryTenderDocumentRepository } from '../../infrastructure/persistence/InMemoryTenderDocumentRepository.js';
-import { MockStorageService } from '../../infrastructure/storage/MockStorageService.js';
+} from '@/common/domain/DomainException.js';
+import { TenantContextHolder } from '@/common/security/TenantContext.js';
+import { InMemoryAuditRepository } from '@/modules/audit/infrastructure/InMemoryAuditRepository.js';
+import { CreateBidUseCase } from '@/modules/bids/application/CreateBidUseCase.js';
+import { GenerateUploadUrlUseCase } from '@/modules/bids/application/GenerateUploadUrlUseCase.js';
+import { ConfirmDocumentUploadUseCase } from '@/modules/bids/application/ConfirmDocumentUploadUseCase.js';
+import { GetDocumentDownloadUrlUseCase } from '@/modules/bids/application/GetDocumentDownloadUrlUseCase.js';
+import { BidsController } from '@/modules/bids/presentation/BidsController.js';
+import { InMemoryBidRepository } from '@/infrastructure/persistence/InMemoryBidRepository.js';
+import { InMemoryTenderDocumentRepository } from '@/infrastructure/persistence/InMemoryTenderDocumentRepository.js';
+import { MockStorageService } from '@/infrastructure/storage/MockStorageService.js';
 
 describe('E2E: Core Business Workflow WITHOUT AI (Bid Ingestion, Direct S3 Handshake & RBAC Security)', () => {
   let bidRepo: InMemoryBidRepository;

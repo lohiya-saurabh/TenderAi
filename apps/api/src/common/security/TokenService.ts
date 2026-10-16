@@ -8,8 +8,8 @@
 
 import { Injectable } from '@nestjs/common';
 import crypto from 'node:crypto';
-import { UnauthorizedError } from '../errors/errors.js';
-import type { UserRole, Permission } from './permissions.js';
+import { UnauthorizedError } from '@/common/errors/errors.js';
+import type { UserRole, Permission } from '@/common/security/permissions.js';
 
 export interface UserTokenPayload {
   sub: string; // userId

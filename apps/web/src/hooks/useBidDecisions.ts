@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { getBidDecision, type BidDecisionSummary, type BidSummary } from '../api/bids.js';
+import { getBidDecision, type BidDecisionSummary, type BidSummary } from '@/api/bids.js';
 
 export interface BidDecisionsState {
   /** Latest bid decision keyed by bid ID (omits unevaluated bids) */

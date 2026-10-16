@@ -1,20 +1,20 @@
 import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { and, eq, lte, or } from 'drizzle-orm';
-import { DRIZZLE_TOKEN, type DrizzleDb } from '../../common/database/database.module.js';
-import * as schema from '../../common/database/schema.js';
+import { DRIZZLE_TOKEN, type DrizzleDb } from '@/common/database/database.module.js';
+import * as schema from '@/common/database/schema.js';
 import {
   INGESTION_QUEUE_TOKEN,
   COMPLETION_QUEUE_TOKEN,
-} from '../../infrastructure/queue/queue.module.js';
+} from '@/infrastructure/queue/queue.module.js';
 import type {
   IJobQueue,
   IngestionJobMessage,
   QueueMessage,
-} from '../bids/application/IJobQueue.js';
-import { DocumentCompletionService } from './DocumentCompletionService.js';
+} from '@/modules/bids/application/IJobQueue.js';
+import { DocumentCompletionService } from '@/modules/documents/DocumentCompletionService.js';
 import type { DocumentExtractionCompletedEvent } from '@tenderpulse/shared-types';
-import { StructuredLogger } from '../../common/logging/StructuredLogger.js';
-import { LoggingContextHolder } from '../../common/logging/LoggingContext.js';
+import { StructuredLogger } from '@/common/logging/StructuredLogger.js';
+import { LoggingContextHolder } from '@/common/logging/LoggingContext.js';
 import { randomUUID } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
 
@@ -245,6 +245,29 @@ export class DocumentProcessingRuntime implements OnModuleInit, OnModuleDestroy 
             this.logger.error(
               `Malformed completion message missing required identifiers (documentId, bidId, or organizationId): ${JSON.stringify(event)}`,
             );
+            if (event.documentId && event.organizationId) {
+              try {
+                await this.db
+                  .update(schema.tenderDocuments)
+                  .set({
+                    status: 'FAILED',
+                    lastProcessingError:
+                      'Malformed completion message missing required identifiers (documentId, bidId, or organizationId).',
+                    processingCompletedAt: new Date(),
+                  })
+                  .where(
+                    and(
+                      eq(schema.tenderDocuments.id, event.documentId),
+                      eq(schema.tenderDocuments.organizationId, event.organizationId),
+                    ),
+                  );
+              } catch (dbErr) {
+                this.logger.error(
+                  `Failed to mark malformed doc ${event.documentId} as FAILED`,
+                  dbErr,
+                );
+              }
+            }
             await this.completionQueue.moveToDeadLetter(
               event as unknown as IngestionJobMessage,
               'Malformed completion message missing documentId, bidId, or organizationId.',
@@ -276,9 +299,67 @@ export class DocumentProcessingRuntime implements OnModuleInit, OnModuleDestroy 
           );
 
           if (receiveCount >= MAX_PROCESSING_ATTEMPTS) {
+            const dlqReason = `Exceeded max attempts (${MAX_PROCESSING_ATTEMPTS}): ${errorMessage}`;
+            if (event.documentId && event.organizationId) {
+              try {
+                await this.db
+                  .update(schema.tenderDocuments)
+                  .set({
+                    status: 'FAILED',
+                    lastProcessingError: dlqReason,
+                    processingCompletedAt: new Date(),
+                  })
+                  .where(
+                    and(
+                      eq(schema.tenderDocuments.id, event.documentId),
+                      eq(schema.tenderDocuments.organizationId, event.organizationId),
+                    ),
+                  );
+
+                if (event.bidId) {
+                  const allBidDocs = await this.db
+                    .select({
+                      id: schema.tenderDocuments.id,
+                      status: schema.tenderDocuments.status,
+                    })
+                    .from(schema.tenderDocuments)
+                    .where(
+                      and(
+                        eq(schema.tenderDocuments.bidId, event.bidId),
+                        eq(schema.tenderDocuments.organizationId, event.organizationId),
+                      ),
+                    );
+
+                  const terminalStatuses = new Set(['COMPLETED', 'FAILED']);
+                  const allDocsTerminal =
+                    allBidDocs.length > 0 &&
+                    allBidDocs.every((d) => terminalStatuses.has(d.status));
+
+                  if (allDocsTerminal) {
+                    await this.db
+                      .update(schema.bids)
+                      .set({
+                        status: 'REVIEW_READY',
+                        updatedAt: new Date(),
+                      })
+                      .where(
+                        and(
+                          eq(schema.bids.id, event.bidId),
+                          eq(schema.bids.organizationId, event.organizationId),
+                        ),
+                      );
+                  }
+                }
+              } catch (dbErr) {
+                this.logger.error(
+                  `Failed to update tender document status to FAILED for doc ${event.documentId}`,
+                  dbErr,
+                );
+              }
+            }
             await this.completionQueue.moveToDeadLetter(
               event as unknown as IngestionJobMessage,
-              `Exceeded max attempts (${MAX_PROCESSING_ATTEMPTS}): ${errorMessage}`,
+              dlqReason,
               receiveCount,
             );
             await this.completionQueue.deleteMessage(receiptHandle);

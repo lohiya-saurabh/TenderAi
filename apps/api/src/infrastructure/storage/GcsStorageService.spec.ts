@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { GcsStorageService } from './GcsStorageService.js';
+import { GcsStorageService } from '@/infrastructure/storage/GcsStorageService.js';
 
 const mockGetSignedUrl = vi.fn();
 const mockGetMetadata = vi.fn();

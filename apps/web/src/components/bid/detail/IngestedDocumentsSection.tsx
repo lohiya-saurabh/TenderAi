@@ -1,9 +1,9 @@
 import React from 'react';
-import type { BidDocument } from '../../../api/bids.js';
-import { formatFileSize } from '../../../utils/formatFileSize.js';
-import { DocumentUploader } from '../DocumentUploader.js';
+import type { BidDocument } from '@/api/bids.js';
+import { formatFileSize } from '@/utils/formatFileSize.js';
+import { DocumentUploader } from '@/components/bid/DocumentUploader.js';
 import { Plus, RefreshCw, Trash2, Download } from 'lucide-react';
-import { Button } from '../../ui/button.js';
+import { Button } from '@/components/ui/button.js';
 
 export interface IngestedDocumentsSectionProps {
   bidId: string;
@@ -143,9 +143,9 @@ export const IngestedDocumentsSection: React.FC<IngestedDocumentsSectionProps> =
                   <span
                     className={`mono text-[11px] font-bold px-2 py-0.5 rounded border shrink-0 ${
                       isCompleted
-                        ? 'bg-primary/10 text-primary border-primary/30'
+                        ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
                         : isProcessing
-                          ? 'bg-orange-500/10 text-orange-500 border-orange-500/30 animate-pulse'
+                          ? 'bg-amber-500/10 text-amber-500 border-amber-500/30 animate-pulse'
                           : 'bg-muted text-muted-foreground border-border'
                     }`}
                   >
@@ -162,7 +162,7 @@ export const IngestedDocumentsSection: React.FC<IngestedDocumentsSectionProps> =
                     <button
                       type="button"
                       onClick={() => onDownload(doc.id)}
-                      className="text-foreground font-semibold underline hover:opacity-80 transition-opacity flex items-center gap-1 cursor-pointer"
+                      className="text-foreground font-semibold underline hover:text-vermilion transition-colors flex items-center gap-1 cursor-pointer"
                       title="Download PDF"
                     >
                       <Download className="h-3 w-3" />

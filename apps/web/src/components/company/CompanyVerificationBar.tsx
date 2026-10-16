@@ -9,9 +9,9 @@
  * 5. Google Drive / OneDrive evidence import
  */
 import React, { useState } from 'react';
-import { Button } from '../common/Button.js';
-import { Badge } from '../common/Badge.js';
-import { Modal } from '../common/Modal.js';
+import { Button } from '@/components/common/Button.js';
+import { Badge } from '@/components/common/Badge.js';
+import { Modal } from '@/components/common/Modal.js';
 import { ShieldCheck, CloudDownload, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import {
   verifyGstin,
@@ -22,7 +22,7 @@ import {
   importCloudEvidence,
   type CompanyItem,
   type VerificationResult,
-} from '../../api/companies.js';
+} from '@/api/companies.js';
 
 export interface CompanyVerificationBarProps {
   company: CompanyItem;

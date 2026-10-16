@@ -1,8 +1,8 @@
-import { AggregateRoot } from '../../../../common/domain/AggregateRoot.js';
-import { ValidationException } from '../../../../common/domain/DomainException.js';
-import { BidStatus } from '../value-objects/BidStatus.js';
-import { Money } from '../value-objects/Money.js';
-import { BidProjectCreatedEvent } from '../events/BidProjectCreatedEvent.js';
+import { AggregateRoot } from '@/common/domain/AggregateRoot.js';
+import { ValidationException } from '@/common/domain/DomainException.js';
+import { BidStatus } from '@/modules/bids/domain/value-objects/BidStatus.js';
+import { Money } from '@/modules/bids/domain/value-objects/Money.js';
+import { BidProjectCreatedEvent } from '@/modules/bids/domain/events/BidProjectCreatedEvent.js';
 
 export interface CreateBidProjectProps {
   id: string;

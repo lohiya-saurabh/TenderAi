@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { useAuth } from '../auth/useAuth.js';
-import { useCompany } from '../context/CompanyContext.js';
-import { useTheme } from '../context/ThemeContext.js';
+import { useAuth } from '@/auth/useAuth.js';
+import { useCompany } from '@/context/useCompany.js';
+import { useTheme } from '@/context/useTheme.js';
 import {
   getWorkspaceSettings,
   updateWorkspaceSettings,
   type NotificationPreferences,
   type WorkspaceSettings,
-} from '../api/settings.js';
-import { listTeamMembers, inviteTeamMember, type TeamMember } from '../api/teams.js';
+} from '@/api/settings.js';
+import { listTeamMembers, inviteTeamMember, type TeamMember } from '@/api/teams.js';
 import {
   getSubscription,
   getUsageSummary,
@@ -19,22 +19,22 @@ import {
   type UsageSummary,
   type PlanDefinition,
   type PlanTier,
-} from '../api/billing.js';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs.js';
+} from '@/api/billing.js';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs.js';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '../components/ui/card.js';
-import { Badge } from '../components/ui/badge.js';
-import { Button } from '../components/ui/button.js';
-import { Input } from '../components/ui/input.js';
-import { Label } from '../components/ui/label.js';
-import { Switch } from '../components/ui/switch.js';
-import { Separator } from '../components/ui/separator.js';
-import { Progress } from '../components/ui/progress.js';
+} from '@/components/ui/card.js';
+import { Badge } from '@/components/ui/badge.js';
+import { Button } from '@/components/ui/button.js';
+import { Input } from '@/components/ui/input.js';
+import { Label } from '@/components/ui/label.js';
+import { Switch } from '@/components/ui/switch.js';
+import { Separator } from '@/components/ui/separator.js';
+import { Progress } from '@/components/ui/progress.js';
 import {
   Building2,
   Bell,

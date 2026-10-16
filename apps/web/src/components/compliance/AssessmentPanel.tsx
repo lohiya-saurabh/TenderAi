@@ -1,11 +1,11 @@
 import React from 'react';
-import { Drawer } from '../common/Drawer.js';
-import { Button } from '../common/Button.js';
-import { StatusBadge } from '../common/StatusBadge.js';
-import { Badge } from '../common/Badge.js';
-import { Card } from '../common/Card.js';
+import { Drawer } from '@/components/common/Drawer.js';
+import { Button } from '@/components/common/Button.js';
+import { StatusBadge } from '@/components/common/StatusBadge.js';
+import { Badge } from '@/components/common/Badge.js';
+import { Card } from '@/components/common/Card.js';
 import { Bot } from 'lucide-react';
-import type { AssessmentRationale } from '../../api/compliance.js';
+import type { AssessmentRationale } from '@/api/compliance.js';
 
 export interface AssessmentPanelProps {
   rationale: AssessmentRationale | null;

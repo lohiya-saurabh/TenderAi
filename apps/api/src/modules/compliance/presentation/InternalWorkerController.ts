@@ -1,10 +1,10 @@
-import { InternalServiceGuard } from '../../../common/security/InternalServiceGuard.js';
+import { InternalServiceGuard } from '@/common/security/InternalServiceGuard.js';
 import {
   BulkIngestComplianceUseCase,
   BulkIngestComplianceResult,
   BulkIngestComplianceCommand,
-} from '../application/BulkIngestComplianceUseCase.js';
-import { BulkIngestComplianceDto, BulkIngestPayload } from './dto/BulkIngestComplianceDto.js';
+} from '@/modules/compliance/application/BulkIngestComplianceUseCase.js';
+import { BulkIngestComplianceDto, BulkIngestPayload } from '@/modules/compliance/presentation/dto/BulkIngestComplianceDto.js';
 
 export class InternalWorkerController {
   constructor(

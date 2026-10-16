@@ -1,6 +1,6 @@
-import { IComplianceItemRepository } from '../domain/repositories/IComplianceItemRepository.js';
-import { ExecutionRulesProps } from '../domain/value-objects/ExecutionRules.js';
-import { ProvenanceProps } from '../domain/value-objects/Provenance.js';
+import { IComplianceItemRepository } from '@/modules/compliance/domain/repositories/IComplianceItemRepository.js';
+import { ExecutionRulesProps } from '@/modules/compliance/domain/value-objects/ExecutionRules.js';
+import { ProvenanceProps } from '@/modules/compliance/domain/value-objects/Provenance.js';
 
 export interface ListComplianceItemsQuery {
   organizationId: string;

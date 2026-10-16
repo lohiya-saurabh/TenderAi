@@ -1,4 +1,4 @@
-import { InvalidExecutionRulesException } from '../../../../common/domain/DomainException.js';
+import { InvalidExecutionRulesException } from '@/common/domain/DomainException.js';
 
 export interface ExecutionRulesProps {
   stampPaperRequired: boolean;

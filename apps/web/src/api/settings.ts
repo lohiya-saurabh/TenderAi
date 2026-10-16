@@ -1,7 +1,7 @@
 /**
  * Settings API Client
  */
-import { apiGet, apiPatch, type ApiResult } from './client.js';
+import { apiGet, apiPatch, type ApiResult } from '@/api/client.js';
 
 export interface NotificationPreferences {
   notifyDeadlines: boolean;

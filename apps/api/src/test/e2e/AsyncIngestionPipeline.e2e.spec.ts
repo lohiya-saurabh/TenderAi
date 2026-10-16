@@ -1,23 +1,23 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { DirectUnitOfWork } from '../../common/database/IUnitOfWork.js';
-import { TenantContextHolder } from '../../common/security/TenantContext.js';
-import { InMemoryAuditRepository } from '../../modules/audit/infrastructure/InMemoryAuditRepository.js';
-import { CreateBidUseCase } from '../../modules/bids/application/CreateBidUseCase.js';
-import { GenerateUploadUrlUseCase } from '../../modules/bids/application/GenerateUploadUrlUseCase.js';
-import { ConfirmDocumentUploadUseCase } from '../../modules/bids/application/ConfirmDocumentUploadUseCase.js';
+import { DirectUnitOfWork } from '@/common/database/IUnitOfWork.js';
+import { TenantContextHolder } from '@/common/security/TenantContext.js';
+import { InMemoryAuditRepository } from '@/modules/audit/infrastructure/InMemoryAuditRepository.js';
+import { CreateBidUseCase } from '@/modules/bids/application/CreateBidUseCase.js';
+import { GenerateUploadUrlUseCase } from '@/modules/bids/application/GenerateUploadUrlUseCase.js';
+import { ConfirmDocumentUploadUseCase } from '@/modules/bids/application/ConfirmDocumentUploadUseCase.js';
 import {
   IngestionWorker,
   IDocumentExtractor,
   ExtractedComplianceItem,
-} from '../../modules/bids/application/IngestionWorker.js';
-import { InMemoryBidRepository } from '../../infrastructure/persistence/InMemoryBidRepository.js';
-import { InMemoryTenderDocumentRepository } from '../../infrastructure/persistence/InMemoryTenderDocumentRepository.js';
-import { InMemoryIngestionJobRepository } from '../../infrastructure/persistence/InMemoryIngestionJobRepository.js';
-import { InMemoryComplianceItemRepository } from '../../infrastructure/persistence/InMemoryComplianceItemRepository.js';
-import { MockStorageService } from '../../infrastructure/storage/MockStorageService.js';
-import { MockSqsJobQueue } from '../../infrastructure/queue/MockSqsJobQueue.js';
-import { IngestionJob } from '../../modules/bids/domain/entities/IngestionJob.js';
-import { TenderDocument } from '../../modules/bids/domain/entities/TenderDocument.js';
+} from '@/modules/bids/application/IngestionWorker.js';
+import { InMemoryBidRepository } from '@/infrastructure/persistence/InMemoryBidRepository.js';
+import { InMemoryTenderDocumentRepository } from '@/infrastructure/persistence/InMemoryTenderDocumentRepository.js';
+import { InMemoryIngestionJobRepository } from '@/infrastructure/persistence/InMemoryIngestionJobRepository.js';
+import { InMemoryComplianceItemRepository } from '@/infrastructure/persistence/InMemoryComplianceItemRepository.js';
+import { MockStorageService } from '@/infrastructure/storage/MockStorageService.js';
+import { MockSqsJobQueue } from '@/infrastructure/queue/MockSqsJobQueue.js';
+import { IngestionJob } from '@/modules/bids/domain/entities/IngestionJob.js';
+import { TenderDocument } from '@/modules/bids/domain/entities/TenderDocument.js';
 
 describe('E2E: Asynchronous Queue Processing & Resilience Architecture (S3 → Job → SQS → Worker → Persistence)', () => {
   let bidRepo: InMemoryBidRepository;

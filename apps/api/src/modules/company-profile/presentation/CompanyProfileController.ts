@@ -9,11 +9,11 @@
  * the factual basis of every bid/no-bid verdict.
  */
 import { Controller, Get, Post, Param, Query, Body, HttpCode } from '@nestjs/common';
-import { BadRequestError } from '../../../common/errors/errors.js';
-import { CompanyProfileService } from '../company-profile.service.js';
-import { RequirePermission } from '../../../common/security/decorators/permissions.decorator.js';
-import { Permissions } from '../../../common/security/permissions.js';
-import type { CompanyProfilePayload } from './dto/CompanyProfilePayload.js';
+import { BadRequestError } from '@/common/errors/errors.js';
+import { CompanyProfileService } from '@/modules/company-profile/company-profile.service.js';
+import { RequirePermission } from '@/common/security/decorators/permissions.decorator.js';
+import { Permissions } from '@/common/security/permissions.js';
+import type { CompanyProfilePayload } from '@/modules/company-profile/presentation/dto/CompanyProfilePayload.js';
 
 @Controller('api/v1/company-profile')
 export class CompanyProfileController {

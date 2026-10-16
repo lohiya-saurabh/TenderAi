@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { CloseIcon } from './Icons.js';
+import { CloseIcon } from '@/components/common/Icons.js';
 
 export interface DrawerProps {
   isOpen: boolean;

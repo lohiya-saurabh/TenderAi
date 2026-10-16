@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getBreakpoint, type Breakpoint } from '../components/dashboard/tenderListData.js';
+import { getBreakpoint, type Breakpoint } from '@/components/dashboard/tenderListData.js';
 
 /**
  * Reactive viewport breakpoint.

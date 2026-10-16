@@ -8,9 +8,9 @@ import {
   DRIZZLE_TOKEN,
   type DrizzleDb,
   createDrizzle,
-} from '../../common/database/database.module.js';
-import * as schema from '../../common/database/schema.js';
-import { BadRequestError } from '../../common/errors/errors.js';
+} from '@/common/database/database.module.js';
+import * as schema from '@/common/database/schema.js';
+import { BadRequestError } from '@/common/errors/errors.js';
 import {
   PLAN_CATALOG,
   type PlanTier,
@@ -19,7 +19,7 @@ import {
   type UsageSummary,
   type ChangePlanDto,
   type PlanDefinition,
-} from './billing.types.js';
+} from '@/modules/billing/billing.types.js';
 
 @Injectable()
 export class BillingService {

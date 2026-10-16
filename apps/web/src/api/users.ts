@@ -1,7 +1,7 @@
 /**
  * Users API Client
  */
-import { apiGet, apiPatch, apiPost, type ApiResult } from './client.js';
+import { apiGet, apiPatch, apiPost, type ApiResult } from '@/api/client.js';
 
 export interface UserProfile {
   id: string;

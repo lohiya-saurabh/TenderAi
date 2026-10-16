@@ -22,18 +22,18 @@ import type {
   BidDecisionSummary,
   BidSummary,
   BidVerdict,
-} from '../../api/bids.js';
+} from '@/api/bids.js';
 import {
   computeReadiness,
   computeRiskLevel,
   type DashboardRiskLevel,
-} from '../../utils/readiness.js';
-import { getDeadlineInfo } from '../../utils/deadline.js';
-import { formatDate } from '../../utils/formatDate.js';
+} from '@/utils/readiness.js';
+import { getDeadlineInfo } from '@/utils/deadline.js';
+import { formatDate } from '@/utils/formatDate.js';
 
 // Re-exported for dashboard consumers (single source of truth lives in utils/)
 export { getDeadlineInfo };
-export type { DeadlineInfo, DeadlineUrgency } from '../../utils/deadline.js';
+export type { DeadlineInfo, DeadlineUrgency } from '@/utils/deadline.js';
 
 // ---------------------------------------------------------------------------
 // Responsive breakpoints

@@ -4,12 +4,12 @@
  * Enforces Zero-Trust TenantContextHolder isolation and Anti-IDOR boundary validation.
  */
 import { Controller, Get, Post, Delete, Param, Body, Query, HttpCode } from '@nestjs/common';
-import { CompanyEvidenceService } from '../application/CompanyEvidenceService.js';
-import { GoogleDriveConnector } from '../infrastructure/GoogleDriveConnector.js';
-import { OneDriveConnector } from '../infrastructure/OneDriveConnector.js';
-import { RequirePermission } from '../../../common/security/decorators/permissions.decorator.js';
-import { Permissions } from '../../../common/security/permissions.js';
-import { BadRequestError } from '../../../common/errors/errors.js';
+import { CompanyEvidenceService } from '@/modules/company-verification/application/CompanyEvidenceService.js';
+import { GoogleDriveConnector } from '@/modules/company-verification/infrastructure/GoogleDriveConnector.js';
+import { OneDriveConnector } from '@/modules/company-verification/infrastructure/OneDriveConnector.js';
+import { RequirePermission } from '@/common/security/decorators/permissions.decorator.js';
+import { Permissions } from '@/common/security/permissions.js';
+import { BadRequestError } from '@/common/errors/errors.js';
 
 export interface UploadEvidenceRequestBody {
   fileName: string;
@@ -114,5 +114,15 @@ export class CompanyEvidenceController {
     @Param('evidenceId') evidenceId: string,
   ) {
     await this.companyEvidenceService.deleteEvidence(companyId, evidenceId);
+  }
+
+  @Post(':evidenceId/extract')
+  @HttpCode(200)
+  @RequirePermission(Permissions.COMPANY_PROFILE_MANAGE)
+  async extractEvidence(
+    @Param('companyId') companyId: string,
+    @Param('evidenceId') evidenceId: string,
+  ) {
+    return this.companyEvidenceService.extractAndPersistChunks(companyId, evidenceId);
   }
 }

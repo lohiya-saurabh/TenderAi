@@ -6,12 +6,12 @@
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && tsc-alias",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint 'src/**/*.ts' --max-warnings=0",
-    "dev": "tsc && node dist/main.js",
+    "dev": "tsc && tsc-alias && node dist/main.js",
     "start": "node dist/main.js",
     "clean": "rm -rf dist"
   },
@@ -45,6 +45,7 @@
     "@typescript-eslint/eslint-plugin": "^8.26.0",
     "@typescript-eslint/parser": "^8.26.0",
     "eslint": "^9.21.0",
+    "tsc-alias": "^1.9.7",
     "typescript": "^5.8.2",
     "vitest": "^5.0.3"
   }

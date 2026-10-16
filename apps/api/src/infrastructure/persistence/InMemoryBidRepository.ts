@@ -1,6 +1,6 @@
-import { ConcurrencyConflictException } from '../../common/domain/DomainException.js';
-import { BidProject } from '../../modules/bids/domain/entities/BidProject.js';
-import { IBidRepository } from '../../modules/bids/domain/repositories/IBidRepository.js';
+import { ConcurrencyConflictException } from '@/common/domain/DomainException.js';
+import { BidProject } from '@/modules/bids/domain/entities/BidProject.js';
+import { IBidRepository } from '@/modules/bids/domain/repositories/IBidRepository.js';
 
 export class InMemoryBidRepository implements IBidRepository {
   private readonly bids = new Map<string, BidProject>();

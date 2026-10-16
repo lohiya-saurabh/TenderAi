@@ -7,9 +7,9 @@
 
 import { Injectable, CanActivate, ExecutionContext, Inject } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { TokenService } from '../TokenService.js';
-import { IS_PUBLIC_KEY } from '../decorators/public.decorator.js';
-import { UnauthorizedError } from '../../errors/errors.js';
+import { TokenService } from '@/common/security/TokenService.js';
+import { IS_PUBLIC_KEY } from '@/common/security/decorators/public.decorator.js';
+import { UnauthorizedError } from '@/common/errors/errors.js';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {

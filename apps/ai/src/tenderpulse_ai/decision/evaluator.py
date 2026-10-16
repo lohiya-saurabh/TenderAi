@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import date
 from typing import NamedTuple
 
@@ -44,6 +45,7 @@ class DeterministicEligibilityEvaluator:
         submission_deadline: date,
         project_location_state: str,
         estimated_value_inr_crores: float,
+        matched_citations: list[EvidenceCitation] | None = None,
     ) -> DeterministicEvaluationOutcome:
         hard_disqualifiers: list[Disqualifier] = []
         missing_information: list[GapItem] = []
@@ -51,6 +53,7 @@ class DeterministicEligibilityEvaluator:
         reasons_not_to_pursue: list[DecisionReason] = []
         uncertain_areas: list[UncertaintyItem] = []
         evidence_citations: list[EvidenceCitation] = []
+        matched_citations = matched_citations or []
 
         # 0. Global Check: Debarment / Blacklisting (Factor 1 - Statutory Hard Disqualifier)
         if company.is_blacklisted:
@@ -114,6 +117,8 @@ class DeterministicEligibilityEvaluator:
                     reasons_to_pursue=reasons_to_pursue,
                     reasons_not_to_pursue=reasons_not_to_pursue,
                     evidence_citations=evidence_citations,
+                    matched_citations=matched_citations,
+                    estimated_value_inr_crores=estimated_value_inr_crores,
                 )
 
             # Factor 3: Past Project Experience
@@ -130,6 +135,8 @@ class DeterministicEligibilityEvaluator:
                     reasons_to_pursue=reasons_to_pursue,
                     reasons_not_to_pursue=reasons_not_to_pursue,
                     evidence_citations=evidence_citations,
+                    matched_citations=matched_citations,
+                    estimated_value_inr_crores=estimated_value_inr_crores,
                 )
 
             # Factor 5: Certifications
@@ -145,6 +152,7 @@ class DeterministicEligibilityEvaluator:
                     reasons_to_pursue=reasons_to_pursue,
                     reasons_not_to_pursue=reasons_not_to_pursue,
                     evidence_citations=evidence_citations,
+                    matched_citations=matched_citations,
                 )
 
             # Factor 6: OEM Authorization
@@ -240,6 +248,15 @@ class DeterministicEligibilityEvaluator:
             verdict = BidDecisionVerdict.GO
             readiness_score = 0.95
 
+        # Merge any unreferenced matched citations from the evidence vault
+        existing_refs = {
+            c.company_evidence_ref for c in evidence_citations if c.company_evidence_ref
+        }
+        for mc in matched_citations:
+            if mc.company_evidence_ref and mc.company_evidence_ref not in existing_refs:
+                evidence_citations.append(mc)
+                existing_refs.add(mc.company_evidence_ref)
+
         return DeterministicEvaluationOutcome(
             verdict=verdict,
             hard_disqualifiers=hard_disqualifiers,
@@ -262,14 +279,29 @@ class DeterministicEligibilityEvaluator:
         missing_information: list[GapItem],
         evidence_citations: list[EvidenceCitation],
     ) -> None:
-        state_norm = project_location_state.strip().lower()
-        company_regions = [r.strip().lower() for r in company.operating_regions]
+        state_norm = re.sub(r"[-_]", " ", project_location_state.strip().lower())
+        company_regions = [
+            re.sub(r"[-_]", " ", r.strip().lower()) for r in company.operating_regions
+        ]
 
-        if state_norm in company_regions:
+        # Neutral handling for unspecified or national scope tenders
+        if state_norm in ("unspecified", ""):
+            return
+
+        is_national_tender = state_norm in ("all india", "pan india", "india")
+        company_has_pan_india = any(
+            r in ("all india", "pan india", "india") for r in company_regions
+        )
+
+        if state_norm in company_regions or is_national_tender or company_has_pan_india:
             reasons_to_pursue.append(
                 DecisionReason(
                     title="Active Operational Presence",
-                    detail=f"Company has established operating presence in target location: {project_location_state}.",
+                    detail=(
+                        f"Company has established operating presence in target location: {project_location_state}."
+                        if not is_national_tender and not company_has_pan_india
+                        else f"Company has nationwide operating presence satisfying {project_location_state}."
+                    ),
                     category="GEOGRAPHY",
                     evidence=EvidenceCitation(
                         tender_requirement_title="Project Location",
@@ -303,14 +335,28 @@ class DeterministicEligibilityEvaluator:
         reasons_to_pursue: list[DecisionReason],
         reasons_not_to_pursue: list[DecisionReason],
         evidence_citations: list[EvidenceCitation],
+        matched_citations: list[EvidenceCitation] | None = None,
+        estimated_value_inr_crores: float = 0.0,
     ) -> None:
-        # Expected threshold in Crores from criterion or title
+        # Expected threshold in Crores from criterion, title/description, or 40% of estimated tender value
         expected_crores = None
         if req.criterion and req.criterion.threshold is not None:
-            expected_crores = req.criterion.threshold
+            expected_crores = float(req.criterion.threshold)
         else:
-            # Fallback heuristic: check if threshold is mentioned in title/description (e.g. 50 Crores)
-            expected_crores = 10.0  # standard baseline for infrastructure works
+            text = f"{req.title} {req.description}"
+            m = re.search(
+                r"(?:inr|rs\.?|₹)?\s*(\d+(?:\.\d+)?)\s*(?:cr|crores?)", text, re.IGNORECASE
+            )
+            if m:
+                expected_crores = float(m.group(1))
+            elif estimated_value_inr_crores > 0:
+                expected_crores = round(estimated_value_inr_crores * 0.4, 2)
+            else:
+                expected_crores = 10.0
+
+        # Calculate turnover using the statutory 3-year average turnover
+        turnovers = [t.turnover_inr_crores for t in company.turnover_records]
+        avg_turnover = sum(turnovers) / len(turnovers) if turnovers else 0.0
 
         # Company's best turnover figure
         best_record = (
@@ -327,9 +373,26 @@ class DeterministicEligibilityEvaluator:
             company_evidence_ref=best_record.evidence_document_id if best_record else None,
             company_entry_id=best_record.financial_year if best_record else None,
         )
+
+        matched = next(
+            (
+                c
+                for c in (matched_citations or [])
+                if c.tender_requirement_title == req.title
+                or "turnover" in c.tender_requirement_title.lower()
+            ),
+            None,
+        )
+        if matched and matched.document_name:
+            citation.document_name = matched.document_name
+            citation.evidence_type = matched.evidence_type or "AUDITED_BALANCE_SHEET"
+            citation.page_number = matched.page_number
+            citation.confidence_score = matched.confidence_score or 0.98
+            citation.notes = matched.notes
+
         evidence_citations.append(citation)
 
-        if not best_record:
+        if not turnovers or avg_turnover == 0.0:
             gap = GapItem(
                 requirement_title=req.title,
                 missing_factor="Financial Turnover Records Missing",
@@ -344,18 +407,18 @@ class DeterministicEligibilityEvaluator:
                         requirement_title=req.title,
                         reason="No verified financial turnover records exist in company profile.",
                         clause_reference=req.provenance.clause_reference,
-                        shortfall_detail=f"Required: ₹{expected_crores} Cr | Found: None",
+                        shortfall_detail=f"Required: ₹{expected_crores:.2f} Cr | Found: None",
                         evidence=citation,
                     )
                 )
             return
 
-        if best_record.turnover_inr_crores >= expected_crores:
+        if avg_turnover >= expected_crores:
             reasons_to_pursue.append(
                 DecisionReason(
                     title="Exceeds Turnover Threshold",
                     detail=(
-                        f"Company turnover of ₹{best_record.turnover_inr_crores:.2f} Cr ({best_record.financial_year}) "
+                        f"Company 3-year average turnover of ₹{avg_turnover:.2f} Cr "
                         f"comfortably satisfies requirement of ₹{expected_crores:.2f} Cr."
                     ),
                     category="FINANCIAL",
@@ -363,9 +426,9 @@ class DeterministicEligibilityEvaluator:
                 )
             )
         else:
-            shortfall = expected_crores - best_record.turnover_inr_crores
+            shortfall = expected_crores - avg_turnover
             detail = (
-                f"Turnover shortfall of ₹{shortfall:.2f} Cr. Company has ₹{best_record.turnover_inr_crores:.2f} Cr "
+                f"Turnover shortfall of ₹{shortfall:.2f} Cr. Company has 3-year average of ₹{avg_turnover:.2f} Cr "
                 f"vs required ₹{expected_crores:.2f} Cr."
             )
             reasons_not_to_pursue.append(
@@ -398,6 +461,8 @@ class DeterministicEligibilityEvaluator:
         reasons_to_pursue: list[DecisionReason],
         reasons_not_to_pursue: list[DecisionReason],
         evidence_citations: list[EvidenceCitation],
+        matched_citations: list[EvidenceCitation] | None = None,
+        estimated_value_inr_crores: float = 0.0,
     ) -> None:
         # Standard lookback window: last 7 years from submission date
         cutoff_year = submission_deadline.year - 7
@@ -415,7 +480,43 @@ class DeterministicEligibilityEvaluator:
             if qualifying_projects
             else None,
         )
+
+        matched = next(
+            (
+                c
+                for c in (matched_citations or [])
+                if c.tender_requirement_title == req.title
+                or any(
+                    k in c.tender_requirement_title.lower()
+                    for k in ("experience", "similar work", "past project")
+                )
+            ),
+            None,
+        )
+        if matched and matched.document_name:
+            citation.document_name = matched.document_name
+            citation.evidence_type = matched.evidence_type or "COMPLETION_CERT"
+            citation.page_number = matched.page_number
+            citation.confidence_score = matched.confidence_score or 0.96
+            citation.notes = matched.notes
+
         evidence_citations.append(citation)
+
+        # Expected experience threshold: req.criterion.threshold, title/desc, or 35% of estimated tender value
+        expected_threshold = None
+        if req.criterion and req.criterion.threshold is not None:
+            expected_threshold = float(req.criterion.threshold)
+        else:
+            text = f"{req.title} {req.description}"
+            m = re.search(
+                r"(?:inr|rs\.?|₹)?\s*(\d+(?:\.\d+)?)\s*(?:cr|crores?)", text, re.IGNORECASE
+            )
+            if m:
+                expected_threshold = float(m.group(1))
+            elif estimated_value_inr_crores > 0:
+                expected_threshold = round(estimated_value_inr_crores * 0.35, 2)
+            else:
+                expected_threshold = 0.0
 
         if not qualifying_projects:
             detail = f"No completed project experience found within the 7-year window (since {cutoff_year})."
@@ -437,14 +538,41 @@ class DeterministicEligibilityEvaluator:
                     evidence=citation,
                 )
             )
+            return
+
+        max_project_val = max(p.contract_value_inr_crores for p in qualifying_projects)
+        total_val = sum(p.contract_value_inr_crores for p in qualifying_projects)
+
+        if expected_threshold > 0 and max_project_val < expected_threshold:
+            detail = (
+                f"Largest completed project of ₹{max_project_val:.2f} Cr is below the required "
+                f"₹{expected_threshold:.2f} Cr threshold."
+            )
+            reasons_not_to_pursue.append(
+                DecisionReason(
+                    title="Technical Experience Deficit",
+                    detail=detail,
+                    category="TECHNICAL",
+                    evidence=citation,
+                )
+            )
+            if req.criticality == RequirementCriticality.HARD_ELIGIBILITY:
+                hard_disqualifiers.append(
+                    Disqualifier(
+                        requirement_title=req.title,
+                        reason="Mandatory project experience threshold not satisfied.",
+                        clause_reference=req.provenance.clause_reference,
+                        shortfall_detail=detail,
+                        evidence=citation,
+                    )
+                )
         else:
-            total_val = sum(p.contract_value_inr_crores for p in qualifying_projects)
             reasons_to_pursue.append(
                 DecisionReason(
                     title="Strong Demonstrated Track Record",
                     detail=(
                         f"Company has {len(qualifying_projects)} completed projects with total value "
-                        f"₹{total_val:.2f} Cr completed since {cutoff_year}."
+                        f"₹{total_val:.2f} Cr completed since {cutoff_year} (largest: ₹{max_project_val:.2f} Cr)."
                     ),
                     category="TECHNICAL",
                     evidence=citation,
@@ -462,6 +590,7 @@ class DeterministicEligibilityEvaluator:
         reasons_to_pursue: list[DecisionReason],
         reasons_not_to_pursue: list[DecisionReason],
         evidence_citations: list[EvidenceCitation],
+        matched_citations: list[EvidenceCitation] | None = None,
     ) -> None:
         title_lower = req.title.lower()
         desc_lower = req.description.lower()
@@ -492,6 +621,23 @@ class DeterministicEligibilityEvaluator:
             company_entry_id=matched_cert.entry_id if matched_cert else None,
             company_evidence_ref=matched_cert.evidence_document_id if matched_cert else None,
         )
+
+        matched = next(
+            (
+                c
+                for c in (matched_citations or [])
+                if c.tender_requirement_title == req.title
+                or any(k in c.tender_requirement_title.lower() for k in ("iso", "cmmi", "cert"))
+            ),
+            None,
+        )
+        if matched and matched.document_name:
+            citation.document_name = matched.document_name
+            citation.evidence_type = matched.evidence_type or "ISO_CERT"
+            citation.page_number = matched.page_number
+            citation.confidence_score = matched.confidence_score or 0.99
+            citation.notes = matched.notes
+
         evidence_citations.append(citation)
 
         if matched_cert:

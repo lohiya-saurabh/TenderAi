@@ -10,14 +10,14 @@ import {
   DRIZZLE_TOKEN,
   type DrizzleDb,
   createDrizzle,
-} from '../../common/database/database.module.js';
-import * as schema from '../../common/database/schema.js';
-import { NotFoundError, BadRequestError } from '../../common/errors/errors.js';
-import { TenantContextHolder } from '../../common/security/TenantContext.js';
+} from '@/common/database/database.module.js';
+import * as schema from '@/common/database/schema.js';
+import { NotFoundError, BadRequestError } from '@/common/errors/errors.js';
+import { TenantContextHolder } from '@/common/security/TenantContext.js';
 import { Optional } from '@nestjs/common';
-import { CompanyProfileService } from '../company-profile/company-profile.service.js';
-import { EntitlementService } from '../billing/entitlement.service.js';
-import type { CompanyProfilePayload } from '../company-profile/presentation/dto/CompanyProfilePayload.js';
+import { CompanyProfileService } from '@/modules/company-profile/company-profile.service.js';
+import { EntitlementService } from '@/modules/billing/entitlement.service.js';
+import type { CompanyProfilePayload } from '@/modules/company-profile/presentation/dto/CompanyProfilePayload.js';
 
 export interface CreateCompanyDto {
   legalName: string;

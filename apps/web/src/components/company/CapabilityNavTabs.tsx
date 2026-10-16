@@ -14,7 +14,7 @@ import {
   AlertTriangle,
   type LucideIcon,
 } from 'lucide-react';
-import type { CapabilitySectionId, FullCompanyProfile } from './companyProfileData.js';
+import type { CapabilitySectionId, FullCompanyProfile } from '@/components/company/companyProfileData.js';
 
 export interface CapabilityNavTabsProps {
   activeSection: CapabilitySectionId;

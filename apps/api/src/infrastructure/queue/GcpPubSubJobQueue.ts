@@ -4,9 +4,9 @@ import {
   IngestionJobMessage,
   QueueMessage,
   DeadLetterMessage,
-} from '../../modules/bids/application/IJobQueue.js';
-import { StructuredLogger } from '../../common/logging/StructuredLogger.js';
-import { LoggingContextHolder } from '../../common/logging/LoggingContext.js';
+} from '@/modules/bids/application/IJobQueue.js';
+import { StructuredLogger } from '@/common/logging/StructuredLogger.js';
+import { LoggingContextHolder } from '@/common/logging/LoggingContext.js';
 
 export interface GcpPubSubConfig {
   topicName: string;

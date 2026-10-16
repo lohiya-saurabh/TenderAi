@@ -6,7 +6,7 @@ import {
   AlertCircleIcon,
   CloseIcon,
   IconProps,
-} from './Icons.js';
+} from '@/components/common/Icons.js';
 
 export type AlertVariant = 'info' | 'success' | 'warning' | 'danger';
 

@@ -3,13 +3,13 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { PGlite } from '@electric-sql/pglite';
-import { initDatabase } from '../../common/database/database.provider.js';
-import { TenantContextHolder } from '../../common/security/TenantContext.js';
-import { NotificationsService } from '../notifications/notifications.service.js';
-import { SettingsService } from '../settings/settings.service.js';
-import { NotFoundError } from '../../common/errors/errors.js';
-import { createDrizzle, type DrizzleDb } from '../../common/database/database.module.js';
-import * as schema from '../../common/database/schema.js';
+import { initDatabase } from '@/common/database/database.provider.js';
+import { TenantContextHolder } from '@/common/security/TenantContext.js';
+import { NotificationsService } from '@/modules/notifications/notifications.service.js';
+import { SettingsService } from '@/modules/settings/settings.service.js';
+import { NotFoundError } from '@/common/errors/errors.js';
+import { createDrizzle, type DrizzleDb } from '@/common/database/database.module.js';
+import * as schema from '@/common/database/schema.js';
 
 describe('Notifications Integration & Preference Gating Suite', () => {
   let db: PGlite;

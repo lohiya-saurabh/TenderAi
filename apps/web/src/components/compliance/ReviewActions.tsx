@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { useAuth } from '../../auth/useAuth.js';
-import { PERMISSIONS } from '../../utils/permissions.js';
-import { Button } from '../common/Button.js';
-import { Modal } from '../common/Modal.js';
+import { useAuth } from '@/auth/useAuth.js';
+import { PERMISSIONS } from '@/utils/permissions.js';
+import { Button } from '@/components/common/Button.js';
+import { Modal } from '@/components/common/Modal.js';
 import {
   PassIcon,
   FailIcon,
@@ -10,9 +10,9 @@ import {
   ReviewRequiredIcon,
   NotApplicableIcon,
   type IconProps,
-} from '../common/Icons.js';
+} from '@/components/common/Icons.js';
 import { Lock, Info } from 'lucide-react';
-import type { ComplianceItem } from '../../api/compliance.js';
+import type { ComplianceItem } from '@/api/compliance.js';
 
 export interface ReviewActionsProps {
   currentStatus: ComplianceItem['status'];

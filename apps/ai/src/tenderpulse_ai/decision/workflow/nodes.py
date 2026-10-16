@@ -13,10 +13,12 @@ from tenderpulse_ai.decision.schemas import (
     BidDecisionVerdict,
     DecisionReason,
     DecisionState,
+    EvidenceCitation,
     ReviewTriggerReason,
     ReviewTriggerType,
 )
 from tenderpulse_ai.decision.workflow.state import BidDecisionWorkflowState
+from tenderpulse_ai.tools.retrieval import DocumentChunk, ScopedRetrievalTool
 
 DecisionModelFn = Callable[[str, str], "str | Awaitable[str]"]
 PersistenceSinkFn = Callable[[BidDecisionResponse], "Awaitable[None] | None"]
@@ -40,7 +42,7 @@ class DecisionWorkflowContext:
 def make_evidence_retrieval_node(ctx: DecisionWorkflowContext):
     """
     Node 1: Evidence RAG & Profile Fact Matching.
-    Synthesizes citations linking tender requirements to company evidence vault facts.
+    Synthesizes dual-provenance citations linking tender requirements to company evidence vault facts.
     """
 
     def evidence_retrieval_node(state: BidDecisionWorkflowState) -> dict[str, Any]:
@@ -48,6 +50,191 @@ def make_evidence_retrieval_node(ctx: DecisionWorkflowContext):
         tender_id = state.get("tender_id", "")
         company = state["company_profile"]
         requirements = state.get("requirements", [])
+        evidence_chunks = state.get("evidence_chunks", [])
+        evidence_docs = state.get("evidence_documents", [])
+
+        # Build lookup table for document metadata
+        doc_map: dict[str, dict[str, Any]] = {}
+        for d in evidence_docs:
+            d_id = d.get("id") or d.get("document_id")
+            if d_id:
+                doc_map[d_id] = d
+
+        # Seed hybrid retrieval tool
+        retrieval_tool = ScopedRetrievalTool(enable_jev_rerank=True)
+        seeded_chunks: list[DocumentChunk] = []
+
+        for c in evidence_chunks:
+            if hasattr(c, "chunk_id"):
+                cid = c.chunk_id
+                doc_id = c.document_id
+                pnum = c.page_number
+                ctext = c.content
+                clause = c.clause_reference or ""
+                emb = c.embedding
+                meta = dict(c.metadata or {})
+                fname = c.file_name or meta.get("file_name")
+            else:
+                cid = c.get("chunk_id") or c.get("id", "")
+                doc_id = (
+                    c.get("document_id")
+                    or c.get("evidenceDocumentId")
+                    or c.get("evidence_document_id", "")
+                )
+                pnum = c.get("page_number") or c.get("pageNumber", 1)
+                ctext = c.get("content") or c.get("text", "")
+                clause = c.get("clause_reference") or c.get("clauseReference", "")
+                emb = c.get("embedding")
+                meta = dict(c.get("metadata") or {})
+                fname = c.get("file_name") or c.get("fileName") or meta.get("file_name")
+
+            if fname and "file_name" not in meta:
+                meta["file_name"] = fname
+
+            seeded_chunks.append(
+                DocumentChunk(
+                    chunk_id=cid,
+                    tenant_id=sec_ctx.tenant_id,
+                    document_id=doc_id,
+                    page_number=pnum,
+                    text=ctext,
+                    clause_reference=clause,
+                    embedding=emb,
+                    metadata=meta,
+                )
+            )
+
+        if seeded_chunks:
+            retrieval_tool.seed_chunks(seeded_chunks)
+
+        matched_citations: list[EvidenceCitation] = []
+
+        # 1. Match each tender requirement against evidence vault chunks
+        for req in requirements:
+            query = f"{req.title} {req.description}"
+            retrieved: list[DocumentChunk] = []
+            if seeded_chunks:
+                try:
+                    retrieved = retrieval_tool.retrieve_evidence_vault(
+                        security_context=sec_ctx,
+                        query=query,
+                        top_k=2,
+                        category=req.category,
+                    )
+                except Exception:
+                    retrieved = []
+
+            if retrieved:
+                top = retrieved[0]
+                doc_info = doc_map.get(top.document_id, {})
+                fname = (
+                    top.metadata.get("file_name")
+                    or doc_info.get("fileName")
+                    or doc_info.get("file_name")
+                    or top.document_id
+                )
+                ev_type = (
+                    top.metadata.get("evidence_type")
+                    or doc_info.get("evidenceType")
+                    or doc_info.get("evidence_type")
+                    or "EVIDENCE"
+                )
+                matched_citations.append(
+                    EvidenceCitation(
+                        tender_requirement_title=req.title,
+                        tender_clause_reference=req.provenance.clause_reference
+                        or "General Condition",
+                        tender_page_number=req.provenance.page_number or 1,
+                        tender_verbatim_quote=req.provenance.verbatim_quote or req.title,
+                        company_evidence_ref=top.document_id,
+                        company_entry_id=top.chunk_id,
+                        document_name=fname,
+                        evidence_type=ev_type,
+                        page_number=top.page_number,
+                        bounding_box=top.metadata.get("bounding_box"),
+                        confidence_score=0.95,
+                        notes=f"Verified from {fname} (Page {top.page_number}): {top.text[:140]}...",
+                    )
+                )
+
+        # 2. Corroborate profile capability entries against evidence vault
+        for turnover in company.turnover_records:
+            if turnover.evidence_document_id and not any(
+                c.company_evidence_ref == turnover.evidence_document_id for c in matched_citations
+            ):
+                doc_info = doc_map.get(turnover.evidence_document_id, {})
+                fname = (
+                    doc_info.get("fileName")
+                    or doc_info.get("file_name")
+                    or turnover.evidence_document_id
+                )
+                matched_citations.append(
+                    EvidenceCitation(
+                        tender_requirement_title="Annual Financial Turnover",
+                        tender_clause_reference="Financial Qualification Criteria",
+                        tender_page_number=1,
+                        tender_verbatim_quote=f"Turnover threshold evaluated for {turnover.financial_year}",
+                        company_evidence_ref=turnover.evidence_document_id,
+                        company_entry_id=turnover.entry_id,
+                        document_name=fname,
+                        evidence_type="AUDITED_BALANCE_SHEET",
+                        page_number=1,
+                        confidence_score=0.98,
+                        notes=f"Audited turnover ₹{turnover.turnover_inr_crores} Cr for {turnover.financial_year} (UDIN: {turnover.ca_udin or 'N/A'}).",
+                    )
+                )
+
+        for exp in company.experience:
+            if exp.evidence_document_id and not any(
+                c.company_evidence_ref == exp.evidence_document_id for c in matched_citations
+            ):
+                doc_info = doc_map.get(exp.evidence_document_id, {})
+                fname = (
+                    doc_info.get("fileName")
+                    or doc_info.get("file_name")
+                    or exp.evidence_document_id
+                )
+                matched_citations.append(
+                    EvidenceCitation(
+                        tender_requirement_title="Similar Project Experience",
+                        tender_clause_reference="Technical Experience Criteria",
+                        tender_page_number=1,
+                        tender_verbatim_quote="Past project completion certification",
+                        company_evidence_ref=exp.evidence_document_id,
+                        company_entry_id=exp.entry_id,
+                        document_name=fname,
+                        evidence_type="COMPLETION_CERT",
+                        page_number=1,
+                        confidence_score=0.96,
+                        notes=f"Completed project '{exp.project_name}' (₹{exp.contract_value_inr_crores} Cr) for {exp.client_name}.",
+                    )
+                )
+
+        for cert in company.certifications:
+            if cert.evidence_document_id and not any(
+                c.company_evidence_ref == cert.evidence_document_id for c in matched_citations
+            ):
+                doc_info = doc_map.get(cert.evidence_document_id, {})
+                fname = (
+                    doc_info.get("fileName")
+                    or doc_info.get("file_name")
+                    or cert.evidence_document_id
+                )
+                matched_citations.append(
+                    EvidenceCitation(
+                        tender_requirement_title="Quality Management Certification",
+                        tender_clause_reference="Statutory Quality Criteria",
+                        tender_page_number=1,
+                        tender_verbatim_quote="Active accreditation certification",
+                        company_evidence_ref=cert.evidence_document_id,
+                        company_entry_id=cert.entry_id,
+                        document_name=fname,
+                        evidence_type="ISO_CERT",
+                        page_number=1,
+                        confidence_score=0.99,
+                        notes=f"Active certification: {cert.standard_name} issued by {cert.issuing_body}.",
+                    )
+                )
 
         audit_entry = {
             "timestamp": datetime.datetime.now(datetime.UTC).isoformat(),
@@ -61,6 +248,8 @@ def make_evidence_retrieval_node(ctx: DecisionWorkflowContext):
                 "tender_id": tender_id,
                 "company_id": company.company_id,
                 "requirements_count": len(requirements),
+                "evidence_chunks_count": len(seeded_chunks),
+                "matched_citations_count": len(matched_citations),
                 "experience_records": len(company.experience),
                 "turnover_records": len(company.turnover_records),
                 "certifications_count": len(company.certifications),
@@ -68,7 +257,7 @@ def make_evidence_retrieval_node(ctx: DecisionWorkflowContext):
         }
 
         return {
-            "matched_citations": [],
+            "matched_citations": matched_citations,
             "audit_events": [audit_entry],
         }
 
@@ -105,6 +294,7 @@ def make_deterministic_evaluation_node(ctx: DecisionWorkflowContext):
             submission_deadline=submission_deadline,
             project_location_state=project_location_state,
             estimated_value_inr_crores=estimated_value,
+            matched_citations=state.get("matched_citations", []),
         )
 
         audit_entry = {

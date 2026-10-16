@@ -135,7 +135,9 @@ PERMISSIONS_POLICY=$(cat <<EOF
         "iam:PassRole"
       ],
       "Resource": [
-        "arn:aws:iam::${ACCOUNT_ID}:role/tenderpulse-*"
+        "arn:aws:iam::${ACCOUNT_ID}:role/tenderpulse-*",
+        "arn:aws:iam::${ACCOUNT_ID}:role/ecsTaskExecutionRole",
+        "arn:aws:iam::${ACCOUNT_ID}:role/*ecsTaskExecutionRole*"
       ]
     },
     {

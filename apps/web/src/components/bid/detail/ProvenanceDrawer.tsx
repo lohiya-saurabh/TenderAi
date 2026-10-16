@@ -1,6 +1,6 @@
 import React from 'react';
-import type { ComplianceItem } from '../../../api/compliance.js';
-import { CloseIcon, MissingIcon } from '../../common/Icons.js';
+import type { ComplianceItem } from '@/api/compliance.js';
+import { CloseIcon, MissingIcon } from '@/components/common/Icons.js';
 
 export interface ProvenanceDrawerProps {
   isOpen: boolean;

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { AlertCircleIcon, CloseIcon } from './Icons.js';
-import { Button } from './Button.js';
+import { AlertCircleIcon, CloseIcon } from '@/components/common/Icons.js';
+import { Button } from '@/components/common/Button.js';
 
 export interface ErrorBannerProps {
   message: string;

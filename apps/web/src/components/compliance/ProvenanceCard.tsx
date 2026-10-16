@@ -1,6 +1,6 @@
 import React from 'react';
 import { MapPin } from 'lucide-react';
-import type { Provenance } from '../../api/compliance.js';
+import type { Provenance } from '@/api/compliance.js';
 
 export interface ProvenanceCardProps {
   provenance: Provenance;

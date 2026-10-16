@@ -2,12 +2,12 @@
  * BidsController — NestJS controller for bid project endpoints with RBAC guards.
  */
 import { Controller, Get, Post, Delete, Param, Query, Body, HttpCode, Inject } from '@nestjs/common';
-import { BidsService, type ListBidsQuery } from './bids.service.js';
-import { ComplianceService } from '../compliance/compliance.service.js';
-import { GetBidDecisionUseCase } from './application/GetBidDecisionUseCase.js';
-import { RequirePermission } from '../../common/security/decorators/permissions.decorator.js';
-import { Permissions } from '../../common/security/permissions.js';
-import { NotFoundError } from '../../common/errors/errors.js';
+import { BidsService, type ListBidsQuery } from '@/modules/bids/bids.service.js';
+import { ComplianceService } from '@/modules/compliance/compliance.service.js';
+import { GetBidDecisionUseCase } from '@/modules/bids/application/GetBidDecisionUseCase.js';
+import { RequirePermission } from '@/common/security/decorators/permissions.decorator.js';
+import { Permissions } from '@/common/security/permissions.js';
+import { NotFoundError } from '@/common/errors/errors.js';
 
 @Controller('api/v1/bids')
 export class BidsController {

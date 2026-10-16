@@ -1,11 +1,11 @@
 import React from 'react';
-import type { BidDetail } from '../../../api/bids.js';
-import type { ComplianceItem } from '../../../api/compliance.js';
-import { Card, CardHeader, CardTitle, CardContent } from '../../common/Card.js';
-import { Badge } from '../../common/Badge.js';
-import { StatusBadge } from '../../common/StatusBadge.js';
-import { computeReadiness } from '../../../utils/readiness.js';
-import { getComplianceRollup } from './bidDetailData.js';
+import type { BidDetail } from '@/api/bids.js';
+import type { ComplianceItem } from '@/api/compliance.js';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/common/Card.js';
+import { Badge } from '@/components/common/Badge.js';
+import { StatusBadge } from '@/components/common/StatusBadge.js';
+import { computeReadiness } from '@/utils/readiness.js';
+import { getComplianceRollup } from '@/components/bid/detail/bidDetailData.js';
 
 export interface ReadinessCardProps {
   bid: BidDetail;

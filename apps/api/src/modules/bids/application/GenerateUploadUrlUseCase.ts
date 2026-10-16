@@ -1,18 +1,18 @@
 import { v4 as uuidv4 } from 'uuid';
-import { IAuditRepository } from '../../audit/domain/repositories/IAuditRepository.js';
-import { AuditLog } from '../../audit/domain/entities/AuditLog.js';
+import { IAuditRepository } from '@/modules/audit/domain/repositories/IAuditRepository.js';
+import { AuditLog } from '@/modules/audit/domain/entities/AuditLog.js';
 import {
   EntityNotFoundException,
   ValidationException,
-} from '../../../common/domain/DomainException.js';
-import { TenantContextHolder } from '../../../common/security/TenantContext.js';
-import { Permissions } from '../../../common/security/permissions.js';
-import { TenderDocument, DocumentType } from '../domain/entities/TenderDocument.js';
-import { IBidRepository } from '../domain/repositories/IBidRepository.js';
-import { ITenderDocumentRepository } from '../domain/repositories/ITenderDocumentRepository.js';
-import { IStorageService } from './IStorageService.js';
+} from '@/common/domain/DomainException.js';
+import { TenantContextHolder } from '@/common/security/TenantContext.js';
+import { Permissions } from '@/common/security/permissions.js';
+import { TenderDocument, DocumentType } from '@/modules/bids/domain/entities/TenderDocument.js';
+import { IBidRepository } from '@/modules/bids/domain/repositories/IBidRepository.js';
+import { ITenderDocumentRepository } from '@/modules/bids/domain/repositories/ITenderDocumentRepository.js';
+import { IStorageService } from '@/modules/bids/application/IStorageService.js';
 import path from 'node:path';
-import { IUnitOfWork, DirectUnitOfWork } from '../../../common/database/IUnitOfWork.js';
+import { IUnitOfWork, DirectUnitOfWork } from '@/common/database/IUnitOfWork.js';
 
 export interface GenerateUploadUrlCommand {
   organizationId: string;

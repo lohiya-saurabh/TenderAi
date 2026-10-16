@@ -8,10 +8,10 @@ import {
   DRIZZLE_TOKEN,
   type DrizzleDb,
   createDrizzle,
-} from '../../common/database/database.module.js';
-import * as schema from '../../common/database/schema.js';
-import { ForbiddenError } from '../../common/errors/errors.js';
-import { PLAN_CATALOG, type PlanTier, type PlanEntitlements } from './billing.types.js';
+} from '@/common/database/database.module.js';
+import * as schema from '@/common/database/schema.js';
+import { ForbiddenError } from '@/common/errors/errors.js';
+import { PLAN_CATALOG, type PlanTier, type PlanEntitlements } from '@/modules/billing/billing.types.js';
 
 @Injectable()
 export class EntitlementService {

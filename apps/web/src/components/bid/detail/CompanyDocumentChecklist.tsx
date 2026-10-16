@@ -1,9 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import type { ComplianceItem } from '../../../api/compliance.js';
-import { Card, CardHeader, CardTitle, CardContent } from '../../common/Card.js';
-import { Badge } from '../../common/Badge.js';
-import { Button } from '../../common/Button.js';
+import type { ComplianceItem } from '@/api/compliance.js';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/common/Card.js';
+import { Badge } from '@/components/common/Badge.js';
+import { Button } from '@/components/common/Button.js';
 import {
   FileText,
   CheckCircle2,

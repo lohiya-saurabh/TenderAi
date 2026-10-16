@@ -1,5 +1,5 @@
-import { AuditLog } from '../domain/entities/AuditLog.js';
-import { IAuditRepository } from '../domain/repositories/IAuditRepository.js';
+import { AuditLog } from '@/modules/audit/domain/entities/AuditLog.js';
+import { IAuditRepository } from '@/modules/audit/domain/repositories/IAuditRepository.js';
 
 export class InMemoryAuditRepository implements IAuditRepository {
   private readonly logs: AuditLog[] = [];

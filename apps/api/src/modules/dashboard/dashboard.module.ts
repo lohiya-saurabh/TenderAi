@@ -2,8 +2,8 @@
  * DashboardModule — feature module for dashboard metrics.
  */
 import { Module } from '@nestjs/common';
-import { DashboardController } from './dashboard.controller.js';
-import { BidsModule } from '../bids/bids.module.js';
+import { DashboardController } from '@/modules/dashboard/dashboard.controller.js';
+import { BidsModule } from '@/modules/bids/bids.module.js';
 
 @Module({
   imports: [BidsModule],

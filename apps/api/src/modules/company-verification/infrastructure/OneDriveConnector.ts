@@ -9,8 +9,8 @@ import type {
   DocumentSourceConnector,
   ExternalSourceFile,
   DownloadedSourceFile,
-} from '../domain/ports/DocumentSourceConnector.js';
-import { BadRequestError, InternalServerError } from '../../../common/errors/errors.js';
+} from '@/modules/company-verification/domain/ports/DocumentSourceConnector.js';
+import { BadRequestError, InternalServerError } from '@/common/errors/errors.js';
 
 interface GraphDriveItemsResponse {
   value?: Array<{

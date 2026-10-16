@@ -1,9 +1,9 @@
-import { ValidationException } from '../../../../common/domain/DomainException.js';
+import { ValidationException } from '@/common/domain/DomainException.js';
 import {
   DocumentType,
   ALLOWED_MIME_TYPES,
   MAX_DOCUMENT_SIZE_BYTES,
-} from '../../domain/entities/TenderDocument.js';
+} from '@/modules/bids/domain/entities/TenderDocument.js';
 
 export interface GenerateUploadUrlPayload {
   documentType: DocumentType;

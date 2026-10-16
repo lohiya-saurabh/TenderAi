@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { of } from 'rxjs';
-import { HttpLoggingInterceptor } from './HttpLoggingInterceptor.js';
+import { HttpLoggingInterceptor } from '@/common/logging/HttpLoggingInterceptor.js';
 import type { ExecutionContext, CallHandler } from '@nestjs/common';
 
 describe('HttpLoggingInterceptor', () => {

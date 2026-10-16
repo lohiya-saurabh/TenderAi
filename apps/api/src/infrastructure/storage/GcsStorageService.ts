@@ -3,8 +3,8 @@ import { EventEmitter } from 'node:events';
 import {
   IStorageService,
   HeadObjectResult,
-} from '../../modules/bids/application/IStorageService.js';
-import { StructuredLogger } from '../../common/logging/StructuredLogger.js';
+} from '@/modules/bids/application/IStorageService.js';
+import { StructuredLogger } from '@/common/logging/StructuredLogger.js';
 
 // Tune stream pipeline listener headroom for GCS chunked streams
 EventEmitter.defaultMaxListeners = Math.max(EventEmitter.defaultMaxListeners || 10, 30);

@@ -3,15 +3,15 @@ import type { ExecutionContext, CallHandler } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { of } from 'rxjs';
 import { PGlite } from '@electric-sql/pglite';
-import { initDatabase } from '../../common/database/database.provider.js';
-import { TokenService } from '../../common/security/TokenService.js';
-import { JwtAuthGuard } from '../../common/security/guards/jwt-auth.guard.js';
-import { RolesGuard } from '../../common/security/guards/roles.guard.js';
-import { TenantContextInterceptor } from '../../common/security/interceptors/tenant-context.interceptor.js';
-import { TenantContextHolder } from '../../common/security/TenantContext.js';
-import { Permissions, type UserRole } from '../../common/security/permissions.js';
-import { UnauthorizedError, ForbiddenError } from '../../common/errors/errors.js';
-import { AuthService } from '../auth/auth.service.js';
+import { initDatabase } from '@/common/database/database.provider.js';
+import { TokenService } from '@/common/security/TokenService.js';
+import { JwtAuthGuard } from '@/common/security/guards/jwt-auth.guard.js';
+import { RolesGuard } from '@/common/security/guards/roles.guard.js';
+import { TenantContextInterceptor } from '@/common/security/interceptors/tenant-context.interceptor.js';
+import { TenantContextHolder } from '@/common/security/TenantContext.js';
+import { Permissions, type UserRole } from '@/common/security/permissions.js';
+import { UnauthorizedError, ForbiddenError } from '@/common/errors/errors.js';
+import { AuthService } from '@/modules/auth/auth.service.js';
 
 describe('Security & RBAC Hardening Suite', () => {
   let tokenService: TokenService;

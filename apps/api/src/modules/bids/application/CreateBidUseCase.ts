@@ -1,14 +1,14 @@
 import { v4 as uuidv4 } from 'uuid';
-import { IAuditRepository } from '../../audit/domain/repositories/IAuditRepository.js';
-import { AuditLog } from '../../audit/domain/entities/AuditLog.js';
-import { ValidationException } from '../../../common/domain/DomainException.js';
-import { TenantContextHolder } from '../../../common/security/TenantContext.js';
-import { Permissions } from '../../../common/security/permissions.js';
-import { BidProject } from '../domain/entities/BidProject.js';
-import { IBidRepository } from '../domain/repositories/IBidRepository.js';
-import { Money } from '../domain/value-objects/Money.js';
-import { IEventBus } from '../../../common/events/IEventBus.js';
-import { IUnitOfWork, DirectUnitOfWork } from '../../../common/database/IUnitOfWork.js';
+import { IAuditRepository } from '@/modules/audit/domain/repositories/IAuditRepository.js';
+import { AuditLog } from '@/modules/audit/domain/entities/AuditLog.js';
+import { ValidationException } from '@/common/domain/DomainException.js';
+import { TenantContextHolder } from '@/common/security/TenantContext.js';
+import { Permissions } from '@/common/security/permissions.js';
+import { BidProject } from '@/modules/bids/domain/entities/BidProject.js';
+import { IBidRepository } from '@/modules/bids/domain/repositories/IBidRepository.js';
+import { Money } from '@/modules/bids/domain/value-objects/Money.js';
+import { IEventBus } from '@/common/events/IEventBus.js';
+import { IUnitOfWork, DirectUnitOfWork } from '@/common/database/IUnitOfWork.js';
 
 export interface CreateBidCommand {
   organizationId: string;

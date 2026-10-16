@@ -18,28 +18,28 @@ import {
   DRIZZLE_TOKEN,
   type DrizzleDb,
   createDrizzle,
-} from '../../../common/database/database.module.js';
-import * as schema from '../../../common/database/schema.js';
-import { NotFoundError, BadRequestError } from '../../../common/errors/errors.js';
-import { TenantContextHolder } from '../../../common/security/TenantContext.js';
-import { CompanyProfileService } from '../../company-profile/company-profile.service.js';
-import { CompanyEvidenceService } from './CompanyEvidenceService.js';
+} from '@/common/database/database.module.js';
+import * as schema from '@/common/database/schema.js';
+import { NotFoundError, BadRequestError } from '@/common/errors/errors.js';
+import { TenantContextHolder } from '@/common/security/TenantContext.js';
+import { CompanyProfileService } from '@/modules/company-profile/company-profile.service.js';
+import { CompanyEvidenceService } from '@/modules/company-verification/application/CompanyEvidenceService.js';
 import {
   BUSINESS_VERIFICATION_PROVIDER,
   type BusinessVerificationProvider,
-} from '../domain/ports/BusinessVerificationProvider.js';
+} from '@/modules/company-verification/domain/ports/BusinessVerificationProvider.js';
 import {
   COMPANY_REGISTRY_PROVIDER,
   type CompanyRegistryProvider,
-} from '../domain/ports/CompanyRegistryProvider.js';
+} from '@/modules/company-verification/domain/ports/CompanyRegistryProvider.js';
 import {
   MSME_VERIFICATION_PORT,
   type IMsmeVerificationPort,
-} from '../domain/ports/IMsmeVerificationPort.js';
+} from '@/modules/company-verification/domain/ports/IMsmeVerificationPort.js';
 import {
   DIGITAL_DOCUMENT_PROVIDER,
   type DigitalDocumentProvider,
-} from '../domain/ports/DigitalDocumentProvider.js';
+} from '@/modules/company-verification/domain/ports/DigitalDocumentProvider.js';
 
 export interface VerificationResultView {
   companyId: string;
@@ -103,7 +103,9 @@ export class EvidenceVerificationService {
     }
 
     const verificationStatus: schema.EvidenceVerificationStatus =
-      discrepancies.length > 0 ? 'NEEDS_REVIEW' : 'SOURCE_VERIFIED';
+      discrepancies.length > 0
+        ? schema.EvidenceVerificationStatus.NEEDS_REVIEW
+        : schema.EvidenceVerificationStatus.SOURCE_VERIFIED;
 
     const now = new Date();
 
@@ -189,7 +191,9 @@ export class EvidenceVerificationService {
     }
 
     const verificationStatus: schema.EvidenceVerificationStatus =
-      discrepancies.length > 0 ? 'NEEDS_REVIEW' : 'SOURCE_VERIFIED';
+      discrepancies.length > 0
+        ? schema.EvidenceVerificationStatus.NEEDS_REVIEW
+        : schema.EvidenceVerificationStatus.SOURCE_VERIFIED;
 
     const now = new Date();
 
@@ -265,7 +269,9 @@ export class EvidenceVerificationService {
     }
 
     const verificationStatus: schema.EvidenceVerificationStatus =
-      discrepancies.length > 0 ? 'NEEDS_REVIEW' : 'SOURCE_VERIFIED';
+      discrepancies.length > 0
+        ? schema.EvidenceVerificationStatus.NEEDS_REVIEW
+        : schema.EvidenceVerificationStatus.SOURCE_VERIFIED;
 
     const now = new Date();
 
@@ -424,7 +430,9 @@ export class EvidenceVerificationService {
 
     const previousStatus = evidence.verificationStatus;
     const newStatus: schema.EvidenceVerificationStatus =
-      decision === 'REJECT' ? 'REJECTED' : 'SOURCE_VERIFIED';
+      decision === 'REJECT'
+        ? schema.EvidenceVerificationStatus.REJECTED
+        : schema.EvidenceVerificationStatus.SOURCE_VERIFIED;
 
     const now = new Date();
     const [updated] = await this.db

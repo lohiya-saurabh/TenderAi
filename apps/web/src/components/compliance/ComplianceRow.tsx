@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import type { ComplianceItem } from '../../api/compliance.js';
-import { StatusBadge } from '../common/StatusBadge.js';
-import { RiskBadge } from '../common/RiskBadge.js';
-import { Badge, type BadgeVariant } from '../common/Badge.js';
-import { Button } from '../common/Button.js';
-import { Card } from '../common/Card.js';
-import { ChevronRightIcon, ChevronDownIcon } from '../common/Icons.js';
+import type { ComplianceItem } from '@/api/compliance.js';
+import { StatusBadge } from '@/components/common/StatusBadge.js';
+import { RiskBadge } from '@/components/common/RiskBadge.js';
+import { Badge, type BadgeVariant } from '@/components/common/Badge.js';
+import { Button } from '@/components/common/Button.js';
+import { Card } from '@/components/common/Card.js';
+import { ChevronRightIcon, ChevronDownIcon } from '@/components/common/Icons.js';
 import { FileText } from 'lucide-react';
-import { ExecutionRulesCard } from './ExecutionRulesCard.js';
-import { ReviewActions } from './ReviewActions.js';
-import { EvidenceTraceabilityChain } from './EvidenceTraceabilityChain.js';
+import { ExecutionRulesCard } from '@/components/compliance/ExecutionRulesCard.js';
+import { ReviewActions } from '@/components/compliance/ReviewActions.js';
+import { EvidenceTraceabilityChain } from '@/components/compliance/EvidenceTraceabilityChain.js';
 
 export interface ComplianceRowProps {
   item: ComplianceItem;

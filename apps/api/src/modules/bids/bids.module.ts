@@ -3,18 +3,18 @@
  */
 import { Module } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
-import { BidsController } from './bids.controller.js';
-import { TendersController } from './tenders.controller.js';
-import { BidsService } from './bids.service.js';
-import { BID_REPOSITORY_TOKEN } from './domain/repositories/IBidRepository.js';
-import { PostgresBidRepository } from '../../infrastructure/persistence/PostgresBidRepository.js';
-import { DATABASE_TOKEN } from '../../common/database/database.module.js';
-import { ComplianceModule } from '../compliance/compliance.module.js';
+import { BidsController } from '@/modules/bids/bids.controller.js';
+import { TendersController } from '@/modules/bids/tenders.controller.js';
+import { BidsService } from '@/modules/bids/bids.service.js';
+import { BID_REPOSITORY_TOKEN } from '@/modules/bids/domain/repositories/IBidRepository.js';
+import { PostgresBidRepository } from '@/infrastructure/persistence/PostgresBidRepository.js';
+import { DATABASE_TOKEN } from '@/common/database/database.module.js';
+import { ComplianceModule } from '@/modules/compliance/compliance.module.js';
 import {
   GetBidDecisionUseCase,
   AI_DECISION_CLIENT_TOKEN,
-} from './application/GetBidDecisionUseCase.js';
-import { AiDecisionClient } from './application/AiDecisionClient.js';
+} from '@/modules/bids/application/GetBidDecisionUseCase.js';
+import { AiDecisionClient } from '@/modules/bids/application/AiDecisionClient.js';
 
 @Module({
   imports: [ComplianceModule],

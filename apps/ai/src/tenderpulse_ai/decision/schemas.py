@@ -4,7 +4,7 @@ from datetime import date
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field
 
 from tenderpulse_ai.agent.schemas import RequirementCandidate
 from tenderpulse_ai.security.context import SecurityContext
@@ -160,6 +160,23 @@ class CompanyProfileSnapshot(BaseModel):
 # ------------------------------------------------------------------ Decision Components
 
 
+class EvidenceChunkWire(BaseModel):
+    chunk_id: str = Field(..., validation_alias=AliasChoices("chunk_id", "id"), min_length=1)
+    document_id: str = Field(
+        ...,
+        validation_alias=AliasChoices("document_id", "evidence_document_id", "evidenceDocumentId"),
+        min_length=1,
+    )
+    file_name: str | None = None
+    page_number: int = 1
+    chunk_type: str = "PROSE"
+    content: str = Field(..., min_length=1)
+    clause_reference: str | None = None
+    bounding_box: dict[str, Any] | None = None
+    metadata: dict[str, Any] | None = Field(default_factory=dict)
+    embedding: list[float] | None = None
+
+
 class EvidenceCitation(BaseModel):
     """Dual-provenance link: connects tender clause to company capability evidence."""
 
@@ -169,6 +186,11 @@ class EvidenceCitation(BaseModel):
     tender_verbatim_quote: str
     company_evidence_ref: str | None = None
     company_entry_id: str | None = None
+    document_name: str | None = None
+    evidence_type: str | None = None
+    page_number: int | None = None
+    bounding_box: dict[str, Any] | None = None
+    confidence_score: float | None = None
     notes: str = ""
 
 
@@ -224,6 +246,8 @@ class BidDecisionRequest(BaseModel):
     requirements: list[RequirementCandidate] = Field(default_factory=list)
     company_profile: CompanyProfileSnapshot
     require_human_review: bool = False
+    evidence_chunks: list[EvidenceChunkWire] = Field(default_factory=list)
+    evidence_documents: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class BidDecisionResponse(BaseModel):

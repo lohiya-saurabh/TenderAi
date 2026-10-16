@@ -9,12 +9,12 @@ import { EventEmitter } from 'node:events';
 import fs from 'node:fs';
 import path from 'node:path';
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module.js';
-import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
+import { AppModule } from '@/app.module.js';
+import { AllExceptionsFilter } from '@/common/filters/all-exceptions.filter.js';
 
-import { StructuredLogger } from './common/logging/StructuredLogger.js';
-import { HttpLoggingInterceptor } from './common/logging/HttpLoggingInterceptor.js';
-import { resolveLogLevels } from './common/logger/log-level.util.js';
+import { StructuredLogger } from '@/common/logging/StructuredLogger.js';
+import { HttpLoggingInterceptor } from '@/common/logging/HttpLoggingInterceptor.js';
+import { resolveLogLevels } from '@/common/logger/log-level.util.js';
 
 // Automatically load .env if present (native Node.js v20.6+)
 for (const envPath of [

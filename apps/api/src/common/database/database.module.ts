@@ -6,8 +6,8 @@
 import { Module, Global } from '@nestjs/common';
 import { drizzle, type PgliteDatabase } from 'drizzle-orm/pglite';
 import { PGlite } from '@electric-sql/pglite';
-import { getDatabase, initDatabase } from './database.provider.js';
-import * as schema from './schema.js';
+import { getDatabase, initDatabase } from '@/common/database/database.provider.js';
+import * as schema from '@/common/database/schema.js';
 
 export const DATABASE_TOKEN = 'DATABASE';
 export const DRIZZLE_TOKEN = 'DRIZZLE';

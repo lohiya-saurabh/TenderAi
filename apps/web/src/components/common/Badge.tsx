@@ -48,7 +48,7 @@ export const Badge: React.FC<BadgeProps> = ({
           bg: 'var(--status-flag-bg)',
           color: 'var(--status-flag-text)',
           border: 'var(--status-flag-border)',
-          dotColor: '#c2410c',
+          dotColor: 'var(--vermilion, #f0441c)',
         };
       case 'info':
         return {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button } from '../../ui/button.js';
+import { Button } from '@/components/ui/button.js';
 import { CheckCircle2, Clock, ArrowUpRight } from 'lucide-react';
 
 export interface BidSignoffDockProps {
@@ -74,31 +74,31 @@ export const BidSignoffDock: React.FC<BidSignoffDockProps> = ({
         <div className="space-y-2 text-xs">
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground font-medium flex items-center gap-1.5">
-              <CheckCircle2 className="h-3.5 w-3.5 text-foreground" />
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
               Technical Review
             </span>
-            <span className="font-semibold text-foreground text-[11px] px-1.5 py-0.5 rounded bg-muted/60 border border-border">
+            <span className="font-bold mono text-emerald-600 dark:text-emerald-400 text-xs">
               PASSED
             </span>
           </div>
 
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground font-medium flex items-center gap-1.5">
-              <CheckCircle2 className="h-3.5 w-3.5 text-foreground" />
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
               Finance &amp; EMD
             </span>
-            <span className="font-semibold text-foreground text-[11px] px-1.5 py-0.5 rounded bg-muted/60 border border-border">
+            <span className="font-bold mono text-emerald-600 dark:text-emerald-400 text-xs">
               PASSED
             </span>
           </div>
 
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground font-medium flex items-center gap-1.5">
-              <Clock className="h-3.5 w-3.5 text-orange-500" />
+              <Clock className="h-3.5 w-3.5 text-vermilion" />
               Legal / LD Cap
             </span>
-            <span className="font-semibold text-orange-600 dark:text-orange-400 text-[11px] px-1.5 py-0.5 rounded bg-orange-500/10 border border-orange-500/20">
-              PENDING
+            <span className="font-bold mono text-vermilion text-xs">
+              FLAGGED
             </span>
           </div>
         </div>
@@ -109,7 +109,7 @@ export const BidSignoffDock: React.FC<BidSignoffDockProps> = ({
             variant="default"
             size="sm"
             onClick={onApproveBid}
-            className="w-full h-9 text-xs font-bold shadow-xs cursor-pointer"
+            className="w-full h-9 text-xs font-bold shadow-xs cursor-pointer bg-vermilion hover:bg-vermilion-hover text-white border-transparent"
           >
             Approve Bid Submission
           </Button>
@@ -119,11 +119,36 @@ export const BidSignoffDock: React.FC<BidSignoffDockProps> = ({
             variant="outline"
             size="sm"
             onClick={onSubmitPreBidQuery}
-            className="w-full h-8 text-xs font-semibold border-border cursor-pointer flex items-center justify-center gap-1"
+            className="w-full h-8 text-xs font-semibold border-border hover:border-vermilion hover:text-vermilion cursor-pointer flex items-center justify-center gap-1 transition-colors"
           >
             <span>Submit Pre-Bid Query</span>
             <ArrowUpRight className="h-3 w-3" />
           </Button>
+        </div>
+      </div>
+
+      {/* 3. Verified Evidence Vault Summary */}
+      <div className="p-4 border border-border rounded-lg bg-card/60 shadow-xs space-y-2 text-[11px] transition-colors">
+        <div className="mono uppercase font-semibold text-muted-foreground">
+          Verified Evidence Vault
+        </div>
+        <div className="flex items-center gap-1.5 font-medium">
+          <span className="w-1.5 h-1.5 rounded-full inline-block bg-emerald-500" />
+          <span className="text-emerald-700 dark:text-emerald-400 font-medium">
+            IRIS GST Verified (Active)
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5 font-medium">
+          <span className="w-1.5 h-1.5 rounded-full inline-block bg-emerald-500" />
+          <span className="text-emerald-700 dark:text-emerald-400 font-medium">
+            MCA RoC CIN Active (RoC-Mumbai)
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5 font-medium">
+          <span className="w-1.5 h-1.5 rounded-full inline-block bg-emerald-500" />
+          <span className="text-emerald-700 dark:text-emerald-400 font-medium">
+            MSME Udyam Verified (Small)
+          </span>
         </div>
       </div>
     </aside>

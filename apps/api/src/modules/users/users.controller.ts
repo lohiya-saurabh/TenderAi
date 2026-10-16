@@ -6,9 +6,9 @@ import {
   UsersService,
   type UpdateUserProfileDto,
   type ChangePasswordDto,
-} from './users.service.js';
-import { RequirePermission } from '../../common/security/decorators/permissions.decorator.js';
-import { Permissions } from '../../common/security/permissions.js';
+} from '@/modules/users/users.service.js';
+import { RequirePermission } from '@/common/security/decorators/permissions.decorator.js';
+import { Permissions } from '@/common/security/permissions.js';
 
 @Controller('api/v1/users')
 export class UsersController {

@@ -1,4 +1,4 @@
-import { IngestionJob } from '../entities/IngestionJob.js';
+import { IngestionJob } from '@/modules/bids/domain/entities/IngestionJob.js';
 
 export interface IIngestionJobRepository {
   findById(id: string, organizationId: string): Promise<IngestionJob | null>;

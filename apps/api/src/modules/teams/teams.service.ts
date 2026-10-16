@@ -10,12 +10,12 @@ import {
   DRIZZLE_TOKEN,
   type DrizzleDb,
   createDrizzle,
-} from '../../common/database/database.module.js';
-import * as schema from '../../common/database/schema.js';
-import { BadRequestError } from '../../common/errors/errors.js';
-import { TenantContextHolder } from '../../common/security/TenantContext.js';
-import { ROLE_PERMISSIONS, type UserRole } from '../../common/security/permissions.js';
-import { EntitlementService } from '../billing/entitlement.service.js';
+} from '@/common/database/database.module.js';
+import * as schema from '@/common/database/schema.js';
+import { BadRequestError } from '@/common/errors/errors.js';
+import { TenantContextHolder } from '@/common/security/TenantContext.js';
+import { ROLE_PERMISSIONS, type UserRole } from '@/common/security/permissions.js';
+import { EntitlementService } from '@/modules/billing/entitlement.service.js';
 
 export interface InviteMemberDto {
   email: string;

@@ -1,15 +1,15 @@
 import {
   ListComplianceItemsUseCase,
   ComplianceItemViewDto,
-} from '../application/ListComplianceItemsUseCase.js';
+} from '@/modules/compliance/application/ListComplianceItemsUseCase.js';
 import {
   ReviewComplianceItemUseCase,
   ReviewComplianceItemResult,
-} from '../application/ReviewComplianceItemUseCase.js';
+} from '@/modules/compliance/application/ReviewComplianceItemUseCase.js';
 import {
   UpdateComplianceItemDto,
   UpdateComplianceItemPayload,
-} from './dto/UpdateComplianceItemDto.js';
+} from '@/modules/compliance/presentation/dto/UpdateComplianceItemDto.js';
 
 export class ComplianceController {
   constructor(

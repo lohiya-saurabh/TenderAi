@@ -14,7 +14,7 @@ export const PublicFooter: React.FC = () => {
                 TP
               </div>
               <span className="text-base font-bold text-foreground tracking-tight">
-                TenderPulse AI
+                TenderPulse<span className="text-vermilion">.ai</span>
               </span>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
@@ -22,7 +22,7 @@ export const PublicFooter: React.FC = () => {
               MSMEs, and public sector vendors.
             </p>
             <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-mono">
-              <Shield className="h-3.5 w-3.5 text-primary" />
+              <Shield className="h-3.5 w-3.5 text-emerald-500" />
               <span>DPDP Act 2023 &bull; GeM / CPPP Ready</span>
             </div>
           </div>

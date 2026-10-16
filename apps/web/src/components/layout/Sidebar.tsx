@@ -1,15 +1,15 @@
 import React, { useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { useAuth } from '../../auth/useAuth.js';
-import { PERMISSIONS } from '../../utils/permissions.js';
+import { useAuth } from '@/auth/useAuth.js';
+import { PERMISSIONS } from '@/utils/permissions.js';
 import {
   TendersIcon,
   PlusCircleIcon,
   BuildingOfficeIcon,
   CloseIcon,
   ShieldLockIcon,
-} from '../common/Icons.js';
-import { cn } from '../../lib/utils.js';
+} from '@/components/common/Icons.js';
+import { cn } from '@/lib/utils.js';
 import { Settings as SettingsIcon } from 'lucide-react';
 
 export interface SidebarProps {
@@ -90,7 +90,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {!isCollapsed && (
             <div className="flex items-center gap-2 min-w-0">
               <span className="text-sm font-bold tracking-tight text-foreground leading-tight truncate">
-                TenderPulse
+                TenderPulse<span className="text-vermilion">.ai</span>
               </span>
               <span className="mono text-[10px] px-1.5 py-0.5 border border-border text-muted-foreground rounded bg-muted/40 font-semibold">
                 v2.4
@@ -149,7 +149,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <span
                       className={cn(
                         'shrink-0 flex items-center justify-center',
-                        isActive ? 'text-primary' : 'text-muted-foreground',
+                        isActive ? 'text-vermilion' : 'text-muted-foreground',
                       )}
                     >
                       <Icon size={16} />
@@ -167,7 +167,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {!isCollapsed ? (
           <>
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-foreground inline-block" />
+              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
               <span className="text-[11px] font-semibold text-foreground tracking-wide">
                 Production v2.0
               </span>
@@ -180,7 +180,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         ) : (
           <div className="flex justify-center">
             <span
-              className="w-2.5 h-2.5 rounded-full bg-foreground inline-block"
+              className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"
               title="System Online: v2.0"
             />
           </div>

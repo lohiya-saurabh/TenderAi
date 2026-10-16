@@ -9,10 +9,10 @@ import {
   DRIZZLE_TOKEN,
   type DrizzleDb,
   createDrizzle,
-} from '../../common/database/database.module.js';
-import * as schema from '../../common/database/schema.js';
-import { BadRequestError, NotFoundError } from '../../common/errors/errors.js';
-import { TenantContextHolder } from '../../common/security/TenantContext.js';
+} from '@/common/database/database.module.js';
+import * as schema from '@/common/database/schema.js';
+import { BadRequestError, NotFoundError } from '@/common/errors/errors.js';
+import { TenantContextHolder } from '@/common/security/TenantContext.js';
 import type {
   SendNotificationDto,
   NotificationResponse,
@@ -20,7 +20,7 @@ import type {
   NotificationCategory,
   NotificationPriority,
   NotificationChannel,
-} from './notifications.types.js';
+} from '@/modules/notifications/notifications.types.js';
 
 @Injectable()
 export class NotificationsService {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import type { BidDetail } from '../../api/bids.js';
-import type { ComplianceItem } from '../../api/compliance.js';
+import type { BidDetail } from '@/api/bids.js';
+import type { ComplianceItem } from '@/api/compliance.js';
 import {
   WORKFLOW_STAGES,
   DEFAULT_COMPANY_PROFILE,
@@ -13,7 +13,7 @@ import {
   deriveHumanReviewTask,
   deriveBidReadiness,
   deriveSubmissionChecklist,
-} from '../workflowData.js';
+} from '@/utils/workflowData.js';
 
 describe('Workflow Domain Data & 13-Stage Journey', () => {
   const mockBid: BidDetail = {

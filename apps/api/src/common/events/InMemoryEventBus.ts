@@ -1,5 +1,5 @@
-import { IDomainEvent } from '../domain/DomainEvent.js';
-import { IEventBus, DomainEventHandler } from './IEventBus.js';
+import { IDomainEvent } from '@/common/domain/DomainEvent.js';
+import { IEventBus, DomainEventHandler } from '@/common/events/IEventBus.js';
 
 export class InMemoryEventBus implements IEventBus {
   private readonly handlers: Map<string, Set<DomainEventHandler<IDomainEvent>>> = new Map();

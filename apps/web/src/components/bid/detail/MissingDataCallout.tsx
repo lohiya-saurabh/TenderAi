@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Card } from '../../common/Card.js';
-import { InfoIcon, ChevronDownIcon } from '../../common/Icons.js';
+import { Card } from '@/components/common/Card.js';
+import { InfoIcon, ChevronDownIcon } from '@/components/common/Icons.js';
 
 interface LiveEndpoint {
   method: string;

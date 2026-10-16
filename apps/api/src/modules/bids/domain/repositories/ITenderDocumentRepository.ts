@@ -1,4 +1,4 @@
-import { TenderDocument } from '../entities/TenderDocument.js';
+import { TenderDocument } from '@/modules/bids/domain/entities/TenderDocument.js';
 
 export interface ITenderDocumentRepository {
   findById(id: string, organizationId: string): Promise<TenderDocument | null>;

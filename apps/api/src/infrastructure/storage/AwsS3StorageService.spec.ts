@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { AwsS3StorageService } from './AwsS3StorageService.js';
+import { AwsS3StorageService } from '@/infrastructure/storage/AwsS3StorageService.js';
 import { HeadObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 
 vi.mock('@aws-sdk/s3-request-presigner', () => ({

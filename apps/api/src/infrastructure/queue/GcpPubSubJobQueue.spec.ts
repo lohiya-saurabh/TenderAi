@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { GcpPubSubJobQueue } from './GcpPubSubJobQueue.js';
-import { IngestionJobMessage } from '../../modules/bids/application/IJobQueue.js';
+import { GcpPubSubJobQueue } from '@/infrastructure/queue/GcpPubSubJobQueue.js';
+import { IngestionJobMessage } from '@/modules/bids/application/IJobQueue.js';
 
 const mockPublishMessage = vi.fn();
 const mockTopic = vi.fn().mockImplementation(() => ({

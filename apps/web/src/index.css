@@ -34,8 +34,8 @@
     --destructive: 14 90% 45%;
     --destructive-foreground: 0 0% 98%;
 
-    /* Pass / Normal Evaluated Criteria: Neutral Monospace Ink-Black (No green, no orange) */
-    --success: 240 10% 3.9%;
+    /* Pass / Quantitative Green (Emerald) */
+    --success: 160 84% 39%;
     --success-foreground: 0 0% 98%;
 
     /* Warning / Flags: Deep Terracotta Orange */
@@ -48,6 +48,12 @@
     --ring: 240 10% 3.9%;
 
     --radius: 0.5rem;
+
+    /* Swiss Vermilion Signature Brand & Primary Action Tokens */
+    --vermilion: #f0441c;
+    --vermilion-hover: #d83812;
+    --vermilion-subtle: rgba(240, 68, 28, 0.08);
+    --vermilion-border: rgba(240, 68, 28, 0.25);
 
     /* Semantic Surface Tokens */
     --color-surface-bg: #ffffff;
@@ -67,33 +73,34 @@
     --text-body: #27272a;
     --text-muted: #71717a;
 
-    --btn-primary-bg: #09090b;
+    --btn-primary-bg: #f0441c;
     --btn-primary-text: #ffffff;
-    --btn-primary-hover: #27272a;
+    --btn-primary-hover: #d83812;
 
-    /* Normal / Evaluated States (Clean Slate & Ink) */
-    --status-emerald-bg: #f4f4f5;
-    --status-emerald-text: #09090b;
-    --status-emerald-border: #e4e4e7;
+    /* Emerald Green for Positive Health, Passed Criteria & High Confidence Data */
+    --status-emerald-bg: #ecfdf5;
+    --status-emerald-text: #047857;
+    --status-emerald-border: #a7f3d0;
+    --emerald-dot: #10b981;
 
-    --status-pass-bg: #f4f4f5;
-    --status-pass-text: #09090b;
-    --status-pass-border: #e4e4e7;
-    --status-pass-icon: #09090b;
+    --status-pass-bg: #ecfdf5;
+    --status-pass-text: #047857;
+    --status-pass-border: #a7f3d0;
+    --status-pass-icon: #047857;
 
     /* Surgical Orange-Red Tiers for Flags & High-Risk Liability */
     --status-amber-bg: #fff7ed;
     --status-amber-text: #c2410c;
     --status-amber-border: #fed7aa;
 
-    --status-flag-bg: #fff7ed;
-    --status-flag-text: #c2410c;
-    --status-flag-border: #fed7aa;
+    --status-flag-bg: rgba(240, 68, 28, 0.08);
+    --status-flag-text: #f0441c;
+    --status-flag-border: rgba(240, 68, 28, 0.25);
 
-    --status-fail-bg: #fff7ed;
-    --status-fail-text: #c2410c;
-    --status-fail-border: #fed7aa;
-    --status-fail-icon: #c2410c;
+    --status-fail-bg: rgba(240, 68, 28, 0.08);
+    --status-fail-text: #f0441c;
+    --status-fail-border: rgba(240, 68, 28, 0.25);
+    --status-fail-icon: #f0441c;
 
     --status-missing-bg: #fff7ed;
     --status-missing-text: #ea580c;
@@ -110,23 +117,23 @@
     --status-na-border: #e4e4e7;
     --status-na-icon: #71717a;
 
-    --color-status-ready: #09090b;
-    --color-status-flagged: #c2410c;
+    --color-status-ready: #047857;
+    --color-status-flagged: #f0441c;
     --color-status-pending: #ea580c;
     --color-status-waived: #71717a;
     --color-status-processing: #ea580c;
     --color-status-draft: #71717a;
     --color-status-queued: #c2410c;
-    --color-status-finalized: #09090b;
-    --color-status-failed: #c2410c;
+    --color-status-finalized: #047857;
+    --color-status-failed: #f0441c;
 
-    --color-danger: #c2410c;
-    --color-danger-bg: #fff7ed;
-    --color-danger-border: #fed7aa;
+    --color-danger: #f0441c;
+    --color-danger-bg: rgba(240, 68, 28, 0.08);
+    --color-danger-border: rgba(240, 68, 28, 0.25);
 
-    --color-success: #09090b;
-    --color-success-bg: #f4f4f5;
-    --color-success-border: #e4e4e7;
+    --color-success: #047857;
+    --color-success-bg: #ecfdf5;
+    --color-success-border: #a7f3d0;
 
     --color-warning: #ea580c;
     --color-warning-bg: #fff7ed;
@@ -238,9 +245,11 @@
     --destructive: 14 90% 45%;
     --destructive-foreground: 0 0% 98%;
 
-    --success: 0 0% 98%;
+    /* Pass / Quantitative Green (Emerald) */
+    --success: 158 64% 52%;
     --success-foreground: 240 10% 3.9%;
 
+    /* Warning / Flags: Deep Terracotta Orange */
     --warning: 24 95% 53%;
     --warning-foreground: 0 0% 100%;
 
@@ -248,6 +257,12 @@
     --border-strong: 240 5% 26%;
     --input: 240 4% 16%;
     --ring: 0 0% 98%;
+
+    /* Swiss Vermilion Signature Brand & Primary Action Tokens */
+    --vermilion: #f0441c;
+    --vermilion-hover: #ff5a36;
+    --vermilion-subtle: rgba(240, 68, 28, 0.15);
+    --vermilion-border: rgba(240, 68, 28, 0.35);
 
     --color-surface-bg: #09090b;
     --color-surface-card: #121215;
@@ -266,31 +281,33 @@
     --text-body: #e4e4e7;
     --text-muted: #a1a1aa;
 
-    --btn-primary-bg: #ffffff;
-    --btn-primary-text: #09090b;
-    --btn-primary-hover: #e4e4e7;
+    --btn-primary-bg: #f0441c;
+    --btn-primary-text: #ffffff;
+    --btn-primary-hover: #ff5a36;
 
-    --status-emerald-bg: #18181b;
-    --status-emerald-text: #ffffff;
-    --status-emerald-border: #27272a;
+    /* Emerald Green for Positive Health, Passed Criteria & High Confidence Data */
+    --status-emerald-bg: rgba(6, 78, 59, 0.25);
+    --status-emerald-text: #34d399;
+    --status-emerald-border: rgba(52, 211, 153, 0.3);
+    --emerald-dot: #34d399;
 
-    --status-pass-bg: #18181b;
-    --status-pass-text: #ffffff;
-    --status-pass-border: #27272a;
-    --status-pass-icon: #ffffff;
+    --status-pass-bg: rgba(6, 78, 59, 0.25);
+    --status-pass-text: #34d399;
+    --status-pass-border: rgba(52, 211, 153, 0.3);
+    --status-pass-icon: #34d399;
 
     --status-amber-bg: rgba(194, 65, 12, 0.15);
     --status-amber-text: #fb923c;
     --status-amber-border: rgba(251, 146, 60, 0.3);
 
-    --status-flag-bg: rgba(194, 65, 12, 0.15);
-    --status-flag-text: #fb923c;
-    --status-flag-border: rgba(251, 146, 60, 0.3);
+    --status-flag-bg: rgba(240, 68, 28, 0.15);
+    --status-flag-text: #f0441c;
+    --status-flag-border: rgba(240, 68, 28, 0.35);
 
-    --status-fail-bg: rgba(194, 65, 12, 0.15);
-    --status-fail-text: #fb923c;
-    --status-fail-border: rgba(251, 146, 60, 0.3);
-    --status-fail-icon: #fb923c;
+    --status-fail-bg: rgba(240, 68, 28, 0.15);
+    --status-fail-text: #f0441c;
+    --status-fail-border: rgba(240, 68, 28, 0.35);
+    --status-fail-icon: #f0441c;
 
     --status-missing-bg: rgba(234, 88, 12, 0.15);
     --status-missing-text: #fdba74;
@@ -307,23 +324,23 @@
     --status-na-border: #27272a;
     --status-na-icon: #71717a;
 
-    --color-status-ready: #ffffff;
-    --color-status-flagged: #fb923c;
+    --color-status-ready: #34d399;
+    --color-status-flagged: #f0441c;
     --color-status-pending: #fdba74;
     --color-status-waived: #a1a1aa;
     --color-status-processing: #fdba74;
     --color-status-draft: #71717a;
     --color-status-queued: #fb923c;
-    --color-status-finalized: #ffffff;
-    --color-status-failed: #fb923c;
+    --color-status-finalized: #34d399;
+    --color-status-failed: #f0441c;
 
-    --color-danger: #fb923c;
-    --color-danger-bg: rgba(194, 65, 12, 0.15);
-    --color-danger-border: rgba(251, 146, 60, 0.3);
+    --color-danger: #f0441c;
+    --color-danger-bg: rgba(240, 68, 28, 0.15);
+    --color-danger-border: rgba(240, 68, 28, 0.35);
 
-    --color-success: #ffffff;
-    --color-success-bg: #18181b;
-    --color-success-border: #27272a;
+    --color-success: #34d399;
+    --color-success-bg: rgba(6, 78, 59, 0.25);
+    --color-success-border: rgba(52, 211, 153, 0.3);
 
     --color-warning: #fb923c;
     --color-warning-bg: rgba(194, 65, 12, 0.15);
@@ -436,3 +453,24 @@ nav::-webkit-scrollbar,
   width: 0;
   height: 0;
 }
+
+/* Swiss Vermilion & Emerald Utility Helpers */
+.bg-vermilion {
+  background-color: var(--vermilion);
+}
+.text-vermilion {
+  color: var(--vermilion);
+}
+.border-vermilion {
+  border-color: var(--vermilion);
+}
+.border-l-vermilion {
+  border-left-color: var(--vermilion);
+}
+.bg-vermilion-subtle {
+  background-color: var(--vermilion-subtle);
+}
+.border-vermilion-border {
+  border-color: var(--vermilion-border);
+}
+

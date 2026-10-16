@@ -1,10 +1,10 @@
 import { Module, Global, Logger } from '@nestjs/common';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { IStorageService } from '../../modules/bids/application/IStorageService.js';
-import { GcsStorageService } from './GcsStorageService.js';
-import { AwsS3StorageService } from './AwsS3StorageService.js';
-import { MockStorageService } from './MockStorageService.js';
+import type { IStorageService } from '@/modules/bids/application/IStorageService.js';
+import { GcsStorageService } from '@/infrastructure/storage/GcsStorageService.js';
+import { AwsS3StorageService } from '@/infrastructure/storage/AwsS3StorageService.js';
+import { MockStorageService } from '@/infrastructure/storage/MockStorageService.js';
 
 export const STORAGE_TOKEN = 'STORAGE_SERVICE';
 

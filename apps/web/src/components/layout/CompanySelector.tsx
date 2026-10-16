@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Building2, Check, Plus } from 'lucide-react';
-import { useCompany } from '../../context/CompanyContext.js';
-import { cn } from '../../lib/utils.js';
+import { useCompany } from '@/context/useCompany.js';
+import { cn } from '@/lib/utils.js';
 
 export const CompanySelector: React.FC = () => {
   const { companies, selectedCompanyId, selectedCompany, setSelectedCompanyId, createCompany } =
@@ -65,7 +65,7 @@ export const CompanySelector: React.FC = () => {
         aria-haspopup="true"
         title="Switch Business Entity / Company"
       >
-        <div className="flex items-center justify-center w-5 h-5 rounded bg-primary/15 text-primary shrink-0">
+        <div className="flex items-center justify-center w-5 h-5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shrink-0">
           <Building2 size={13} />
         </div>
 
@@ -119,7 +119,7 @@ export const CompanySelector: React.FC = () => {
                   className={cn(
                     'w-full flex items-start justify-between p-2 rounded-lg text-left transition-colors border',
                     isSelected
-                      ? 'bg-primary/10 border-primary/40 text-foreground font-medium'
+                      ? 'bg-vermilion-subtle border-vermilion-border text-foreground font-medium'
                       : 'border-transparent hover:bg-accent/80 text-muted-foreground hover:text-foreground',
                   )}
                 >
@@ -127,7 +127,7 @@ export const CompanySelector: React.FC = () => {
                     <div
                       className={cn(
                         'text-xs font-semibold truncate',
-                        isSelected ? 'text-primary' : 'text-foreground',
+                        isSelected ? 'text-vermilion' : 'text-foreground',
                       )}
                     >
                       {company.legalName}
@@ -147,7 +147,7 @@ export const CompanySelector: React.FC = () => {
                   </div>
 
                   {isSelected && (
-                    <div className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground shrink-0 mt-0.5 shadow-xs">
+                    <div className="flex items-center justify-center w-5 h-5 rounded-full bg-vermilion text-white shrink-0 mt-0.5 shadow-xs">
                       <Check size={11} strokeWidth={3} />
                     </div>
                   )}

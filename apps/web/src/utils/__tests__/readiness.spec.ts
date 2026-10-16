@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeReadiness, computeRiskLevel } from '../readiness.js';
+import { computeReadiness, computeRiskLevel } from '@/utils/readiness.js';
 
 describe('readiness — Invariant Guarantees', () => {
   it('strictly caps readiness percentage at 100% even if approved exceeds total', () => {

@@ -6,38 +6,39 @@
  * and zero-network deterministic mock adapters via environment variables.
  */
 import { Module } from '@nestjs/common';
-import { DatabaseModule } from '../../common/database/database.module.js';
-import { StorageModule } from '../../infrastructure/storage/storage.module.js';
-import { CompanyProfileModule } from '../company-profile/company-profile.module.js';
+import { DatabaseModule } from '@/common/database/database.module.js';
+import { StorageModule } from '@/infrastructure/storage/storage.module.js';
+import { CompanyProfileModule } from '@/modules/company-profile/company-profile.module.js';
 
 // Application Services
-import { CompanyEvidenceService } from './application/CompanyEvidenceService.js';
-import { EvidenceVerificationService } from './application/EvidenceVerificationService.js';
+import { CompanyEvidenceService } from '@/modules/company-verification/application/CompanyEvidenceService.js';
+import { EvidenceVerificationService } from '@/modules/company-verification/application/EvidenceVerificationService.js';
 
 // Ports Tokens
-import { BUSINESS_VERIFICATION_PROVIDER } from './domain/ports/BusinessVerificationProvider.js';
-import { COMPANY_REGISTRY_PROVIDER } from './domain/ports/CompanyRegistryProvider.js';
-import { MSME_VERIFICATION_PORT } from './domain/ports/IMsmeVerificationPort.js';
-import { DIGITAL_DOCUMENT_PROVIDER } from './domain/ports/DigitalDocumentProvider.js';
+import { BUSINESS_VERIFICATION_PROVIDER } from '@/modules/company-verification/domain/ports/BusinessVerificationProvider.js';
+import { COMPANY_REGISTRY_PROVIDER } from '@/modules/company-verification/domain/ports/CompanyRegistryProvider.js';
+import { MSME_VERIFICATION_PORT } from '@/modules/company-verification/domain/ports/IMsmeVerificationPort.js';
+import { DIGITAL_DOCUMENT_PROVIDER } from '@/modules/company-verification/domain/ports/DigitalDocumentProvider.js';
 
 // Infrastructure Adapters
-import { IrisIrpGstAdapter } from './infrastructure/IrisIrpGstAdapter.js';
-import { MockGstVerificationAdapter } from './infrastructure/MockGstVerificationAdapter.js';
-import { McaRegistryAdapter } from './infrastructure/McaRegistryAdapter.js';
-import { MockMcaRegistryAdapter } from './infrastructure/MockMcaRegistryAdapter.js';
-import { UdyamVerificationAdapter } from './infrastructure/UdyamVerificationAdapter.js';
-import { MockMsmeVerificationAdapter } from './infrastructure/MockMsmeVerificationAdapter.js';
-import { DigiLockerAdapter } from './infrastructure/DigiLockerAdapter.js';
-import { MockDigitalLockerAdapter } from './infrastructure/MockDigitalLockerAdapter.js';
+import { IrisIrpGstAdapter } from '@/modules/company-verification/infrastructure/IrisIrpGstAdapter.js';
+import { MockGstVerificationAdapter } from '@/modules/company-verification/infrastructure/MockGstVerificationAdapter.js';
+import { McaRegistryAdapter } from '@/modules/company-verification/infrastructure/McaRegistryAdapter.js';
+import { MockMcaRegistryAdapter } from '@/modules/company-verification/infrastructure/MockMcaRegistryAdapter.js';
+import { UdyamVerificationAdapter } from '@/modules/company-verification/infrastructure/UdyamVerificationAdapter.js';
+import { MockMsmeVerificationAdapter } from '@/modules/company-verification/infrastructure/MockMsmeVerificationAdapter.js';
+import { DigiLockerAdapter } from '@/modules/company-verification/infrastructure/DigiLockerAdapter.js';
+import { MockDigitalLockerAdapter } from '@/modules/company-verification/infrastructure/MockDigitalLockerAdapter.js';
 
 // Connectors
-import { LocalUploadConnector } from './infrastructure/LocalUploadConnector.js';
-import { GoogleDriveConnector } from './infrastructure/GoogleDriveConnector.js';
-import { OneDriveConnector } from './infrastructure/OneDriveConnector.js';
+import { LocalUploadConnector } from '@/modules/company-verification/infrastructure/LocalUploadConnector.js';
+import { GoogleDriveConnector } from '@/modules/company-verification/infrastructure/GoogleDriveConnector.js';
+import { OneDriveConnector } from '@/modules/company-verification/infrastructure/OneDriveConnector.js';
+import { AiEvidenceExtractor } from '@/modules/company-verification/application/AiEvidenceExtractor.js';
 
 // Controllers
-import { CompanyEvidenceController } from './presentation/CompanyEvidenceController.js';
-import { CompanyVerificationController } from './presentation/CompanyVerificationController.js';
+import { CompanyEvidenceController } from '@/modules/company-verification/presentation/CompanyEvidenceController.js';
+import { CompanyVerificationController } from '@/modules/company-verification/presentation/CompanyVerificationController.js';
 
 @Module({
   imports: [DatabaseModule, StorageModule, CompanyProfileModule],
@@ -45,6 +46,7 @@ import { CompanyVerificationController } from './presentation/CompanyVerificatio
   providers: [
     CompanyEvidenceService,
     EvidenceVerificationService,
+    AiEvidenceExtractor,
     LocalUploadConnector,
     GoogleDriveConnector,
     OneDriveConnector,
@@ -83,6 +85,6 @@ import { CompanyVerificationController } from './presentation/CompanyVerificatio
           : MockDigitalLockerAdapter,
     },
   ],
-  exports: [CompanyEvidenceService, EvidenceVerificationService],
+  exports: [CompanyEvidenceService, EvidenceVerificationService, AiEvidenceExtractor],
 })
 export class CompanyVerificationModule {}

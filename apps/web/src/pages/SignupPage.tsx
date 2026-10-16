@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { useAuth } from '../auth/useAuth.js';
-import { type PlanTier } from '../api/billing.js';
-import { Button } from '../components/ui/button.js';
-import { Input } from '../components/ui/input.js';
-import { Label } from '../components/ui/label.js';
-import { ErrorBanner } from '../components/common/ErrorBanner.js';
+import { useAuth } from '@/auth/useAuth.js';
+import { type PlanTier } from '@/api/billing.js';
+import { Button } from '@/components/ui/button.js';
+import { Input } from '@/components/ui/input.js';
+import { Label } from '@/components/ui/label.js';
+import { ErrorBanner } from '@/components/common/ErrorBanner.js';
 import { Building2, Lock, Mail, User, ShieldCheck, ArrowRight, Sparkles } from 'lucide-react';
 
 export const SignupPage: React.FC = () => {

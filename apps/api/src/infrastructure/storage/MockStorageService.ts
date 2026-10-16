@@ -1,7 +1,7 @@
 import {
   IStorageService,
   HeadObjectResult,
-} from '../../modules/bids/application/IStorageService.js';
+} from '@/modules/bids/application/IStorageService.js';
 
 export class MockStorageService implements IStorageService {
   private readonly objects: Map<

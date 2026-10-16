@@ -23,6 +23,11 @@ from tenderpulse_ai.decision import (
     BidDecisionRequest,
     BidDecisionResponse,
 )
+from tenderpulse_ai.domain.evidence_extractor import (
+    CompanyEvidenceExtractionRequest,
+    CompanyEvidenceExtractionResponse,
+    CompanyEvidenceExtractor,
+)
 from tenderpulse_ai.infrastructure.queue import (
     DocumentExtractionCompletedEvent,
     DocumentQueueConsumerWorker,
@@ -468,6 +473,30 @@ async def analyze_bid_decision(request: BidDecisionRequest):
     """Bid/No-Bid Decision Intelligence Agent: evaluates company profile against tender."""
     agent = BidDecisionAgent()
     return await agent.evaluate(request)
+
+
+@app.post(
+    "/api/v1/evidence/extract",
+    response_model=CompanyEvidenceExtractionResponse,
+    dependencies=[Depends(verify_internal_key)],
+)
+async def extract_company_evidence(request: CompanyEvidenceExtractionRequest):
+    """Automated extraction & chunking of company evidence documents (balance sheets, work orders, ISO certs)."""
+    logger.info(
+        "Received company evidence extraction request for doc_id=%s, type=%s, org=%s, comp=%s",
+        request.evidence_document_id,
+        request.evidence_type,
+        request.organization_id,
+        request.company_id,
+    )
+    extractor = CompanyEvidenceExtractor()
+    result = await extractor.extract(request)
+    logger.info(
+        "Completed company evidence extraction for doc_id=%s (generated %d chunks)",
+        request.evidence_document_id,
+        len(result.chunks),
+    )
+    return result
 
 
 @app.get("/api/v1/worker/queue-status", dependencies=[Depends(verify_internal_key)])

@@ -22,6 +22,7 @@ from tenderpulse_ai.decision import (
     DecisionState,
     FinancialTurnover,
 )
+from tenderpulse_ai.decision.schemas import EvidenceChunkWire
 from tenderpulse_ai.decision.workflow import (
     BidDecisionWorkflowState,
     DecisionWorkflowContext,
@@ -234,3 +235,99 @@ async def test_bid_decision_langgraph_architectural_invariant_verdict_untouched(
     assert len(response.hard_disqualifiers) >= 1
     assert any(d.reason for d in response.hard_disqualifiers if "debarred" in d.reason.lower())
     assert any("Debarment" in r.title for r in response.reasons_not_to_pursue)
+
+
+@pytest.mark.asyncio
+async def test_bid_decision_evidence_rag_hybrid_vault_matching():
+    """Verify that uploaded evidence chunks are retrieved via hybrid RAG and cited in bid decision."""
+    agent = BidDecisionAgent()
+    profile = make_sample_profile(turnover=95.0)
+
+    evidence_chunk = EvidenceChunkWire(
+        chunk_id="chk_audited_turnover_01",
+        document_id="doc_audited_balance_sheet_2025",
+        file_name="Apex_Audited_Turnover_Certificate_FY25.pdf",
+        page_number=3,
+        chunk_type="CERTIFICATE_KEY_VALUE",
+        content="Statutory Turnover: M/s Apex Infrastructure Corp achieved average annual financial turnover of INR 95.0 Crores for the preceding 3 financial years. Certified under CA UDIN 24987654AAAA5678.",
+        metadata={
+            "turnover_inr_crores": 95.0,
+            "financial_year": "FY24",
+            "ca_udin": "24987654AAAA5678",
+            "evidence_type": "AUDITED_BALANCE_SHEET",
+            "file_name": "Apex_Audited_Turnover_Certificate_FY25.pdf",
+        },
+    )
+
+    request = BidDecisionRequest(
+        security_context=make_sec_context(),
+        tender_id="tender_mumbai_metro_01",
+        tender_title="Mumbai Metro Line 4 Depot",
+        estimated_value_inr_crores=100.0,
+        submission_deadline=SUBMISSION_DEADLINE,
+        project_location_state="Maharashtra",
+        requirements=make_sample_requirements(),
+        company_profile=profile,
+        evidence_chunks=[evidence_chunk],
+        evidence_documents=[
+            {
+                "id": "doc_audited_balance_sheet_2025",
+                "fileName": "Apex_Audited_Turnover_Certificate_FY25.pdf",
+                "evidenceType": "AUDITED_BALANCE_SHEET",
+            }
+        ],
+    )
+
+    response = await agent.evaluate(request)
+
+    assert response.verdict in (BidDecisionVerdict.GO, BidDecisionVerdict.CONDITIONAL_GO)
+    assert len(response.evidence_citations) >= 1
+
+    # Verify that the dual-provenance citation links the tender requirement to the actual evidence document
+    citation = next(
+        c
+        for c in response.evidence_citations
+        if c.company_evidence_ref == "doc_audited_balance_sheet_2025"
+    )
+    assert citation.document_name == "Apex_Audited_Turnover_Certificate_FY25.pdf"
+    assert citation.page_number == 3
+    assert citation.confidence_score is not None and citation.confidence_score >= 0.90
+
+    # Check evidence retrieval audit event
+    retrieval_event = next(
+        e for e in response.audit_events if e["action"] == "EVIDENCE_RETRIEVAL_COMPLETED"
+    )
+    assert retrieval_event["details"]["evidence_chunks_count"] == 1
+    assert retrieval_event["details"]["matched_citations_count"] >= 1
+
+
+@pytest.mark.asyncio
+async def test_bid_decision_workflow_with_null_metadata_evidence_chunk():
+    """Verify that workflow executes safely without TypeError when evidence chunk metadata is None."""
+    agent = BidDecisionAgent()
+    profile = make_sample_profile(turnover=95.0)
+
+    evidence_chunk = EvidenceChunkWire(
+        chunk_id="chk_null_meta_01",
+        document_id="doc_null_meta_01",
+        file_name="Turnover_Cert.pdf",
+        page_number=1,
+        chunk_type="FINANCIAL_TURNOVER",
+        content="Turnover for FY24 is INR 95.0 Crores.",
+        metadata=None,
+    )
+
+    request = BidDecisionRequest(
+        security_context=make_sec_context(),
+        tender_id="tender_null_meta_01",
+        tender_title="Metro Project Null Meta",
+        estimated_value_inr_crores=100.0,
+        submission_deadline=SUBMISSION_DEADLINE,
+        project_location_state="Maharashtra",
+        requirements=make_sample_requirements(),
+        company_profile=profile,
+        evidence_chunks=[evidence_chunk],
+    )
+
+    response = await agent.evaluate(request)
+    assert response.verdict in (BidDecisionVerdict.GO, BidDecisionVerdict.CONDITIONAL_GO)

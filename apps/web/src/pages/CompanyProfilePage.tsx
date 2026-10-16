@@ -1,18 +1,18 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { useCompany } from '../context/CompanyContext.js';
-import { CompanyProfileHeader } from '../components/company/CompanyProfileHeader.js';
-import { CapabilityNavTabs } from '../components/company/CapabilityNavTabs.js';
-import { CompanyProfileView } from '../components/company/CompanyProfileView.js';
-import { CompanyVerificationBar } from '../components/company/CompanyVerificationBar.js';
-import { Card, CardContent } from '../components/ui/card.js';
+import { useCompany } from '@/context/useCompany.js';
+import { CompanyProfileHeader } from '@/components/company/CompanyProfileHeader.js';
+import { CapabilityNavTabs } from '@/components/company/CapabilityNavTabs.js';
+import { CompanyProfileView } from '@/components/company/CompanyProfileView.js';
+import { CompanyVerificationBar } from '@/components/company/CompanyVerificationBar.js';
+import { Card, CardContent } from '@/components/ui/card.js';
 import { Building2 } from 'lucide-react';
-import { listCompanyEvidence, type EvidenceDocumentItem } from '../api/companies.js';
+import { listCompanyEvidence, type EvidenceDocumentItem } from '@/api/companies.js';
 import type {
   CapabilitySectionId,
   FullCompanyProfile,
   RegistrationItem,
   EvidenceVaultItem,
-} from '../components/company/companyProfileData.js';
+} from '@/components/company/companyProfileData.js';
 
 export const CompanyProfilePage: React.FC = () => {
   const { selectedCompany, reloadCompanies } = useCompany();

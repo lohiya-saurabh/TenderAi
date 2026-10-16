@@ -1,22 +1,22 @@
 import { v4 as uuidv4 } from 'uuid';
-import { IJobQueue, QueueMessage, IngestionJobMessage } from './IJobQueue.js';
-import { IIngestionJobRepository } from '../domain/repositories/IIngestionJobRepository.js';
-import { IBidRepository } from '../domain/repositories/IBidRepository.js';
-import { ITenderDocumentRepository } from '../domain/repositories/ITenderDocumentRepository.js';
-import { IComplianceItemRepository } from '../../compliance/domain/repositories/IComplianceItemRepository.js';
-import { IAuditRepository } from '../../audit/domain/repositories/IAuditRepository.js';
-import { AuditLog } from '../../audit/domain/entities/AuditLog.js';
-import { ComplianceItem } from '../../compliance/domain/entities/ComplianceItem.js';
+import { IJobQueue, QueueMessage, IngestionJobMessage } from '@/modules/bids/application/IJobQueue.js';
+import { IIngestionJobRepository } from '@/modules/bids/domain/repositories/IIngestionJobRepository.js';
+import { IBidRepository } from '@/modules/bids/domain/repositories/IBidRepository.js';
+import { ITenderDocumentRepository } from '@/modules/bids/domain/repositories/ITenderDocumentRepository.js';
+import { IComplianceItemRepository } from '@/modules/compliance/domain/repositories/IComplianceItemRepository.js';
+import { IAuditRepository } from '@/modules/audit/domain/repositories/IAuditRepository.js';
+import { AuditLog } from '@/modules/audit/domain/entities/AuditLog.js';
+import { ComplianceItem } from '@/modules/compliance/domain/entities/ComplianceItem.js';
 import {
   ExecutionRules,
   ExecutionRulesProps,
-} from '../../compliance/domain/value-objects/ExecutionRules.js';
-import { Provenance } from '../../compliance/domain/value-objects/Provenance.js';
-import { TenderDocument } from '../domain/entities/TenderDocument.js';
-import { BidStatus } from '../domain/value-objects/BidStatus.js';
-import { IUnitOfWork, DirectUnitOfWork } from '../../../common/database/IUnitOfWork.js';
-import { IEventBus } from '../../../common/events/IEventBus.js';
-import { ComplianceIngestionCompletedEvent } from '../domain/events/ComplianceIngestionCompletedEvent.js';
+} from '@/modules/compliance/domain/value-objects/ExecutionRules.js';
+import { Provenance } from '@/modules/compliance/domain/value-objects/Provenance.js';
+import { TenderDocument } from '@/modules/bids/domain/entities/TenderDocument.js';
+import { BidStatus } from '@/modules/bids/domain/value-objects/BidStatus.js';
+import { IUnitOfWork, DirectUnitOfWork } from '@/common/database/IUnitOfWork.js';
+import { IEventBus } from '@/common/events/IEventBus.js';
+import { ComplianceIngestionCompletedEvent } from '@/modules/bids/domain/events/ComplianceIngestionCompletedEvent.js';
 
 import { SecurityContextDto } from '@tenderpulse/shared-types';
 

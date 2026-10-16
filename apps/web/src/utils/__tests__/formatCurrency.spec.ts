@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatINR, formatIndianNumber, formatCurrency } from '../formatCurrency.js';
+import { formatINR, formatIndianNumber, formatCurrency } from '@/utils/formatCurrency.js';
 
 describe('formatCurrency utility', () => {
   it('formats rupees with ₹ symbol in Indian grouping system', () => {

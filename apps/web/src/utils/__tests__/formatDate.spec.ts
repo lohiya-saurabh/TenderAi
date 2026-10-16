@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatDate, formatDateTime, formatRelativeTime } from '../formatDate.js';
+import { formatDate, formatDateTime, formatRelativeTime } from '@/utils/formatDate.js';
 
 describe('formatDate utilities', () => {
   const sampleIso = '2026-10-02T14:30:00.000Z';

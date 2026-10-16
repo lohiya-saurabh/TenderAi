@@ -1,9 +1,9 @@
 import type { LoggerService } from '@nestjs/common';
 import fs from 'node:fs';
 import path from 'node:path';
-import { LoggingContextHolder } from './LoggingContext.js';
-import { LogSanitizer } from './LogSanitizer.js';
-import { RotatingLogStream } from './RotatingLogStream.js';
+import { LoggingContextHolder } from '@/common/logging/LoggingContext.js';
+import { LogSanitizer } from '@/common/logging/LogSanitizer.js';
+import { RotatingLogStream } from '@/common/logging/RotatingLogStream.js';
 
 export type LogLevelName = 'DEBUG' | 'INFO' | 'WARN' | 'ERROR' | 'FATAL';
 

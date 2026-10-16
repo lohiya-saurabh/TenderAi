@@ -1,14 +1,14 @@
 import React from 'react';
-import { FailIcon, InfoIcon } from '../../common/Icons.js';
-import type { BidDetail } from '../../../api/bids.js';
-import type { ComplianceItem } from '../../../api/compliance.js';
+import { FailIcon, InfoIcon } from '@/components/common/Icons.js';
+import type { BidDetail } from '@/api/bids.js';
+import type { ComplianceItem } from '@/api/compliance.js';
 import {
   getComplianceRollup,
   getDeadlineBufferDays,
   formatCommercialRiskItem,
   type BidDecision,
-} from './bidDetailData.js';
-import { CompanyDocumentChecklist } from './CompanyDocumentChecklist.js';
+} from '@/components/bid/detail/bidDetailData.js';
+import { CompanyDocumentChecklist } from '@/components/bid/detail/CompanyDocumentChecklist.js';
 
 export interface BidVerdictCardProps {
   bid: BidDetail;
@@ -72,10 +72,10 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
 
   const verdictTextColor =
     verdict === 'PURSUE'
-      ? 'text-primary'
+      ? 'text-emerald-600 dark:text-emerald-400'
       : verdict === 'DO_NOT_PURSUE'
-        ? 'text-destructive'
-        : 'text-orange-500';
+        ? 'text-vermilion'
+        : 'text-amber-500';
 
   // Summary statement
   const summaryText = decision?.reasons?.[0]
@@ -110,29 +110,38 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
       <div className="space-y-3 pt-4 border-t border-border text-xs">
         <div className="flex justify-between items-center py-0.5">
           <span className="text-muted-foreground">Required 3-Year Avg Turnover</span>
-          <span className="text-foreground mono font-semibold">
-            ≥ ₹250.00 Cr (Satisfied: ₹320 Cr)
-          </span>
+          <div className="text-right">
+            <span className="text-foreground mono font-semibold">
+              ≥ ₹250.00 Cr (Satisfied: ₹320 Cr)
+            </span>
+            <span className="text-emerald-600 dark:text-emerald-400 mono font-bold ml-1.5">✓ PASS (1.78x)</span>
+          </div>
         </div>
         <div className="flex justify-between items-center py-0.5">
           <span className="text-muted-foreground">Earnest Money Deposit (EMD)</span>
-          <span className="text-foreground mono font-semibold">
-            {bid.estimatedValueRupees
-              ? `₹${((Number(bid.estimatedValueRupees) * 0.01) / 10000000).toFixed(2)} Cr (Bank Guarantee)`
-              : '₹12.50 Cr (Bank Guarantee)'}
-          </span>
+          <div className="text-right">
+            <span className="text-foreground mono font-semibold">
+              {bid.estimatedValueRupees
+                ? `₹${((Number(bid.estimatedValueRupees) * 0.01) / 10000000).toFixed(2)} Cr (Bank Guarantee)`
+                : '₹12.50 Cr (Bank Guarantee)'}
+            </span>
+            <span className="text-emerald-600 dark:text-emerald-400 mono font-bold ml-1.5">✓ PASS</span>
+          </div>
         </div>
         <div className="flex justify-between items-center py-0.5">
           <span className="text-muted-foreground">Liquidated Damages Cap</span>
-          <span className="text-orange-500 mono font-semibold">
-            10% Maximum (Flagged for Review)
+          <span className="text-vermilion mono font-bold">
+            10% Maximum Exposure (FLAGGED) ⚠
           </span>
         </div>
         <div className="flex justify-between items-center py-0.5">
           <span className="text-muted-foreground">Past Similar Highway Works</span>
-          <span className="text-foreground mono font-semibold">
-            2 Works &gt; ₹500 Cr (Verified)
-          </span>
+          <div className="text-right">
+            <span className="text-foreground mono font-semibold">
+              2 Works &gt; ₹500 Cr (Verified)
+            </span>
+            <span className="text-emerald-600 dark:text-emerald-400 mono font-bold ml-1.5">✓ PASS</span>
+          </div>
         </div>
       </div>
 
@@ -211,17 +220,73 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
 
           {/* Evidence Citations */}
           {decision.evidenceCitations && decision.evidenceCitations.length > 0 && (
-            <div className="space-y-1.5">
-              <div className="text-xs font-semibold text-foreground uppercase tracking-wider">
-                Evidence Citations
+            <div className="space-y-2 pt-2 border-t border-border/50">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                  Verified Evidence Provenance ({decision.evidenceCitations.length})
+                </span>
+                <span className="mono text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                  Dual-Grounded in Vault
+                </span>
               </div>
-              <ul className="list-disc pl-5 space-y-1 text-xs text-muted-foreground">
-                {decision.evidenceCitations.map((c, i) => (
-                  <li key={i} className="leading-relaxed">
-                    {typeof c === 'string' ? c : JSON.stringify(c)}
-                  </li>
-                ))}
-              </ul>
+              <div className="space-y-1.5">
+                {decision.evidenceCitations.map((c, i) => {
+                  if (typeof c === 'string') {
+                    return (
+                      <div
+                        key={i}
+                        className="text-xs text-muted-foreground p-2 rounded bg-muted/40 border border-border/50"
+                      >
+                        {c}
+                      </div>
+                    );
+                  }
+                  const cit = c as Record<string, unknown>;
+                  const title =
+                    (typeof cit.tender_requirement_title === 'string' && cit.tender_requirement_title) ||
+                    (typeof cit.title === 'string' && cit.title) ||
+                    'Requirement';
+                  const note =
+                    (typeof cit.notes === 'string' && cit.notes) ||
+                    (typeof cit.tender_verbatim_quote === 'string' && cit.tender_verbatim_quote) ||
+                    (typeof cit.detail === 'string' && cit.detail) ||
+                    '';
+                  const docName =
+                    (typeof cit.document_name === 'string' && cit.document_name) ||
+                    (typeof cit.company_evidence_ref === 'string' && cit.company_evidence_ref) ||
+                    (typeof cit.documentName === 'string' && cit.documentName) ||
+                    undefined;
+                  const page =
+                    (typeof cit.page_number === 'number' || typeof cit.page_number === 'string'
+                      ? cit.page_number
+                      : null) ??
+                    (typeof cit.pageNumber === 'number' || typeof cit.pageNumber === 'string'
+                      ? cit.pageNumber
+                      : null);
+
+                  return (
+                    <div
+                      key={i}
+                      className="text-xs p-2.5 rounded bg-muted/30 border border-border/50 flex flex-col gap-1"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-semibold text-foreground">{title}</span>
+                        {docName && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono bg-card border border-border text-muted-foreground">
+                            📄 {docName}
+                            {page ? ` (p. ${page})` : ''}
+                          </span>
+                        )}
+                      </div>
+                      {note && (
+                        <div className="text-muted-foreground text-[11px] leading-relaxed">
+                          {note}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
 

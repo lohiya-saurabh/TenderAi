@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { deriveGroundingMatch } from '../grounding.js';
+import { deriveGroundingMatch } from '@/utils/grounding.js';
 
 describe('deriveGroundingMatch — Deterministic Citation Verification', () => {
   it('returns 100% Verbatim Grounding when all 4 coordinates are verified and present', () => {

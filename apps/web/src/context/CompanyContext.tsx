@@ -1,11 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { useAuth } from '../auth/useAuth.js';
+import React, { createContext, useState, useEffect, useCallback, useMemo } from 'react';
+import { useAuth } from '@/auth/useAuth.js';
 import {
   listCompanies,
   type CompanyItem,
   createCompany as apiCreateCompany,
   type CreateCompanyInput,
-} from '../api/companies.js';
+} from '@/api/companies.js';
 
 export interface CompanyContextValue {
   companies: CompanyItem[];
@@ -18,7 +18,7 @@ export interface CompanyContextValue {
   createCompany: (input: CreateCompanyInput) => Promise<CompanyItem | null>;
 }
 
-const CompanyContext = createContext<CompanyContextValue | undefined>(undefined);
+export const CompanyContext = createContext<CompanyContextValue | undefined>(undefined);
 
 const STORAGE_KEY_PREFIX = 'tenderpulse_active_company_';
 
@@ -153,10 +153,3 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
   return <CompanyContext.Provider value={value}>{children}</CompanyContext.Provider>;
 };
 
-export const useCompany = (): CompanyContextValue => {
-  const context = useContext(CompanyContext);
-  if (!context) {
-    throw new Error('useCompany must be used within a CompanyProvider');
-  }
-  return context;
-};

@@ -1,9 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../../auth/useAuth.js';
-import { Button } from '../ui/button.js';
+import { useAuth } from '@/auth/useAuth.js';
+import { Button } from '@/components/ui/button.js';
 import { ShieldCheck, ArrowRight, Layers, FileCheck2, Cpu, Sun, Moon } from 'lucide-react';
-import { useTheme } from '../../context/ThemeContext.js';
+import { useTheme } from '@/context/useTheme.js';
 
 export const PublicNav: React.FC = () => {
   const { isAuthenticated } = useAuth();
@@ -18,8 +18,8 @@ export const PublicNav: React.FC = () => {
             TP
           </div>
           <div className="flex flex-col">
-            <span className="text-base font-bold tracking-tight text-foreground group-hover:text-primary transition-colors">
-              TenderPulse AI
+            <span className="text-base font-bold tracking-tight text-foreground transition-colors">
+              TenderPulse<span className="text-vermilion">.ai</span>
             </span>
             <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-mono">
               Bid Readiness SaaS

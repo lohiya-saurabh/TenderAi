@@ -1,4 +1,4 @@
-import { InvalidStateTransitionException } from '../../../../common/domain/DomainException.js';
+import { InvalidStateTransitionException } from '@/common/domain/DomainException.js';
 
 export type DocumentStatusEnum = 'PENDING_UPLOAD' | 'VERIFIED' | 'FAILED' | 'PROCESSED';
 

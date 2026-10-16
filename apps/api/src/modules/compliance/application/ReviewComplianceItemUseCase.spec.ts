@@ -1,16 +1,16 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { DirectUnitOfWork } from '../../../common/database/IUnitOfWork.js';
+import { DirectUnitOfWork } from '@/common/database/IUnitOfWork.js';
 import {
   ConcurrencyConflictException,
   EntityNotFoundException,
   ValidationException,
-} from '../../../common/domain/DomainException.js';
-import { InMemoryComplianceItemRepository } from '../../../infrastructure/persistence/InMemoryComplianceItemRepository.js';
-import { InMemoryAuditRepository } from '../../audit/infrastructure/InMemoryAuditRepository.js';
-import { ComplianceItem } from '../domain/entities/ComplianceItem.js';
-import { ExecutionRules } from '../domain/value-objects/ExecutionRules.js';
-import { Provenance } from '../domain/value-objects/Provenance.js';
-import { ReviewComplianceItemUseCase } from './ReviewComplianceItemUseCase.js';
+} from '@/common/domain/DomainException.js';
+import { InMemoryComplianceItemRepository } from '@/infrastructure/persistence/InMemoryComplianceItemRepository.js';
+import { InMemoryAuditRepository } from '@/modules/audit/infrastructure/InMemoryAuditRepository.js';
+import { ComplianceItem } from '@/modules/compliance/domain/entities/ComplianceItem.js';
+import { ExecutionRules } from '@/modules/compliance/domain/value-objects/ExecutionRules.js';
+import { Provenance } from '@/modules/compliance/domain/value-objects/Provenance.js';
+import { ReviewComplianceItemUseCase } from '@/modules/compliance/application/ReviewComplianceItemUseCase.js';
 
 describe('ReviewComplianceItemUseCase', () => {
   let complianceRepo: InMemoryComplianceItemRepository;

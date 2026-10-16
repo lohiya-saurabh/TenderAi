@@ -1,15 +1,15 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { DirectUnitOfWork } from '../../../common/database/IUnitOfWork.js';
+import { DirectUnitOfWork } from '@/common/database/IUnitOfWork.js';
 import {
   EntityNotFoundException,
   InvalidProvenanceException,
-} from '../../../common/domain/DomainException.js';
-import { InMemoryBidRepository } from '../../../infrastructure/persistence/InMemoryBidRepository.js';
-import { InMemoryComplianceItemRepository } from '../../../infrastructure/persistence/InMemoryComplianceItemRepository.js';
-import { InMemoryAuditRepository } from '../../audit/infrastructure/InMemoryAuditRepository.js';
-import { BidProject } from '../../bids/domain/entities/BidProject.js';
-import { Money } from '../../bids/domain/value-objects/Money.js';
-import { BulkIngestComplianceUseCase } from './BulkIngestComplianceUseCase.js';
+} from '@/common/domain/DomainException.js';
+import { InMemoryBidRepository } from '@/infrastructure/persistence/InMemoryBidRepository.js';
+import { InMemoryComplianceItemRepository } from '@/infrastructure/persistence/InMemoryComplianceItemRepository.js';
+import { InMemoryAuditRepository } from '@/modules/audit/infrastructure/InMemoryAuditRepository.js';
+import { BidProject } from '@/modules/bids/domain/entities/BidProject.js';
+import { Money } from '@/modules/bids/domain/value-objects/Money.js';
+import { BulkIngestComplianceUseCase } from '@/modules/compliance/application/BulkIngestComplianceUseCase.js';
 
 describe('BulkIngestComplianceUseCase', () => {
   let bidRepo: InMemoryBidRepository;

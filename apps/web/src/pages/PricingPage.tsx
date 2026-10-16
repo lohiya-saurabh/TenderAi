@@ -1,8 +1,8 @@
 import React from 'react';
-import { PublicNav } from '../components/layout/PublicNav.js';
-import { PublicFooter } from '../components/layout/PublicFooter.js';
-import { PlanCards } from '../components/billing/PlanCards.js';
-import { Badge } from '../components/ui/badge.js';
+import { PublicNav } from '@/components/layout/PublicNav.js';
+import { PublicFooter } from '@/components/layout/PublicFooter.js';
+import { PlanCards } from '@/components/billing/PlanCards.js';
+import { Badge } from '@/components/ui/badge.js';
 import { Check, X } from 'lucide-react';
 
 export const PricingPage: React.FC = () => {

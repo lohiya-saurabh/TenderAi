@@ -11,7 +11,7 @@
  * This runner strictly watches compiled files (*.js, *.json) in `apps/api/dist`, debounces
  * compiler output batches from `tsc -w`, and safely recycles the Node process without port collisions.
  */
-import { spawn } from 'node:child_process';
+import { spawn, execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -26,6 +26,20 @@ let childProcess = null;
 let restartDebounceTimer = null;
 let isShuttingDown = false;
 let isRestarting = false;
+let isResolvingAliases = false;
+
+function resolveAliases() {
+  try {
+    isResolvingAliases = true;
+    execSync('npx tsc-alias -p apps/api/tsconfig.json', { cwd: rootDir, stdio: 'ignore' });
+  } catch {
+    // ignore mid-write compile glitches
+  } finally {
+    setTimeout(() => {
+      isResolvingAliases = false;
+    }, 200);
+  }
+}
 
 function parseEnvFile(filePath) {
   const envVars = {};
@@ -105,7 +119,7 @@ launchApiServer();
 // Watch compiled distribution folder
 if (fs.existsSync(distDir)) {
   const watcher = fs.watch(distDir, { recursive: true }, (eventType, filename) => {
-    if (isShuttingDown || !filename) return;
+    if (isShuttingDown || !filename || isResolvingAliases) return;
 
     // Only restart on compiled application code or manifest changes
     if (!filename.endsWith('.js') && !filename.endsWith('.json')) return;
@@ -116,8 +130,9 @@ if (fs.existsSync(distDir)) {
 
     restartDebounceTimer = setTimeout(() => {
       console.log(
-        `\n🔄 [WatchAPI] Recompilation detected in ${filename}. Restarting API server...`,
+        `\n🔄 [WatchAPI] Recompilation detected in ${filename}. Resolving path aliases and restarting API server...`,
       );
+      resolveAliases();
       restartApiServer();
     }, 350);
   });

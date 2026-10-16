@@ -3,7 +3,7 @@ import {
   toRequirementCandidate,
   toRequirementCandidates,
   type RequirementSourceItem,
-} from './RequirementMapper.js';
+} from '@/modules/bids/application/RequirementMapper.js';
 
 const baseItem = (overrides: Partial<RequirementSourceItem> = {}): RequirementSourceItem => ({
   category: 'FINANCIAL',

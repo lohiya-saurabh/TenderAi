@@ -7,12 +7,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import type {
   CompanyRegistryProvider,
   McaCompanyMasterDetails,
-} from '../domain/ports/CompanyRegistryProvider.js';
+} from '@/modules/company-verification/domain/ports/CompanyRegistryProvider.js';
 import {
   BadRequestError,
   NotFoundError,
   InternalServerError,
-} from '../../../common/errors/errors.js';
+} from '@/common/errors/errors.js';
 
 interface RawMcaResponse {
   cin?: string;
