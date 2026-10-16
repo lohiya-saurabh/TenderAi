@@ -7,12 +7,12 @@
  * 3. MSME Udyam registration check
  * 4. DigiLocker document depository connection
  * 5. Google Drive / OneDrive evidence import
+ * 6. Local PDF device uploads
  */
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/common/Button.js';
 import { Badge } from '@/components/common/Badge.js';
-import { Modal } from '@/components/common/Modal.js';
-import { ShieldCheck, CloudDownload, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, Upload } from 'lucide-react';
 import {
   verifyGstin,
   verifyMca,
@@ -20,18 +20,26 @@ import {
   getDigiLockerAuthUrl,
   submitDigiLockerCallback,
   importCloudEvidence,
+  uploadCompanyEvidence,
   type CompanyItem,
   type VerificationResult,
 } from '@/api/companies.js';
+import { EvidenceAttributeFields } from '@/components/company/EvidenceAttributeFields.js';
+import { VerificationActionModals } from '@/components/company/VerificationActionModals.js';
+import { EvidenceUploadModal } from '@/components/company/EvidenceUploadModal.js';
 
 export interface CompanyVerificationBarProps {
   company: CompanyItem;
   onRefresh: () => void;
+  openEvidenceModalTrigger?: number;
+  defaultEvidenceSource?: 'DEVICE' | 'CLOUD' | 'GOOGLE_DRIVE' | 'ONEDRIVE';
 }
 
 export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
   company,
   onRefresh,
+  openEvidenceModalTrigger,
+  defaultEvidenceSource,
 }) => {
   const [activeModal, setActiveModal] = useState<
     'GSTIN' | 'MCA' | 'UDYAM' | 'DIGILOCKER' | 'CLOUD_IMPORT' | null
@@ -41,19 +49,121 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successResult, setSuccessResult] = useState<VerificationResult | null>(null);
 
-  // Cloud Import State
+  // Evidence Source & Modal State (Device vs Cloud)
+  const [evidenceSource, setEvidenceSource] = useState<'DEVICE' | 'CLOUD'>('DEVICE');
+  const [deviceFile, setDeviceFile] = useState<File | null>(null);
+  const [evidenceType, setEvidenceType] = useState('AUDITED_BALANCE_SHEET');
+  const [isDragOver, setIsDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Dynamic Metadata Fields per Document Type
+  const [finCaFirm, setFinCaFirm] = useState('');
+  const [finUdin, setFinUdin] = useState('');
+  const [finFy, setFinFy] = useState('FY 2024-25');
+  const [finAvgTurnover, setFinAvgTurnover] = useState('');
+  const [finNetWorth, setFinNetWorth] = useState('');
+
+  const [expClient, setExpClient] = useState('');
+  const [expProjectName, setExpProjectName] = useState('');
+  const [expContractRef, setExpContractRef] = useState('');
+  const [expContractValue, setExpContractValue] = useState('');
+  const [expCompletionDate, setExpCompletionDate] = useState('');
+
+  const [isoStandard, setIsoStandard] = useState('ISO 9001:2015');
+  const [isoCertBody, setIsoCertBody] = useState('');
+  const [isoCertNumber, setIsoCertNumber] = useState('');
+  const [isoValidFrom, setIsoValidFrom] = useState('');
+  const [isoValidTo, setIsoValidTo] = useState('');
+
+  const [gstNumber, setGstNumber] = useState(company.gstin || '');
+  const [gstTradeName, setGstTradeName] = useState(company.legalName || '');
+
+  const [panNumber, setPanNumber] = useState(company.pan || '');
+  const [panHolderName, setPanHolderName] = useState(company.legalName || '');
+
+  const [cinNumber, setCinNumber] = useState(company.cin || '');
+  const [rocJurisdiction, setRocJurisdiction] = useState('');
+
+  const [udyamNumber, setUdyamNumber] = useState(company.udyamId || '');
+  const [udyamCategory, setUdyamCategory] = useState<'MICRO' | 'SMALL' | 'MEDIUM'>('SMALL');
+
+  const [oemPrincipal, setOemPrincipal] = useState('');
+  const [oemTenderRef, setOemTenderRef] = useState('');
+  const [oemValidTo, setOemValidTo] = useState('');
+
+  const [genericIssuer, setGenericIssuer] = useState('');
+  const [genericRefNumber, setGenericRefNumber] = useState('');
+  const [genericValidFrom, setGenericValidFrom] = useState('');
+  const [genericValidTo, setGenericValidTo] = useState('');
+
   const [cloudProvider, setCloudProvider] = useState<'google-drive' | 'onedrive'>('google-drive');
-  const [cloudDocType, setCloudDocType] = useState('AUDITED_BALANCE_SHEET');
+
+  useEffect(() => {
+    if (openEvidenceModalTrigger && openEvidenceModalTrigger > 0) {
+      const src =
+        defaultEvidenceSource === 'CLOUD' ||
+        defaultEvidenceSource === 'GOOGLE_DRIVE' ||
+        defaultEvidenceSource === 'ONEDRIVE'
+          ? 'CLOUD'
+          : 'DEVICE';
+      setEvidenceSource(src);
+      if (defaultEvidenceSource === 'ONEDRIVE') {
+        setCloudProvider('onedrive');
+      } else if (defaultEvidenceSource === 'GOOGLE_DRIVE') {
+        setCloudProvider('google-drive');
+      }
+      setErrorMsg(null);
+      resetDeviceForm();
+      setActiveModal('CLOUD_IMPORT');
+    }
+  }, [openEvidenceModalTrigger, defaultEvidenceSource]);
+
+  const resetDeviceForm = () => {
+    setDeviceFile(null);
+    setIsDragOver(false);
+    setErrorMsg(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    setFinCaFirm('');
+    setFinUdin('');
+    setFinFy('FY 2024-25');
+    setFinAvgTurnover('');
+    setFinNetWorth('');
+    setExpClient('');
+    setExpProjectName('');
+    setExpContractRef('');
+    setExpContractValue('');
+    setExpCompletionDate('');
+    setIsoStandard('ISO 9001:2015');
+    setIsoCertBody('');
+    setIsoCertNumber('');
+    setIsoValidFrom('');
+    setIsoValidTo('');
+    setGstNumber(company.gstin || '');
+    setGstTradeName(company.legalName || '');
+    setPanNumber(company.pan || '');
+    setPanHolderName(company.legalName || '');
+    setCinNumber(company.cin || '');
+    setRocJurisdiction('');
+    setUdyamNumber(company.udyamId || '');
+    setUdyamCategory('SMALL');
+    setOemPrincipal('');
+    setOemTenderRef('');
+    setOemValidTo('');
+    setGenericIssuer('');
+    setGenericRefNumber('');
+    setGenericValidFrom('');
+    setGenericValidTo('');
+  };
 
   const handleOpenGstin = () => {
-    setInputVal(company.gstin || '27AABCU9603R1ZM');
+    setInputVal(company.gstin || '27AAACA1234F1Z9');
     setErrorMsg(null);
     setSuccessResult(null);
     setActiveModal('GSTIN');
   };
 
   const handleOpenMca = () => {
-    setInputVal(company.cin || 'U72900MH2018PTC123456');
+    setInputVal(company.cin || 'L45200MH1993PLC071970');
     setErrorMsg(null);
     setSuccessResult(null);
     setActiveModal('MCA');
@@ -72,9 +182,172 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
     setActiveModal('DIGILOCKER');
   };
 
-  const handleOpenCloudImport = () => {
+  const handleOpenEvidenceModal = (source: 'DEVICE' | 'CLOUD' = 'DEVICE') => {
+    setEvidenceSource(source);
     setErrorMsg(null);
+    resetDeviceForm();
     setActiveModal('CLOUD_IMPORT');
+  };
+
+  const validateAndSetDeviceFile = (file: File) => {
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    if (!isPdf) {
+      setErrorMsg('Only PDF documents are supported for company evidence.');
+      return;
+    }
+    if (file.size > 50 * 1024 * 1024) {
+      setErrorMsg('File size exceeds the 50MB limit.');
+      return;
+    }
+    setErrorMsg(null);
+    setDeviceFile(file);
+  };
+
+  const handleDeviceFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      validateAndSetDeviceFile(file);
+    }
+  };
+
+  const handleDeviceFileDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      validateAndSetDeviceFile(file);
+    }
+  };
+
+  const getContextualMetadata = () => {
+    let issuer = '';
+    let referenceNumber = '';
+    let validFrom = '';
+    let validTo = '';
+    const extractedAttributes: Record<string, unknown> = {
+      evidence_category: evidenceType,
+    };
+
+    if (evidenceType === 'AUDITED_BALANCE_SHEET') {
+      issuer = finCaFirm.trim();
+      referenceNumber = finUdin.trim();
+      extractedAttributes.ca_firm = finCaFirm.trim() || undefined;
+      extractedAttributes.udin = finUdin.trim() || undefined;
+      extractedAttributes.financial_year = finFy || undefined;
+      if (finAvgTurnover) {
+        extractedAttributes.average_turnover_inr_cr = parseFloat(finAvgTurnover);
+      }
+      if (finNetWorth) {
+        extractedAttributes.net_worth_inr_cr = parseFloat(finNetWorth);
+      }
+    } else if (evidenceType === 'COMPLETION_CERT' || evidenceType === 'WORK_ORDER') {
+      issuer = expClient.trim();
+      referenceNumber = expContractRef.trim();
+      validTo = expCompletionDate;
+      extractedAttributes.client_name = expClient.trim() || undefined;
+      extractedAttributes.issuer = expClient.trim() || undefined;
+      extractedAttributes.reference_number = expContractRef.trim() || undefined;
+      extractedAttributes.work_order_no = expContractRef.trim() || undefined;
+      extractedAttributes.project_name = expProjectName.trim() || undefined;
+      extractedAttributes.completion_date = expCompletionDate || undefined;
+      if (expContractValue) {
+        extractedAttributes.contract_value_inr_cr = parseFloat(expContractValue);
+      }
+    } else if (evidenceType === 'ISO_CERT') {
+      issuer = isoCertBody.trim();
+      referenceNumber = isoCertNumber.trim();
+      validFrom = isoValidFrom;
+      validTo = isoValidTo;
+      extractedAttributes.standard_name = isoStandard;
+      extractedAttributes.issuing_body = isoCertBody.trim() || undefined;
+      extractedAttributes.certificate_number = isoCertNumber.trim() || undefined;
+      extractedAttributes.valid_from = isoValidFrom || undefined;
+      extractedAttributes.valid_to = isoValidTo || undefined;
+    } else if (evidenceType === 'GST_REG') {
+      issuer = 'Goods & Services Tax Network (GSTN)';
+      referenceNumber = gstNumber.trim();
+      extractedAttributes.gstin = gstNumber.trim() || undefined;
+      extractedAttributes.trade_name = gstTradeName.trim() || undefined;
+    } else if (evidenceType === 'PAN_CARD') {
+      issuer = 'Income Tax Department of India';
+      referenceNumber = panNumber.trim();
+      extractedAttributes.pan = panNumber.trim() || undefined;
+      extractedAttributes.holder_name = panHolderName.trim() || undefined;
+    } else if (evidenceType === 'INCORPORATION_CERT') {
+      issuer = rocJurisdiction.trim() || 'Ministry of Corporate Affairs (MCA)';
+      referenceNumber = cinNumber.trim();
+      extractedAttributes.cin = cinNumber.trim() || undefined;
+      extractedAttributes.roc_jurisdiction = rocJurisdiction.trim() || undefined;
+    } else if (evidenceType === 'UDYAM_CERT') {
+      issuer = 'Ministry of MSME';
+      referenceNumber = udyamNumber.trim();
+      extractedAttributes.udyam_id = udyamNumber.trim() || undefined;
+      extractedAttributes.enterprise_category = udyamCategory;
+    } else if (evidenceType === 'OEM_MAF') {
+      issuer = oemPrincipal.trim();
+      referenceNumber = oemTenderRef.trim();
+      validTo = oemValidTo;
+      extractedAttributes.oem_principal = oemPrincipal.trim() || undefined;
+      extractedAttributes.tender_reference = oemTenderRef.trim() || undefined;
+      extractedAttributes.valid_until = oemValidTo || undefined;
+    } else {
+      issuer = genericIssuer.trim();
+      referenceNumber = genericRefNumber.trim();
+      validFrom = genericValidFrom;
+      validTo = genericValidTo;
+    }
+
+    return { issuer, referenceNumber, validFrom, validTo, extractedAttributes };
+  };
+
+  const handleExecuteDeviceUpload = async () => {
+    if (!deviceFile) {
+      setErrorMsg('Please select a PDF document to upload.');
+      return;
+    }
+
+    setLoading(true);
+    setErrorMsg(null);
+
+    try {
+      const base64String = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          const base64 = result.includes(',') ? result.split(',')[1]! : result;
+          resolve(base64);
+        };
+        reader.onerror = () => reject(new Error('Failed to read file from disk.'));
+        reader.readAsDataURL(deviceFile);
+      });
+
+      const { issuer, referenceNumber, validFrom, validTo, extractedAttributes } =
+        getContextualMetadata();
+
+      const res = await uploadCompanyEvidence(company.id, {
+        fileName: deviceFile.name,
+        fileBase64: base64String,
+        mimeType: deviceFile.type || 'application/pdf',
+        evidenceType,
+        issuer: issuer || undefined,
+        referenceNumber: referenceNumber || undefined,
+        validFrom: validFrom || undefined,
+        validTo: validTo || undefined,
+        extractedAttributes,
+      });
+
+      if (res.ok) {
+        onRefresh();
+        setActiveModal(null);
+        resetDeviceForm();
+      } else {
+        setErrorMsg(res.error.message);
+      }
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : 'Upload failed.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleExecuteVerification = async () => {
@@ -122,7 +395,6 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
         return;
       }
 
-      // Simulate consent code callback
       const callbackRes = await submitDigiLockerCallback(
         company.id,
         'mock_consent_code_123',
@@ -144,24 +416,38 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
     setLoading(true);
     setErrorMsg(null);
     try {
-      const fileId =
-        cloudProvider === 'google-drive' ? 'gdrive_file_audited_fy24' : 'onedrive_file_ca_networth';
-      const fileName =
-        cloudProvider === 'google-drive'
+      const { issuer, referenceNumber, validFrom, validTo } = getContextualMetadata();
+
+      const defaultName =
+        evidenceType === 'AUDITED_BALANCE_SHEET'
           ? 'Audited_Balance_Sheet_FY24.pdf'
-          : 'Networth_Certificate_UDIN.pdf';
+          : evidenceType === 'COMPLETION_CERT'
+            ? 'NHAI_STRR_Completion_Certificate.pdf'
+            : evidenceType === 'ISO_CERT'
+              ? 'ISO_9001_Quality_Management_Certificate.pdf'
+              : 'Company_Evidence_Document.pdf';
+
+      const fileId =
+        cloudProvider === 'google-drive' ? 'gdrive_file_evidence_01' : 'onedrive_file_evidence_01';
+      const fileName = defaultName;
 
       const res = await importCloudEvidence(company.id, {
         provider: cloudProvider,
         fileId,
         fileName,
-        evidenceType: cloudDocType,
-        issuer: cloudProvider === 'google-drive' ? 'Statutory Auditor' : 'Chartered Accountant',
+        evidenceType,
+        issuer:
+          issuer ||
+          (cloudProvider === 'google-drive' ? 'Google Cloud Drive Import' : 'Microsoft 365 Import'),
+        referenceNumber: referenceNumber || undefined,
+        validFrom: validFrom || undefined,
+        validTo: validTo || undefined,
       });
 
       if (res.ok) {
         onRefresh();
         setActiveModal(null);
+        resetDeviceForm();
       } else {
         setErrorMsg(res.error.message);
       }
@@ -282,343 +568,141 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
             </Button>
           </div>
 
-          {/* 5. Cloud Drive Import */}
+          {/* 5. Company Evidence Documents */}
           <div className="p-4 rounded-lg border border-border bg-card shadow-2xs flex flex-col justify-between gap-3 hover:border-border-strong transition-colors">
             <div className="flex justify-between items-center">
-              <span className="text-xs font-bold text-foreground">Cloud Storage Import</span>
+              <span className="text-xs font-bold text-foreground">Evidence Documents</span>
               <Badge variant="primary" size="sm">
-                Drive / 365
+                Vault
               </Badge>
             </div>
-            <p className="text-[11px] text-muted-foreground m-0 truncate">
-              Import folders from Google Drive or Microsoft OneDrive
+            <p className="text-[11px] mono text-muted-foreground m-0 truncate">
+              Upload local PDFs or sync from Google Drive / 365
             </p>
             <Button
-              variant="secondary"
+              variant="outline"
               size="sm"
-              onClick={handleOpenCloudImport}
-              className="self-start mt-auto text-xs h-7"
-              icon={<CloudDownload size={13} />}
+              onClick={() => handleOpenEvidenceModal('DEVICE')}
+              className="self-start mt-auto text-xs h-7 border-border hover:border-foreground/30"
+              icon={<Upload size={13} />}
             >
-              Import Evidence
+              Upload Evidence
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Verification Modal for GSTIN / MCA / UDYAM */}
-      {activeModal && activeModal !== 'DIGILOCKER' && activeModal !== 'CLOUD_IMPORT' && (
-        <Modal
-          isOpen={true}
-          onClose={() => setActiveModal(null)}
-          title={`Verify ${activeModal === 'GSTIN' ? 'GSTIN with IRIS IRP' : activeModal === 'MCA' ? 'MCA Corporate Identity (CIN)' : 'MSME Udyam Registration'}`}
-          footer={
-            <>
-              <Button variant="ghost" onClick={() => setActiveModal(null)} disabled={loading}>
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                onClick={handleExecuteVerification}
-                disabled={loading || !inputVal.trim()}
-              >
-                {loading ? 'Verifying...' : `Verify ${activeModal}`}
-              </Button>
-            </>
-          }
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {errorMsg && (
-              <div
-                style={{
-                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                  border: '1px solid rgba(239, 68, 68, 0.3)',
-                  padding: '0.75rem',
-                  borderRadius: 'var(--radius-md)',
-                  color: 'var(--color-danger)',
-                  fontSize: 'var(--text-xs)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                }}
-              >
-                <AlertTriangle size={16} /> {errorMsg}
-              </div>
-            )}
+      {/* Verification Modal for GSTIN / MCA / UDYAM / DIGILOCKER */}
+      <VerificationActionModals
+        activeModal={
+          activeModal === 'GSTIN' ||
+          activeModal === 'MCA' ||
+          activeModal === 'UDYAM' ||
+          activeModal === 'DIGILOCKER'
+            ? activeModal
+            : null
+        }
+        onClose={() => setActiveModal(null)}
+        loading={loading}
+        inputVal={inputVal}
+        setInputVal={setInputVal}
+        errorMsg={errorMsg}
+        successResult={successResult}
+        onExecuteVerification={handleExecuteVerification}
+        onSimulateDigiLockerImport={handleSimulateDigiLockerImport}
+      />
 
-            {successResult && (
-              <div className="p-3 rounded-md border border-border bg-muted/40 text-xs">
-                <div className="flex items-center gap-2 font-bold text-foreground mb-1">
-                  <CheckCircle2 size={16} />{' '}
-                  {successResult.verificationStatus === 'SOURCE_VERIFIED'
-                    ? 'Verification Successful & Profile Synced!'
-                    : 'Discrepancy Detected — Flagged for Review'}
-                </div>
-                {successResult.discrepancies.map((d, i) => (
-                  <p key={i} className="text-orange-600 dark:text-orange-400 my-0.5">
-                    • {d}
-                  </p>
-                ))}
-              </div>
-            )}
-
-            <div>
-              <label
-                style={{
-                  fontSize: 'var(--text-xs)',
-                  fontWeight: 600,
-                  color: 'var(--color-surface-text)',
-                  display: 'block',
-                  marginBottom: '0.35rem',
-                }}
-              >
-                {activeModal === 'GSTIN'
-                  ? '15-Character GSTIN Number'
-                  : activeModal === 'MCA'
-                    ? '21-Character CIN or LLPIN'
-                    : 'Udyam Registration Number'}
-              </label>
-              <input
-                type="text"
-                value={inputVal}
-                onChange={(e) => setInputVal(e.target.value.toUpperCase())}
-                placeholder={
-                  activeModal === 'GSTIN'
-                    ? 'e.g. 27AABCU9603R1ZM'
-                    : activeModal === 'MCA'
-                      ? 'e.g. U72900MH2018PTC123456'
-                      : 'e.g. UDYAM-MH-01-0012345'
-                }
-                style={{
-                  width: '100%',
-                  padding: '0.55rem 0.75rem',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--color-surface-border)',
-                  backgroundColor: 'var(--color-surface-input)',
-                  color: 'var(--color-surface-text)',
-                  fontSize: 'var(--text-sm)',
-                  fontFamily: 'var(--font-mono)',
-                  outline: 'none',
-                }}
-              />
-            </div>
-
-            <div
-              style={{
-                fontSize: 'var(--text-2xs)',
-                color: 'var(--color-surface-muted)',
-                display: 'flex',
-                gap: '0.5rem',
-                alignItems: 'center',
-              }}
-            >
-              <span>Quick auto-fill samples:</span>
-              {activeModal === 'GSTIN' && (
-                <button
-                  type="button"
-                  onClick={() => setInputVal('27AABCU9603R1ZM')}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--color-primary-300)',
-                    textDecoration: 'underline',
-                    cursor: 'pointer',
-                    fontSize: 'inherit',
-                  }}
-                >
-                  ACME Infra (27AABCU9603R1ZM)
-                </button>
-              )}
-              {activeModal === 'MCA' && (
-                <button
-                  type="button"
-                  onClick={() => setInputVal('U72900MH2018PTC123456')}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--color-primary-300)',
-                    textDecoration: 'underline',
-                    cursor: 'pointer',
-                    fontSize: 'inherit',
-                  }}
-                >
-                  RoC-Mumbai (U72900MH2018PTC123456)
-                </button>
-              )}
-              {activeModal === 'UDYAM' && (
-                <button
-                  type="button"
-                  onClick={() => setInputVal('UDYAM-MH-01-0012345')}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--color-primary-300)',
-                    textDecoration: 'underline',
-                    cursor: 'pointer',
-                    fontSize: 'inherit',
-                  }}
-                >
-                  MSME Small (UDYAM-MH-01-0012345)
-                </button>
-              )}
-            </div>
-          </div>
-        </Modal>
-      )}
-
-      {/* DigiLocker Consent Modal */}
-      {activeModal === 'DIGILOCKER' && (
-        <Modal
-          isOpen={true}
-          onClose={() => setActiveModal(null)}
-          title="Connect Official DigiLocker Depository"
-          footer={
-            <>
-              <Button variant="ghost" onClick={() => setActiveModal(null)} disabled={loading}>
-                Cancel
-              </Button>
-              <Button variant="primary" onClick={handleSimulateDigiLockerImport} disabled={loading}>
-                {loading ? 'Authorizing & Importing...' : 'Authorize & Pull Certificates'}
-              </Button>
-            </>
-          }
-        >
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1rem',
-              fontSize: 'var(--text-xs)',
-            }}
-          >
-            <p style={{ color: 'var(--color-surface-text)', margin: 0 }}>
-              Connecting to DigiLocker allows TenderPulse AI to pull digitally signed government
-              certificates directly from the Ministry of Corporate Affairs, GSTN, and Ministry of
-              MSME without manual document tampering risk.
-            </p>
-            <div
-              style={{
-                padding: '0.75rem',
-                borderRadius: 'var(--radius-md)',
-                backgroundColor: 'var(--color-surface-card-subtle)',
-                border: '1px solid var(--color-surface-border)',
-              }}
-            >
-              <strong>Certificates automatically pulled into Evidence Vault:</strong>
-              <ul
-                style={{
-                  margin: '0.4rem 0 0 1.25rem',
-                  color: 'var(--color-surface-muted)',
-                  fontSize: 'var(--text-2xs)',
-                }}
-              >
-                <li>MCA Certificate of Incorporation (with CIN verification)</li>
-                <li>GST Registration Certificate (Form REG-06)</li>
-                <li>MSME Udyam Registration Certificate</li>
-              </ul>
-            </div>
-            {errorMsg && <div style={{ color: 'var(--color-danger)' }}>{errorMsg}</div>}
-          </div>
-        </Modal>
-      )}
-
-      {/* Cloud Drive Import Modal */}
-      {activeModal === 'CLOUD_IMPORT' && (
-        <Modal
-          isOpen={true}
-          onClose={() => setActiveModal(null)}
-          title="Import Evidence from Cloud Storage"
-          footer={
-            <>
-              <Button variant="ghost" onClick={() => setActiveModal(null)} disabled={loading}>
-                Cancel
-              </Button>
-              <Button variant="primary" onClick={handleExecuteCloudImport} disabled={loading}>
-                {loading ? 'Importing...' : 'Import Selected File'}
-              </Button>
-            </>
-          }
-        >
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1rem',
-              fontSize: 'var(--text-xs)',
-            }}
-          >
-            <div>
-              <label style={{ fontWeight: 600, display: 'block', marginBottom: '0.35rem' }}>
-                Cloud Provider
-              </label>
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <label
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <input
-                    type="radio"
-                    name="provider"
-                    checked={cloudProvider === 'google-drive'}
-                    onChange={() => setCloudProvider('google-drive')}
-                  />
-                  Google Drive
-                </label>
-                <label
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <input
-                    type="radio"
-                    name="provider"
-                    checked={cloudProvider === 'onedrive'}
-                    onChange={() => setCloudProvider('onedrive')}
-                  />
-                  Microsoft OneDrive / SharePoint
-                </label>
-              </div>
-            </div>
-
-            <div>
-              <label style={{ fontWeight: 600, display: 'block', marginBottom: '0.35rem' }}>
-                Evidence Classification
-              </label>
-              <select
-                value={cloudDocType}
-                onChange={(e) => setCloudDocType(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '0.55rem',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--color-surface-border)',
-                  backgroundColor: 'var(--color-surface-input)',
-                  color: 'var(--color-surface-text)',
-                  outline: 'none',
-                }}
-              >
-                <option value="AUDITED_BALANCE_SHEET">Audited Balance Sheet / Financials</option>
-                <option value="WORK_ORDER">Work Order / Contract Agreement</option>
-                <option value="COMPLETION_CERT">Client Completion Certificate</option>
-                <option value="ISO_CERT">ISO Quality / Safety Certificate</option>
-                <option value="OEM_MAF">Manufacturer Authorization Form (MAF)</option>
-              </select>
-            </div>
-
-            <p style={{ color: 'var(--color-surface-muted)', fontSize: 'var(--text-2xs)' }}>
-              Selected file will be transferred into isolated tenant object storage and cataloged
-              with a cryptographic SHA-256 hash.
-            </p>
-          </div>
-        </Modal>
-      )}
+      {/* Evidence Ingestion Modal (Device Upload & Cloud Drive Import) */}
+      <EvidenceUploadModal
+        isOpen={activeModal === 'CLOUD_IMPORT'}
+        onClose={() => {
+          setActiveModal(null);
+          resetDeviceForm();
+        }}
+        loading={loading}
+        errorMsg={errorMsg}
+        setErrorMsg={setErrorMsg}
+        evidenceSource={evidenceSource}
+        setEvidenceSource={setEvidenceSource}
+        cloudProvider={cloudProvider}
+        setCloudProvider={setCloudProvider}
+        deviceFile={deviceFile}
+        setDeviceFile={setDeviceFile}
+        evidenceType={evidenceType}
+        setEvidenceType={setEvidenceType}
+        isDragOver={isDragOver}
+        setIsDragOver={setIsDragOver}
+        fileInputRef={fileInputRef}
+        handleDeviceFileChange={handleDeviceFileChange}
+        handleDeviceFileDrop={handleDeviceFileDrop}
+        onExecuteDeviceUpload={handleExecuteDeviceUpload}
+        onExecuteCloudImport={handleExecuteCloudImport}
+        renderDynamicFields={() => (
+          <EvidenceAttributeFields
+            evidenceType={evidenceType}
+            finCaFirm={finCaFirm}
+            setFinCaFirm={setFinCaFirm}
+            finUdin={finUdin}
+            setFinUdin={setFinUdin}
+            finFy={finFy}
+            setFinFy={setFinFy}
+            finAvgTurnover={finAvgTurnover}
+            setFinAvgTurnover={setFinAvgTurnover}
+            finNetWorth={finNetWorth}
+            setFinNetWorth={setFinNetWorth}
+            expClient={expClient}
+            setExpClient={setExpClient}
+            expProjectName={expProjectName}
+            setExpProjectName={setExpProjectName}
+            expContractRef={expContractRef}
+            setExpContractRef={setExpContractRef}
+            expContractValue={expContractValue}
+            setExpContractValue={setExpContractValue}
+            expCompletionDate={expCompletionDate}
+            setExpCompletionDate={setExpCompletionDate}
+            isoStandard={isoStandard}
+            setIsoStandard={setIsoStandard}
+            isoCertBody={isoCertBody}
+            setIsoCertBody={setIsoCertBody}
+            isoCertNumber={isoCertNumber}
+            setIsoCertNumber={setIsoCertNumber}
+            isoValidFrom={isoValidFrom}
+            setIsoValidFrom={setIsoValidFrom}
+            isoValidTo={isoValidTo}
+            setIsoValidTo={setIsoValidTo}
+            gstNumber={gstNumber}
+            setGstNumber={setGstNumber}
+            gstTradeName={gstTradeName}
+            setGstTradeName={setGstTradeName}
+            panNumber={panNumber}
+            setPanNumber={setPanNumber}
+            panHolderName={panHolderName}
+            setPanHolderName={setPanHolderName}
+            cinNumber={cinNumber}
+            setCinNumber={setCinNumber}
+            rocJurisdiction={rocJurisdiction}
+            setRocJurisdiction={setRocJurisdiction}
+            udyamNumber={udyamNumber}
+            setUdyamNumber={setUdyamNumber}
+            udyamCategory={udyamCategory}
+            setUdyamCategory={setUdyamCategory}
+            oemPrincipal={oemPrincipal}
+            setOemPrincipal={setOemPrincipal}
+            oemTenderRef={oemTenderRef}
+            setOemTenderRef={setOemTenderRef}
+            oemValidTo={oemValidTo}
+            setOemValidTo={setOemValidTo}
+            genericIssuer={genericIssuer}
+            setGenericIssuer={setGenericIssuer}
+            genericRefNumber={genericRefNumber}
+            setGenericRefNumber={setGenericRefNumber}
+            genericValidFrom={genericValidFrom}
+            setGenericValidFrom={setGenericValidFrom}
+            genericValidTo={genericValidTo}
+            setGenericValidTo={setGenericValidTo}
+          />
+        )}
+      />
     </>
   );
 };

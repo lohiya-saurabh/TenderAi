@@ -43,10 +43,26 @@ export const Breadcrumbs: React.FC = () => {
       const bidId = bidMatch[1];
       const rest = bidMatch[2] || '';
 
+      const formatBidBreadcrumb = (id: string): string => {
+        if (id.includes('nhai_ham')) return 'NHAI HAM 4-Lane';
+        if (id.includes('nhai_greenfield')) return 'NHAI Greenfield Exp';
+        if (id.includes('ncrtc_metro')) return 'NCRTC Metro Viaduct';
+        if (id.includes('rvnl_rail')) return 'RVNL Rail Bridge';
+        if (id.includes('msrdc_cable')) return 'MSRDC Cable Bridge';
+        if (id.includes('morth_mountain')) return 'MoRTH Mountain Hwy';
+        if (id.includes('cpwd_logistics')) return 'CPWD Logistics Hub';
+        if (id.includes('nhai_atms')) return 'NHAI ATMS Tolling';
+        if (id.includes('state_highway')) return 'State Hwy Rehab';
+        if (id.includes('nhai_outer_ring')) return 'NHAI Outer Ring Exp';
+
+        const clean = id.replace(/^bid_/, '').replace(/[_-]/g, ' ');
+        return clean.length > 22 ? `${clean.slice(0, 20)}...` : clean;
+      };
+
       const baseSegments: BreadcrumbSegment[] = [
         { label: 'Tender Bids', to: '/bids' },
         {
-          label: bidId.length > 12 ? `${bidId.slice(0, 10)}...` : bidId,
+          label: formatBidBreadcrumb(bidId),
           to: rest ? `/bids/${bidId}` : undefined,
         },
       ];

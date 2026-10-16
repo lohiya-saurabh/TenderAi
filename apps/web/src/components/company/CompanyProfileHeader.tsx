@@ -26,7 +26,7 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
   const displayGstin =
     selectedCompany?.gstin ||
     profile.registrations.find((r) => r.regType === 'GSTIN')?.regNumber ||
-    '27AAKCA1234F1Z5';
+    'Pending Registration';
 
   const handlePublishVersion = () => {
     setPublishSuccess(true);
@@ -115,7 +115,9 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
               </div>
               <div>
                 <strong className="text-foreground">Credit Rating:</strong>{' '}
-                <span className="text-foreground font-semibold">{profile.creditRating.rating}</span>
+                <span className="text-foreground font-semibold">
+                  {profile.creditRating?.rating ?? 'Not Rated / Pending'}
+                </span>
               </div>
             </div>
           </div>

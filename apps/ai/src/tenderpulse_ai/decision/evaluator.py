@@ -389,6 +389,10 @@ class DeterministicEligibilityEvaluator:
             citation.page_number = matched.page_number
             citation.confidence_score = matched.confidence_score or 0.98
             citation.notes = matched.notes
+            if matched.company_evidence_ref:
+                citation.company_evidence_ref = matched.company_evidence_ref
+            if matched.company_entry_id:
+                citation.company_entry_id = matched.company_entry_id
 
         evidence_citations.append(citation)
 
@@ -428,8 +432,8 @@ class DeterministicEligibilityEvaluator:
         else:
             shortfall = expected_crores - avg_turnover
             detail = (
-                f"Turnover shortfall of ₹{shortfall:.2f} Cr. Company has 3-year average of ₹{avg_turnover:.2f} Cr "
-                f"vs required ₹{expected_crores:.2f} Cr."
+                f"Turnover shortfall of ₹{shortfall:.2f} Cr. Company 3-year average of ₹{avg_turnover:.2f} Cr "
+                f"is below the required ₹{expected_crores:.2f} Cr threshold."
             )
             reasons_not_to_pursue.append(
                 DecisionReason(
@@ -499,6 +503,10 @@ class DeterministicEligibilityEvaluator:
             citation.page_number = matched.page_number
             citation.confidence_score = matched.confidence_score or 0.96
             citation.notes = matched.notes
+            if matched.company_evidence_ref:
+                citation.company_evidence_ref = matched.company_evidence_ref
+            if matched.company_entry_id:
+                citation.company_entry_id = matched.company_entry_id
 
         evidence_citations.append(citation)
 

@@ -306,9 +306,16 @@ class CompanyEvidenceExtractor:
             re.IGNORECASE,
         )
         if client_match:
-            attrs["issuer"] = client_match.group(1).strip()
-            attrs["client"] = attrs["issuer"]
-            attrs["client_name"] = attrs["issuer"]
+            matched_client = client_match.group(1).strip()
+            if re.search(r"national highways authority of india", matched_client, re.I):
+                matched_client = "NHAI"
+            elif re.search(r"central public works department", matched_client, re.I):
+                matched_client = "CPWD"
+            elif re.search(r"public works department", matched_client, re.I):
+                matched_client = "PWD"
+            attrs["issuer"] = matched_client
+            attrs["client"] = matched_client
+            attrs["client_name"] = matched_client
 
         # 2. Contract / Completed Value in INR Crores
         val_match = re.search(

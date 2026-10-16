@@ -6,24 +6,41 @@ import { CompanyProfileView } from '@/components/company/CompanyProfileView.js';
 import { CompanyVerificationBar } from '@/components/company/CompanyVerificationBar.js';
 import { Card, CardContent } from '@/components/ui/card.js';
 import { Building2 } from 'lucide-react';
-import { listCompanyEvidence, type EvidenceDocumentItem } from '@/api/companies.js';
+import { listCompanyEvidence, getCompanyProfile, type EvidenceDocumentItem } from '@/api/companies.js';
+import type { CompanyProfileView as ApiCompanyProfileView } from '@/api/companyProfile.js';
 import type {
   CapabilitySectionId,
   FullCompanyProfile,
   RegistrationItem,
   EvidenceVaultItem,
+  FinancialTurnoverItem,
+  SolvencyItem,
+  ExperienceItem,
+  CertificationItem,
+  OemAuthorizationItem,
+  EmployeeItem,
+  EquipmentItem,
 } from '@/components/company/companyProfileData.js';
 
 export const CompanyProfilePage: React.FC = () => {
   const { selectedCompany, reloadCompanies } = useCompany();
   const [activeSection, setActiveSection] = useState<CapabilitySectionId>('overview');
   const [evidenceList, setEvidenceList] = useState<EvidenceDocumentItem[]>([]);
+  const [apiProfile, setApiProfile] = useState<ApiCompanyProfileView | null>(null);
+  const [openEvidenceTrigger, setOpenEvidenceTrigger] = useState(0);
+  const [evidenceSourceDefault, setEvidenceSourceDefault] = useState<'DEVICE' | 'GOOGLE_DRIVE' | 'ONEDRIVE'>('DEVICE');
 
   const fetchEvidence = useCallback(async () => {
     if (selectedCompany?.id) {
-      const res = await listCompanyEvidence(selectedCompany.id);
+      const [res, profRes] = await Promise.all([
+        listCompanyEvidence(selectedCompany.id),
+        getCompanyProfile(selectedCompany.id),
+      ]);
       if (res.ok) {
         setEvidenceList(res.data);
+      }
+      if (profRes.ok && profRes.data) {
+        setApiProfile(profRes.data);
       }
     }
   }, [selectedCompany?.id]);
@@ -102,39 +119,183 @@ export const CompanyProfilePage: React.FC = () => {
       docType: doc.evidenceType,
       uploadedAt: doc.importedAt || doc.createdAt,
       expiryDate: doc.validTo,
+      validTo: doc.validTo,
       sha256Hash: doc.sha256Hash,
       linkedCapabilitiesCount: 1,
       verificationStatus: doc.verificationStatus,
+      issuer: doc.issuer,
+      referenceNumber: doc.referenceNumber,
+      validFrom: doc.validFrom,
+      extractedAttributes: doc.extractedAttributes,
     }));
+
+    const payload = apiProfile?.active?.payload;
+
+    const turnoverRecords: FinancialTurnoverItem[] = (payload?.turnover_records ?? []).map((t) => ({
+      id: t.entry_id,
+      title: `${t.financial_year || 'FY'} Audited Financial Turnover`,
+      financialYear: t.financial_year || '',
+      turnoverInrCrores: Number(t.turnover_inr_crores) || 0,
+      netWorthInrCrores: 0,
+      caFirmName: 'Statutory Auditor',
+      caMembershipNo: '',
+      caUdin: t.ca_udin || '',
+      isUdinValidated: Boolean(t.ca_udin),
+      audited: true,
+      status: 'VERIFIED',
+      evidenceDocId: t.evidence_document_id,
+    }));
+
+    const certifications: CertificationItem[] = (payload?.certifications ?? []).map((c) => ({
+      id: c.entry_id,
+      title: `${c.standard_name} Certification`,
+      standard: c.standard_name,
+      issuingBody: c.issuing_body,
+      certificateNumber: c.entry_id,
+      validFrom: c.valid_from,
+      validUntil: c.valid_to || '',
+      scopeSummary: `${c.standard_name} Quality Management Scope`,
+      status: 'VERIFIED',
+      evidenceDocId: c.evidence_document_id,
+    }));
+
+    const pastExperience: ExperienceItem[] = (payload?.experience ?? []).map((e) => ({
+      id: e.entry_id,
+      title: e.project_name,
+      projectTitle: e.project_name,
+      clientName: e.client_name,
+      clientType: 'CENTRAL_GOVT',
+      contractValueInrCrores: Number(e.contract_value_inr_crores) || 0,
+      completionDate: e.completion_date,
+      locationState: e.location_state,
+      scopeHighlights: e.work_type_tags || ['Infrastructure EPC Works'],
+      workTypeTags: e.work_type_tags || [],
+      status: 'VERIFIED',
+      evidenceDocId: e.evidence_document_id,
+    }));
+
+    const oemAuthorizations: OemAuthorizationItem[] = (payload?.oem_authorizations ?? []).map((o) => ({
+      id: o.entry_id,
+      title: `${o.oem_name} Authorization`,
+      oemName: o.oem_name,
+      partnerTier: 'Authorized Partner',
+      productCategories: o.product_lines || [],
+      authorizedTerritory: 'National',
+      validFrom: o.valid_from,
+      validUntil: o.valid_to,
+      mafDocName: '',
+      status: 'VERIFIED',
+      evidenceDocId: o.evidence_document_id,
+    }));
+
+    const employees: EmployeeItem[] = (payload?.staff ?? []).map((s) => ({
+      id: s.entry_id,
+      title: s.name,
+      name: s.name,
+      designation: s.role,
+      role: 'PROJECT_MANAGER',
+      qualification: s.qualification,
+      experienceYears: s.experience_years,
+      isKeyPersonnel: true,
+      status: 'VERIFIED',
+      evidenceDocId: s.evidence_document_id,
+    }));
+
+    const equipment: EquipmentItem[] = (payload?.equipment ?? []).map((eq) => ({
+      id: eq.entry_id,
+      title: eq.name,
+      name: eq.name,
+      modelAndMake: eq.name,
+      equipmentType: eq.equipment_type,
+      quantity: eq.quantity,
+      ownership: eq.owned ? 'OWNED' : 'LEASED',
+      manufactureYear: 2022,
+      capacityOrRating: 'Heavy Machinery',
+      status: 'VERIFIED',
+      evidenceDocId: eq.evidence_document_id,
+    }));
+
+    const solvencyRecords: SolvencyItem[] =
+      (payload?.solvency_records && payload.solvency_records.length > 0)
+        ? payload.solvency_records.map((s) => ({
+            id: s.entry_id,
+            title: `${s.bank_name || 'Bank'} Solvency Certificate`,
+            bankName: s.bank_name || 'Scheduled Commercial Bank',
+            solvencyLimitInrCrores: Number(s.solvency_limit_inr_crores) || 0,
+            sanctionDate: s.sanction_date || '',
+            validUntil: s.valid_until || '',
+            accountNumberMasked: s.account_number_masked || 'XXXX-XXXX-XXXX',
+            status: 'VERIFIED',
+            evidenceDocId: s.evidence_document_id || undefined,
+          }))
+        : evidenceList
+            .filter((d) => d.evidenceType === 'SOLVENCY_CERT')
+            .map((d) => {
+              const attrs = (d.extractedAttributes || {}) as Record<string, unknown>;
+              return {
+                id: d.id,
+                title: `${d.issuer || 'Bank'} Solvency Certificate`,
+                bankName: d.issuer || 'Scheduled Commercial Bank',
+                solvencyLimitInrCrores: Number(attrs.solvency_limit_inr_crores) || 0,
+                sanctionDate: d.validFrom ? d.validFrom.split('T')[0]! : '',
+                validUntil: d.validTo ? d.validTo.split('T')[0]! : '',
+                accountNumberMasked: d.referenceNumber || 'XXXX-XXXX-XXXX',
+                status: 'VERIFIED',
+                evidenceDocId: d.id,
+              };
+            });
+
+    const creditRating = payload?.credit_rating
+      ? {
+          agency: payload.credit_rating.agency,
+          rating: payload.credit_rating.rating,
+          validUntil: payload.credit_rating.valid_until || undefined,
+        }
+      : (() => {
+          const solvDoc = evidenceList.find((d) => d.evidenceType === 'SOLVENCY_CERT');
+          const attrs = (solvDoc?.extractedAttributes || {}) as Record<string, unknown>;
+          if (attrs?.rating) {
+            return {
+              agency: String(attrs.agency || solvDoc?.issuer || 'Credit Rating Agency'),
+              rating: String(attrs.rating),
+              validUntil: solvDoc?.validTo ? solvDoc.validTo.split('T')[0] : undefined,
+            };
+          }
+          return null;
+        })();
+
+    const mcaData = (selectedCompany.mcaVerificationData || {}) as Record<string, unknown>;
+    const cinYearMatch = selectedCompany.cin ? selectedCompany.cin.match(/[A-Za-z]{2}(\d{4})[A-Za-z]{3}/) : null;
+    const derivedIncorporation =
+      (mcaData.incorporationDate as string) ||
+      (mcaData.incorporation_date as string) ||
+      (cinYearMatch ? cinYearMatch[1] : null) ||
+      '—';
 
     return {
       companyId: selectedCompany.id,
       companyName: selectedCompany.legalName,
       legalEntityName: selectedCompany.legalName,
       cinNumber: selectedCompany.cin || '—',
-      incorporationDate: selectedCompany.createdAt ? selectedCompany.createdAt.split('T')[0]! : '—',
-      profileVersion: 'v1.0 (Active Baseline)',
-      msmeCategory: 'SMALL',
+      incorporationDate: derivedIncorporation,
+      profileVersion: apiProfile?.active ? `v${apiProfile.active.version}.0 (Active)` : 'v1.0 (Clean Baseline)',
+      msmeCategory: selectedCompany.udyamId ? 'SMALL' : 'LARGE ENTERPRISE',
       msmeType: 'CONSTRUCTION_INFRA',
       isBlacklisted: false,
-      creditRating: {
-        agency: 'CRISIL / CARE',
-        rating: 'Investment Grade',
-        validUntil: '2027-03-31',
-      },
+      creditRating,
       registrations,
-      certifications: [],
-      turnoverRecords: [],
-      solvencyRecords: [],
-      pastExperience: [],
+      certifications,
+      turnoverRecords,
+      solvencyRecords,
+      pastExperience,
       projects: [],
-      oemAuthorizations: [],
-      employees: [],
-      equipment: [],
+      oemAuthorizations,
+      employees,
+      equipment,
       geographicCoverage: [],
       evidenceVault,
     };
-  }, [selectedCompany, evidenceList]);
+  }, [selectedCompany, evidenceList, apiProfile]);
 
   if (!profile || !selectedCompany) {
     return (
@@ -160,7 +321,12 @@ export const CompanyProfilePage: React.FC = () => {
       />
 
       {/* Third-Party Verification Hub (IRIS IRP, MCA, Udyam, DigiLocker, Cloud Drive) */}
-      <CompanyVerificationBar company={selectedCompany} onRefresh={handleRefreshAll} />
+      <CompanyVerificationBar
+        company={selectedCompany}
+        onRefresh={handleRefreshAll}
+        openEvidenceModalTrigger={openEvidenceTrigger}
+        defaultEvidenceSource={evidenceSourceDefault}
+      />
 
       {/* 11-Section Tab Navigation */}
       <CapabilityNavTabs
@@ -170,7 +336,18 @@ export const CompanyProfilePage: React.FC = () => {
       />
 
       {/* Active Section Content */}
-      <CompanyProfileView profile={profile} activeSection={activeSection} />
+      <CompanyProfileView
+        profile={profile}
+        activeSection={activeSection}
+        onUploadEvidence={() => {
+          setEvidenceSourceDefault('DEVICE');
+          setOpenEvidenceTrigger(Date.now());
+        }}
+        onImportCloud={() => {
+          setEvidenceSourceDefault('GOOGLE_DRIVE');
+          setOpenEvidenceTrigger(Date.now());
+        }}
+      />
     </div>
   );
 };

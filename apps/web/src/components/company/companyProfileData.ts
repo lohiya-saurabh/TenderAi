@@ -150,9 +150,14 @@ export interface EvidenceVaultItem {
   docType: string;
   uploadedAt: string;
   expiryDate?: string | null;
+  validTo?: string | null;
   sha256Hash: string;
   linkedCapabilitiesCount: number;
   verificationStatus: CapabilityStatus;
+  issuer?: string | null;
+  referenceNumber?: string | null;
+  validFrom?: string | null;
+  extractedAttributes?: Record<string, unknown> | null;
 }
 
 export interface FullCompanyProfile {
@@ -162,14 +167,14 @@ export interface FullCompanyProfile {
   cinNumber: string;
   incorporationDate: string;
   profileVersion: string;
-  msmeCategory: 'MICRO' | 'SMALL' | 'MEDIUM';
+  msmeCategory: 'MICRO' | 'SMALL' | 'MEDIUM' | 'LARGE ENTERPRISE';
   msmeType: 'MANUFACTURING' | 'SERVICES' | 'CONSTRUCTION_INFRA';
   isBlacklisted: boolean;
-  creditRating: {
+  creditRating?: {
     agency: string;
     rating: string;
-    validUntil: string;
-  };
+    validUntil?: string | null;
+  } | null;
   registrations: RegistrationItem[];
   certifications: CertificationItem[];
   turnoverRecords: FinancialTurnoverItem[];
