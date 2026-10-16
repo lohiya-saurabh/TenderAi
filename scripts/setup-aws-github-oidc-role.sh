@@ -71,7 +71,10 @@ TRUST_POLICY=$(cat <<EOF
           "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
         },
         "StringLike": {
-          "token.actions.githubusercontent.com:sub": "repo:${GITHUB_REPO}:*"
+          "token.actions.githubusercontent.com:sub": [
+            "repo:${GITHUB_REPO}:*",
+            "repo:${GITHUB_REPO}*:*"
+          ]
         }
       }
     }
