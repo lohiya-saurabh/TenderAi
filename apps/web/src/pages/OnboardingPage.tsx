@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/auth/useAuth.js';
-import { useCompany } from '@/context/CompanyContext.js';
+import { useCompany } from '@/context/useCompany.js';
 import { Button } from '@/components/ui/button.js';
 import { Label } from '@/components/ui/label.js';
 import { Badge } from '@/components/ui/badge.js';

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { createBid } from '@/api/bids.js';
-import { useCompany } from '@/context/CompanyContext.js';
+import { useCompany } from '@/context/useCompany.js';
 import { Button } from '@/components/common/Button.js';
 import { ErrorBanner } from '@/components/common/ErrorBanner.js';
 import { Building2, ArrowLeft, ShieldCheck, FileSpreadsheet, Calendar, Hash } from 'lucide-react';

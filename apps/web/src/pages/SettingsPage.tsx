@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '@/auth/useAuth.js';
-import { useCompany } from '@/context/CompanyContext.js';
-import { useTheme } from '@/context/ThemeContext.js';
+import { useCompany } from '@/context/useCompany.js';
+import { useTheme } from '@/context/useTheme.js';
 import {
   getWorkspaceSettings,
   updateWorkspaceSettings,

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button.js';
 
 import { CompanySelector } from '@/components/layout/CompanySelector.js';
 import { NotificationBell } from '@/components/layout/NotificationBell.js';
-import { useTheme } from '@/context/ThemeContext.js';
+import { useTheme } from '@/context/useTheme.js';
 import { Sun, Moon } from 'lucide-react';
 
 export interface HeaderProps {

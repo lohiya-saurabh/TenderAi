@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge.js';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card.js';
 import { Check, ArrowRight, Building2, Users, FileText, HardDrive, Sparkles } from 'lucide-react';
 
-export const CANONICAL_PLANS: PlanDefinition[] = [
+const CANONICAL_PLANS: PlanDefinition[] = [
   {
     tier: 'FREE',
     name: 'Free Evaluation',

@@ -23,9 +23,9 @@ npm run build -w @tenderpulse/api
 # Function to kill child processes on exit (Ctrl+C)
 cleanup() {
   echo -e "\n\n${YELLOW}🛑 Shutting down TenderPulse AI servers...${NC}"
-  kill $AI_PID $TSC_PID $API_PID 2>/dev/null || true
+  kill $AI_PID $TSC_PID $TSCALIAS_PID $API_PID 2>/dev/null || true
   sleep 0.3
-  kill -9 $AI_PID $TSC_PID $API_PID 2>/dev/null || true
+  kill -9 $AI_PID $TSC_PID $TSCALIAS_PID $API_PID 2>/dev/null || true
   kill 0 2>/dev/null || true
   exit 0
 }
@@ -49,6 +49,8 @@ AI_PID=$!
 echo -e "${BLUE}👀 Starting TypeScript compiler in watch mode...${NC}"
 npx tsc -w --preserveWatchOutput -p apps/api/tsconfig.json &
 TSC_PID=$!
+npx tsc-alias -w -p apps/api/tsconfig.json &
+TSCALIAS_PID=$!
 
 echo -e "${GREEN}🌐 Starting Backend API on http://localhost:3000...${NC}"
 node scripts/watch-api.js &

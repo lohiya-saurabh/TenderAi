@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@/auth/useAuth.js';
 import { Button } from '@/components/ui/button.js';
 import { ShieldCheck, ArrowRight, Layers, FileCheck2, Cpu, Sun, Moon } from 'lucide-react';
-import { useTheme } from '@/context/ThemeContext.js';
+import { useTheme } from '@/context/useTheme.js';
 
 export const PublicNav: React.FC = () => {
   const { isAuthenticated } = useAuth();

@@ -4,7 +4,7 @@ import { Badge } from '@/components/common/Badge.js';
 import { Modal } from '@/components/common/Modal.js';
 import { type FullCompanyProfile, computeProfileHealth } from '@/components/company/companyProfileData.js';
 import { Zap, Building2, Check, CheckCircle2, FolderArchive, Plus, RefreshCw } from 'lucide-react';
-import { useCompany } from '@/context/CompanyContext.js';
+import { useCompany } from '@/context/useCompany.js';
 
 export interface CompanyProfileHeaderProps {
   profile: FullCompanyProfile;

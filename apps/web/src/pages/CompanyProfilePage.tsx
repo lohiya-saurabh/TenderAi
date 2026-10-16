@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { useCompany } from '@/context/CompanyContext.js';
+import { useCompany } from '@/context/useCompany.js';
 import { CompanyProfileHeader } from '@/components/company/CompanyProfileHeader.js';
 import { CapabilityNavTabs } from '@/components/company/CapabilityNavTabs.js';
 import { CompanyProfileView } from '@/components/company/CompanyProfileView.js';
