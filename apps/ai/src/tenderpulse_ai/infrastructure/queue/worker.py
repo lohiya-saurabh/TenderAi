@@ -218,6 +218,7 @@ class DocumentQueueConsumerWorker:
                     document_id=body.document_id,
                     status="COMPLETED",
                     items=result.items,
+                    chunks=getattr(result, "chunks", []),
                     workflow_run_id=body.workflow_run_id,
                     trace_id=trace_id,
                     correlation_id=body.correlation_id,

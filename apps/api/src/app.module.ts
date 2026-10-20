@@ -20,6 +20,7 @@ import { TeamsModule } from '@/modules/teams/teams.module.js';
 import { NotificationsModule } from '@/modules/notifications/notifications.module.js';
 import { BillingModule } from '@/modules/billing/billing.module.js';
 import { CompanyVerificationModule } from '@/modules/company-verification/company-verification.module.js';
+import { ChatModule } from '@/modules/chat/chat.module.js';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { CompanyVerificationModule } from '@/modules/company-verification/compan
     TeamsModule,
     NotificationsModule,
     BillingModule,
+    ChatModule,
   ],
 })
 export class AppModule {}

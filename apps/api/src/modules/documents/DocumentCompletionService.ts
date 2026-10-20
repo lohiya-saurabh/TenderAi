@@ -358,6 +358,41 @@ export class DocumentCompletionService {
             (item) => item.status === 'READY' || item.status === 'PASS',
           ).length;
 
+          // Persist extracted tender document chunks if present
+          if (event.chunks && event.chunks.length > 0) {
+            await tx
+              .delete(schema.tenderDocumentChunks)
+              .where(
+                and(
+                  eq(schema.tenderDocumentChunks.documentId, event.documentId),
+                  eq(schema.tenderDocumentChunks.organizationId, event.organizationId),
+                ),
+              );
+
+            const chunkRows = event.chunks.map((chunk, idx) => ({
+              id: chunk.id || chunk.chunkId || `chk-${randomUUID()}`,
+              organizationId: event.organizationId,
+              bidId: event.bidId,
+              documentId: event.documentId,
+              chunkIndex: chunk.chunkIndex ?? idx,
+              chunkType: chunk.chunkType || 'PROSE',
+              content: chunk.content,
+              pageNumber: chunk.pageNumber ?? 1,
+              sectionTitle: chunk.sectionTitle ?? null,
+              clauseReference: chunk.clauseReference ?? null,
+              boundingBox: chunk.boundingBox ?? null,
+              metadata: chunk.metadata ?? null,
+              embedding: chunk.embedding ?? null,
+              createdAt: now,
+            }));
+
+            const CHUNK_BATCH_SIZE = 100;
+            for (let i = 0; i < chunkRows.length; i += CHUNK_BATCH_SIZE) {
+              const batch = chunkRows.slice(i, i + CHUNK_BATCH_SIZE);
+              await tx.insert(schema.tenderDocumentChunks).values(batch);
+            }
+          }
+
           // First update this document to COMPLETED
           await tx
             .update(schema.tenderDocuments)

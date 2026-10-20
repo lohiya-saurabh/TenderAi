@@ -9,14 +9,17 @@ import {
   companyEvidenceChunks,
   evidenceVerificationHistory,
 } from './companies.js';
-import { bids, tenderDocuments, bidDecisions } from './bids.js';
+import { bids, tenderDocuments, bidDecisions, tenderDocumentChunks } from './bids.js';
 import { complianceItems } from './compliance.js';
+import { chatConversations, chatMessages } from './chat.js';
 import { notifications, auditLogs } from './system.js';
 
 export const organizationsRelations = relations(organizations, ({ many, one }) => ({
   users: many(users),
   companies: many(companies),
   bids: many(bids),
+  conversations: many(chatConversations),
+
   tenantSettings: one(tenantSettings, {
     fields: [organizations.id],
     references: [tenantSettings.organizationId],
@@ -59,6 +62,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   }),
   refreshTokens: many(refreshTokens),
   notifications: many(notifications),
+  conversations: many(chatConversations),
 }));
 
 export const refreshTokensRelations = relations(refreshTokens, ({ one }) => ({
@@ -77,11 +81,13 @@ export const companiesRelations = relations(companies, ({ one, many }) => ({
   evidenceDocuments: many(companyEvidenceDocuments),
   evidenceChunks: many(companyEvidenceChunks),
   profileVersions: many(companyProfileVersions),
+  conversations: many(chatConversations),
   profile: one(companyProfiles, {
     fields: [companies.id],
     references: [companyProfiles.companyId],
   }),
 }));
+
 
 export const companyProfilesRelations = relations(companyProfiles, ({ one }) => ({
   company: one(companies, {
@@ -164,11 +170,13 @@ export const bidsRelations = relations(bids, ({ one, many }) => ({
     references: [companies.id],
   }),
   documents: many(tenderDocuments),
+  chunks: many(tenderDocumentChunks),
   complianceItems: many(complianceItems),
   decisions: many(bidDecisions),
+  conversations: many(chatConversations),
 }));
 
-export const tenderDocumentsRelations = relations(tenderDocuments, ({ one }) => ({
+export const tenderDocumentsRelations = relations(tenderDocuments, ({ one, many }) => ({
   bid: one(bids, {
     fields: [tenderDocuments.bidId],
     references: [bids.id],
@@ -177,7 +185,9 @@ export const tenderDocumentsRelations = relations(tenderDocuments, ({ one }) => 
     fields: [tenderDocuments.organizationId],
     references: [organizations.id],
   }),
+  chunks: many(tenderDocumentChunks),
 }));
+
 
 export const complianceItemsRelations = relations(complianceItems, ({ one }) => ({
   bid: one(bids, {
@@ -226,3 +236,50 @@ export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
     references: [organizations.id],
   }),
 }));
+
+export const tenderDocumentChunksRelations = relations(tenderDocumentChunks, ({ one }) => ({
+  document: one(tenderDocuments, {
+    fields: [tenderDocumentChunks.documentId],
+    references: [tenderDocuments.id],
+  }),
+  bid: one(bids, {
+    fields: [tenderDocumentChunks.bidId],
+    references: [bids.id],
+  }),
+  organization: one(organizations, {
+    fields: [tenderDocumentChunks.organizationId],
+    references: [organizations.id],
+  }),
+}));
+
+export const chatConversationsRelations = relations(chatConversations, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [chatConversations.organizationId],
+    references: [organizations.id],
+  }),
+  company: one(companies, {
+    fields: [chatConversations.companyId],
+    references: [companies.id],
+  }),
+  bid: one(bids, {
+    fields: [chatConversations.bidId],
+    references: [bids.id],
+  }),
+  user: one(users, {
+    fields: [chatConversations.userId],
+    references: [users.id],
+  }),
+  messages: many(chatMessages),
+}));
+
+export const chatMessagesRelations = relations(chatMessages, ({ one }) => ({
+  conversation: one(chatConversations, {
+    fields: [chatMessages.conversationId],
+    references: [chatConversations.id],
+  }),
+  organization: one(organizations, {
+    fields: [chatMessages.organizationId],
+    references: [organizations.id],
+  }),
+}));
+

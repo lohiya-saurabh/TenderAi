@@ -63,3 +63,27 @@ export const bidDecisions = pgTable('bid_decisions', {
 });
 
 export type BidDecision = typeof bidDecisions.$inferSelect;
+
+export const tenderDocumentChunks = pgTable('tender_document_chunks', {
+  id: pk(),
+  organizationId: orgId().references(() => organizations.id, { onDelete: 'cascade' }),
+  bidId: text('bid_id')
+    .notNull()
+    .references(() => bids.id, { onDelete: 'cascade' }),
+  documentId: text('document_id')
+    .notNull()
+    .references(() => tenderDocuments.id, { onDelete: 'cascade' }),
+  chunkIndex: integer('chunk_index').notNull(),
+  chunkType: text('chunk_type').notNull().default('PROSE'),
+  content: text('content').notNull(),
+  pageNumber: integer('page_number').notNull(),
+  sectionTitle: text('section_title'),
+  clauseReference: text('clause_reference'),
+  boundingBox: jsonb('bounding_box'),
+  metadata: jsonb('metadata'),
+  embedding: jsonb('embedding'),
+  createdAt: createdAt(),
+});
+
+export type TenderDocumentChunk = typeof tenderDocumentChunks.$inferSelect;
+

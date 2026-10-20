@@ -1,4 +1,5 @@
 import type { SecurityContextDto } from './security.js';
+import type { TenderDocumentChunkDto } from './chat.js';
 
 export interface ExtractedComplianceItemDto {
   category: string;
@@ -49,9 +50,11 @@ export interface DocumentExtractionCompletedEvent {
   documentId: string;
   status: 'COMPLETED' | 'FAILED' | 'REVIEW_READY' | string;
   items: ExtractedComplianceItemDto[];
+  chunks?: TenderDocumentChunkDto[];
   error?: string;
   workflowRunId?: string;
   traceId?: string;
   correlationId?: string;
   timestamp?: string;
 }
+

@@ -593,6 +593,67 @@ export async function initDatabaseDdl(db: PGlite): Promise<void> {
     DROP TRIGGER IF EXISTS trg_auto_org_audit_logs ON audit_logs;
     CREATE TRIGGER trg_auto_org_audit_logs BEFORE INSERT ON audit_logs FOR EACH ROW EXECUTE FUNCTION auto_provision_org();
 
+    CREATE TABLE IF NOT EXISTS tender_document_chunks (
+      id TEXT PRIMARY KEY,
+      organization_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+      bid_id TEXT NOT NULL REFERENCES bids(id) ON DELETE CASCADE,
+      document_id TEXT NOT NULL REFERENCES tender_documents(id) ON DELETE CASCADE,
+      chunk_index INTEGER NOT NULL,
+      chunk_type TEXT NOT NULL DEFAULT 'PROSE',
+      content TEXT NOT NULL,
+      page_number INTEGER NOT NULL,
+      section_title TEXT,
+      clause_reference TEXT,
+      bounding_box JSONB,
+      metadata JSONB,
+      embedding JSONB,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_tender_doc_chunks_doc ON tender_document_chunks(document_id);
+    CREATE INDEX IF NOT EXISTS idx_tender_doc_chunks_bid ON tender_document_chunks(bid_id);
+    CREATE INDEX IF NOT EXISTS idx_tender_doc_chunks_org ON tender_document_chunks(organization_id);
+
+    CREATE TABLE IF NOT EXISTS chat_conversations (
+      id TEXT PRIMARY KEY,
+      organization_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+      company_id TEXT REFERENCES companies(id) ON DELETE CASCADE,
+      bid_id TEXT REFERENCES bids(id) ON DELETE CASCADE,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      title TEXT NOT NULL DEFAULT 'New Chat',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_chat_conversations_org ON chat_conversations(organization_id);
+    CREATE INDEX IF NOT EXISTS idx_chat_conversations_bid ON chat_conversations(bid_id);
+    CREATE INDEX IF NOT EXISTS idx_chat_conversations_user ON chat_conversations(user_id);
+
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id TEXT PRIMARY KEY,
+      conversation_id TEXT NOT NULL REFERENCES chat_conversations(id) ON DELETE CASCADE,
+      organization_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+      role TEXT NOT NULL,
+      content TEXT NOT NULL,
+      tool_calls JSONB,
+      citations JSONB,
+      financial_summary JSONB,
+      metadata JSONB,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_chat_messages_conv ON chat_messages(conversation_id);
+    CREATE INDEX IF NOT EXISTS idx_chat_messages_org ON chat_messages(organization_id);
+
+    DROP TRIGGER IF EXISTS trg_auto_org_chat_conv ON chat_conversations;
+    CREATE TRIGGER trg_auto_org_chat_conv BEFORE INSERT ON chat_conversations FOR EACH ROW EXECUTE FUNCTION auto_provision_org();
+
+    DROP TRIGGER IF EXISTS trg_auto_org_chat_msg ON chat_messages;
+    CREATE TRIGGER trg_auto_org_chat_msg BEFORE INSERT ON chat_messages FOR EACH ROW EXECUTE FUNCTION auto_provision_org();
+
+    DROP TRIGGER IF EXISTS trg_auto_org_tender_chunks ON tender_document_chunks;
+    CREATE TRIGGER trg_auto_org_tender_chunks BEFORE INSERT ON tender_document_chunks FOR EACH ROW EXECUTE FUNCTION auto_provision_org();
+
     -- Foreign Key Constraints with ON DELETE CASCADE
     DO $$ BEGIN
       -- Users & Auth

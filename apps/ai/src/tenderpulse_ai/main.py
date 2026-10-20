@@ -17,6 +17,11 @@ from tenderpulse_ai.agent import (
     TenderRequirementAgent,
     default_requirement_model,
 )
+from tenderpulse_ai.chat import (
+    ChatCopilotAgent,
+    ChatQueryRequest,
+    ChatQueryResponse,
+)
 from tenderpulse_ai.config import settings
 from tenderpulse_ai.decision import (
     BidDecisionAgent,
@@ -341,6 +346,7 @@ async def _execute_and_publish_extraction(
                 document_id=request.document_id,
                 status="COMPLETED",
                 items=result.items,
+                chunks=getattr(result, "chunks", []),
                 workflow_run_id=request.workflow_run_id,
                 trace_id=trace_id,
                 correlation_id=request.correlation_id,
@@ -508,3 +514,21 @@ async def get_queue_status():
         "completion_queue_provider": settings.completion_queue_provider,
         "worker_running": bool(worker and worker.is_running),
     }
+
+
+@app.post(
+    "/api/v1/chat/query",
+    response_model=ChatQueryResponse,
+    dependencies=[Depends(verify_internal_key)],
+)
+async def chat_query(request: ChatQueryRequest):
+    """Tender Chat Copilot: conversational RAG intelligence with LangGraph stateful workflow."""
+    logger.info(
+        "Received chat query for org=%s, bid=%s, company=%s, conv=%s",
+        request.security_context.tenant_id,
+        request.bid_id,
+        request.company_id,
+        request.conversation_id,
+    )
+    agent = ChatCopilotAgent()
+    return await agent.query(request)

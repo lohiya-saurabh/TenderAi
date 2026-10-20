@@ -37,6 +37,8 @@ import {
   mapApiDecisionToBidDecision,
   type ApiBidDecisionSummary,
 } from '@/components/bid/detail/bidDetailData.js';
+import { Sparkles } from 'lucide-react';
+import { ChatCopilotDrawer } from '@/components/chat/index.js';
 
 /**
  * Tender Detail — "Should I bid on this tender?"
@@ -80,6 +82,7 @@ export const BidDetailPage: React.FC = () => {
   const [docToDelete, setDocToDelete] = useState<BidDocument | null>(null);
   const [isDeletingDoc, setIsDeletingDoc] = useState<boolean>(false);
   const [reprocessingDocId, setReprocessingDocId] = useState<string | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState<boolean>(false);
 
   // Fetch Bid details
   const fetchBid = useCallback(() => getBid(bidId), [bidId]);
@@ -399,6 +402,15 @@ export const BidDetailPage: React.FC = () => {
               </Button>
             </Link>
           )}
+          <Button
+            variant={isChatOpen ? 'secondary' : 'outline'}
+            size="sm"
+            onClick={() => setIsChatOpen(!isChatOpen)}
+            className="h-8 text-xs border-emerald-600/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 gap-1.5"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>{isChatOpen ? 'Close Copilot' : 'AI Copilot'}</span>
+          </Button>
           {canUploadDoc && (
             <Button
               variant={showUploader ? 'secondary' : 'outline'}
@@ -736,6 +748,28 @@ export const BidDetailPage: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Floating Ask Copilot Trigger Button */}
+      {!isChatOpen && (
+        <button
+          type="button"
+          onClick={() => setIsChatOpen(true)}
+          className="fixed bottom-6 right-6 z-30 flex items-center gap-2 px-3.5 py-2.5 rounded-full bg-emerald-600 text-white shadow-lg hover:bg-emerald-700 transition-all hover:scale-105 cursor-pointer font-medium text-xs border border-emerald-500/30"
+          title="Open Tender AI Copilot"
+        >
+          <Sparkles className="w-4 h-4" />
+          <span>Ask Copilot</span>
+        </button>
+      )}
+
+      {/* Chat Copilot Drawer */}
+      <ChatCopilotDrawer
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        bidId={bidId}
+        companyId={bid?.companyId}
+        tenderTitle={bid?.title}
+      />
     </div>
   );
 };
