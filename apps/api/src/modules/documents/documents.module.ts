@@ -28,7 +28,12 @@ import { DocumentCompletionService } from '@/modules/documents/DocumentCompletio
         completionQueue: IJobQueue,
         completionService: DocumentCompletionService,
       ) => {
-        return new DocumentProcessingRuntime(db, ingestionQueue, completionQueue, completionService);
+        return new DocumentProcessingRuntime(
+          db,
+          ingestionQueue,
+          completionQueue,
+          completionService,
+        );
       },
       inject: [
         DRIZZLE_TOKEN,

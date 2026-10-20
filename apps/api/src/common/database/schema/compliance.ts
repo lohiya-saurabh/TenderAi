@@ -1,6 +1,8 @@
 import { pgTable, text, integer, boolean, jsonb } from 'drizzle-orm/pg-core';
 import { pk, orgId, tstz, createdAt, updatedAt } from './helpers.js';
 import { bids } from './bids.js';
+import { organizations } from './tenants.js';
+import { companies } from './companies.js';
 
 export interface ComplianceItemProvenance {
   documentId?: string | null;
@@ -19,8 +21,8 @@ export const complianceItems = pgTable('compliance_items', {
   bidId: text('bid_id')
     .notNull()
     .references(() => bids.id, { onDelete: 'cascade' }),
-  organizationId: orgId(),
-  companyId: text('company_id'),
+  organizationId: orgId().references(() => organizations.id, { onDelete: 'cascade' }),
+  companyId: text('company_id').references(() => companies.id, { onDelete: 'cascade' }),
   category: text('category').notNull(),
   title: text('title').notNull(),
   description: text('description').notNull(),

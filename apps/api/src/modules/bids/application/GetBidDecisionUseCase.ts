@@ -25,11 +25,7 @@
 import { Injectable, Inject, Optional } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
 import { eq, and, desc } from 'drizzle-orm';
-import {
-  DRIZZLE_TOKEN,
-  type DrizzleDb,
-  createDrizzle,
-} from '@/common/database/database.module.js';
+import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '@/common/database/database.module.js';
 import * as schema from '@/common/database/schema.js';
 import { NotFoundError, ConflictError, BadRequestError } from '@/common/errors/errors.js';
 import { TenantContextHolder } from '@/common/security/TenantContext.js';
@@ -39,7 +35,10 @@ import {
   type AiBidDecisionResponse,
   type AiCompanyProfileSnapshot,
 } from '@/modules/bids/application/AiDecisionClient.js';
-import { toRequirementCandidates, type RequirementSourceItem } from '@/modules/bids/application/RequirementMapper.js';
+import {
+  toRequirementCandidates,
+  type RequirementSourceItem,
+} from '@/modules/bids/application/RequirementMapper.js';
 
 export interface BidDecisionEvaluationResult {
   decisionId: string;

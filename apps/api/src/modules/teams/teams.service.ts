@@ -87,7 +87,15 @@ export class TeamsService {
     const callerUserId = TenantContextHolder.get()?.userId;
 
     let orgName = 'Default Workspace';
-    if (callerUserId) {
+    const [org] = await this.db
+      .select({ name: schema.organizations.name })
+      .from(schema.organizations)
+      .where(eq(schema.organizations.id, orgId))
+      .limit(1);
+
+    if (org?.name) {
+      orgName = org.name;
+    } else if (callerUserId) {
       const [userRec] = await this.db
         .select({ organizationName: schema.users.organizationName })
         .from(schema.users)

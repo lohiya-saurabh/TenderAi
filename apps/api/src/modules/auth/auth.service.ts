@@ -6,22 +6,15 @@ import { PGlite } from '@electric-sql/pglite';
 import bcrypt from 'bcrypt';
 import crypto from 'node:crypto';
 import { sql } from 'drizzle-orm';
-import {
-  DRIZZLE_TOKEN,
-  type DrizzleDb,
-  createDrizzle,
-} from '@/common/database/database.module.js';
+import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '@/common/database/database.module.js';
 import * as schema from '@/common/database/schema.js';
 import { UnauthorizedError, ConflictError, BadRequestError } from '@/common/errors/errors.js';
 import { TokenService } from '@/common/security/TokenService.js';
-import {
-  ROLE_PERMISSIONS,
-  type UserRole,
-  type Permission,
-} from '@/common/security/permissions.js';
+import { ROLE_PERMISSIONS, type UserRole, type Permission } from '@/common/security/permissions.js';
 
 // Precomputed cost-10 bcrypt hash used to normalize timing and defend against user enumeration
-const DUMMY_BCRYPT_HASH = '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
+const BCRYPT_HASH =
+  process.env.BCRYPT_HASH || '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
 
 export interface AuthResult {
   accessToken: string;
@@ -83,7 +76,7 @@ export class AuthService {
 
     if (!matched) {
       // Defend against user enumeration by equalizing comparison latency (~70ms)
-      await bcrypt.compare(candidatePassword, DUMMY_BCRYPT_HASH);
+      await bcrypt.compare(candidatePassword, BCRYPT_HASH);
       throw new UnauthorizedError('Invalid email or password.');
     }
 
@@ -96,11 +89,13 @@ export class AuthService {
       typeof matched.permissions === 'string'
         ? JSON.parse(matched.permissions)
         : (matched.permissions ?? []);
-    const normalizedRole = String(matched.role ?? 'BID_MANAGER')
+    const normalizedRole = String(matched.role ?? 'VIEWER')
       .toUpperCase()
       .replace(/\s+/g, '_') as UserRole;
 
-    const defaultRolePerms = ROLE_PERMISSIONS[normalizedRole] ? Array.from(ROLE_PERMISSIONS[normalizedRole]) : [];
+    const defaultRolePerms = ROLE_PERMISSIONS[normalizedRole]
+      ? Array.from(ROLE_PERMISSIONS[normalizedRole])
+      : [];
     const permissions: Permission[] = Array.from(new Set([...rawPermissions, ...defaultRolePerms]));
 
     const userProfile = {
@@ -186,7 +181,9 @@ export class AuthService {
       .toUpperCase()
       .replace(/\s+/g, '_') as UserRole;
 
-    const defaultRolePerms = ROLE_PERMISSIONS[normalizedRole] ? Array.from(ROLE_PERMISSIONS[normalizedRole]) : [];
+    const defaultRolePerms = ROLE_PERMISSIONS[normalizedRole]
+      ? Array.from(ROLE_PERMISSIONS[normalizedRole])
+      : [];
     const permissions: Permission[] = Array.from(new Set([...rawPermissions, ...defaultRolePerms]));
 
     const userProfile = {
@@ -298,6 +295,23 @@ export class AuthService {
     const now = new Date();
     const periodEnd = new Date(now);
     periodEnd.setDate(periodEnd.getDate() + 30);
+
+    // 3b. Create Canonical Organization Entity
+    const orgSlug = orgName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+    await this.db
+      .insert(schema.organizations)
+      .values({
+        id: orgId,
+        name: orgName,
+        slug: `${orgSlug}-${rand}`,
+        domain: candidateEmail.split('@')[1] ?? null,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .onConflictDoNothing();
 
     // 4. Create User Record as TENANT_ADMIN
     const adminPermissions: Permission[] = Array.from(ROLE_PERMISSIONS.ADMIN);

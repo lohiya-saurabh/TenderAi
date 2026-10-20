@@ -21,6 +21,10 @@ export const COMPLETION_QUEUE_TOKEN = 'COMPLETION_QUEUE';
       provide: QUEUE_TOKEN,
       useFactory: (): IJobQueue => {
         const logger = new Logger('QueueModule:Ingestion');
+        if (process.env.QUEUE_PROVIDER === 'mock' || process.env.ALLOW_MOCK_SERVICES === 'true') {
+          return new MockSqsJobQueue();
+        }
+
         const queueUrl = process.env.AWS_SQS_INGESTION_QUEUE_URL || process.env.AWS_SQS_QUEUE_URL;
         if (queueUrl) {
           const service = new AwsSqsJobQueue({
@@ -49,10 +53,6 @@ export const COMPLETION_QUEUE_TOKEN = 'COMPLETION_QUEUE';
           return service;
         }
 
-        if (process.env.QUEUE_PROVIDER === 'mock' || process.env.ALLOW_MOCK_SERVICES === 'true') {
-          return new MockSqsJobQueue();
-        }
-
         if (process.env.NODE_ENV === 'production') {
           throw new Error(
             'A production message queue must be configured with AWS_SQS_QUEUE_URL or GCP Pub/Sub settings.',
@@ -66,6 +66,10 @@ export const COMPLETION_QUEUE_TOKEN = 'COMPLETION_QUEUE';
       provide: COMPLETION_QUEUE_TOKEN,
       useFactory: (): IJobQueue => {
         const logger = new Logger('QueueModule:Completion');
+        if (process.env.QUEUE_PROVIDER === 'mock' || process.env.ALLOW_MOCK_SERVICES === 'true') {
+          return new MockSqsJobQueue();
+        }
+
         if (process.env.AWS_SQS_COMPLETION_QUEUE_URL) {
           const service = new AwsSqsJobQueue({
             queueUrl: process.env.AWS_SQS_COMPLETION_QUEUE_URL,

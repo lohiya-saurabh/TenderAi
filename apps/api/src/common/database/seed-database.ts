@@ -29,8 +29,41 @@ export async function seedDatabase(
   const seedFullProfile = options?.seedFullProfile ?? false;
   const seedBidsAndCompliance = options?.seedBidsAndCompliance ?? false;
 
-  // 1. Seed Users & Companies
+  // 1. Seed Organizations, Users & Companies
   if (seedUsers) {
+    for (const user of DEMO_USERS) {
+      await drizzleDb
+        .insert(schema.organizations)
+        .values({
+          id: user.organizationId,
+          name: user.organizationName,
+          slug: user.organizationName
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/(^-|-$)/g, ''),
+          domain: user.email.split('@')[1] ?? null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .onConflictDoNothing();
+    }
+
+    for (const comp of DEMO_COMPANIES) {
+      await drizzleDb
+        .insert(schema.organizations)
+        .values({
+          id: comp.organizationId,
+          name: comp.legalName,
+          slug: (comp.slug || comp.legalName)
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/(^-|-$)/g, ''),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .onConflictDoNothing();
+    }
+
     for (const user of DEMO_USERS) {
       const hashedPassword = await bcrypt.hash(user.password, 10);
       await drizzleDb

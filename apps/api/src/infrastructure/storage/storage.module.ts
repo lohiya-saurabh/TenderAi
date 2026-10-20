@@ -15,6 +15,10 @@ export const STORAGE_TOKEN = 'STORAGE_SERVICE';
       provide: STORAGE_TOKEN,
       useFactory: (): IStorageService => {
         const logger = new Logger('StorageModule');
+        if (process.env.STORAGE_PROVIDER === 'mock' || process.env.ALLOW_MOCK_SERVICES === 'true') {
+          return new MockStorageService();
+        }
+
         // 1. AWS S3 detection
         const s3Bucket = process.env.AWS_S3_BUCKET || process.env.S3_BUCKET_NAME;
         if (s3Bucket) {

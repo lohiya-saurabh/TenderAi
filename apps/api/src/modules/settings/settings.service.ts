@@ -29,6 +29,7 @@ export interface WorkspaceSettingsView {
 }
 
 export interface UpdateWorkspaceSettingsDto {
+  organizationName?: string;
   defaultCompanyId?: string;
   notificationPreferences?: Partial<NotificationPreferences>;
 }
@@ -48,8 +49,14 @@ export class SettingsService {
     const orgId = this.requireOrg();
     const userId = TenantContextHolder.get()?.userId;
 
-    let orgName = 'Default Workspace';
-    if (userId) {
+    const [org] = await this.db
+      .select({ name: schema.organizations.name })
+      .from(schema.organizations)
+      .where(eq(schema.organizations.id, orgId))
+      .limit(1);
+
+    let orgName = org?.name ?? 'Default Workspace';
+    if (!org && userId) {
       const [userRec] = await this.db
         .select({ organizationName: schema.users.organizationName })
         .from(schema.users)
@@ -147,6 +154,33 @@ export class SettingsService {
         target: schema.tenantSettings.organizationId,
         set: updates,
       });
+
+    if (dto.organizationName !== undefined && dto.organizationName.trim()) {
+      const newName = dto.organizationName.trim();
+      const orgSlug = newName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+
+      await this.db
+        .insert(schema.organizations)
+        .values({
+          id: orgId,
+          name: newName,
+          slug: orgSlug,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: schema.organizations.id,
+          set: { name: newName, updatedAt: new Date() },
+        });
+
+      await this.db
+        .update(schema.users)
+        .set({ organizationName: newName })
+        .where(eq(schema.users.organizationId, orgId));
+    }
 
     return this.getWorkspaceSettings();
   }

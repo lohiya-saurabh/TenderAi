@@ -15,11 +15,7 @@ import { eq, and, desc, or } from 'drizzle-orm';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import {
-  DRIZZLE_TOKEN,
-  type DrizzleDb,
-  createDrizzle,
-} from '@/common/database/database.module.js';
+import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '@/common/database/database.module.js';
 import * as schema from '@/common/database/schema.js';
 import { NotFoundError, BadRequestError } from '@/common/errors/errors.js';
 import { TenantContextHolder } from '@/common/security/TenantContext.js';
@@ -240,7 +236,12 @@ export class CompanyEvidenceService {
     evidenceIdOrName: string,
     hostHeader?: string,
     token?: string,
-  ): Promise<{ downloadUrl: string; expiresInSeconds: number; fileName: string; mimeType: string }> {
+  ): Promise<{
+    downloadUrl: string;
+    expiresInSeconds: number;
+    fileName: string;
+    mimeType: string;
+  }> {
     const doc = await this.getEvidenceById(companyId, evidenceIdOrName);
 
     if (this.storageService) {

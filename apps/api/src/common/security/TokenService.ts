@@ -37,11 +37,13 @@ export class TokenService {
   private readonly refreshTokenTtlSeconds: number;
 
   constructor() {
-    this.secret =
-      process.env['JWT_SECRET'] || 'tenderpulse-super-secret-jwt-key-2026-production-grade';
-    if (process.env['NODE_ENV'] === 'production' && !process.env['JWT_SECRET']) {
-      throw new Error('FATAL: JWT_SECRET environment variable is required in production.');
+    const secret = process.env['JWT_SECRET'];
+    if (!secret) {
+      throw new Error(
+        'FATAL: JWT_SECRET environment variable is missing. Please configure JWT_SECRET in your .env file.',
+      );
     }
+    this.secret = secret;
     this.accessTokenTtlSeconds = Number(process.env['JWT_ACCESS_TTL_SECONDS']) || 3600; // 1 hour
     this.refreshTokenTtlSeconds = Number(process.env['JWT_REFRESH_TTL_SECONDS']) || 7 * 24 * 3600; // 7 days
   }

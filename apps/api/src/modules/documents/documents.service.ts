@@ -5,11 +5,7 @@ import { Injectable, Inject, Logger } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { PGlite } from '@electric-sql/pglite';
 import { eq, and, inArray } from 'drizzle-orm';
-import {
-  DRIZZLE_TOKEN,
-  type DrizzleDb,
-  createDrizzle,
-} from '@/common/database/database.module.js';
+import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '@/common/database/database.module.js';
 import * as schema from '@/common/database/schema.js';
 import { STORAGE_TOKEN } from '@/infrastructure/storage/storage.module.js';
 import type { IStorageService } from '@/modules/bids/application/IStorageService.js';

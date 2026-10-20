@@ -3,12 +3,8 @@
  */
 import { Injectable, Inject } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
-import { eq, and, asc, desc } from 'drizzle-orm';
-import {
-  DRIZZLE_TOKEN,
-  type DrizzleDb,
-  createDrizzle,
-} from '@/common/database/database.module.js';
+import { eq, and, asc, desc, sql } from 'drizzle-orm';
+import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '@/common/database/database.module.js';
 import * as schema from '@/common/database/schema.js';
 import { NotFoundError, ConflictError } from '@/common/errors/errors.js';
 import type { DemoComplianceItem } from '@/seed/data.js';
@@ -113,11 +109,21 @@ export class ComplianceService {
    * requirements awaiting human action (status PENDING, REVIEW_REQUIRED, or humanReviewRequired).
    */
   public async listReviewTasks(bidId: string): Promise<DemoComplianceItem[]> {
-    const items = await this.listItems(bidId);
-    return items.filter(
-      (item) =>
-        item.status === 'PENDING' || item.status === 'REVIEW_REQUIRED' || item.humanReviewRequired,
-    );
+    const orgId = this.getTenantOrgId();
+    const records = await this.db
+      .select()
+      .from(schema.complianceItems)
+      .where(
+        and(
+          eq(schema.complianceItems.bidId, bidId),
+          eq(schema.complianceItems.organizationId, orgId),
+          sql`(${schema.complianceItems.status} IN ('PENDING', 'REVIEW_REQUIRED') OR ${schema.complianceItems.humanReviewRequired} = true)`,
+        ),
+      )
+      .orderBy(asc(schema.complianceItems.createdAt));
+
+    const deduped = deduplicateComplianceItems(records);
+    return deduped.map((row) => mapComplianceRecord(row));
   }
 
   /**
@@ -133,17 +139,30 @@ export class ComplianceService {
     reviewNeeded: number;
     readinessPct: number | null;
   }> {
-    const items = await this.listItems(bidId);
-    const total = items.length;
-    const ready = items.filter((r) => r.status === 'READY' || r.status === 'PASS').length;
-    const flagged = items.filter((r) => r.status === 'FLAGGED' || r.status === 'FAIL').length;
-    const pending = items.filter((r) => r.status === 'PENDING' || r.status === 'MISSING').length;
-    const waived = items.filter(
-      (r) => r.status === 'WAIVED' || r.status === 'NOT_APPLICABLE',
-    ).length;
-    const reviewRequired = items.filter(
-      (r) => r.status === 'REVIEW_REQUIRED' || r.humanReviewRequired,
-    ).length;
+    const orgId = this.getTenantOrgId();
+    const [stats] = await this.db
+      .select({
+        total: sql<number>`count(*)::int`,
+        ready: sql<number>`count(*) filter (where ${schema.complianceItems.status} in ('READY', 'PASS'))::int`,
+        flagged: sql<number>`count(*) filter (where ${schema.complianceItems.status} in ('FLAGGED', 'FAIL'))::int`,
+        pending: sql<number>`count(*) filter (where ${schema.complianceItems.status} in ('PENDING', 'MISSING'))::int`,
+        waived: sql<number>`count(*) filter (where ${schema.complianceItems.status} in ('WAIVED', 'NOT_APPLICABLE'))::int`,
+        reviewRequired: sql<number>`count(*) filter (where ${schema.complianceItems.status} = 'REVIEW_REQUIRED' or ${schema.complianceItems.humanReviewRequired} = true)::int`,
+      })
+      .from(schema.complianceItems)
+      .where(
+        and(
+          eq(schema.complianceItems.bidId, bidId),
+          eq(schema.complianceItems.organizationId, orgId),
+        ),
+      );
+
+    const total = stats?.total ?? 0;
+    const ready = stats?.ready ?? 0;
+    const flagged = stats?.flagged ?? 0;
+    const pending = stats?.pending ?? 0;
+    const waived = stats?.waived ?? 0;
+    const reviewRequired = stats?.reviewRequired ?? 0;
 
     return {
       totalRequirements: total,
