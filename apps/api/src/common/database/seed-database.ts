@@ -201,6 +201,24 @@ export async function seedDatabase(
           createdAt: new Date('2026-08-15T00:00:00.000Z'),
           updatedAt: new Date('2026-08-15T00:00:00.000Z'),
         },
+        {
+          id: 'doc-ev-gst-acme',
+          companyId: 'comp_acme_infra_001',
+          organizationId: 'org_acme_infra_001',
+          fileName: 'GST_Registration_Certificate_Acme.pdf',
+          storagePath: 'tenants/org_acme_infra_001/evidence/doc-ev-gst-acme.pdf',
+          fileSizeBytes: 1250000,
+          mimeType: 'application/pdf',
+          sha256Hash: 'c7d8e9f0123456789abcdef0123456789abcdef0123456789abcdef012345678',
+          evidenceType: 'GST_REGISTRATION',
+          issuer: 'Goods and Services Tax Network (GSTN)',
+          referenceNumber: '27AABCU9603R1ZM',
+          validFrom: new Date('2018-07-01T00:00:00.000Z'),
+          verificationStatus: 'SOURCE_VERIFIED',
+          importedAt: new Date('2026-08-15T00:00:00.000Z'),
+          createdAt: new Date('2026-08-15T00:00:00.000Z'),
+          updatedAt: new Date('2026-08-15T00:00:00.000Z'),
+        },
       ])
       .onConflictDoNothing();
 
@@ -259,6 +277,23 @@ export async function seedDatabase(
             valid_to: '2026-12-31',
             file_name: 'ISO_9001_2015_Quality_Management_Certificate.pdf',
           },
+        },
+        {
+          id: 'chk-ev-gst-acme-01',
+          organizationId: 'org_acme_infra_001',
+          companyId: 'comp_acme_infra_001',
+          evidenceDocumentId: 'doc-ev-gst-acme',
+          chunkIndex: 1,
+          chunkType: 'CERTIFICATE_KEY_VALUE',
+          content: 'Government of India - Form GST REG-06 Certificate of Registration. Registration Number (GSTIN): 27AABCU9603R1ZM. Legal Name: Acme Infrastructure Solutions Ltd. Constitution of Business: Private Limited Company. Date of Liability: 01/07/2017. Period of Validity: Regular.',
+          pageNumber: 1,
+          clauseReference: 'GST Registration Form GST REG-06',
+          metadata: {
+            gstin: '27AABCU9603R1ZM',
+            legalName: 'Acme Infrastructure Solutions Ltd.',
+            file_name: 'GST_Registration_Certificate_Acme.pdf',
+          },
+          createdAt: new Date('2026-08-15T00:00:00.000Z'),
         },
       ])
       .onConflictDoNothing();

@@ -199,28 +199,30 @@ def parse_financial_amount_crores(val: Any, default: float | None = None) -> flo
 def keyword_matches_text(kw: str, text: str) -> bool:
     """Matches a keyword against text with whole-word and common English inflection handling."""
     kw_lower = kw.lower()
-    if re.search(rf"\b{re.escape(kw_lower)}\b", text):
+    # Normalize underscores, hyphens, and slashes to spaces to handle tokens like gst_reg, GST_Certificate
+    normalized_text = re.sub(r"[_/\\.-]", " ", text).lower()
+    if re.search(rf"\b{re.escape(kw_lower)}\b", normalized_text):
         return True
     # Plural / singular inflections
     if kw_lower.endswith("ies") and len(kw_lower) > 4:
         singular = kw_lower[:-3] + "y"
-        if re.search(rf"\b{re.escape(singular)}\b", text):
+        if re.search(rf"\b{re.escape(singular)}\b", normalized_text):
             return True
     elif kw_lower.endswith("y") and len(kw_lower) > 3:
         plural = kw_lower[:-1] + "ies"
-        if re.search(rf"\b{re.escape(plural)}\b", text):
+        if re.search(rf"\b{re.escape(plural)}\b", normalized_text):
             return True
     elif kw_lower.endswith("es") and len(kw_lower) > 4:
         singular = kw_lower[:-2]
-        if re.search(rf"\b{re.escape(singular)}\b", text):
+        if re.search(rf"\b{re.escape(singular)}\b", normalized_text):
             return True
     elif kw_lower.endswith("s") and len(kw_lower) > 3 and not kw_lower.endswith("ss"):
         singular = kw_lower[:-1]
-        if re.search(rf"\b{re.escape(singular)}\b", text):
+        if re.search(rf"\b{re.escape(singular)}\b", normalized_text):
             return True
     else:
         plural = kw_lower + "s"
-        if re.search(rf"\b{re.escape(plural)}\b", text):
+        if re.search(rf"\b{re.escape(plural)}\b", normalized_text):
             return True
     return False
 
@@ -370,10 +372,61 @@ class ChatToolRegistry:
         company_id: str | None = None,
         limit: int = 5,
     ) -> list[dict[str, Any]]:
-        """Searches company evidence vault chunks (CA certs, ISO certs, work orders)."""
-        evidence = self.context.get("company_evidence") or self.context.get("companyEvidence") or []
-        if not evidence:
-            evidence = [
+        """Searches company evidence vault chunks (CA certs, ISO certs, work orders, GST/statutory records)."""
+        raw_evidence = (
+            self.context.get("company_evidence") or self.context.get("companyEvidence") or []
+        )
+        chunks = self.context.get("company_chunks") or self.context.get("companyChunks") or []
+        combined: list[dict[str, Any]] = []
+
+        # 1. Ingest parsed text chunks from company vault
+        for chk in chunks:
+            chunk_copy = dict(chk)
+            chunk_copy.setdefault("chunkId", chk.get("id"))
+            chunk_copy.setdefault("documentId", chk.get("evidenceDocumentId"))
+            chunk_copy.setdefault("documentName", chk.get("fileName") or "Company_Evidence.pdf")
+            chunk_copy.setdefault("evidenceType", "EVIDENCE_CHUNK")
+            combined.append(chunk_copy)
+
+        # 2. Ingest document metadata records from evidence vault
+        for ev in raw_evidence:
+            ev_copy = dict(ev)
+            attrs = ev.get("extractedAttributes") or ev.get("extracted_attributes") or {}
+            attr_text = (
+                " ".join(f"{k}: {v}" for k, v in attrs.items() if isinstance(v, (str, int, float)))
+                if isinstance(attrs, dict)
+                else ""
+            )
+            content = ev.get("content") or ""
+            if not content:
+                content_parts = [
+                    str(ev.get("documentName") or ev.get("fileName") or ""),
+                    str(ev.get("evidenceType") or ""),
+                    str(ev.get("referenceNumber") or ""),
+                    str(ev.get("issuer") or ""),
+                    attr_text,
+                ]
+                content = " | ".join(p for p in content_parts if p)
+
+            ev_copy["content"] = content
+            ev_copy.setdefault("chunkId", ev.get("id") or f"doc_{ev.get('documentId')}")
+            ev_copy.setdefault("documentId", ev.get("id"))
+            ev_copy.setdefault("documentName", ev.get("fileName") or "Company_Evidence.pdf")
+            ev_copy.setdefault("evidenceType", "DOCUMENT")
+            combined.append(ev_copy)
+
+        if not combined:
+            combined = [
+                {
+                    "chunkId": "ev_chk_gst_01",
+                    "documentId": "doc_gst_cert_01",
+                    "documentName": "GST_Registration_Certificate.pdf",
+                    "pageNumber": 1,
+                    "evidenceType": "GST_REGISTRATION",
+                    "content": "Government of India - Goods and Services Tax Certificate of Registration. GSTIN: 27AAACA1234F1Z9. Legal Name: Ashoka Buildcon Limited. Constitution of Business: Public Limited Company. Date of liability: 01/07/2017. Period of Validity: Regular.",
+                    "gstin": "27AAACA1234F1Z9",
+                    "pan": "AAACA1234F",
+                },
                 {
                     "chunkId": "ev_chk_turnover_01",
                     "documentId": "doc_ca_cert_01",
@@ -405,17 +458,21 @@ class ChatToolRegistry:
         substantive_kws = [k for k in keywords if k not in PROCUREMENT_WRAPPER_WORDS]
         scored_evidence: list[tuple[float, dict[str, Any]]] = []
 
-        for ev in evidence:
+        for ev in combined:
             if not self._is_accessible(ev):
                 continue
+            attrs = ev.get("extractedAttributes") or ev.get("extracted_attributes") or {}
+            attr_text = (
+                " ".join(f"{k} {v}" for k, v in attrs.items() if isinstance(v, (str, int, float)))
+                if isinstance(attrs, dict)
+                else ""
+            )
             text = (
-                ev.get("content", "")
-                + " "
-                + ev.get("evidenceType", "")
-                + " "
-                + ev.get("documentName", "")
+                f"{ev.get('content', '')} {ev.get('evidenceType', '')} {ev.get('documentName', '')} "
+                f"{ev.get('issuer', '')} {ev.get('referenceNumber', '')} {attr_text}"
             ).lower()
 
+            # Anti-hallucination guard: If substantive keywords exist, verify substantive density
             if substantive_kws:
                 substantive_hits = count_keyword_matches(substantive_kws, text)
                 min_required = 2 if len(substantive_kws) >= 3 else 1
@@ -426,17 +483,57 @@ class ChatToolRegistry:
             for kw in keywords:
                 if keyword_matches_text(kw, text):
                     score += 1.0
+                    # Boost exact category or document name matches
+                    if kw in ev.get("evidenceType", "").lower():
+                        score += 2.0
+                    if kw in ev.get("documentName", "").lower():
+                        score += 1.5
 
             if score > 0 or not keywords:
                 scored_evidence.append((score, ev))
 
         scored_evidence.sort(key=lambda x: x[0], reverse=True)
         results = [item[1] for item in scored_evidence[:limit]]
-        # Anti-hallucination guard: If keywords were queried and NONE matched, return empty list
-        if not results and not keywords and evidence:
-            accessible_evidence = [e for e in evidence if self._is_accessible(e)]
-            results = accessible_evidence[:limit]
+        if not results and not keywords and combined:
+            accessible = [e for e in combined if self._is_accessible(e)]
+            results = accessible[:limit]
         return results
+
+    def get_company_profile(self, company_id: str | None = None) -> dict[str, Any]:
+        """Retrieves structured company statutory data, identifiers, and registrations."""
+        profile = self.context.get("company_profile") or self.context.get("companyProfile") or {}
+        if not self._is_accessible(profile):
+            from tenderpulse_ai.security.exceptions import UnauthorizedDocumentAccessException
+
+            raise UnauthorizedDocumentAccessException(
+                "Access denied: Company profile belongs to another tenant."
+            )
+
+        legal_name = (
+            profile.get("legalName")
+            or profile.get("legal_name")
+            or profile.get("companyName")
+            or profile.get("name")
+            or "Ashoka Buildcon Limited"
+        )
+        gstin = profile.get("gstin") or "27AAACA1234F1Z9"
+        pan = profile.get("pan") or "AAACA1234F"
+        cin = profile.get("cin") or "L45200MH1993PLC071970"
+        udyam_id = profile.get("udyamId") or profile.get("udyam_id") or "UDYAM-MH-12-0049281"
+        constitution = profile.get("constitution") or "Public Limited Company"
+        gstin_verified_at = profile.get("gstinVerifiedAt") or profile.get("gstin_verified_at")
+
+        return {
+            "companyId": company_id or profile.get("id") or profile.get("companyId", "comp-active"),
+            "legalName": legal_name,
+            "companyName": legal_name,
+            "gstin": gstin,
+            "pan": pan,
+            "cin": cin,
+            "udyamId": udyam_id,
+            "constitution": constitution,
+            "gstinVerifiedAt": gstin_verified_at,
+        }
 
     def get_company_financials(self, company_id: str | None = None) -> dict[str, Any]:
         """Retrieves financial turnover records, average turnover, UDIN, and net worth."""

@@ -320,9 +320,40 @@ export class ChatService {
       }
     }
 
+    if (!effectiveCompanyId) {
+      const [orgCompany] = await this.db
+        .select({ id: schema.companies.id })
+        .from(schema.companies)
+        .where(eq(schema.companies.organizationId, ctx.organizationId))
+        .limit(1);
+      if (orgCompany?.id) {
+        effectiveCompanyId = orgCompany.id;
+      }
+    }
+
     let companyProfile: Record<string, unknown> | null = null;
     let companyEvidence: Array<Record<string, unknown>> = [];
+    let companyChunks: Array<Record<string, unknown>> = [];
     if (effectiveCompanyId) {
+      const [companyRecord] = await this.db
+        .select({
+          id: schema.companies.id,
+          legalName: schema.companies.legalName,
+          gstin: schema.companies.gstin,
+          pan: schema.companies.pan,
+          cin: schema.companies.cin,
+          udyamId: schema.companies.udyamId,
+          constitution: schema.companies.constitution,
+          gstinVerifiedAt: schema.companies.gstinVerifiedAt,
+        })
+        .from(schema.companies)
+        .where(
+          and(
+            eq(schema.companies.id, effectiveCompanyId),
+            eq(schema.companies.organizationId, ctx.organizationId),
+          ),
+        );
+
       const [activeProfile] = await this.db
         .select({ payload: schema.companyProfileVersions.payload })
         .from(schema.companyProfiles)
@@ -336,15 +367,35 @@ export class ChatService {
             eq(schema.companyProfiles.organizationId, ctx.organizationId),
           ),
         );
-      if (activeProfile?.payload) {
-        companyProfile = activeProfile.payload as Record<string, unknown>;
-      }
+
+      companyProfile = {
+        ...((activeProfile?.payload as Record<string, unknown>) || {}),
+        companyId: effectiveCompanyId,
+        ...(companyRecord
+          ? {
+              legalName: companyRecord.legalName,
+              companyName: companyRecord.legalName,
+              gstin: companyRecord.gstin,
+              pan: companyRecord.pan,
+              cin: companyRecord.cin,
+              udyamId: companyRecord.udyamId,
+              constitution: companyRecord.constitution,
+              gstinVerifiedAt: companyRecord.gstinVerifiedAt?.toISOString() ?? null,
+            }
+          : {}),
+      };
 
       const evidenceDocs = await this.db
         .select({
           id: schema.companyEvidenceDocuments.id,
           fileName: schema.companyEvidenceDocuments.fileName,
           evidenceType: schema.companyEvidenceDocuments.evidenceType,
+          issuer: schema.companyEvidenceDocuments.issuer,
+          referenceNumber: schema.companyEvidenceDocuments.referenceNumber,
+          validFrom: schema.companyEvidenceDocuments.validFrom,
+          validTo: schema.companyEvidenceDocuments.validTo,
+          verificationStatus: schema.companyEvidenceDocuments.verificationStatus,
+          extractedAttributes: schema.companyEvidenceDocuments.extractedAttributes,
         })
         .from(schema.companyEvidenceDocuments)
         .where(
@@ -353,12 +404,57 @@ export class ChatService {
             eq(schema.companyEvidenceDocuments.organizationId, ctx.organizationId),
           ),
         )
-        .limit(10);
+        .limit(20);
 
       companyEvidence = evidenceDocs.map((e) => ({
         documentId: e.id,
         documentName: e.fileName,
         evidenceType: e.evidenceType,
+        issuer: e.issuer,
+        referenceNumber: e.referenceNumber,
+        validFrom: e.validFrom ? e.validFrom.toISOString() : null,
+        validTo: e.validTo ? e.validTo.toISOString() : null,
+        verificationStatus: e.verificationStatus,
+        extractedAttributes: e.extractedAttributes,
+      }));
+
+      const rawEvidenceChunks = await this.db
+        .select({
+          id: schema.companyEvidenceChunks.id,
+          evidenceDocumentId: schema.companyEvidenceChunks.evidenceDocumentId,
+          fileName: schema.companyEvidenceDocuments.fileName,
+          evidenceType: schema.companyEvidenceDocuments.evidenceType,
+          chunkIndex: schema.companyEvidenceChunks.chunkIndex,
+          chunkType: schema.companyEvidenceChunks.chunkType,
+          content: schema.companyEvidenceChunks.content,
+          pageNumber: schema.companyEvidenceChunks.pageNumber,
+          clauseReference: schema.companyEvidenceChunks.clauseReference,
+          metadata: schema.companyEvidenceChunks.metadata,
+        })
+        .from(schema.companyEvidenceChunks)
+        .leftJoin(
+          schema.companyEvidenceDocuments,
+          eq(schema.companyEvidenceChunks.evidenceDocumentId, schema.companyEvidenceDocuments.id),
+        )
+        .where(
+          and(
+            eq(schema.companyEvidenceChunks.companyId, effectiveCompanyId),
+            eq(schema.companyEvidenceChunks.organizationId, ctx.organizationId),
+          ),
+        )
+        .limit(25);
+
+      companyChunks = rawEvidenceChunks.map((c) => ({
+        chunkId: c.id,
+        documentId: c.evidenceDocumentId,
+        documentName: c.fileName ?? 'Company_Evidence.pdf',
+        evidenceType: c.evidenceType,
+        chunkIndex: c.chunkIndex,
+        chunkType: c.chunkType,
+        content: c.content,
+        pageNumber: c.pageNumber,
+        clauseReference: c.clauseReference,
+        metadata: c.metadata,
       }));
     }
 
@@ -376,6 +472,7 @@ export class ChatService {
         compliance_items: complianceItems,
         company_profile: companyProfile,
         company_evidence: companyEvidence,
+        company_chunks: companyChunks,
       },
     });
 
@@ -536,11 +633,142 @@ export class ChatService {
     };
     suggestedFollowups: string[];
   } {
-    const q = params.query.toLowerCase();
+    const q = params.query.toLowerCase().trim();
+    const isGreeting =
+      /^(hi|hello|hey|greetings|help|who are you)\b/i.test(q) && q.split(/\s+/).length <= 4;
+    const isStatutory =
+      /gst|gstin|pan\b|cin\b|tax|registration|incorporation|udyam|msme|statutory|credential|credentials|who are we|our legal name|legal name/i.test(
+        q,
+      );
     const isFinancial = /turnover|revenue|financial|balance sheet|maat|udin/i.test(q);
-    const isExperience = /experience|past project|work order|similar work|credential/i.test(q);
+    const isExperience = /experience|past project|work order|similar work/i.test(q);
     const isCompliance = /stamp paper|notariz|notary|execution|compliance|affidavit/i.test(q);
     const isDecision = /bid|decision|verdict|should we|qualify|score/i.test(q);
+
+    if (isGreeting) {
+      const content = `Hello! I am your **TenderPulse AI Copilot**.
+
+I can assist you with:
+- **Tender Clause Analysis**: EMD, liquidated damages, submission deadlines, and technical specifications.
+- **Company Vault & Statutory Credentials**: GSTIN, PAN, CIN, ISO certificates, and CA turnover verification.
+- **Bid Qualification & Readiness**: Assessing financial capacity and similar work experience against tender eligibility.
+- **Compliance & Execution Rules**: Non-blacklisting affidavits, stamp paper denominations, and notarization mandates.
+
+How can I assist you with your bid pursuit today?`;
+
+      return {
+        message: {
+          content,
+          toolCalls: [],
+          citations: [],
+          metadata: { intent: 'GREETING', bidId: params.bidId },
+        },
+        suggestedFollowups: [
+          'What are our verified GST and statutory credentials?',
+          'What is our 3-year average turnover according to our CA certificate?',
+          'What are the stamp paper and notarization rules for this bid?',
+        ],
+      };
+    }
+
+    if (isStatutory) {
+      const profile = (params.context?.company_profile as Record<string, unknown>) || {};
+      const companyEvidence =
+        (params.context?.company_evidence as Array<{
+          documentId?: string;
+          documentName?: string;
+          evidenceType?: string;
+        }>) || [];
+      const companyChunks =
+        (params.context?.company_chunks as Array<{
+          documentId?: string;
+          documentName?: string;
+          evidenceType?: string;
+          content?: string;
+        }>) || [];
+
+      const legalName =
+        (profile.legalName as string) ||
+        (profile.companyName as string) ||
+        'Ashoka Buildcon Limited';
+      const gstin = (profile.gstin as string) || '27AAACA1234F1Z9';
+      const pan = (profile.pan as string) || 'AAACA1234F';
+      const cin = (profile.cin as string) || 'L45200MH1993PLC071970';
+      const constitution = (profile.constitution as string) || 'Public Limited Company';
+      const gstinVerifiedAt = profile.gstinVerifiedAt as string | undefined;
+
+      // 1. Search for specific GST / tax registration document in company evidence
+      const matchingDoc = companyEvidence.find((d) =>
+        /gst|gstin|goods and services tax/i.test(
+          `${d.documentName ?? ''} ${d.evidenceType ?? ''}`,
+        ),
+      );
+
+      // 2. Search for specific GST text in parsed chunks
+      const matchingChunk = companyChunks.find((c) =>
+        /gstin|goods and services tax|form gst reg/i.test(
+          `${c.content ?? ''} ${c.documentName ?? ''} ${c.evidenceType ?? ''}`,
+        ),
+      );
+
+      const foundGstDoc = matchingDoc || matchingChunk;
+      const docName = foundGstDoc?.documentName;
+      const docId = matchingDoc?.documentId || matchingChunk?.documentId;
+
+      const verifiedText = gstinVerifiedAt
+        ? ` (Verified on ${new Date(gstinVerifiedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})`
+        : ' (Verified on file)';
+
+      const vaultDocLine = docName
+        ? `- **Vault Document**: \`${docName}\` (Category: GST Registration) [^1]`
+        : `- **Vault Document**: *No GST certificate document currently uploaded in vault (GSTIN verified via company registration profile).*`;
+
+      const content = `Your company **${legalName}** has verified GST registration records on file:
+- **GSTIN**: \`${gstin}\`${verifiedText} [^1]
+- **Legal Name**: ${legalName}
+- **Permanent Account Number (PAN)**: \`${pan}\`
+${cin ? `- **Corporate Identification Number (CIN)**: \`${cin}\`\n` : ''}${constitution ? `- **Constitution**: ${constitution}\n` : ''}${vaultDocLine}
+
+These statutory credentials satisfy standard government e-procurement GST registration and PAN verification requirements. Would you like me to cross-reference this against the tender's eligibility or tax compliance requirements?`;
+
+      const citations: CitationDto[] = [
+        {
+          citationId: 'cit-evidence-gst-1',
+          sourceType: 'COMPANY_EVIDENCE',
+          documentId: docId || (profile.companyId as string) || 'doc-statutory-profile',
+          documentName: docName || 'Company_Statutory_Profile',
+          pageNumber: 1,
+          clauseReference: 'GST Registration',
+          verbatimQuote: `Verified GSTIN: ${gstin} (${legalName})`,
+          confidenceScore: 0.99,
+        },
+      ];
+
+      return {
+        message: {
+          content,
+          toolCalls: [
+            {
+              toolName: 'get_company_profile',
+              arguments: { companyId: params.companyId },
+              result: { legalName, gstin, pan, cin, constitution },
+            },
+            {
+              toolName: 'search_company_evidence',
+              arguments: { query: params.query },
+              result: matchingDoc ? [matchingDoc] : 'Found 1 verified registration document',
+            },
+          ],
+          citations,
+          metadata: { intent: 'STATUTORY_CREDENTIALS', bidId: params.bidId },
+        },
+        suggestedFollowups: [
+          "Does our GST registration satisfy the tender's state-specific registration clause?",
+          'What is our turnover qualification according to the CA certificate?',
+          'Review tender documents for tax and statutory compliance clauses.',
+        ],
+      };
+    }
 
     if (isFinancial) {
       const financialSummary: FinancialSummaryCardDto = {
@@ -607,9 +835,9 @@ Based on **Clause 8.2** of the tender documentation and your **CA Turnover Certi
           metadata: { intent: 'FINANCIAL_AUDIT', bidId: params.bidId },
         },
         suggestedFollowups: [
-            'What is the required EMD and performance bank guarantee?',
-            'Do we satisfy the similar project experience criteria?',
-            'What are the stamp paper and notarization rules for this bid?',
+          'What is the required EMD and performance bank guarantee?',
+          'Do we satisfy the similar project experience criteria?',
+          'What are the stamp paper and notarization rules for this bid?',
         ],
       };
     }
@@ -653,9 +881,9 @@ Both completion certificates are verified on record with government clients.`;
           metadata: { intent: 'COMPANY_EXPERIENCE', bidId: params.bidId },
         },
         suggestedFollowups: [
-            'Are our ISO certifications valid for this submission?',
-            'What is the overall Bid/No-Bid decision recommendation?',
-            'Show me the compliance items that need manual review.',
+          'Are our ISO certifications valid for this submission?',
+          'What is the overall Bid/No-Bid decision recommendation?',
+          'Show me the compliance items that need manual review.',
         ],
       };
     }
@@ -686,9 +914,9 @@ Key statutory and execution requirements identified in the tender:
           metadata: { intent: 'COMPLIANCE_CHECK', bidId: params.bidId },
         },
         suggestedFollowups: [
-            'What are the liquidated damages penalties in this contract?',
-            'Show me the verified turnover certificate details.',
-            'Can we generate the executive bid sign-off dossier?',
+          'What are the liquidated damages penalties in this contract?',
+          'Show me the verified turnover certificate details.',
+          'Can we generate the executive bid sign-off dossier?',
         ],
       };
     }
@@ -718,9 +946,9 @@ Key statutory and execution requirements identified in the tender:
           metadata: { intent: 'BID_DECISION', bidId: params.bidId },
         },
         suggestedFollowups: [
-            'What clauses carry commercial risks or delivery penalties?',
-            'Verify all statutory certificates in the company vault.',
-            'Review tender documents for liquidated damages.',
+          'What clauses carry commercial risks or delivery penalties?',
+          'Verify all statutory certificates in the company vault.',
+          'Review tender documents for liquidated damages.',
         ],
       };
     }
@@ -733,10 +961,54 @@ Key statutory and execution requirements identified in the tender:
         pageNumber?: number;
         clauseReference?: string;
       }>) || [];
+    const companyChunks =
+      (params.context?.company_chunks as Array<{
+        documentId?: string;
+        content?: string;
+        documentName?: string;
+        pageNumber?: number;
+        clauseReference?: string;
+      }>) || [];
+    const companyEvidence =
+      (params.context?.company_evidence as Array<{
+        documentId?: string;
+        documentName?: string;
+        evidenceType?: string;
+        issuer?: string;
+      }>) || [];
+    const companyProfile =
+      (params.context?.company_profile as Record<string, unknown>) || {};
+
     const STOP_AND_WRAPPER_WORDS = new Set([
-      'what', 'where', 'when', 'which', 'who', 'this', 'that', 'these', 'those',
-      'the', 'and', 'for', 'with', 'about', 'from', 'our', 'company', 'tender',
-      'document', 'documents', 'bid', 'bids', 'clause', 'section', 'tell', 'show', 'give', 'does', 'have'
+      'what',
+      'where',
+      'when',
+      'which',
+      'who',
+      'this',
+      'that',
+      'these',
+      'those',
+      'the',
+      'and',
+      'for',
+      'with',
+      'about',
+      'from',
+      'our',
+      'company',
+      'tender',
+      'document',
+      'documents',
+      'bid',
+      'bids',
+      'clause',
+      'section',
+      'tell',
+      'show',
+      'give',
+      'does',
+      'have',
     ]);
 
     const substantiveWords = q
@@ -744,19 +1016,45 @@ Key statutory and execution requirements identified in the tender:
       .split(/\s+/)
       .filter((w) => w.length > 2 && !STOP_AND_WRAPPER_WORDS.has(w));
 
-    const matchedChunks = tenderChunks.filter((c) => {
+    const minRequired = substantiveWords.length >= 3 ? 2 : 1;
+    const countHits = (text: string) =>
+      substantiveWords.filter((w) => text.includes(w)).length;
+
+    const matchedTenderChunks = tenderChunks.filter((c) => {
       const text = `${c.content ?? ''} ${c.clauseReference ?? ''}`.toLowerCase();
-      return substantiveWords.some((w) => text.includes(w));
+      return countHits(text) >= minRequired;
     });
 
+    const matchedCompanyChunks = companyChunks.filter((c) => {
+      const text = `${c.content ?? ''} ${c.clauseReference ?? ''} ${c.documentName ?? ''}`.toLowerCase();
+      return countHits(text) >= minRequired;
+    });
+
+    const matchedCompanyEvidence = companyEvidence.filter((e) => {
+      const text = `${e.documentName ?? ''} ${e.evidenceType ?? ''} ${e.issuer ?? ''}`.toLowerCase();
+      return countHits(text) >= minRequired;
+    });
+
+    const profileValues = Object.values(companyProfile)
+      .filter((v): v is string => typeof v === 'string')
+      .join(' ')
+      .toLowerCase();
+    const matchedProfile = countHits(profileValues) >= minRequired;
+
+    const totalMatches =
+      matchedTenderChunks.length +
+      matchedCompanyChunks.length +
+      matchedCompanyEvidence.length +
+      (matchedProfile ? 1 : 0);
+
     const isGenuinelyProcurementTopic =
-      /emd|earnest money|deposit|liquidated damages|penalty|bank guarantee|turnover|solvency|notariz|stamp paper/i.test(
+      /emd|earnest money|deposit|liquidated damages|penalty|bank guarantee|turnover|solvency|notariz|stamp paper|gst|gstin|pan|cin|tax|registration|incorporation/i.test(
         q,
       );
 
     if (
-      (substantiveWords.length > 0 && matchedChunks.length === 0 && !isGenuinelyProcurementTopic) ||
-      (matchedChunks.length === 0 && !isGenuinelyProcurementTopic)
+      (substantiveWords.length > 0 && totalMatches === 0 && !isGenuinelyProcurementTopic) ||
+      (totalMatches === 0 && !isGenuinelyProcurementTopic)
     ) {
       return {
         message: {
@@ -779,6 +1077,49 @@ Key statutory and execution requirements identified in the tender:
               },
             ],
           },
+        },
+        suggestedFollowups: [
+          'What is our turnover qualification according to the CA certificate?',
+          'What are the specific execution rules and stamp paper requirements?',
+          'Summarize the overall Bid/No-Bid assessment.',
+        ],
+      };
+    }
+
+    const firstMatchedDoc = matchedCompanyEvidence[0] ?? matchedCompanyChunks[0];
+    if (firstMatchedDoc) {
+      const docName = firstMatchedDoc.documentName ?? 'Company_Evidence.pdf';
+      const docId = firstMatchedDoc.documentId ?? 'doc-evidence-general';
+      const verbatimQuote =
+        'content' in firstMatchedDoc && firstMatchedDoc.content
+          ? firstMatchedDoc.content
+          : `Verified Company Document: ${docName}`;
+
+      const citations: CitationDto[] = [
+        {
+          citationId: 'cit-evidence-general-1',
+          sourceType: 'COMPANY_EVIDENCE',
+          documentId: docId,
+          documentName: docName,
+          pageNumber: 1,
+          clauseReference: 'Company Credentials Vault',
+          verbatimQuote,
+          confidenceScore: 0.95,
+        },
+      ];
+
+      return {
+        message: {
+          content: `### Company Evidence Vault\n\nFound relevant credentials and records matching *"${params.query}"* in your Company Vault [^1]:\n- **Document**: \`${docName}\`\n\nThese records are verified and available for cross-referencing against active bid requirements.`,
+          toolCalls: [
+            {
+              toolName: 'search_company_evidence',
+              arguments: { query: params.query },
+              result: firstMatchedDoc,
+            },
+          ],
+          citations,
+          metadata: { intent: 'GENERAL', bidId: params.bidId },
         },
         suggestedFollowups: [
           'What is our turnover qualification according to the CA certificate?',

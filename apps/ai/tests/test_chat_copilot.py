@@ -316,3 +316,199 @@ async def test_chat_copilot_followup_history_intent():
     response = await agent.query(request)
     assert response.message.metadata.get("intent") == "FINANCIAL_AUDIT"
     assert response.message.financial_summary is not None
+
+
+@pytest.mark.asyncio
+async def test_chat_copilot_statutory_gst_records_retrieval():
+    """Verifies that 'GST records' retrieves company statutory credentials and vault evidence without false rejection."""
+    from tenderpulse_ai.chat.schemas import CitationSourceType
+
+    agent = ChatCopilotAgent()
+
+    sec_ctx = SecurityContext(
+        tenant_id="org_test_001",
+        company_id="comp_test_001",
+        user_id="user_test_001",
+        workflow_run_id="run_test_gst_01",
+        roles=["BID_MANAGER"],
+        permissions=["bids.read", "chat.query"],
+    )
+
+    request = ChatQueryRequest(
+        security_context=sec_ctx,
+        query="GST records",
+        bid_id="bid_test_101",
+        company_id="comp_test_001",
+    )
+
+    response = await agent.query(request)
+    assert response.message.metadata.get("intent") == "STATUTORY_CREDENTIALS"
+    assert "27AAACA1234F1Z9" in response.message.content
+    assert "Ashoka Buildcon Limited" in response.message.content
+    assert "No verifiable evidence" not in response.message.content
+    assert "Grounded Evidence Assessment" not in response.message.content
+
+    # Citations should include company evidence
+    citations = response.message.citations or []
+    assert len(citations) > 0
+    assert any(c.source_type == CitationSourceType.COMPANY_EVIDENCE for c in citations)
+
+
+@pytest.mark.asyncio
+async def test_chat_copilot_conversational_greeting():
+    """Verifies that friendly greetings return helpful copilot introduction without rejection errors."""
+    agent = ChatCopilotAgent()
+
+    sec_ctx = SecurityContext(
+        tenant_id="org_test_001",
+        company_id="comp_test_001",
+        user_id="user_test_001",
+        workflow_run_id="run_test_greeting_01",
+        roles=["BID_MANAGER"],
+        permissions=["bids.read", "chat.query"],
+    )
+
+    request = ChatQueryRequest(
+        security_context=sec_ctx,
+        query="hello",
+        bid_id="bid_test_101",
+        company_id="comp_test_001",
+    )
+
+    response = await agent.query(request)
+    assert response.message.metadata.get("intent") == "GREETING"
+    assert "TenderPulse AI Copilot" in response.message.content
+    assert "No verifiable evidence" not in response.message.content
+    assert len(response.suggested_followups) > 0
+
+
+@pytest.mark.asyncio
+async def test_chat_copilot_adversarial_out_of_domain_query():
+    """Verifies that out-of-domain queries strictly trigger the anti-hallucination guard with 0 citations."""
+    agent = ChatCopilotAgent()
+
+    sec_ctx = SecurityContext(
+        tenant_id="org_test_001",
+        company_id="comp_test_001",
+        user_id="user_test_001",
+        workflow_run_id="run_test_adversarial_01",
+        roles=["BID_MANAGER"],
+        permissions=["bids.read", "chat.query"],
+    )
+
+    request = ChatQueryRequest(
+        security_context=sec_ctx,
+        query="What is the secret recipe for chocolate chip cookies in this highway tender?",
+        bid_id="bid_test_101",
+        company_id="comp_test_001",
+    )
+
+    response = await agent.query(request)
+    assert "Anti-Hallucination Policy" in response.message.content
+    assert "No verifiable evidence" in response.message.content
+    assert len(response.message.citations or []) == 0
+    uncertainties = response.message.metadata.get("uncertainties", [])
+    assert any(u.get("type") == "LACK_OF_EVIDENCE" for u in uncertainties)
+
+
+@pytest.mark.asyncio
+async def test_chat_copilot_custom_context_statutory_retrieval():
+    """Verifies that contextual company profile in request overrides defaults."""
+    agent = ChatCopilotAgent()
+
+    sec_ctx = SecurityContext(
+        tenant_id="org_test_001",
+        company_id="comp_tata_001",
+        user_id="user_test_001",
+        workflow_run_id="run_test_tata_01",
+        roles=["BID_MANAGER"],
+        permissions=["bids.read", "chat.query"],
+    )
+
+    request = ChatQueryRequest(
+        security_context=sec_ctx,
+        query="What is our GSTIN and legal registration?",
+        bid_id="bid_test_101",
+        company_id="comp_tata_001",
+        context={
+            "company_profile": {
+                "legalName": "Tata Projects Limited",
+                "gstin": "27AAACT9999P1Z1",
+                "pan": "AAACT9999P",
+                "cin": "U45200MH1979PLC021573",
+                "constitution": "Public Limited Company",
+            },
+            "company_evidence": [
+                {
+                    "documentId": "doc_tata_gst",
+                    "documentName": "Tata_Projects_GST_Registration.pdf",
+                    "evidenceType": "GST_REGISTRATION",
+                    "content": "Form GST REG-06. Tata Projects Limited. GSTIN: 27AAACT9999P1Z1.",
+                }
+            ],
+        },
+    )
+
+    response = await agent.query(request)
+    assert response.message.metadata.get("intent") == "STATUTORY_CREDENTIALS"
+    assert "Tata Projects Limited" in response.message.content
+    assert "27AAACT9999P1Z1" in response.message.content
+    assert "Tata_Projects_GST_Registration.pdf" in response.message.content
+    assert len(response.message.citations or []) >= 1
+
+
+@pytest.mark.asyncio
+async def test_chat_copilot_adversarial_hybrid_prompt():
+    """Verifies that queries mixing conversational greetings with technical tender questions execute smoothly."""
+    agent = ChatCopilotAgent()
+
+    sec_ctx = SecurityContext(
+        tenant_id="org_test_001",
+        company_id="comp_test_001",
+        user_id="user_test_001",
+        workflow_run_id="run_test_hybrid_01",
+        roles=["BID_MANAGER"],
+        permissions=["bids.read", "chat.query"],
+    )
+
+    request = ChatQueryRequest(
+        security_context=sec_ctx,
+        query="Hello, does GST apply to NIT Clause 4.1 for EMD?",
+        bid_id="bid_test_101",
+        company_id="comp_test_001",
+    )
+
+    response = await agent.query(request)
+    assert "No verifiable evidence" not in response.message.content
+    assert len(response.message.citations or []) > 0
+
+
+@pytest.mark.asyncio
+async def test_chat_copilot_company_evidence_general_intent():
+    """Verifies that non-statutory company evidence queries (like ISO certs) are retrieved and cited under GENERAL intent."""
+    agent = ChatCopilotAgent()
+
+    sec_ctx = SecurityContext(
+        tenant_id="org_test_001",
+        company_id="comp_test_001",
+        user_id="user_test_001",
+        workflow_run_id="run_test_iso_01",
+        roles=["BID_MANAGER"],
+        permissions=["bids.read", "chat.query"],
+    )
+
+    request = ChatQueryRequest(
+        security_context=sec_ctx,
+        query="Do we have an ISO 9001 certificate?",
+        bid_id="bid_test_101",
+        company_id="comp_test_001",
+    )
+
+    response = await agent.query(request)
+    assert "ISO" in response.message.content
+    assert "No verifiable evidence" not in response.message.content
+    assert len(response.message.citations or []) > 0
+    citations = response.message.citations or []
+    from tenderpulse_ai.chat.schemas import CitationSourceType
+
+    assert any(c.source_type == CitationSourceType.COMPANY_EVIDENCE for c in citations)

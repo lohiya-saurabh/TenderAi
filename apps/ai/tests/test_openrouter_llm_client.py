@@ -290,3 +290,105 @@ async def test_deterministic_validator_rejects_hallucinated_llm_quote():
     clean_quote = " ".join(hallucinated_candidate.provenance.verbatim_quote.lower().split())
     quote_in_page = clean_quote in raw_page_text.lower()
     assert quote_in_page is False
+
+
+@pytest.mark.asyncio
+async def test_openai_compatible_client_generate_chat_completion_success():
+    sample_response = {
+        "choices": [
+            {
+                "message": {
+                    "role": "assistant",
+                    "content": "Your company Ashoka Buildcon has verified GST records on file.",
+                }
+            }
+        ]
+    }
+
+    def handler(request: httpx.Request):
+        assert request.headers.get("authorization") == "Bearer test-chat-key"
+        assert request.headers.get("http-referer") == "https://tenderpulse.ai"
+        body = json.loads(request.content)
+        assert body["model"] == "google/gemini-2.0-flash-001"
+        assert len(body["messages"]) == 1
+        assert body["messages"][0]["content"] == "Hello Copilot"
+        return httpx.Response(200, json=sample_response)
+
+    transport = httpx.MockTransport(handler)
+    mock_client = httpx.AsyncClient(transport=transport)
+    client = OpenAICompatibleLlmClient(
+        api_key="test-chat-key",
+        base_url="https://openrouter.ai/api/v1",
+        model="google/gemini-2.0-flash-001",
+        client=mock_client,
+    )
+
+    result = await client.generate_chat_completion(
+        messages=[{"role": "user", "content": "Hello Copilot"}]
+    )
+    assert result == "Your company Ashoka Buildcon has verified GST records on file."
+
+
+@pytest.mark.asyncio
+async def test_openai_compatible_client_generate_chat_completion_with_system_prompt_and_retry():
+    attempts = 0
+
+    def handler(request: httpx.Request):
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            return httpx.Response(503, json={"error": "Service temporarily unavailable"})
+        body = json.loads(request.content)
+        assert body["messages"][0]["role"] == "system"
+        assert body["messages"][0]["content"] == "You are a procurement expert."
+        assert body["messages"][1]["role"] == "user"
+        return httpx.Response(
+            200,
+            json={
+                "choices": [
+                    {
+                        "message": {
+                            "role": "assistant",
+                            "content": "Here is the statutory analysis.",
+                        }
+                    }
+                ]
+            },
+        )
+
+    transport = httpx.MockTransport(handler)
+    mock_client = httpx.AsyncClient(transport=transport)
+    client = OpenAICompatibleLlmClient(
+        api_key="test-chat-key",
+        base_url="https://openrouter.ai/api/v1",
+        model="google/gemini-2.0-flash-001",
+        client=mock_client,
+    )
+
+    result = await client.generate_chat_completion(
+        messages=[{"role": "user", "content": "Analyze statutory credentials"}],
+        system_prompt="You are a procurement expert.",
+        max_retries=1,
+    )
+    assert attempts == 2
+    assert result == "Here is the statutory analysis."
+
+
+@pytest.mark.asyncio
+async def test_openai_compatible_client_generate_chat_completion_handles_failure_gracefully():
+    def handler(request: httpx.Request):
+        return httpx.Response(401, json={"error": "Invalid API key"})
+
+    transport = httpx.MockTransport(handler)
+    mock_client = httpx.AsyncClient(transport=transport)
+    client = OpenAICompatibleLlmClient(
+        api_key="bad-key",
+        base_url="https://openrouter.ai/api/v1",
+        model="google/gemini-2.0-flash-001",
+        client=mock_client,
+    )
+
+    result = await client.generate_chat_completion(
+        messages=[{"role": "user", "content": "Test fail"}]
+    )
+    assert result == ""

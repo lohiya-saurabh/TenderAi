@@ -280,4 +280,66 @@ describe('ChatService — Tenant Isolation & Anti-IDOR Suite', () => {
     const uncertainties = (res.message.metadata?.uncertainties as Array<{ type: string }>) ?? [];
     expect(uncertainties.some((u) => u.type === 'LACK_OF_EVIDENCE')).toBe(true);
   });
+
+  it('retrieves statutory GST credentials and company evidence without false lack-of-evidence rejection', async () => {
+    TenantContextHolder.setFallback({
+      organizationId: TENANT_A,
+      userId: USER_A,
+      role: 'ADMIN',
+    });
+
+    const res = await chatService.sendMessage({
+      message: 'GST records',
+      bidId: bidAId,
+    });
+
+    expect(res.message.role).toBe('assistant');
+    expect(res.message.content).not.toContain('No verifiable evidence');
+    expect(res.message.content).not.toContain('Anti-Hallucination Policy');
+    // Acme Infrastructure seeded GSTIN: 27AABCU9603R1ZM
+    expect(res.message.content).toContain('27AABCU9603R1ZM');
+    expect(res.message.content).toContain('Acme Infrastructure Solutions Ltd');
+    expect(res.message.content).toContain('GST_Registration_Certificate_Acme.pdf');
+    expect(res.message.citations ?? []).not.toHaveLength(0);
+    expect(res.message.citations?.[0].sourceType).toBe('COMPANY_EVIDENCE');
+    expect(res.message.citations?.[0].documentName).toBe('GST_Registration_Certificate_Acme.pdf');
+    expect(res.message.metadata?.intent).toBe('STATUTORY_CREDENTIALS');
+  });
+
+  it('resolves primary company evidence and statutory GSTIN when bidId and companyId are omitted', async () => {
+    TenantContextHolder.setFallback({
+      organizationId: TENANT_A,
+      userId: USER_A,
+      role: 'ADMIN',
+    });
+
+    const res = await chatService.sendMessage({
+      message: 'What is our GST number?',
+    });
+
+    expect(res.message.role).toBe('assistant');
+    expect(res.message.content).toContain('27AABCU9603R1ZM');
+    expect(res.message.content).toContain('Acme Infrastructure Solutions Ltd');
+    expect(res.message.citations?.[0].sourceType).toBe('COMPANY_EVIDENCE');
+    expect(res.message.metadata?.intent).toBe('STATUTORY_CREDENTIALS');
+  });
+
+  it('responds conversationally to greetings without lack-of-evidence errors', async () => {
+    TenantContextHolder.setFallback({
+      organizationId: TENANT_A,
+      userId: USER_A,
+      role: 'ADMIN',
+    });
+
+    const res = await chatService.sendMessage({
+      message: 'hello',
+      bidId: bidAId,
+    });
+
+    expect(res.message.role).toBe('assistant');
+    expect(res.message.content).toContain('TenderPulse AI Copilot');
+    expect(res.message.content).not.toContain('No verifiable evidence');
+    expect(res.message.metadata?.intent).toBe('GREETING');
+    expect(res.suggestedFollowups.length).toBeGreaterThan(0);
+  });
 });
