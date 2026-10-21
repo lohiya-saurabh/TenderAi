@@ -1,3 +1,5 @@
+import pytest
+
 from tenderpulse_ai.pipeline import (
     default_tender_extractor,
     extract_clause_reference,
@@ -260,3 +262,70 @@ def test_regression_different_accident_liabilities_same_pipeline():
 
     assert "Rs. 2 Crore" in item_c.description
     assert "Rs. 50 Lakh" in item_c.description
+
+
+def test_liquidated_damages_rule_mutual_exclusion():
+    """Proves that general LD triggers Rule 11 and milestone LD triggers Rule 22 without duplication."""
+    general_doc = (
+        '<untrusted_document_data document_id="doc_g" page="15">\n'
+        "Clause 14.1 Liquidated Damages for Delay: If the Contractor fails to complete the Works within the Time for Completion, "
+        "the Contractor shall pay delay damages in the amount of 0.05% of the Contract Price per day.\n"
+        "</untrusted_document_data>"
+    )
+    items_g = default_tender_extractor("sys", general_doc)
+    ld_g = [i.title for i in items_g if "Liquidated" in i.title or "Delay Damages" in i.title]
+    assert ld_g == ["Completion Schedule & Delay Damages (LD)"]
+
+    milestone_doc = (
+        '<untrusted_document_data document_id="doc_m" page="18">\n'
+        "Clause 12.3 If the Concessionaire fails to achieve any Project Milestone or COD within the scheduled completion date, "
+        "it shall pay damages for delay at the rate of 0.1% of Performance Security per day.\n"
+        "</untrusted_document_data>"
+    )
+    items_m = default_tender_extractor("sys", milestone_doc)
+    ld_m = [i.title for i in items_m if "Liquidated" in i.title or "Delay" in i.title]
+    assert ld_m == ["Liquidated Damages for Construction Milestone & COD Delay"]
+
+
+@pytest.mark.asyncio
+async def test_consolidation_updates_description_when_quote_wins():
+    """Proves that multi-page consolidation adopts winning candidate's description with extracted values."""
+    from tenderpulse_ai.models.llm_client import StructuredLLMClient
+    from tenderpulse_ai.pipeline import (
+        DocumentExtractionRequest,
+        NormalizedPage,
+        ProductionExtractionPipeline,
+    )
+    from tenderpulse_ai.security.context import SecurityContext
+
+    sec_ctx = SecurityContext(
+        tenant_id="org_test",
+        user_id="usr_test",
+        workflow_run_id="run_test",
+        allowed_document_ids=["doc_cons"],
+        purpose="COMPLIANCE_EXTRACTION",
+    )
+    req = DocumentExtractionRequest(
+        security_context=sec_ctx,
+        bid_id="bid_cons",
+        document_id="doc_cons",
+        file_name="NIT.pdf",
+        pages=[
+            NormalizedPage(
+                page_number=2,
+                text="State support grant payable in equal instalments during construction period.",
+            ),
+            NormalizedPage(
+                page_number=18,
+                text="Clause 25.5.1 Rs. 40.09 Crore shall be due and payable to the Concessionaire in 10 equal instalments during the Construction Period.",
+            ),
+        ],
+    )
+    pipeline = ProductionExtractionPipeline(
+        llm_client=StructuredLLMClient(enable_live_client=False)
+    )
+    res = await pipeline.execute(req)
+    grant_item = next(i for i in res.items if "Grant" in i["title"])
+    assert "40.09 Crore" in grant_item["description"]
+    assert "10 Tranches" in grant_item["description"]
+    assert "Pages 2, 18" in grant_item["provenance"]["clauseReference"]

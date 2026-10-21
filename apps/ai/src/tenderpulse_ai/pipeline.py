@@ -1656,17 +1656,7 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                     )
                 )
 
-        # 22. Legal: Liquidated Damages for Delay
-        is_milestone_delay_ld = any(
-            k in text_lower
-            for k in (
-                "liquidated damages",
-                "damages for delay",
-                "fails to achieve any project milestone",
-                "fails to achieve milestone",
-                "cod does not occur",
-            )
-        ) and any(k in text_lower for k in ("performance security", "delay", "damages", "penalty"))
+        # 22. Legal: Liquidated Damages for Delay (reuses is_milestone_delay_ld from line 1166)
         if is_milestone_delay_ld:
             res = get_clause_and_quote(
                 r"(?:damages.*?performance security|liquidated damages|fails to achieve.*?milestone)",
@@ -2831,6 +2821,7 @@ class ProductionExtractionPipeline:
                     )
                 )
                 if prefer_new_quote:
+                    existing["description"] = payload["description"]
                     existing["provenance"]["confidenceScore"] = max(
                         existing["provenance"]["confidenceScore"],
                         payload["provenance"]["confidenceScore"],
