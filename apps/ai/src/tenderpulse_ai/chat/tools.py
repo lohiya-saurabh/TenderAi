@@ -98,18 +98,33 @@ STOP_WORDS = {
     "just",
     "should",
     "now",
+    "you",
+    "your",
+    "how",
+    "does",
+    "have",
+    "has",
+    "had",
+    "can",
+    "could",
+    "would",
+    "tell",
+    "say",
 }
 
 
 PROCUREMENT_WRAPPER_WORDS = {
     "tender",
+    "tenders",
     "document",
     "documents",
     "bid",
     "bids",
     "bidding",
     "clause",
+    "clauses",
     "section",
+    "sections",
     "according",
     "provide",
     "give",
@@ -127,7 +142,52 @@ PROCUREMENT_WRAPPER_WORDS = {
     "our",
     "company",
     "contract",
+    "contracts",
+    "highway",
+    "highways",
+    "project",
+    "projects",
 }
+
+
+OUT_OF_DOMAIN_PATTERNS = re.compile(
+    r"\b("
+    r"rocket|propulsion|spacecraft|satellite\s+launch|missile|"
+    r"nuclear\s+submarine|submarine|torpedo|warship|"
+    r"crypto|cryptocurrency|bitcoin|ethereum|arbitrage|hash\s+rate|"
+    r"veterinary|knee\s+surgery|cattle|livestock|farm\s+animal|"
+    r"pizza|toppings|cookie|cookies|recipe|bake|baking|chocolate\s+chip|"
+    r"bollywood|box\s+office|sports\s+betting|cricket\s+match(?:es)?|national\s+anthem|lyrics"
+    r")\b",
+    re.IGNORECASE,
+)
+
+NON_ANIMAL_OUT_OF_DOMAIN_PATTERNS = re.compile(
+    r"\b("
+    r"rocket|propulsion|spacecraft|satellite\s+launch|missile|"
+    r"nuclear\s+submarine|submarine|torpedo|warship|"
+    r"crypto|cryptocurrency|bitcoin|ethereum|arbitrage|hash\s+rate|"
+    r"knee\s+surgery|pizza|toppings|cookie|cookies|recipe|bake|baking|chocolate\s+chip|"
+    r"bollywood|box\s+office|sports\s+betting|cricket\s+match(?:es)?|national\s+anthem|lyrics"
+    r")\b",
+    re.IGNORECASE,
+)
+
+INFRA_CIVIL_TERMS_PATTERN = re.compile(
+    r"\b(underpass|culvert|crossing|overpass|bypass|bridge|subway|drainage|corridor)\b",
+    re.IGNORECASE,
+)
+
+
+def is_out_of_domain(query: str) -> bool:
+    """Detects adversarial, non-procurement, or ungrounded queries."""
+    if not query or not isinstance(query, str):
+        return False
+    # If the query contains infrastructure engineering terms (e.g. 'cattle underpass'),
+    # evaluate against non-animal adversarial patterns to avoid false rejections.
+    if INFRA_CIVIL_TERMS_PATTERN.search(query):
+        return bool(NON_ANIMAL_OUT_OF_DOMAIN_PATTERNS.search(query))
+    return bool(OUT_OF_DOMAIN_PATTERNS.search(query))
 
 
 def extract_keywords(query: str) -> list[str]:
@@ -236,6 +296,150 @@ def count_keyword_matches(keywords: list[str], text: str) -> int:
     return hits
 
 
+# Bid and Procurement Domain Thesaurus mapping canonical concepts to synonym groups
+PROCUREMENT_DOMAIN_SYNONYMS: list[list[str]] = [
+    # 1. Penalties, delay, liquidated damages
+    [
+        "penalty",
+        "penalties",
+        "fine",
+        "fines",
+        "deduction",
+        "deductions",
+        "late",
+        "delay",
+        "delays",
+        "liquidated",
+        "damages",
+        "ld",
+        "compensation",
+        "extension",
+        "delaying",
+        "overdue",
+        "overrun",
+    ],
+    # 2. Turnover, financial audit, balance sheet
+    [
+        "turnover",
+        "turnovers",
+        "revenue",
+        "revenues",
+        "income",
+        "sales",
+        "balance",
+        "sheet",
+        "sheets",
+        "maat",
+        "udin",
+        "ca",
+        "audited",
+        "audit",
+        "certificate",
+        "certified",
+        "chartered",
+    ],
+    # 3. Solvency, credit, working capital, net worth
+    [
+        "solvency",
+        "credit",
+        "networth",
+        "worth",
+        "capital",
+        "soundness",
+        "facility",
+        "banker",
+        "borrowing",
+    ],
+    # 4. Experience, past projects, track record, credentials
+    [
+        "experience",
+        "past",
+        "project",
+        "projects",
+        "work",
+        "works",
+        "order",
+        "orders",
+        "completion",
+        "track",
+        "record",
+        "similar",
+        "executed",
+        "completed",
+        "client",
+        "credential",
+        "credentials",
+    ],
+    # 5. Tax, statutory, GST, registration, corporate
+    [
+        "gst",
+        "gstin",
+        "tax",
+        "taxes",
+        "pan",
+        "cin",
+        "roc",
+        "udyam",
+        "msme",
+        "statutory",
+        "registration",
+        "incorporation",
+        "identity",
+        "incorporate",
+    ],
+    # 6. Stamp paper, notarization, affidavits, integrity pact
+    [
+        "stamp",
+        "notary",
+        "notariz",
+        "notarized",
+        "notarization",
+        "affidavit",
+        "affidavits",
+        "integrity",
+        "pact",
+        "blacklisting",
+        "debarment",
+        "attestation",
+        "undertaking",
+    ],
+    # 7. EMD, guarantees, deposits, bid security
+    [
+        "emd",
+        "earnest",
+        "money",
+        "deposit",
+        "deposits",
+        "security",
+        "guarantee",
+        "guarantees",
+        "pbg",
+        "bidsecurity",
+    ],
+]
+
+
+def get_synonyms_for_tokens(tokens: list[str]) -> set[str]:
+    """Expands query tokens against procurement thesaurus synonym clusters."""
+    synonyms: set[str] = set()
+    for token in tokens:
+        t_clean = token.lower()
+        for group in PROCUREMENT_DOMAIN_SYNONYMS:
+            matched = False
+            for term in group:
+                if len(term) <= 3 or len(t_clean) <= 3:
+                    if t_clean == term:
+                        matched = True
+                        break
+                else:
+                    if t_clean == term or t_clean.startswith(term) or term.startswith(t_clean):
+                        matched = True
+                        break
+            if matched:
+                synonyms.update(group)
+    return synonyms
+
+
 class ChatToolRegistry:
     """
     In-memory and context-backed tool execution registry for the AI Chat Worker.
@@ -281,86 +485,57 @@ class ChatToolRegistry:
         limit: int = 5,
     ) -> list[dict[str, Any]]:
         """Searches tender document chunks for the bid, returning relevant clauses."""
+        if is_out_of_domain(query):
+            return []
+
         chunks = self.context.get("tender_chunks") or self.context.get("tenderChunks") or []
         if not chunks:
-            # Baseline tender data if not passed in context
-            chunks = [
-                {
-                    "chunkId": "chk_emd_01",
-                    "documentId": "doc_nit_01",
-                    "documentName": "NIT_Document.pdf",
-                    "pageNumber": 3,
-                    "clauseReference": "Clause 4.1",
-                    "sectionTitle": "Earnest Money Deposit (EMD)",
-                    "content": "The bidder must furnish an Earnest Money Deposit (EMD) of INR 5,00,000 on a 100 Rupee stamp paper prior to tender submission.",
-                },
-                {
-                    "chunkId": "chk_tech_01",
-                    "documentId": "doc_nit_01",
-                    "documentName": "NIT_Document.pdf",
-                    "pageNumber": 7,
-                    "clauseReference": "Clause 8.2",
-                    "sectionTitle": "Technical Capability & Minimum Average Annual Turnover",
-                    "content": "The bidder must have achieved a Minimum Average Annual Turnover (MAAT) of at least INR 25.00 Crores across the last 3 financial years (FY 2021-22, 2022-23, 2023-24). Audited turnover certificate with valid UDIN is mandatory.",
-                },
-                {
-                    "chunkId": "chk_exp_01",
-                    "documentId": "doc_nit_01",
-                    "documentName": "NIT_Document.pdf",
-                    "pageNumber": 9,
-                    "clauseReference": "Clause 10.4",
-                    "sectionTitle": "Similar Work Experience",
-                    "content": "The bidder must have successfully completed at least 1 similar infrastructure project valued at INR 20.00 Crores or 2 projects valued at INR 12.50 Crores each for central or state government undertakings within the last 5 years.",
-                },
-                {
-                    "chunkId": "chk_legal_01",
-                    "documentId": "doc_nit_01",
-                    "documentName": "NIT_Document.pdf",
-                    "pageNumber": 12,
-                    "clauseReference": "Clause 14.1",
-                    "sectionTitle": "Liquidated Damages & Execution Penalties",
-                    "content": "Liquidated damages for project completion delay shall be levied at 0.5% per week of delay, capped at 10% of total contract value. Non-performance may lead to forfeiture of Performance Bank Guarantee.",
-                },
-            ]
+            return []
 
         keywords = extract_keywords(query)
         substantive_kws = [k for k in keywords if k not in PROCUREMENT_WRAPPER_WORDS]
+        synonyms = get_synonyms_for_tokens(substantive_kws or keywords)
         scored_chunks: list[tuple[float, dict[str, Any]]] = []
 
         for chk in chunks:
             if not self._is_accessible(chk):
                 continue
-            text = (
-                chk.get("content", "")
-                + " "
-                + chk.get("sectionTitle", "")
-                + " "
-                + chk.get("clauseReference", "")
-            ).lower()
+            content_lower = chk.get("content", "").lower()
+            section_lower = chk.get("sectionTitle", "").lower()
+            clause_lower = chk.get("clauseReference", "").lower()
+            text = f"{content_lower} {section_lower} {clause_lower}"
 
-            # Anti-hallucination guard: If substantive keywords exist, verify substantive density
             if substantive_kws:
-                substantive_hits = count_keyword_matches(substantive_kws, text)
-                min_required = 2 if len(substantive_kws) >= 3 else 1
-                if substantive_hits < min_required:
+                has_substantive_hit = any(
+                    keyword_matches_text(kw, text) for kw in substantive_kws
+                ) or any(keyword_matches_text(syn, text) for syn in synonyms)
+                if not has_substantive_hit:
                     continue
 
             score = 0.0
+            # Direct keyword hits (3.0 pts, clause +2.5, section +1.5)
             for kw in keywords:
                 if keyword_matches_text(kw, text):
-                    score += 1.0
-                    # Boost exact clause or section matches
-                    if kw in chk.get("clauseReference", "").lower():
-                        score += 2.0
-                    if kw in chk.get("sectionTitle", "").lower():
+                    score += 3.0
+                    if kw in clause_lower:
+                        score += 2.5
+                    if kw in section_lower:
                         score += 1.5
 
-            if score > 0 or not keywords:
+            # Domain synonym hits (2.0 pts, clause +2.0, section +1.5)
+            for syn in synonyms:
+                if syn not in keywords and keyword_matches_text(syn, text):
+                    score += 2.0
+                    if syn in clause_lower:
+                        score += 2.0
+                    if syn in section_lower:
+                        score += 1.5
+
+            if score > 0:
                 scored_chunks.append((score, chk))
 
         scored_chunks.sort(key=lambda x: x[0], reverse=True)
         results = [item[1] for item in scored_chunks[:limit]]
-        # Anti-hallucination guard: If keywords were queried and NONE matched, do NOT fall back to returning arbitrary chunks!
         if not results and not keywords and chunks:
             accessible_chunks = [c for c in chunks if self._is_accessible(c)]
             results = accessible_chunks[:limit]
@@ -373,6 +548,9 @@ class ChatToolRegistry:
         limit: int = 5,
     ) -> list[dict[str, Any]]:
         """Searches company evidence vault chunks (CA certs, ISO certs, work orders, GST/statutory records)."""
+        if is_out_of_domain(query):
+            return []
+
         raw_evidence = (
             self.context.get("company_evidence") or self.context.get("companyEvidence") or []
         )
@@ -409,53 +587,20 @@ class ChatToolRegistry:
                 content = " | ".join(p for p in content_parts if p)
 
             ev_copy["content"] = content
-            ev_copy.setdefault("chunkId", ev.get("id") or f"doc_{ev.get('documentId')}")
-            ev_copy.setdefault("documentId", ev.get("id"))
-            ev_copy.setdefault("documentName", ev.get("fileName") or "Company_Evidence.pdf")
+            doc_id = ev.get("documentId") or ev.get("id") or "doc_evidence"
+            doc_name = ev.get("documentName") or ev.get("fileName") or "Company_Evidence.pdf"
+            ev_copy.setdefault("chunkId", ev.get("id") or f"doc_{doc_id}")
+            ev_copy["documentId"] = doc_id
+            ev_copy["documentName"] = doc_name
             ev_copy.setdefault("evidenceType", "DOCUMENT")
             combined.append(ev_copy)
 
         if not combined:
-            combined = [
-                {
-                    "chunkId": "ev_chk_gst_01",
-                    "documentId": "doc_gst_cert_01",
-                    "documentName": "GST_Registration_Certificate.pdf",
-                    "pageNumber": 1,
-                    "evidenceType": "GST_REGISTRATION",
-                    "content": "Government of India - Goods and Services Tax Certificate of Registration. GSTIN: 27AAACA1234F1Z9. Legal Name: Ashoka Buildcon Limited. Constitution of Business: Public Limited Company. Date of liability: 01/07/2017. Period of Validity: Regular.",
-                    "gstin": "27AAACA1234F1Z9",
-                    "pan": "AAACA1234F",
-                },
-                {
-                    "chunkId": "ev_chk_turnover_01",
-                    "documentId": "doc_ca_cert_01",
-                    "documentName": "CA_Turnover_Certificate_FY21_24.pdf",
-                    "pageNumber": 1,
-                    "evidenceType": "FINANCIAL_STATEMENT",
-                    "content": "This is to certify that M/s ABC Infra achieved audited turnover of INR 32.5 Cr (FY 2021-22), INR 38.0 Cr (FY 2022-23), and INR 42.5 Cr (FY 2023-24). Average Annual Turnover: INR 37.67 Crores. UDIN: 24089123AAAAAA9999.",
-                    "udin": "24089123AAAAAA9999",
-                },
-                {
-                    "chunkId": "ev_chk_work_order_01",
-                    "documentId": "doc_wo_nhai_01",
-                    "documentName": "NHAI_Completion_Certificate_Pkg4.pdf",
-                    "pageNumber": 2,
-                    "evidenceType": "PROJECT_CREDENTIAL",
-                    "content": "Project Completion Certificate: Successfully executed Highway Widening Project Package-4 for NHAI. Total completed value: INR 28.50 Crores. Completion Date: 15-Jan-2024. Performance rating: Satisfactory.",
-                },
-                {
-                    "chunkId": "ev_chk_iso_01",
-                    "documentId": "doc_iso_9001_01",
-                    "documentName": "ISO_9001_2015_Certificate.pdf",
-                    "pageNumber": 1,
-                    "evidenceType": "CERTIFICATION",
-                    "content": "ISO 9001:2015 Quality Management System Certification. Certificate No: QMS-IND-2023-8821. Valid until: 30-Nov-2026. Registrar: TUV India.",
-                },
-            ]
+            return []
 
         keywords = extract_keywords(query)
         substantive_kws = [k for k in keywords if k not in PROCUREMENT_WRAPPER_WORDS]
+        synonyms = get_synonyms_for_tokens(substantive_kws or keywords)
         scored_evidence: list[tuple[float, dict[str, Any]]] = []
 
         for ev in combined:
@@ -467,29 +612,40 @@ class ChatToolRegistry:
                 if isinstance(attrs, dict)
                 else ""
             )
-            text = (
-                f"{ev.get('content', '')} {ev.get('evidenceType', '')} {ev.get('documentName', '')} "
-                f"{ev.get('issuer', '')} {ev.get('referenceNumber', '')} {attr_text}"
-            ).lower()
+            content_lower = str(ev.get("content", "")).lower()
+            ev_type_lower = str(ev.get("evidenceType", "")).lower()
+            doc_name_lower = str(ev.get("documentName", "")).lower()
+            issuer_lower = str(ev.get("issuer", "")).lower()
+            ref_lower = str(ev.get("referenceNumber", "")).lower()
+            text = f"{content_lower} {ev_type_lower} {doc_name_lower} {issuer_lower} {ref_lower} {attr_text.lower()}"
 
-            # Anti-hallucination guard: If substantive keywords exist, verify substantive density
             if substantive_kws:
-                substantive_hits = count_keyword_matches(substantive_kws, text)
-                min_required = 2 if len(substantive_kws) >= 3 else 1
-                if substantive_hits < min_required:
+                has_substantive_hit = any(
+                    keyword_matches_text(kw, text) for kw in substantive_kws
+                ) or any(keyword_matches_text(syn, text) for syn in synonyms)
+                if not has_substantive_hit:
                     continue
 
             score = 0.0
+            # Direct keyword hits (3.0 pts, category +2.0, docName +1.5)
             for kw in keywords:
                 if keyword_matches_text(kw, text):
-                    score += 1.0
-                    # Boost exact category or document name matches
-                    if kw in ev.get("evidenceType", "").lower():
+                    score += 3.0
+                    if kw in ev_type_lower:
                         score += 2.0
-                    if kw in ev.get("documentName", "").lower():
+                    if kw in doc_name_lower:
                         score += 1.5
 
-            if score > 0 or not keywords:
+            # Domain synonym hits (2.0 pts, category +1.5, docName +1.0)
+            for syn in synonyms:
+                if syn not in keywords and keyword_matches_text(syn, text):
+                    score += 2.0
+                    if syn in ev_type_lower:
+                        score += 1.5
+                    if syn in doc_name_lower:
+                        score += 1.0
+
+            if score > 0:
                 scored_evidence.append((score, ev))
 
         scored_evidence.sort(key=lambda x: x[0], reverse=True)
@@ -514,17 +670,17 @@ class ChatToolRegistry:
             or profile.get("legal_name")
             or profile.get("companyName")
             or profile.get("name")
-            or "Ashoka Buildcon Limited"
+            or ""
         )
-        gstin = profile.get("gstin") or "27AAACA1234F1Z9"
-        pan = profile.get("pan") or "AAACA1234F"
-        cin = profile.get("cin") or "L45200MH1993PLC071970"
-        udyam_id = profile.get("udyamId") or profile.get("udyam_id") or "UDYAM-MH-12-0049281"
-        constitution = profile.get("constitution") or "Public Limited Company"
+        gstin = profile.get("gstin") or ""
+        pan = profile.get("pan") or ""
+        cin = profile.get("cin") or ""
+        udyam_id = profile.get("udyamId") or profile.get("udyam_id") or ""
+        constitution = profile.get("constitution") or ""
         gstin_verified_at = profile.get("gstinVerifiedAt") or profile.get("gstin_verified_at")
 
         return {
-            "companyId": company_id or profile.get("id") or profile.get("companyId", "comp-active"),
+            "companyId": company_id or profile.get("id") or profile.get("companyId", ""),
             "legalName": legal_name,
             "companyName": legal_name,
             "gstin": gstin,
@@ -545,28 +701,31 @@ class ChatToolRegistry:
                 "Access denied: Company profile belongs to another tenant."
             )
 
-        turnover_records = (
-            profile.get("turnoverRecords")
-            or profile.get("turnover_records")
-            or [
-                {"financialYear": "2023-24", "turnoverInrCrores": 42.5},
-                {"financialYear": "2022-23", "turnoverInrCrores": 38.0},
-                {"financialYear": "2021-22", "turnoverInrCrores": 32.5},
-            ]
-        )
-        values = [float(r.get("turnoverInrCrores", 0)) for r in turnover_records]
-        avg_turnover = round(sum(values) / len(values), 2) if values else 37.67
+        turnover_records = profile.get("turnoverRecords") or profile.get("turnover_records") or []
+        solvency = profile.get("solvencyInrCrores")
+        net_worth = profile.get("netWorthInrCrores")
+        audited_udin = profile.get("auditedUdin") or profile.get("caUdin") or profile.get("udin")
+        statutory_pan = profile.get("pan")
+        statutory_gstin = profile.get("gstin")
+        company_name = profile.get("legalName") or profile.get("companyName", "")
+
+        values = [
+            float(r.get("turnoverInrCrores", 0))
+            for r in turnover_records
+            if r.get("turnoverInrCrores") is not None
+        ]
+        avg_turnover = round(sum(values) / len(values), 2) if values else None
 
         return {
-            "companyId": company_id or profile.get("companyId", "comp-active"),
-            "companyName": profile.get("companyName", "ABC Infra Projects Ltd"),
+            "companyId": company_id or profile.get("companyId", ""),
+            "companyName": company_name,
             "turnoverRecords": turnover_records,
             "averageTurnoverInrCrores": avg_turnover,
-            "netWorthInrCrores": profile.get("netWorthInrCrores", 18.2),
-            "solvencyInrCrores": profile.get("solvencyInrCrores", 15.0),
-            "auditedUdin": "24089123AAAAAA9999",
-            "statutoryPan": "AAACA1234F",
-            "gstin": "27AAACA1234F1Z5",
+            "netWorthInrCrores": net_worth,
+            "solvencyInrCrores": solvency,
+            "auditedUdin": audited_udin,
+            "statutoryPan": statutory_pan,
+            "gstin": statutory_gstin,
         }
 
     def calculate_financial_capacity(
@@ -600,14 +759,15 @@ class ChatToolRegistry:
                 parse_financial_amount_crores(turnover_average_inr_crores, 0.0) or 0.0
             )
         else:
-            avg_turnover = float(
-                parse_financial_amount_crores(fin.get("averageTurnoverInrCrores"), 37.67) or 37.67
-            )
+            fin_avg = fin.get("averageTurnoverInrCrores")
+            avg_turnover = float(parse_financial_amount_crores(fin_avg, 0.0) or 0.0)
 
         if required_turnover_inr_crores is not None:
             parsed_req_turnover = parse_financial_amount_crores(required_turnover_inr_crores)
             req_turnover = float(parsed_req_turnover) if parsed_req_turnover is not None else None
-            turnover_qualified = avg_turnover >= req_turnover if req_turnover is not None else True
+            turnover_qualified = (
+                (avg_turnover >= req_turnover) if req_turnover is not None else True
+            )
             turnover_margin = (
                 round(avg_turnover - req_turnover, 2) if req_turnover is not None else None
             )
@@ -622,22 +782,21 @@ class ChatToolRegistry:
         if solvency_amount_inr_crores is not None:
             solvency = float(parse_financial_amount_crores(solvency_amount_inr_crores, 0.0) or 0.0)
         else:
-            solvency = float(
-                parse_financial_amount_crores(
-                    self.context.get("solvency_amount_inr_crores")
-                    or self.context.get("solvencyAmountInrCrores")
-                    or fin.get("solvencyInrCrores"),
-                    0.0,
-                )
-                or 0.0
+            fin_solv = (
+                self.context.get("solvency_amount_inr_crores")
+                or self.context.get("solvencyAmountInrCrores")
+                or fin.get("solvencyInrCrores")
             )
+            solvency = float(parse_financial_amount_crores(fin_solv, 0.0) or 0.0)
 
         if required_solvency_inr_crores is not None:
             parsed_req_solvency = parse_financial_amount_crores(required_solvency_inr_crores)
             req_solvency = float(parsed_req_solvency) if parsed_req_solvency is not None else None
-            solvency_qualified = solvency >= req_solvency if req_solvency is not None else True
+            solvency_qualified = (solvency >= req_solvency) if req_solvency is not None else True
             solvency_margin = (
-                round(solvency - req_solvency, 2) if req_solvency is not None else None
+                round(solvency - req_solvency, 2)
+                if (solvency is not None and req_solvency is not None)
+                else None
             )
             solvency_verdict = "PASS" if solvency_qualified else "FAIL"
         else:
@@ -650,15 +809,18 @@ class ChatToolRegistry:
         if net_worth_inr_crores is not None:
             net_worth = float(parse_financial_amount_crores(net_worth_inr_crores, 0.0) or 0.0)
         else:
-            net_worth = float(
-                parse_financial_amount_crores(fin.get("netWorthInrCrores"), 18.2) or 18.2
-            )
+            fin_nw = fin.get("netWorthInrCrores")
+            net_worth = float(parse_financial_amount_crores(fin_nw, 0.0) or 0.0)
 
         if required_net_worth_inr_crores is not None:
             parsed_req_nw = parse_financial_amount_crores(required_net_worth_inr_crores)
             req_nw = float(parsed_req_nw) if parsed_req_nw is not None else None
-            net_worth_qualified = net_worth >= req_nw if req_nw is not None else True
-            net_worth_margin = round(net_worth - req_nw, 2) if req_nw is not None else None
+            net_worth_qualified = (net_worth >= req_nw) if req_nw is not None else True
+            net_worth_margin = (
+                round(net_worth - req_nw, 2)
+                if (net_worth is not None and req_nw is not None)
+                else None
+            )
             net_worth_verdict = "PASS" if net_worth_qualified else "FAIL"
         else:
             req_nw = None
@@ -702,7 +864,7 @@ class ChatToolRegistry:
         overall_verdict = "QUALIFIED" if is_overall_qualified else "DISQUALIFIED"
 
         return {
-            "companyId": company_id or fin.get("companyId", "comp-active"),
+            "companyId": company_id or fin.get("companyId", ""),
             "turnoverAverageInrCrores": round(avg_turnover, 2),
             "requiredTurnoverInrCrores": req_turnover,
             "turnoverMarginInrCrores": turnover_margin,
@@ -739,22 +901,7 @@ class ChatToolRegistry:
                 "Access denied: Company profile belongs to another tenant."
             )
 
-        experience = profile.get("experience") or [
-            {
-                "projectName": "NHAI Highway Widening Package-4",
-                "client": "National Highways Authority of India (NHAI)",
-                "completedValueInrCrores": 28.5,
-                "completionDate": "2024-01-15",
-                "scope": "Civil construction, bituminous overlay, and culvert structures",
-            },
-            {
-                "projectName": "State PWD Flyover Bridge Construction",
-                "client": "Maharashtra PWD",
-                "completedValueInrCrores": 15.2,
-                "completionDate": "2022-09-30",
-                "scope": "Prestressed concrete girder flyover bridge",
-            },
-        ]
+        experience = profile.get("experience") or []
         return [e for e in experience if self._is_accessible(e)]
 
     def get_compliance_matrix(
@@ -763,46 +910,7 @@ class ChatToolRegistry:
         category: str | None = None,
     ) -> list[dict[str, Any]]:
         """Retrieves compliance matrix items, execution rules, and statuses."""
-        items = (
-            self.context.get("compliance_items")
-            or self.context.get("complianceItems")
-            or [
-                {
-                    "id": "cmp_01",
-                    "category": "TECHNICAL",
-                    "title": "Minimum Average Annual Turnover (MAAT)",
-                    "description": "Requires INR 25.00 Cr turnover across last 3 years.",
-                    "status": "PASS",
-                    "executionRules": {"udinRequired": True, "notarizationRequired": False},
-                    "clauseReference": "Clause 8.2",
-                },
-                {
-                    "id": "cmp_02",
-                    "category": "COMMERCIAL",
-                    "title": "Earnest Money Deposit (EMD)",
-                    "description": "EMD of INR 5,00,000 on 100 Rupee stamp paper.",
-                    "status": "FLAGGED",
-                    "executionRules": {
-                        "stampPaperRequired": True,
-                        "stampPaperDenominationInr": 100,
-                    },
-                    "clauseReference": "Clause 4.1",
-                },
-                {
-                    "id": "cmp_03",
-                    "category": "EXECUTION",
-                    "title": "Integrity Pact & Non-Blacklisting Affidavit",
-                    "description": "Notarized affidavit on INR 500 stamp paper signed by Director.",
-                    "status": "FLAGGED",
-                    "executionRules": {
-                        "stampPaperRequired": True,
-                        "stampPaperDenominationInr": 500,
-                        "notarizationRequired": True,
-                    },
-                    "clauseReference": "Clause 12.3",
-                },
-            ]
-        )
+        items = self.context.get("compliance_items") or self.context.get("complianceItems") or []
 
         accessible_items = [i for i in items if self._is_accessible(i)]
         if category:
@@ -817,34 +925,8 @@ class ChatToolRegistry:
         company_id: str | None = None,
     ) -> dict[str, Any]:
         """Retrieves bid decision verdict, score, disqualifiers, risks, and gaps."""
-        decision = (
-            self.context.get("bid_decision")
-            or self.context.get("bidDecision")
-            or {
-                "verdict": "GO",
-                "readinessScore": 0.88,
-                "reasonsToPursue": [
-                    "Company average turnover (INR 37.67 Cr) exceeds tender requirement of INR 25.00 Cr.",
-                    "Completed NHAI project (INR 28.50 Cr) qualifies similar work threshold.",
-                ],
-                "reasonsNotToPursue": [],
-                "hardDisqualifiers": [],
-                "commercialRisks": [
-                    {
-                        "title": "Liquidated Damages Cap",
-                        "severity": "MEDIUM",
-                        "detail": "10% LD cap with 0.5%/week delay penalties.",
-                    }
-                ],
-                "missingInformation": [
-                    {
-                        "requirementTitle": "Integrity Pact Notarization",
-                        "missingFactor": "Stamp paper affidavit pending signature",
-                    }
-                ],
-            }
-        )
-        if not self._is_accessible(decision):
+        decision = self.context.get("bid_decision") or self.context.get("bidDecision") or {}
+        if decision and not self._is_accessible(decision):
             from tenderpulse_ai.security.exceptions import UnauthorizedDocumentAccessException
 
             raise UnauthorizedDocumentAccessException(

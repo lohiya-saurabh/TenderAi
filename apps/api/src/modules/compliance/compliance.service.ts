@@ -3,9 +3,7 @@
  */
 import { Injectable, Inject } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
-import { eq, and, asc, desc, sql } from 'drizzle-orm';
-import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '@/common/database/database.module.js';
-import * as schema from '@/common/database/schema.js';
+import { type DrizzleDb } from '@/common/database/database.module.js';
 import { NotFoundError, ConflictError } from '@/common/errors/errors.js';
 import type { DemoComplianceItem } from '@/seed/data.js';
 import { TenantContextHolder } from '@/common/security/TenantContext.js';
@@ -24,6 +22,8 @@ import {
   type CommercialRiskItem,
   type RiskFindingsResult,
 } from './application/compliance-risk.calculator.js';
+import { ComplianceRepository } from './compliance.repository.js';
+import { ComplianceQueries } from './compliance.queries.js';
 
 export interface ReviewComplianceDto {
   status?: DemoComplianceItem['status'];
@@ -50,10 +50,20 @@ export type {
 
 @Injectable()
 export class ComplianceService {
-  private readonly db: DrizzleDb;
+  private readonly repository: ComplianceRepository;
+  private readonly queries: ComplianceQueries;
 
-  constructor(@Inject(DRIZZLE_TOKEN) db: DrizzleDb | PGlite) {
-    this.db = 'select' in db ? (db as DrizzleDb) : createDrizzle(db as PGlite);
+  constructor(
+    @Inject(ComplianceRepository)
+    repoOrDb: ComplianceRepository | DrizzleDb | PGlite,
+  ) {
+    if (repoOrDb instanceof ComplianceRepository) {
+      this.repository = repoOrDb;
+      this.queries = new ComplianceQueries(repoOrDb.getDb());
+    } else {
+      this.repository = new ComplianceRepository(repoOrDb);
+      this.queries = new ComplianceQueries(this.repository.getDb());
+    }
   }
 
   /**
@@ -68,34 +78,14 @@ export class ComplianceService {
 
   public async listItems(bidId: string): Promise<DemoComplianceItem[]> {
     const orgId = this.getTenantOrgId();
-    const records = await this.db
-      .select()
-      .from(schema.complianceItems)
-      .where(
-        and(
-          eq(schema.complianceItems.bidId, bidId),
-          eq(schema.complianceItems.organizationId, orgId),
-        ),
-      )
-      .orderBy(asc(schema.complianceItems.createdAt));
-
+    const records = await this.repository.listItemsByBidId(bidId, orgId);
     const deduped = deduplicateComplianceItems(records);
     return deduped.map((row) => mapComplianceRecord(row));
   }
 
   public async getItemById(bidId: string, itemId: string): Promise<DemoComplianceItem> {
     const orgId = this.getTenantOrgId();
-    const [item] = await this.db
-      .select()
-      .from(schema.complianceItems)
-      .where(
-        and(
-          eq(schema.complianceItems.bidId, bidId),
-          eq(schema.complianceItems.id, itemId),
-          eq(schema.complianceItems.organizationId, orgId),
-        ),
-      )
-      .limit(1);
+    const item = await this.repository.findItemById(bidId, itemId, orgId);
 
     if (!item) {
       throw new NotFoundError(`Compliance item '${itemId}' not found.`);
@@ -110,18 +100,7 @@ export class ComplianceService {
    */
   public async listReviewTasks(bidId: string): Promise<DemoComplianceItem[]> {
     const orgId = this.getTenantOrgId();
-    const records = await this.db
-      .select()
-      .from(schema.complianceItems)
-      .where(
-        and(
-          eq(schema.complianceItems.bidId, bidId),
-          eq(schema.complianceItems.organizationId, orgId),
-          sql`(${schema.complianceItems.status} IN ('PENDING', 'REVIEW_REQUIRED') OR ${schema.complianceItems.humanReviewRequired} = true)`,
-        ),
-      )
-      .orderBy(asc(schema.complianceItems.createdAt));
-
+    const records = await this.queries.listReviewTasks(bidId, orgId);
     const deduped = deduplicateComplianceItems(records);
     return deduped.map((row) => mapComplianceRecord(row));
   }
@@ -140,40 +119,7 @@ export class ComplianceService {
     readinessPct: number | null;
   }> {
     const orgId = this.getTenantOrgId();
-    const [stats] = await this.db
-      .select({
-        total: sql<number>`count(*)::int`,
-        ready: sql<number>`count(*) filter (where ${schema.complianceItems.status} in ('READY', 'PASS'))::int`,
-        flagged: sql<number>`count(*) filter (where ${schema.complianceItems.status} in ('FLAGGED', 'FAIL'))::int`,
-        pending: sql<number>`count(*) filter (where ${schema.complianceItems.status} in ('PENDING', 'MISSING'))::int`,
-        waived: sql<number>`count(*) filter (where ${schema.complianceItems.status} in ('WAIVED', 'NOT_APPLICABLE'))::int`,
-        reviewRequired: sql<number>`count(*) filter (where ${schema.complianceItems.status} = 'REVIEW_REQUIRED' or ${schema.complianceItems.humanReviewRequired} = true)::int`,
-      })
-      .from(schema.complianceItems)
-      .where(
-        and(
-          eq(schema.complianceItems.bidId, bidId),
-          eq(schema.complianceItems.organizationId, orgId),
-        ),
-      );
-
-    const total = stats?.total ?? 0;
-    const ready = stats?.ready ?? 0;
-    const flagged = stats?.flagged ?? 0;
-    const pending = stats?.pending ?? 0;
-    const waived = stats?.waived ?? 0;
-    const reviewRequired = stats?.reviewRequired ?? 0;
-
-    return {
-      totalRequirements: total,
-      ready,
-      flagged,
-      pending,
-      waived,
-      reviewRequired,
-      reviewNeeded: pending + reviewRequired,
-      readinessPct: total > 0 ? Math.round((ready / total) * 100) : null,
-    };
+    return this.queries.getReadinessRollup(bidId, orgId);
   }
 
   /**
@@ -182,12 +128,7 @@ export class ComplianceService {
    */
   public async getEvidenceMatches(bidId: string): Promise<EvidenceMatchesResult> {
     const orgId = this.getTenantOrgId();
-
-    const [bid] = await this.db
-      .select()
-      .from(schema.bids)
-      .where(and(eq(schema.bids.id, bidId), eq(schema.bids.organizationId, orgId)))
-      .limit(1);
+    const bid = await this.queries.findBidById(bidId, orgId);
 
     if (!bid) {
       throw new NotFoundError(`Bid project '${bidId}' not found.`);
@@ -202,26 +143,14 @@ export class ComplianceService {
    */
   public async getRiskFindings(bidId: string): Promise<RiskFindingsResult> {
     const orgId = this.getTenantOrgId();
-
-    const [bid] = await this.db
-      .select()
-      .from(schema.bids)
-      .where(and(eq(schema.bids.id, bidId), eq(schema.bids.organizationId, orgId)))
-      .limit(1);
+    const bid = await this.queries.findBidById(bidId, orgId);
 
     if (!bid) {
       throw new NotFoundError(`Bid project '${bidId}' not found.`);
     }
 
     const mappedItems = await this.listItems(bidId);
-
-    const [decisionRecord] = await this.db
-      .select()
-      .from(schema.bidDecisions)
-      .where(
-        and(eq(schema.bidDecisions.bidId, bidId), eq(schema.bidDecisions.organizationId, orgId)),
-      )
-      .orderBy(desc(schema.bidDecisions.createdAt));
+    const decisionRecord = await this.queries.findLatestBidDecision(bidId, orgId);
 
     return buildRiskFindings(bid.id, bid.tenderNumber, mappedItems, decisionRecord);
   }
@@ -235,17 +164,7 @@ export class ComplianceService {
     const userId = TenantContextHolder.get()?.userId || 'usr_reviewer';
     const reviewer = 'Reviewer';
 
-    const [item] = await this.db
-      .select()
-      .from(schema.complianceItems)
-      .where(
-        and(
-          eq(schema.complianceItems.bidId, bidId),
-          eq(schema.complianceItems.id, itemId),
-          eq(schema.complianceItems.organizationId, orgId),
-        ),
-      )
-      .limit(1);
+    const item = await this.repository.findItemById(bidId, itemId, orgId);
 
     if (!item) {
       throw new NotFoundError(`Compliance item '${itemId}' not found.`);
@@ -285,34 +204,18 @@ export class ComplianceService {
       newStatus === 'WAIVED' ||
       newStatus === 'NOT_APPLICABLE';
 
-    await this.db
-      .update(schema.complianceItems)
-      .set({
-        status: newStatus,
-        reviewNotes: newNotes,
-        reviewedBy: reviewer,
-        reviewedAt: now,
-        humanReviewRequired: isResolved ? false : item.humanReviewRequired,
-        version: nextVersion,
-        updatedAt: now,
-      })
-      .where(
-        and(
-          eq(schema.complianceItems.id, itemId),
-          eq(schema.complianceItems.organizationId, orgId),
-        ),
-      );
+    await this.repository.updateItemReview(itemId, orgId, {
+      status: newStatus,
+      reviewNotes: newNotes,
+      reviewedBy: reviewer,
+      reviewedAt: now,
+      humanReviewRequired: isResolved ? false : item.humanReviewRequired,
+      version: nextVersion,
+      updatedAt: now,
+    });
 
     // Recalculate summary metrics on bid in PostgreSQL
-    const allItems = await this.db
-      .select()
-      .from(schema.complianceItems)
-      .where(
-        and(
-          eq(schema.complianceItems.bidId, bidId),
-          eq(schema.complianceItems.organizationId, orgId),
-        ),
-      );
+    const allItems = await this.repository.listItemsByBidId(bidId, orgId);
 
     const approvedCount = allItems.filter((i) => {
       const st = i.id === itemId ? newStatus : i.status;
@@ -324,18 +227,15 @@ export class ComplianceService {
     }).length;
     const totalCount = allItems.length;
 
-    await this.db
-      .update(schema.bids)
-      .set({
-        approvedRequirements: approvedCount,
-        flaggedRequirements: flaggedCount,
-        totalRequirements: totalCount,
-        updatedAt: now,
-      })
-      .where(and(eq(schema.bids.id, bidId), eq(schema.bids.organizationId, orgId)));
+    await this.repository.updateBidMetrics(bidId, orgId, {
+      approvedRequirements: approvedCount,
+      flaggedRequirements: flaggedCount,
+      totalRequirements: totalCount,
+      updatedAt: now,
+    });
 
     // Record audit event in PostgreSQL
-    await this.db.insert(schema.auditLogs).values({
+    await this.repository.createAuditLog({
       id: `aud-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
       bidId,
       organizationId: orgId,

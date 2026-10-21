@@ -77,9 +77,172 @@ def test_tender_chunker_hierarchical_semantic():
     assert wire_dict["chunkIndex"] == 0
 
 
+SAMPLE_COPILOT_CONTEXT = {
+    "tender_chunks": [
+        {
+            "chunkId": "chk_emd_01",
+            "documentId": "doc_nit_01",
+            "documentName": "NIT_Document.pdf",
+            "pageNumber": 3,
+            "clauseReference": "Clause 4.1",
+            "sectionTitle": "Earnest Money Deposit (EMD)",
+            "content": "The bidder must furnish an Earnest Money Deposit (EMD) of INR 5,00,000 on a 100 Rupee stamp paper prior to tender submission.",
+        },
+        {
+            "chunkId": "chk_tech_01",
+            "documentId": "doc_nit_01",
+            "documentName": "NIT_Document.pdf",
+            "pageNumber": 7,
+            "clauseReference": "Clause 8.2",
+            "sectionTitle": "Technical Capability & Minimum Average Annual Turnover",
+            "content": "The bidder must have achieved a Minimum Average Annual Turnover (MAAT) of at least INR 25.00 Crores across the last 3 financial years (FY 2021-22, 2022-23, 2023-24). Audited turnover certificate with valid UDIN is mandatory.",
+        },
+        {
+            "chunkId": "chk_legal_01",
+            "documentId": "doc_nit_01",
+            "documentName": "NIT_Document.pdf",
+            "pageNumber": 14,
+            "clauseReference": "Clause 14.2",
+            "sectionTitle": "Liquidated Damages & Execution Penalties",
+            "content": "Liquidated damages for delay in project completion shall be levied at the rate of 0.5% of the contract value per week of delay, subject to a maximum penalty cap of 10% of the total contract value.",
+        },
+    ],
+    "company_evidence": [
+        {
+            "chunkId": "ev_chk_gst_01",
+            "documentId": "doc_gst_cert_01",
+            "documentName": "GST_Registration_Certificate.pdf",
+            "pageNumber": 1,
+            "evidenceType": "GST_REGISTRATION",
+            "content": "Government of India - Goods and Services Tax Certificate of Registration. GSTIN: 27AAACA1234F1Z9. Legal Name: Ashoka Buildcon Limited. Constitution of Business: Public Limited Company. Date of liability: 01/07/2017. Period of Validity: Regular.",
+            "gstin": "27AAACA1234F1Z9",
+            "pan": "AAACA1234F",
+        },
+        {
+            "chunkId": "ev_chk_turnover_01",
+            "documentId": "doc_ca_cert_01",
+            "documentName": "CA_Turnover_Certificate.pdf",
+            "pageNumber": 1,
+            "evidenceType": "CA_CERTIFICATE",
+            "content": "Chartered Accountant Certificate: Audited annual turnover of M/s Ashoka Buildcon Limited for FY 2021-22 is INR 32.50 Cr, FY 2022-23 is INR 38.00 Cr, and FY 2023-24 is INR 42.50 Cr. 3-year average turnover is INR 37.67 Cr. Certified under UDIN 23045210AAAAAA1234.",
+            "udin": "23045210AAAAAA1234",
+        },
+        {
+            "chunkId": "ev_chk_iso_01",
+            "documentId": "doc_iso_9001",
+            "documentName": "ISO_9001_2015_Certificate.pdf",
+            "pageNumber": 1,
+            "evidenceType": "ISO_CERTIFICATE",
+            "content": "Quality Management System Certificate: ISO 9001:2015 certified for infrastructure, highways, and bridge construction. Valid through 2026.",
+        },
+        {
+            "chunkId": "ev_chk_exp_01",
+            "documentId": "doc_nhai_completion",
+            "documentName": "NHAI_Completion_Certificate.pdf",
+            "pageNumber": 2,
+            "evidenceType": "WORK_COMPLETION",
+            "content": "Client Completion Certificate from NHAI: NHAI Highway Widening Package-4 successfully executed with completed value of INR 28.50 Crores on 15/01/2024.",
+        },
+    ],
+    "company_profile": {
+        "companyId": "comp-1",
+        "legalName": "Ashoka Buildcon Limited",
+        "companyName": "Ashoka Buildcon Limited",
+        "gstin": "27AAACA1234F1Z9",
+        "pan": "AAACA1234F",
+        "cin": "L45200MH1993PLC071970",
+        "turnoverRecords": [
+            {"financialYear": "2021-22", "turnoverInrCrores": 32.5},
+            {"financialYear": "2022-23", "turnoverInrCrores": 38.0},
+            {"financialYear": "2023-24", "turnoverInrCrores": 42.5},
+        ],
+        "averageTurnoverInrCrores": 37.67,
+        "solvencyInrCrores": 15.0,
+        "netWorthInrCrores": 18.2,
+        "auditedUdin": "23045210AAAAAA1234",
+        "experience": [
+            {
+                "projectName": "NHAI Highway Widening Package-4",
+                "client": "National Highways Authority of India (NHAI)",
+                "completedValueInrCrores": 28.5,
+                "completionDate": "2024-01-15",
+                "scope": "Civil construction, bituminous overlay, and culvert structures",
+            },
+            {
+                "projectName": "State PWD Flyover Bridge Construction",
+                "client": "Maharashtra PWD",
+                "completedValueInrCrores": 15.2,
+                "completionDate": "2022-09-30",
+                "scope": "Prestressed concrete girder flyover bridge",
+            },
+        ],
+    },
+    "compliance_items": [
+        {
+            "id": "cmp_01",
+            "category": "TECHNICAL",
+            "title": "Minimum Average Annual Turnover (MAAT)",
+            "description": "Requires INR 25.00 Cr turnover across last 3 years.",
+            "status": "PASS",
+            "executionRules": {"udinRequired": True, "notarizationRequired": False},
+            "clauseReference": "Clause 8.2",
+        },
+        {
+            "id": "cmp_02",
+            "category": "COMMERCIAL",
+            "title": "Earnest Money Deposit (EMD)",
+            "description": "EMD of INR 5,00,000 on 100 Rupee stamp paper.",
+            "status": "FLAGGED",
+            "executionRules": {
+                "stampPaperRequired": True,
+                "stampPaperDenominationInr": 100,
+            },
+            "clauseReference": "Clause 4.1",
+        },
+        {
+            "id": "cmp_03",
+            "category": "EXECUTION",
+            "title": "Integrity Pact & Non-Blacklisting Affidavit",
+            "description": "Notarized affidavit on INR 500 stamp paper signed by Director.",
+            "status": "FLAGGED",
+            "executionRules": {
+                "stampPaperRequired": True,
+                "stampPaperDenominationInr": 500,
+                "notarizationRequired": True,
+            },
+            "clauseReference": "Clause 12.3",
+        },
+    ],
+    "bid_decision": {
+        "verdict": "GO",
+        "readinessScore": 0.88,
+        "reasonsToPursue": [
+            "Company average turnover (INR 37.67 Cr) exceeds tender requirement of INR 25.00 Cr.",
+            "Completed NHAI project (INR 28.50 Cr) qualifies similar work threshold.",
+        ],
+        "reasonsNotToPursue": [],
+        "hardDisqualifiers": [],
+        "commercialRisks": [
+            {
+                "title": "Liquidated Damages Cap",
+                "severity": "MEDIUM",
+                "detail": "10% LD cap with 0.5%/week delay penalties.",
+            }
+        ],
+        "missingInformation": [
+            {
+                "requirementTitle": "Integrity Pact Notarization",
+                "missingFactor": "Stamp paper affidavit pending signature",
+            }
+        ],
+    },
+    "required_turnover_inr_crores": 25.0,
+}
+
+
 def test_chat_tools_registry():
     """Verifies all 6 AI worker chat tools execute and return structured records."""
-    registry = ChatToolRegistry()
+    registry = ChatToolRegistry(SAMPLE_COPILOT_CONTEXT)
 
     # 1. search_tender_documents
     tender_results = registry.search_tender_documents("EMD stamp paper")
@@ -131,6 +294,7 @@ async def test_chat_copilot_financial_intent_workflow():
         query="What is the minimum turnover requirement and do we satisfy it based on our CA certificate?",
         bid_id="bid_test_101",
         company_id="comp_test_001",
+        context=SAMPLE_COPILOT_CONTEXT,
     )
 
     response = await agent.query(request)
@@ -165,6 +329,7 @@ async def test_chat_copilot_compliance_intent_workflow():
         query="What are the stamp paper and notarization rules for this bid?",
         bid_id="bid_test_101",
         company_id="comp_test_001",
+        context=SAMPLE_COPILOT_CONTEXT,
     )
 
     response = await agent.query(request)
@@ -271,7 +436,7 @@ def test_tender_chunker_cycle_safety_and_overlap():
 
 def test_chat_tools_stopword_filtering():
     """Verifies that ChatToolRegistry filters stopwords like 'what', 'are', 'the' so queries match content."""
-    registry = ChatToolRegistry()
+    registry = ChatToolRegistry(SAMPLE_COPILOT_CONTEXT)
     # Query composed largely of conversational stopwords + 1 key content word
     results = registry.search_tender_documents("What are the and for of liquidated damages?")
     assert len(results) > 0
@@ -301,6 +466,7 @@ async def test_chat_copilot_followup_history_intent():
         query="Is it sufficient for this tender?",
         bid_id="bid_test_101",
         company_id="comp_test_001",
+        context=SAMPLE_COPILOT_CONTEXT,
         history=[
             {
                 "role": "user",
@@ -339,6 +505,7 @@ async def test_chat_copilot_statutory_gst_records_retrieval():
         query="GST records",
         bid_id="bid_test_101",
         company_id="comp_test_001",
+        context=SAMPLE_COPILOT_CONTEXT,
     )
 
     response = await agent.query(request)
@@ -476,6 +643,7 @@ async def test_chat_copilot_adversarial_hybrid_prompt():
         query="Hello, does GST apply to NIT Clause 4.1 for EMD?",
         bid_id="bid_test_101",
         company_id="comp_test_001",
+        context=SAMPLE_COPILOT_CONTEXT,
     )
 
     response = await agent.query(request)
@@ -502,6 +670,7 @@ async def test_chat_copilot_company_evidence_general_intent():
         query="Do we have an ISO 9001 certificate?",
         bid_id="bid_test_101",
         company_id="comp_test_001",
+        context=SAMPLE_COPILOT_CONTEXT,
     )
 
     response = await agent.query(request)

@@ -3,35 +3,28 @@
  */
 import { Injectable, Inject } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
-import { eq, and, desc } from 'drizzle-orm';
-import {
-  DRIZZLE_TOKEN,
-  type DrizzleDb,
-  createDrizzle,
-} from '@/common/database/database.module.js';
-import * as schema from '@/common/database/schema.js';
+import { type DrizzleDb } from '@/common/database/database.module.js';
 import type { DemoAuditEvent } from '@/seed/data.js';
 import { TenantContextHolder } from '@/common/security/TenantContext.js';
+import { AuditRepository } from '@/modules/audit/audit.repository.js';
 
 @Injectable()
 export class AuditService {
-  private readonly db: DrizzleDb;
+  private readonly repository: AuditRepository;
 
-  constructor(@Inject(DRIZZLE_TOKEN) db: DrizzleDb | PGlite) {
-    this.db = 'select' in db ? (db as DrizzleDb) : createDrizzle(db as PGlite);
+  constructor(
+    @Inject(AuditRepository)
+    repositoryOrDb: AuditRepository | DrizzleDb | PGlite,
+  ) {
+    this.repository =
+      repositoryOrDb instanceof AuditRepository
+        ? repositoryOrDb
+        : new AuditRepository(repositoryOrDb);
   }
 
   public async listEvents(bidId: string): Promise<DemoAuditEvent[]> {
     const orgId = TenantContextHolder.get()?.organizationId;
-    const records = await this.db
-      .select()
-      .from(schema.auditLogs)
-      .where(
-        orgId
-          ? and(eq(schema.auditLogs.bidId, bidId), eq(schema.auditLogs.organizationId, orgId))
-          : eq(schema.auditLogs.bidId, bidId),
-      )
-      .orderBy(desc(schema.auditLogs.timestamp));
+    const records = await this.repository.listEvents(bidId, orgId);
 
     return records.map((row) => ({
       id: row.id,

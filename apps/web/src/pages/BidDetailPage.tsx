@@ -39,6 +39,7 @@ import {
 } from '@/components/bid/detail/bidDetailData.js';
 import { Sparkles } from 'lucide-react';
 import { ChatCopilotDrawer } from '@/components/chat/index.js';
+import { useCompany } from '@/context/useCompany.js';
 
 /**
  * Tender Detail — "Should I bid on this tender?"
@@ -64,6 +65,10 @@ export const BidDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const bidId = id || '';
   const navigate = useNavigate();
+
+  const { selectedCompany } = useCompany();
+  const isGstVerified = Boolean(selectedCompany?.gstinVerifiedAt);
+  const isMcaVerified = Boolean(selectedCompany?.mcaVerifiedAt);
 
   const { hasPermission } = useAuth();
   const canUploadDoc = hasPermission(PERMISSIONS.DOCUMENTS_UPLOAD);
@@ -372,15 +377,14 @@ export const BidDetailPage: React.FC = () => {
           ? Number(decision.readinessScore)
           : Number(decision.readinessScore) * 100,
       )
-    : 84;
+    : 0;
 
   const verdictLabel = decision?.verdict
     ? decision.verdict.replace(/_/g, ' ')
-    : bid.status === 'REVIEW_READY'
-      ? 'PURSUE BID'
-      : 'REVIEW REQUIRED';
-  const verdictColor =
-    verdictLabel.includes('PURSUE') || verdictLabel === 'GO'
+    : 'NOT EVALUATED';
+  const verdictColor = !decision?.verdict
+    ? 'text-muted-foreground'
+    : verdictLabel.includes('PURSUE') || verdictLabel === 'GO' || verdictLabel === 'BID'
       ? 'text-emerald-600 dark:text-emerald-400'
       : 'text-vermilion';
 
@@ -512,7 +516,7 @@ export const BidDetailPage: React.FC = () => {
               >
                 {bid.estimatedValueRupees
                   ? formatCompactINR(bid.estimatedValueRupees)
-                  : '₹1,250.00 Cr'}
+                  : '—'}
               </div>
               <div
                 className="mt-2 text-xs font-medium text-muted-foreground truncate"
@@ -520,7 +524,7 @@ export const BidDetailPage: React.FC = () => {
                   bid.estimatedValueRupees ? formatCurrency(bid.estimatedValueRupees) : undefined
                 }
               >
-                {bid.tenderingAuthority || 'NHAI'} BOT Highway
+                {bid.tenderingAuthority ? `${bid.tenderingAuthority} Tender` : 'Authority Unspecified'}
               </div>
             </div>
 
@@ -528,13 +532,29 @@ export const BidDetailPage: React.FC = () => {
               <div className="mono text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
                 EVIDENCE STATUS
               </div>
-              <div className="mt-2 text-3xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
-                Verified
+              <div
+                className={`mt-2 text-3xl font-bold tracking-tight ${isGstVerified || isMcaVerified ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}
+              >
+                {isGstVerified || isMcaVerified ? 'Verified' : 'Pending'}
               </div>
               <div className="mt-2 text-xs font-medium text-foreground/80 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-                <span className="text-emerald-700 dark:text-emerald-400 font-medium">
-                  IRIS GST &amp; MCA RoC Active
+                <span
+                  className={`w-1.5 h-1.5 rounded-full inline-block ${isGstVerified || isMcaVerified ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                />
+                <span
+                  className={
+                    isGstVerified || isMcaVerified
+                      ? 'text-emerald-700 dark:text-emerald-400 font-medium'
+                      : 'text-amber-700 dark:text-amber-400 font-medium'
+                  }
+                >
+                  {isGstVerified && isMcaVerified
+                    ? 'IRIS GST & MCA RoC Active'
+                    : isGstVerified
+                      ? 'IRIS GST Active'
+                      : isMcaVerified
+                        ? 'MCA RoC Active'
+                        : 'Statutory Verification Pending'}
                 </span>
               </div>
             </div>
@@ -548,8 +568,10 @@ export const BidDetailPage: React.FC = () => {
               </div>
               <div className="mt-2 text-xs font-medium text-foreground/80">
                 Readiness Score:{' '}
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                  {scoreNum} / 100
+                <span
+                  className={`font-bold ${decision ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}
+                >
+                  {decision ? `${scoreNum} / 100` : 'Not Evaluated'}
                 </span>
               </div>
             </div>

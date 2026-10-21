@@ -3,17 +3,16 @@
  *
  * Implements 1 Tenant -> N Companies scoping with strict anti-IDOR validation.
  */
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Optional } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
-import { eq, and, desc } from 'drizzle-orm';
-import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '@/common/database/database.module.js';
+import { type DrizzleDb } from '@/common/database/database.module.js';
 import * as schema from '@/common/database/schema.js';
 import { NotFoundError, BadRequestError } from '@/common/errors/errors.js';
 import { TenantContextHolder } from '@/common/security/TenantContext.js';
-import { Optional } from '@nestjs/common';
 import { CompanyProfileService } from '@/modules/company-profile/company-profile.service.js';
 import { EntitlementService } from '@/modules/billing/entitlement.service.js';
 import type { CompanyProfilePayload } from '@/modules/company-profile/presentation/dto/CompanyProfilePayload.js';
+import { CompaniesRepository } from '@/modules/companies/companies.repository.js';
 
 export interface CreateCompanyDto {
   legalName: string;
@@ -48,17 +47,21 @@ export interface CompanyView {
 
 @Injectable()
 export class CompaniesService {
-  private readonly db: DrizzleDb;
+  private readonly repository: CompaniesRepository;
 
   constructor(
-    @Inject(DRIZZLE_TOKEN) db: DrizzleDb | PGlite,
+    @Inject(CompaniesRepository)
+    repositoryOrDb: CompaniesRepository | DrizzleDb | PGlite,
     @Inject(CompanyProfileService)
     private readonly companyProfileService: CompanyProfileService,
     @Optional()
     @Inject(EntitlementService)
     private readonly entitlementService?: EntitlementService,
   ) {
-    this.db = 'select' in db ? (db as DrizzleDb) : createDrizzle(db as PGlite);
+    this.repository =
+      repositoryOrDb instanceof CompaniesRepository
+        ? repositoryOrDb
+        : new CompaniesRepository(repositoryOrDb);
   }
 
   /**
@@ -67,11 +70,7 @@ export class CompaniesService {
   public async listCompanies(): Promise<CompanyView[]> {
     const orgId = this.requireOrg();
 
-    const records = await this.db
-      .select()
-      .from(schema.companies)
-      .where(eq(schema.companies.organizationId, orgId))
-      .orderBy(desc(schema.companies.createdAt));
+    const records = await this.repository.listCompaniesByOrganization(orgId);
 
     return records.map((r) => this.mapCompany(r));
   }
@@ -82,11 +81,7 @@ export class CompaniesService {
   public async getCompanyById(companyId: string): Promise<CompanyView> {
     const orgId = this.requireOrg();
 
-    const [record] = await this.db
-      .select()
-      .from(schema.companies)
-      .where(and(eq(schema.companies.id, companyId), eq(schema.companies.organizationId, orgId)))
-      .limit(1);
+    const record = await this.repository.findCompanyById(companyId, orgId);
 
     if (!record) {
       throw new NotFoundError(`Company '${companyId}' not found in your organization.`);
@@ -113,21 +108,18 @@ export class CompaniesService {
     const companyId = `comp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const now = new Date();
 
-    const [created] = await this.db
-      .insert(schema.companies)
-      .values({
-        id: companyId,
-        organizationId: orgId,
-        legalName: dto.legalName.trim(),
-        slug: dto.slug?.trim() ?? null,
-        gstin: dto.gstin?.trim() ?? null,
-        pan: dto.pan?.trim() ?? null,
-        udyamId: dto.udyamId?.trim() ?? null,
-        constitution: dto.constitution?.trim() ?? null,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .returning();
+    const created = await this.repository.createCompany({
+      id: companyId,
+      organizationId: orgId,
+      legalName: dto.legalName.trim(),
+      slug: dto.slug?.trim() ?? null,
+      gstin: dto.gstin?.trim() ?? null,
+      pan: dto.pan?.trim() ?? null,
+      udyamId: dto.udyamId?.trim() ?? null,
+      constitution: dto.constitution?.trim() ?? null,
+      createdAt: now,
+      updatedAt: now,
+    });
 
     if (!created) {
       throw new BadRequestError('Failed to create company record.');

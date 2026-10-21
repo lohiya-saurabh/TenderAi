@@ -1,21 +1,15 @@
 /**
  * TeamsService — Manages team members and invitations within a Tenant.
  */
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Optional } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
-import { eq } from 'drizzle-orm';
 import bcrypt from 'bcrypt';
-import { Optional } from '@nestjs/common';
-import {
-  DRIZZLE_TOKEN,
-  type DrizzleDb,
-  createDrizzle,
-} from '@/common/database/database.module.js';
-import * as schema from '@/common/database/schema.js';
+import { type DrizzleDb } from '@/common/database/database.module.js';
 import { BadRequestError } from '@/common/errors/errors.js';
 import { TenantContextHolder } from '@/common/security/TenantContext.js';
 import { ROLE_PERMISSIONS, type UserRole } from '@/common/security/permissions.js';
 import { EntitlementService } from '@/modules/billing/entitlement.service.js';
+import { TeamsRepository } from '@/modules/teams/teams.repository.js';
 
 export interface InviteMemberDto {
   email: string;
@@ -36,15 +30,19 @@ export interface TeamMemberView {
 
 @Injectable()
 export class TeamsService {
-  private readonly db: DrizzleDb;
+  private readonly repository: TeamsRepository;
 
   constructor(
-    @Inject(DRIZZLE_TOKEN) db: DrizzleDb | PGlite,
+    @Inject(TeamsRepository)
+    repositoryOrDb: TeamsRepository | DrizzleDb | PGlite,
     @Optional()
     @Inject(EntitlementService)
     private readonly entitlementService?: EntitlementService,
   ) {
-    this.db = 'select' in db ? (db as DrizzleDb) : createDrizzle(db as PGlite);
+    this.repository =
+      repositoryOrDb instanceof TeamsRepository
+        ? repositoryOrDb
+        : new TeamsRepository(repositoryOrDb);
   }
 
   /**
@@ -53,19 +51,7 @@ export class TeamsService {
   public async listMembers(): Promise<TeamMemberView[]> {
     const orgId = this.requireOrg();
 
-    const records = await this.db
-      .select({
-        id: schema.users.id,
-        email: schema.users.email,
-        name: schema.users.name,
-        phone: schema.users.phone,
-        role: schema.users.role,
-        permissions: schema.users.permissions,
-        organizationId: schema.users.organizationId,
-        organizationName: schema.users.organizationName,
-      })
-      .from(schema.users)
-      .where(eq(schema.users.organizationId, orgId));
+    const records = await this.repository.listMembersByOrganization(orgId);
 
     return records.map((r) => ({
       id: r.id,
@@ -87,22 +73,14 @@ export class TeamsService {
     const callerUserId = TenantContextHolder.get()?.userId;
 
     let orgName = 'Default Workspace';
-    const [org] = await this.db
-      .select({ name: schema.organizations.name })
-      .from(schema.organizations)
-      .where(eq(schema.organizations.id, orgId))
-      .limit(1);
+    const foundOrgName = await this.repository.findOrganizationName(orgId);
 
-    if (org?.name) {
-      orgName = org.name;
+    if (foundOrgName) {
+      orgName = foundOrgName;
     } else if (callerUserId) {
-      const [userRec] = await this.db
-        .select({ organizationName: schema.users.organizationName })
-        .from(schema.users)
-        .where(eq(schema.users.id, callerUserId))
-        .limit(1);
-      if (userRec?.organizationName) {
-        orgName = userRec.organizationName;
+      const userOrgName = await this.repository.findUserOrganizationName(callerUserId);
+      if (userOrgName) {
+        orgName = userOrgName;
       }
     }
 
@@ -137,20 +115,17 @@ export class TeamsService {
     const newUserId = `usr_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
     const tempPassword = await bcrypt.hash('TenderPulse@2026', 10);
 
-    const [created] = await this.db
-      .insert(schema.users)
-      .values({
-        id: newUserId,
-        email: dto.email.toLowerCase().trim(),
-        name: dto.name.trim(),
-        password: tempPassword,
-        phone: null,
-        role: normalizedRole,
-        permissions,
-        organizationId: orgId,
-        organizationName: orgName,
-      })
-      .returning();
+    const created = await this.repository.createUser({
+      id: newUserId,
+      email: dto.email.toLowerCase().trim(),
+      name: dto.name.trim(),
+      password: tempPassword,
+      phone: null,
+      role: normalizedRole,
+      permissions,
+      organizationId: orgId,
+      organizationName: orgName,
+    });
 
     if (!created) {
       throw new BadRequestError('Failed to provision new team member.');
@@ -171,7 +146,7 @@ export class TeamsService {
   private requireOrg(): string {
     const orgId = TenantContextHolder.get()?.organizationId;
     if (!orgId) {
-      throw new BadRequestError('Tenant context is required to access team members.');
+      throw new BadRequestError('Tenant organization context is required.');
     }
     return orgId;
   }

@@ -11,6 +11,7 @@ import {
   QueueMessage,
   DeadLetterMessage,
 } from '@/modules/bids/application/IJobQueue.js';
+import { ConfigService } from '@nestjs/config';
 import { StructuredLogger } from '@/common/logging/StructuredLogger.js';
 import { LoggingContextHolder } from '@/common/logging/LoggingContext.js';
 
@@ -31,18 +32,21 @@ export class AwsSqsJobQueue implements IJobQueue {
   private readonly dlqUrl?: string;
   private readonly logger = new StructuredLogger('AwsSqsJobQueue', 'api');
 
-  constructor(config: AwsSqsConfig) {
+  constructor(config: AwsSqsConfig, configService?: ConfigService) {
+    const cfg = configService ?? new ConfigService();
     this.queueUrl = config.queueUrl;
     this.dlqUrl = config.dlqUrl;
+    const accessKeyId = cfg.get<string>('AWS_ACCESS_KEY_ID');
+    const secretAccessKey = cfg.get<string>('AWS_SECRET_ACCESS_KEY');
     this.sqsClient = new SQSClient({
-      region: config.region || process.env.AWS_REGION || 'ap-south-1',
-      endpoint: config.endpoint || process.env.SQS_ENDPOINT || undefined,
+      region: config.region || cfg.get<string>('AWS_REGION') || 'ap-south-1',
+      endpoint: config.endpoint || cfg.get<string>('SQS_ENDPOINT') || undefined,
       credentials:
         config.credentials ||
-        (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+        (accessKeyId && secretAccessKey
           ? {
-              accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-              secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+              accessKeyId,
+              secretAccessKey,
             }
           : undefined),
     });

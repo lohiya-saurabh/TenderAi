@@ -5,6 +5,7 @@
  * falling back to MockSqsJobQueue for local in-memory execution and testing.
  */
 import { Module, Global, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import type { IJobQueue } from '@/modules/bids/application/IJobQueue.js';
 import { AwsSqsJobQueue } from '@/infrastructure/queue/AwsSqsJobQueue.js';
 import { GcpPubSubJobQueue } from '@/infrastructure/queue/GcpPubSubJobQueue.js';
@@ -19,41 +20,45 @@ export const COMPLETION_QUEUE_TOKEN = 'COMPLETION_QUEUE';
   providers: [
     {
       provide: QUEUE_TOKEN,
-      useFactory: (): IJobQueue => {
+      useFactory: (configService: ConfigService): IJobQueue => {
         const logger = new Logger('QueueModule:Ingestion');
-        if (process.env.QUEUE_PROVIDER === 'mock' || process.env.ALLOW_MOCK_SERVICES === 'true') {
+        const queueProvider = configService.get<string>('QUEUE_PROVIDER');
+        const allowMock = configService.get<string>('ALLOW_MOCK_SERVICES');
+        if (queueProvider === 'mock' || allowMock === 'true') {
           return new MockSqsJobQueue();
         }
 
-        const queueUrl = process.env.AWS_SQS_INGESTION_QUEUE_URL || process.env.AWS_SQS_QUEUE_URL;
+        const queueUrl =
+          configService.get<string>('AWS_SQS_INGESTION_QUEUE_URL') ||
+          configService.get<string>('AWS_SQS_QUEUE_URL');
         if (queueUrl) {
           const service = new AwsSqsJobQueue({
             queueUrl,
-            dlqUrl: process.env.AWS_SQS_DLQ_URL,
-            region: process.env.AWS_REGION || 'ap-south-1',
+            dlqUrl: configService.get<string>('AWS_SQS_DLQ_URL'),
+            region: configService.get<string>('AWS_REGION') || 'ap-south-1',
           });
           logger.log(`Connected to AWS SQS ingestion queue: ${queueUrl}`);
           return service;
         }
 
-        if (
-          process.env.GCP_PROJECT_ID &&
-          process.env.GCP_PUBSUB_TOPIC &&
-          process.env.GCP_PUBSUB_SUBSCRIPTION
-        ) {
+        const gcpProjectId = configService.get<string>('GCP_PROJECT_ID');
+        const gcpTopic = configService.get<string>('GCP_PUBSUB_TOPIC');
+        const gcpSub = configService.get<string>('GCP_PUBSUB_SUBSCRIPTION');
+        if (gcpProjectId && gcpTopic && gcpSub) {
           const service = new GcpPubSubJobQueue({
-            projectId: process.env.GCP_PROJECT_ID,
-            topicName: process.env.GCP_PUBSUB_TOPIC,
-            subscriptionName: process.env.GCP_PUBSUB_SUBSCRIPTION,
-            dlqTopicName: process.env.GCP_PUBSUB_DLQ_TOPIC,
+            projectId: gcpProjectId,
+            topicName: gcpTopic,
+            subscriptionName: gcpSub,
+            dlqTopicName: configService.get<string>('GCP_PUBSUB_DLQ_TOPIC'),
           });
           logger.log(
-            `Connected to GCP Pub/Sub ingestion: topic=${process.env.GCP_PUBSUB_TOPIC}, sub=${process.env.GCP_PUBSUB_SUBSCRIPTION}`,
+            `Connected to GCP Pub/Sub ingestion: topic=${gcpTopic}, sub=${gcpSub}`,
           );
           return service;
         }
 
-        if (process.env.NODE_ENV === 'production') {
+        const nodeEnv = configService.get<string>('NODE_ENV');
+        if (nodeEnv === 'production') {
           throw new Error(
             'A production message queue must be configured with AWS_SQS_QUEUE_URL or GCP Pub/Sub settings.',
           );
@@ -61,44 +66,48 @@ export const COMPLETION_QUEUE_TOKEN = 'COMPLETION_QUEUE';
 
         return new MockSqsJobQueue();
       },
+      inject: [ConfigService],
     },
     {
       provide: COMPLETION_QUEUE_TOKEN,
-      useFactory: (): IJobQueue => {
+      useFactory: (configService: ConfigService): IJobQueue => {
         const logger = new Logger('QueueModule:Completion');
-        if (process.env.QUEUE_PROVIDER === 'mock' || process.env.ALLOW_MOCK_SERVICES === 'true') {
+        const queueProvider = configService.get<string>('QUEUE_PROVIDER');
+        const allowMock = configService.get<string>('ALLOW_MOCK_SERVICES');
+        if (queueProvider === 'mock' || allowMock === 'true') {
           return new MockSqsJobQueue();
         }
 
-        if (process.env.AWS_SQS_COMPLETION_QUEUE_URL) {
+        const completionQueueUrl = configService.get<string>('AWS_SQS_COMPLETION_QUEUE_URL');
+        if (completionQueueUrl) {
           const service = new AwsSqsJobQueue({
-            queueUrl: process.env.AWS_SQS_COMPLETION_QUEUE_URL,
-            dlqUrl: process.env.AWS_SQS_COMPLETION_DLQ_URL,
-            region: process.env.AWS_REGION || 'ap-south-1',
+            queueUrl: completionQueueUrl,
+            dlqUrl: configService.get<string>('AWS_SQS_COMPLETION_DLQ_URL'),
+            region: configService.get<string>('AWS_REGION') || 'ap-south-1',
           });
-          logger.log(`Connected to AWS SQS completion queue: ${process.env.AWS_SQS_COMPLETION_QUEUE_URL}`);
+          logger.log(`Connected to AWS SQS completion queue: ${completionQueueUrl}`);
           return service;
         }
 
-        if (
-          process.env.GCP_PROJECT_ID &&
-          process.env.GCP_PUBSUB_COMPLETION_TOPIC &&
-          process.env.GCP_PUBSUB_COMPLETION_SUBSCRIPTION
-        ) {
+        const gcpProjectId = configService.get<string>('GCP_PROJECT_ID');
+        const gcpCompletionTopic = configService.get<string>('GCP_PUBSUB_COMPLETION_TOPIC');
+        const gcpCompletionSub = configService.get<string>('GCP_PUBSUB_COMPLETION_SUBSCRIPTION');
+        if (gcpProjectId && gcpCompletionTopic && gcpCompletionSub) {
           const service = new GcpPubSubJobQueue({
-            projectId: process.env.GCP_PROJECT_ID,
-            topicName: process.env.GCP_PUBSUB_COMPLETION_TOPIC,
-            subscriptionName: process.env.GCP_PUBSUB_COMPLETION_SUBSCRIPTION,
-            dlqTopicName: process.env.GCP_PUBSUB_COMPLETION_DLQ_TOPIC,
+            projectId: gcpProjectId,
+            topicName: gcpCompletionTopic,
+            subscriptionName: gcpCompletionSub,
+            dlqTopicName: configService.get<string>('GCP_PUBSUB_COMPLETION_DLQ_TOPIC'),
           });
           logger.log(
-            `Connected to GCP Pub/Sub completion: topic=${process.env.GCP_PUBSUB_COMPLETION_TOPIC}, sub=${process.env.GCP_PUBSUB_COMPLETION_SUBSCRIPTION}`,
+            `Connected to GCP Pub/Sub completion: topic=${gcpCompletionTopic}, sub=${gcpCompletionSub}`,
           );
           return service;
         }
 
         return new MockSqsJobQueue();
       },
+      inject: [ConfigService],
     },
   ],
   exports: [QUEUE_TOKEN, COMPLETION_QUEUE_TOKEN],

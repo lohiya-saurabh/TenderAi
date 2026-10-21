@@ -67,12 +67,13 @@ export const CompanyProfilePage: React.FC = () => {
         regNumber: selectedCompany.gstin,
         issuingAuthority: 'Goods & Services Tax Network (GSTN)',
         stateOrJurisdiction: 'India',
-        status: isGstVerified ? 'SOURCE_VERIFIED' : 'VERIFIED',
-        verificationNotes: isGstVerified ? 'Verified via IRIS IRP GSP' : undefined,
+        status: isGstVerified ? 'SOURCE_VERIFIED' : 'UNVERIFIED',
+        verificationNotes: isGstVerified ? 'Verified via IRIS IRP GSP' : 'Pending verification',
         lastVerifiedAt: selectedCompany.gstinVerifiedAt || undefined,
       });
     }
     if (selectedCompany.pan) {
+      const isPanVerified = Boolean(selectedCompany.gstinVerifiedAt || selectedCompany.mcaVerifiedAt);
       registrations.push({
         id: 'reg-pan',
         title: 'Permanent Account Number (PAN)',
@@ -80,7 +81,8 @@ export const CompanyProfilePage: React.FC = () => {
         regNumber: selectedCompany.pan,
         issuingAuthority: 'Income Tax Department of India',
         stateOrJurisdiction: 'Pan-India',
-        status: 'VERIFIED',
+        status: isPanVerified ? 'SOURCE_VERIFIED' : 'UNVERIFIED',
+        verificationNotes: isPanVerified ? 'Verified via Statutory Return Cross-Check' : 'Pending verification',
       });
     }
     if (selectedCompany.cin) {
@@ -92,8 +94,8 @@ export const CompanyProfilePage: React.FC = () => {
         regNumber: selectedCompany.cin,
         issuingAuthority: 'Ministry of Corporate Affairs (MCA)',
         stateOrJurisdiction: 'India',
-        status: isMcaVerified ? 'SOURCE_VERIFIED' : 'VERIFIED',
-        verificationNotes: isMcaVerified ? 'Verified via MCA Master Data' : undefined,
+        status: isMcaVerified ? 'SOURCE_VERIFIED' : 'UNVERIFIED',
+        verificationNotes: isMcaVerified ? 'Verified via MCA Master Data' : 'Pending verification',
         lastVerifiedAt: selectedCompany.mcaVerifiedAt || undefined,
       });
     }
@@ -106,8 +108,8 @@ export const CompanyProfilePage: React.FC = () => {
         regNumber: selectedCompany.udyamId,
         issuingAuthority: 'Ministry of MSME, Govt of India',
         stateOrJurisdiction: 'India',
-        status: isUdyamVerified ? 'SOURCE_VERIFIED' : 'VERIFIED',
-        verificationNotes: isUdyamVerified ? 'Verified via MSME National Portal' : undefined,
+        status: isUdyamVerified ? 'SOURCE_VERIFIED' : 'UNVERIFIED',
+        verificationNotes: isUdyamVerified ? 'Verified via MSME National Portal' : 'Pending verification',
         lastVerifiedAt: selectedCompany.udyamVerifiedAt || undefined,
       });
     }

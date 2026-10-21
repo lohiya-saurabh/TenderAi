@@ -4,6 +4,7 @@
  * Any module that needs type-safe query building injects 'DRIZZLE_TOKEN'.
  */
 import { Module, Global } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { drizzle, type PgliteDatabase } from 'drizzle-orm/pglite';
 import { PGlite } from '@electric-sql/pglite';
 import { getDatabase, initDatabase } from '@/common/database/database.provider.js';
@@ -23,9 +24,10 @@ export function createDrizzle(db: PGlite): DrizzleDb {
   providers: [
     {
       provide: DATABASE_TOKEN,
-      useFactory: async () => {
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => {
         const db = await getDatabase();
-        await initDatabase(db);
+        await initDatabase(db, undefined, configService);
         return db;
       },
     },

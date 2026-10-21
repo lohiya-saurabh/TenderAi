@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import datetime
+import json
+import logging
 import re
 from typing import Any, TypedDict
 
@@ -13,8 +15,39 @@ from tenderpulse_ai.chat.schemas import (
     FinancialSummaryCardDto,
     ToolCallDto,
 )
-from tenderpulse_ai.chat.tools import STOP_WORDS, ChatToolRegistry
+from tenderpulse_ai.chat.tools import (
+    STOP_WORDS,
+    ChatToolRegistry,
+    extract_keywords,
+    get_synonyms_for_tokens,
+    is_out_of_domain,
+)
 from tenderpulse_ai.security.context import SecurityContext
+
+logger = logging.getLogger("tenderpulse_ai.chat.workflow")
+
+_llm_client_instance: Any | None = None
+
+
+def get_llm_client() -> Any | None:
+    """Provides a reusable singleton OpenAICompatibleLlmClient instance."""
+    global _llm_client_instance
+    from tenderpulse_ai.config import settings
+
+    if not settings.llm_api_key:
+        return None
+    if _llm_client_instance is None:
+        from tenderpulse_ai.infrastructure.llm.openai_compatible_client import (
+            OpenAICompatibleLlmClient,
+        )
+
+        _llm_client_instance = OpenAICompatibleLlmClient(
+            api_key=settings.llm_api_key,
+            base_url=settings.llm_base_url,
+            model=settings.llm_model,
+            timeout=12.0,
+        )
+    return _llm_client_instance
 
 
 class ChatWorkflowState(TypedDict, total=False):
@@ -27,6 +60,7 @@ class ChatWorkflowState(TypedDict, total=False):
     context: dict[str, Any]
     routed_intent: str
     tools_to_call: list[str]
+    tool_args: dict[str, dict[str, Any]]
     tool_calls: list[ToolCallDto]
     retrieved_evidence: list[dict[str, Any]]
     citations: list[CitationDto]
@@ -35,14 +69,65 @@ class ChatWorkflowState(TypedDict, total=False):
     response_content: str
     suggested_followups: list[str]
     audit_events: list[dict[str, Any]]
+    query_rewritten: bool
 
 
-def intent_routing_node(state: ChatWorkflowState) -> dict[str, Any]:
-    """Analyzes the user's prompt and conversation context to select relevant tools."""
-    query = state.get("query", "").lower()
+VALID_INTENTS = {
+    "TENDER_SPEC",
+    "FINANCIAL_AUDIT",
+    "STATUTORY_CREDENTIALS",
+    "COMPANY_EXPERIENCE",
+    "COMPLIANCE_CHECK",
+    "BID_DECISION",
+    "GREETING",
+    "GENERAL",
+}
+
+VALID_TOOLS = {
+    "search_tender_documents",
+    "search_company_evidence",
+    "get_company_profile",
+    "get_company_financials",
+    "calculate_financial_capacity",
+    "get_company_experience",
+    "get_compliance_matrix",
+    "get_bid_decision_summary",
+}
+
+
+def _turn_reset_state(
+    intent: str,
+    tools_to_call: list[str],
+    tool_args: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    """Resets turn-scoped state keys so MemorySaver checkpoints don't bleed across turns."""
+    return {
+        "routed_intent": intent,
+        "tools_to_call": tools_to_call,
+        "tool_args": tool_args,
+        "tool_calls": [],
+        "retrieved_evidence": [],
+        "citations": [],
+        "uncertainties": [],
+        "financial_summary": None,
+        "query_rewritten": False,
+    }
+
+
+async def intent_routing_node(state: ChatWorkflowState) -> dict[str, Any]:
+    """Analyzes the user's prompt and conversation context via LLM Semantic Router
+    with domain thesaurus fallback to classify intent and select tools with optimized arguments."""
+    query = state.get("query", "").strip()
+    q_lower = query.lower()
+
+    if is_out_of_domain(query):
+        return _turn_reset_state(
+            intent="GENERAL",
+            tools_to_call=["search_tender_documents", "search_company_evidence"],
+            tool_args={},
+        )
+
     history = state.get("history", [])
-    tools: list[str] = []
-    intent = "GENERAL"
 
     financial_keywords = [
         "turnover",
@@ -53,6 +138,8 @@ def intent_routing_node(state: ChatWorkflowState) -> dict[str, Any]:
         "maat",
         "udin",
         "ca cert",
+        "audit",
+        "audited",
     ]
     capacity_keywords = [
         "capacity",
@@ -65,6 +152,7 @@ def intent_routing_node(state: ChatWorkflowState) -> dict[str, Any]:
     ]
     experience_keywords = [
         "past project",
+        "past projects",
         "similar work",
         "work order",
         "completion certificate",
@@ -72,6 +160,8 @@ def intent_routing_node(state: ChatWorkflowState) -> dict[str, Any]:
         "highway project",
         "bridge project",
         "similar experience",
+        "track record",
+        "executed",
     ]
     compliance_keywords = [
         "stamp paper",
@@ -95,18 +185,35 @@ def intent_routing_node(state: ChatWorkflowState) -> dict[str, Any]:
         "gap",
         "go",
         "no-go",
+        "pursue",
     ]
     tender_keywords = [
         "emd",
         "earnest money",
         "deposit",
         "liquidated damages",
+        "penalty",
+        "penalties",
+        "late",
+        "delay",
+        "delays",
+        "liquidated",
+        "damages",
+        "ld",
+        "compensation",
+        "extension",
         "penalty cap",
         "submission deadline",
+        "deadline",
         "technical specification",
+        "specification",
         "nit",
+        "rfp",
+        "gcc",
+        "scc",
         "tender clause",
         "tender spec",
+        "clause",
     ]
     statutory_keywords = [
         "gst",
@@ -124,17 +231,161 @@ def intent_routing_node(state: ChatWorkflowState) -> dict[str, Any]:
         "who are we",
         "our legal name",
         "legal name",
+        "roc",
     ]
     greeting_keywords = [
         "hello",
         "hi",
         "hey",
+        "yo",
+        "sup",
+        "what's up",
+        "whats up",
+        "hiya",
+        "howdy",
+        "namaste",
         "greetings",
         "help",
         "who are you",
+        "how are you",
+        "how do you do",
+        "how're you",
+        "doing well",
+        "good morning",
+        "good afternoon",
+        "good evening",
+        "good day",
+        "thanks",
+        "thank you",
     ]
 
-    if any(k in query for k in capacity_keywords):
+    is_greeting_match = (
+        any(re.search(rf"\b{re.escape(k)}\b", q_lower) for k in greeting_keywords)
+        and not any(k in q_lower for k in capacity_keywords)
+        and not any(k in q_lower for k in financial_keywords)
+        and not any(re.search(rf"\b{re.escape(k)}\b", q_lower) for k in statutory_keywords)
+        and not any(k in q_lower for k in experience_keywords)
+        and not any(k in q_lower for k in compliance_keywords)
+        and not any(k in q_lower for k in decision_keywords)
+        and not any(k in q_lower for k in tender_keywords)
+    )
+
+    if is_greeting_match:
+        return _turn_reset_state(
+            intent="GREETING",
+            tools_to_call=[],
+            tool_args={},
+        )
+
+    # 1. Semantic Router via Live LLM when API key is configured
+    llm_client = get_llm_client()
+    if llm_client:
+        try:
+            system_prompt = (
+                "You are the Query Router & Tool Orchestrator for TenderPulse AI, an intelligent procurement copilot for infrastructure bids.\n"
+                "Analyze the user's message and multi-turn conversation history to determine their intent and select the appropriate retrieval tools with optimized search arguments.\n\n"
+                "Supported Intents:\n"
+                "- TENDER_SPEC: Questions about tender requirements, technical specifications, clauses (e.g. liquidated damages, EMD, completion periods, deadlines, penalty cap).\n"
+                "- FINANCIAL_AUDIT: Questions regarding financial capacity, annual turnover (MAAT), CA certificates, UDIN, solvency, net worth, or follow-up questions asking if past turnover or financial numbers are sufficient or meet tender thresholds.\n"
+                "- STATUTORY_CREDENTIALS: Questions regarding company registration, GSTIN, PAN, CIN, incorporation, or legal identity.\n"
+                "- COMPANY_EXPERIENCE: Questions regarding past projects, similar work experience, completed contracts, or client completion certificates.\n"
+                "- COMPLIANCE_CHECK: Questions regarding compliance matrix, mandatory execution rules, stamp paper denominations, notarization, or affidavits.\n"
+                "- BID_DECISION: High-level pursuit questions on whether the organization should bid overall (Go / No-Go decision verdict, overall readiness score, pursuit risks, or general bid strategy).\n"
+                "- GREETING: Casual conversational greetings, hellos, introductions, or pleasantries without specific procurement requests.\n"
+                "- GENERAL: General inquiries or ungrounded questions.\n\n"
+                "Available Tools:\n"
+                '- search_tender_documents: args {"query": "<optimized search keywords with procurement synonyms>"}\n'
+                '- search_company_evidence: args {"query": "<optimized search keywords with credentials/vault terms>"}\n'
+                "- get_company_profile: args {}\n"
+                "- get_company_financials: args {}\n"
+                "- calculate_financial_capacity: args {}\n"
+                '- get_company_experience: args {"query": "<search query for specific project types>"}\n'
+                "- get_compliance_matrix: args {}\n"
+                "- get_bid_decision_summary: args {}\n\n"
+                "Respond ONLY with a valid JSON object matching this schema:\n"
+                "{\n"
+                '  "intent": "TENDER_SPEC | FINANCIAL_AUDIT | STATUTORY_CREDENTIALS | COMPANY_EXPERIENCE | COMPLIANCE_CHECK | BID_DECISION | GREETING | GENERAL",\n'
+                '  "tools": [\n'
+                '    {"name": "<tool_name>", "args": { ... }}\n'
+                "  ],\n"
+                '  "reasoning": "<brief justification>"\n'
+                "}"
+            )
+
+            messages = [
+                {"role": "system", "content": system_prompt},
+                *[
+                    {"role": m.get("role", "user"), "content": str(m.get("content", ""))}
+                    for m in history[-3:]
+                ],
+                {"role": "user", "content": query},
+            ]
+
+            llm_reply = await llm_client.generate_chat_completion(
+                messages=messages, temperature=0.1
+            )
+            if llm_reply:
+                m_json = re.search(r"\{.*\}", llm_reply, re.DOTALL)
+                if m_json:
+                    parsed = json.loads(m_json.group(0))
+                    intent_cand = str(parsed.get("intent", "")).strip().upper()
+                    recent_text = " ".join(str(m.get("content", "")).lower() for m in history[-2:])
+                    if any(
+                        term in q_lower for term in ("sufficient", "enough", "satisfy", "meet")
+                    ) and any(k in recent_text for k in financial_keywords + capacity_keywords):
+                        intent_cand = "FINANCIAL_AUDIT"
+                    if intent_cand in VALID_INTENTS:
+                        routed_tools: list[str] = []
+                        tool_args: dict[str, dict[str, Any]] = {}
+                        for t in parsed.get("tools", []):
+                            t_name = t.get("name")
+                            if t_name in VALID_TOOLS:
+                                routed_tools.append(t_name)
+                                if isinstance(t.get("args"), dict):
+                                    tool_args[t_name] = t["args"]
+
+                        if intent_cand == "STATUTORY_CREDENTIALS":
+                            if "get_company_profile" not in routed_tools:
+                                routed_tools.append("get_company_profile")
+                            if "search_company_evidence" not in routed_tools:
+                                routed_tools.append("search_company_evidence")
+                                tool_args.setdefault("search_company_evidence", {"query": query})
+                        elif intent_cand == "FINANCIAL_AUDIT":
+                            if "get_company_financials" not in routed_tools:
+                                routed_tools.append("get_company_financials")
+                            if "calculate_financial_capacity" not in routed_tools:
+                                routed_tools.append("calculate_financial_capacity")
+                        elif intent_cand == "COMPANY_EXPERIENCE":
+                            if "get_company_experience" not in routed_tools:
+                                routed_tools.append("get_company_experience")
+                        elif intent_cand == "COMPLIANCE_CHECK":
+                            if "get_compliance_matrix" not in routed_tools:
+                                routed_tools.append("get_compliance_matrix")
+                        elif intent_cand == "BID_DECISION":
+                            if "get_bid_decision_summary" not in routed_tools:
+                                routed_tools.append("get_bid_decision_summary")
+                        elif intent_cand == "TENDER_SPEC":
+                            if "search_tender_documents" not in routed_tools:
+                                routed_tools.append("search_tender_documents")
+                                tool_args.setdefault("search_tender_documents", {"query": query})
+
+                        if routed_tools or intent_cand in ("GREETING", "GENERAL"):
+                            return _turn_reset_state(
+                                intent=intent_cand,
+                                tools_to_call=list(dict.fromkeys(routed_tools)),
+                                tool_args=tool_args,
+                            )
+        except Exception as err:
+            logger.debug(
+                "[ChatWorkflow] Semantic router LLM call failed or timed out, falling back to thesaurus router: %s",
+                err,
+            )
+
+    # 2. Intelligent Domain Thesaurus Semantic Fallback Router (Offline / Test Execution)
+    tools: list[str] = []
+    intent = "GENERAL"
+
+    if any(k in q_lower for k in capacity_keywords):
         intent = "FINANCIAL_AUDIT"
         tools.extend(
             [
@@ -144,7 +395,7 @@ def intent_routing_node(state: ChatWorkflowState) -> dict[str, Any]:
                 "search_company_evidence",
             ]
         )
-    elif any(k in query for k in financial_keywords):
+    elif any(k in q_lower for k in financial_keywords):
         intent = "FINANCIAL_AUDIT"
         tools.extend(
             [
@@ -154,18 +405,18 @@ def intent_routing_node(state: ChatWorkflowState) -> dict[str, Any]:
                 "search_company_evidence",
             ]
         )
-    elif any(re.search(rf"\b{re.escape(k)}\b", query) for k in statutory_keywords):
+    elif any(re.search(rf"\b{re.escape(k)}\b", q_lower) for k in statutory_keywords):
         intent = "STATUTORY_CREDENTIALS"
         tools.extend(["get_company_profile", "search_company_evidence", "search_tender_documents"])
-    elif any(k in query for k in experience_keywords) or "experience" in query:
+    elif any(k in q_lower for k in experience_keywords) or "experience" in q_lower:
         intent = "COMPANY_EXPERIENCE"
         tools.extend(
             ["get_company_experience", "search_tender_documents", "search_company_evidence"]
         )
-    elif any(k in query for k in compliance_keywords):
+    elif any(k in q_lower for k in compliance_keywords):
         intent = "COMPLIANCE_CHECK"
         tools.extend(["get_compliance_matrix", "search_tender_documents"])
-    elif any(k in query for k in decision_keywords):
+    elif any(k in q_lower for k in decision_keywords):
         intent = "BID_DECISION"
         tools.extend(
             [
@@ -175,14 +426,9 @@ def intent_routing_node(state: ChatWorkflowState) -> dict[str, Any]:
                 "search_tender_documents",
             ]
         )
-    elif any(k in query for k in tender_keywords):
+    elif any(k in q_lower for k in tender_keywords):
         intent = "TENDER_SPEC"
         tools.append("search_tender_documents")
-    elif (
-        any(re.search(rf"\b{re.escape(k)}\b", query) for k in greeting_keywords)
-        and len(query.split()) <= 4
-    ):
-        intent = "GREETING"
     elif history:
         # Contextual continuity from recent turns
         recent_text = " ".join(str(m.get("content", "")).lower() for m in history[-2:])
@@ -224,6 +470,9 @@ def intent_routing_node(state: ChatWorkflowState) -> dict[str, Any]:
             tools.extend(
                 ["get_bid_decision_summary", "get_compliance_matrix", "search_tender_documents"]
             )
+        elif any(k in recent_text for k in tender_keywords):
+            intent = "TENDER_SPEC"
+            tools.append("search_tender_documents")
         else:
             intent = "GENERAL"
             tools.extend(["search_tender_documents", "search_company_evidence"])
@@ -231,46 +480,64 @@ def intent_routing_node(state: ChatWorkflowState) -> dict[str, Any]:
         intent = "GENERAL"
         tools.extend(["search_tender_documents", "search_company_evidence"])
 
-    # Deduplicate tools while preserving order
+    # Build semantic domain-expanded search arguments for retrieval tools
+    tokens = extract_keywords(query)
+    substantive_tokens = [w for w in tokens if w not in STOP_WORDS]
+    synonyms = get_synonyms_for_tokens(substantive_tokens or tokens)
+    expanded_search_query = " ".join(
+        list(dict.fromkeys((substantive_tokens or tokens) + list(synonyms)))
+    )
+
+    tool_args: dict[str, dict[str, Any]] = {}
+    if "search_tender_documents" in tools:
+        tool_args["search_tender_documents"] = {"query": expanded_search_query or query}
+    if "search_company_evidence" in tools:
+        tool_args["search_company_evidence"] = {"query": expanded_search_query or query}
+    if "get_company_experience" in tools:
+        tool_args["get_company_experience"] = {"query": query}
+
     deduped_tools = list(dict.fromkeys(tools))
-    return {
-        "routed_intent": intent,
-        "tools_to_call": deduped_tools,
-    }
+    return _turn_reset_state(
+        intent=intent,
+        tools_to_call=deduped_tools,
+        tool_args=tool_args,
+    )
 
 
 def tool_calling_node(state: ChatWorkflowState) -> dict[str, Any]:
-    """Executes routed AI worker tools scoped strictly by security context."""
+    """Executes routed AI worker tools scoped strictly by security context synchronously on in-memory context."""
     registry = ChatToolRegistry(
         state.get("context"), security_context=state.get("security_context")
     )
     query = state.get("query", "")
     bid_id = state.get("bid_id")
     company_id = state.get("company_id")
+    tool_args_map = state.get("tool_args") or {}
 
-    tool_calls: list[ToolCallDto] = []
-    retrieved_evidence: list[dict[str, Any]] = []
-
-    for tool_name in state.get("tools_to_call", []):
+    def _execute_tool(tool_name: str) -> tuple[ToolCallDto, list[dict[str, Any]]]:
         args: dict[str, Any] = {}
         result: Any = None
+        custom_args = tool_args_map.get(tool_name) or {}
+        evidence_items: list[dict[str, Any]] = []
 
         if tool_name == "search_tender_documents":
-            args = {"query": query, "bid_id": bid_id, "limit": 4}
+            search_query = custom_args.get("query") or query
+            args = {"query": search_query, "bid_id": bid_id, "limit": 4}
             result = registry.search_tender_documents(**args)
             for item in result:
-                retrieved_evidence.append({"type": "TENDER", "data": item})
+                evidence_items.append({"type": "TENDER", "data": item})
 
         elif tool_name == "search_company_evidence":
-            args = {"query": query, "company_id": company_id, "limit": 3}
+            search_query = custom_args.get("query") or query
+            args = {"query": search_query, "company_id": company_id, "limit": 3}
             result = registry.search_company_evidence(**args)
             for item in result:
-                retrieved_evidence.append({"type": "EVIDENCE", "data": item})
+                evidence_items.append({"type": "EVIDENCE", "data": item})
 
         elif tool_name == "get_company_financials":
             args = {"company_id": company_id}
             result = registry.get_company_financials(**args)
-            retrieved_evidence.append({"type": "FINANCIALS", "data": result})
+            evidence_items.append({"type": "FINANCIALS", "data": result})
 
         elif tool_name == "calculate_financial_capacity":
             ctx = state.get("context") or {}
@@ -297,31 +564,40 @@ def tool_calling_node(state: ChatWorkflowState) -> dict[str, Any]:
                 or ctx.get("maxCompletionDate"),
             }
             result = registry.calculate_financial_capacity(**args)
-            retrieved_evidence.append({"type": "CAPACITY", "data": result})
+            evidence_items.append({"type": "CAPACITY", "data": result})
 
         elif tool_name == "get_company_experience":
-            args = {"company_id": company_id, "query": query}
+            exp_query = custom_args.get("query") or query
+            args = {"company_id": company_id, "query": exp_query}
             result = registry.get_company_experience(**args)
             for item in result:
-                retrieved_evidence.append({"type": "EXPERIENCE", "data": item})
+                evidence_items.append({"type": "EXPERIENCE", "data": item})
 
         elif tool_name == "get_compliance_matrix":
             args = {"bid_id": bid_id}
             result = registry.get_compliance_matrix(**args)
             for item in result:
-                retrieved_evidence.append({"type": "COMPLIANCE", "data": item})
+                evidence_items.append({"type": "COMPLIANCE", "data": item})
 
         elif tool_name == "get_bid_decision_summary":
             args = {"bid_id": bid_id, "company_id": company_id}
             result = registry.get_bid_decision_summary(**args)
-            retrieved_evidence.append({"type": "DECISION", "data": result})
+            evidence_items.append({"type": "DECISION", "data": result})
 
         elif tool_name == "get_company_profile":
             args = {"company_id": company_id}
             result = registry.get_company_profile(**args)
-            retrieved_evidence.append({"type": "PROFILE", "data": result})
+            evidence_items.append({"type": "PROFILE", "data": result})
 
-        tool_calls.append(ToolCallDto(tool_name=tool_name, arguments=args, result=result))
+        return ToolCallDto(tool_name=tool_name, arguments=args, result=result), evidence_items
+
+    results = [_execute_tool(t) for t in state.get("tools_to_call", [])]
+
+    tool_calls: list[ToolCallDto] = []
+    retrieved_evidence: list[dict[str, Any]] = []
+    for call, ev_list in results:
+        tool_calls.append(call)
+        retrieved_evidence.extend(ev_list)
 
     return {
         "tool_calls": tool_calls,
@@ -329,8 +605,63 @@ def tool_calling_node(state: ChatWorkflowState) -> dict[str, Any]:
     }
 
 
+async def query_rewrite_node(state: ChatWorkflowState) -> dict[str, Any]:
+    """Expands and rewrites search queries when initial tender document retrieval yielded empty evidence.
+    Leverages domain thesaurus and LLM reformulation to retry chunk retrieval with broadened scope."""
+    query = state.get("query", "")
+    bid_id = state.get("bid_id")
+    registry = ChatToolRegistry(
+        state.get("context"), security_context=state.get("security_context")
+    )
+
+    tokens = extract_keywords(query)
+    synonyms = get_synonyms_for_tokens(tokens)
+    rewritten_query = " ".join(list(dict.fromkeys(tokens + list(synonyms))))
+
+    llm_client = get_llm_client()
+    if llm_client:
+        try:
+            rewrite_prompt = (
+                "You are an expert procurement search query optimizer. Given this user question about a tender:\n"
+                f'"{query}"\n'
+                "Extract the core technical terms and standard Indian procurement keywords (e.g. EMD, MAAT, GCC, Liquidated Damages, Completion) "
+                "as a space-separated search query without punctuation or explanations."
+            )
+            llm_result = await llm_client.generate_chat_completion(
+                messages=[{"role": "user", "content": rewrite_prompt}]
+            )
+            if llm_result and len(llm_result.strip()) > 3:
+                rewritten_query = llm_result.strip()
+        except Exception as e:
+            logger.debug("[ChatWorkflow] LLM query rewrite fallback to thesaurus: %s", e)
+
+    results = registry.search_tender_documents(query=rewritten_query, bid_id=bid_id, limit=4)
+    retrieved_evidence = list(state.get("retrieved_evidence", []))
+    for item in results:
+        retrieved_evidence.append({"type": "TENDER", "data": item})
+
+    tool_calls = list(state.get("tool_calls", []))
+    tool_calls.append(
+        ToolCallDto(
+            tool_name="search_tender_documents",
+            arguments={"query": rewritten_query, "bid_id": bid_id, "limit": 4, "retry": True},
+            result=results,
+        )
+    )
+
+    return {
+        "query_rewritten": True,
+        "retrieved_evidence": retrieved_evidence,
+        "tool_calls": tool_calls,
+    }
+
+
 def citation_generation_node(state: ChatWorkflowState) -> dict[str, Any]:
     """Generates deterministic, verified citations linking tender clauses and company vault proof."""
+    query = state.get("query", "")
+    if is_out_of_domain(query):
+        return {"citations": []}
+
     citations: list[CitationDto] = []
     seen_quotes: set[str] = set()
     counter = 1
@@ -407,6 +738,14 @@ def uncertainty_verification_node(state: ChatWorkflowState) -> dict[str, Any]:
     query = state.get("query", "").lower()
     intent = state.get("routed_intent", "")
 
+    if is_out_of_domain(query):
+        uncertainties.append(
+            {
+                "type": "LACK_OF_EVIDENCE",
+                "summary": f"No verifiable documentary evidence or clause found in the tender documents or company vault regarding '{query.strip()}'.",
+            }
+        )
+
     # Check for known execution rule hazards (e.g. stamp paper, notarization)
     compliance_items = [
         e["data"] for e in state.get("retrieved_evidence", []) if e.get("type") == "COMPLIANCE"
@@ -417,7 +756,7 @@ def uncertainty_verification_node(state: ChatWorkflowState) -> dict[str, Any]:
             uncertainties.append(
                 {
                     "type": "MANDATORY_NOTARIZATION",
-                    "summary": f"{item.get('title')} requires physical notarization on stamp paper prior to bid submission.",
+                    "summary": f"{item.get('title')} requires physical Notarized execution on Stamp Paper prior to bid submission.",
                     "item_id": item.get("id"),
                 }
             )
@@ -426,7 +765,7 @@ def uncertainty_verification_node(state: ChatWorkflowState) -> dict[str, Any]:
             uncertainties.append(
                 {
                     "type": "STAMP_PAPER_REQUIRED",
-                    "summary": f"{item.get('title')} requires non-judicial stamp paper of INR {denom}.",
+                    "summary": f"{item.get('title')} requires Non-Judicial Stamp Paper of INR {denom}.",
                     "item_id": item.get("id"),
                 }
             )
@@ -449,55 +788,66 @@ def uncertainty_verification_node(state: ChatWorkflowState) -> dict[str, Any]:
                 }
             )
 
-    # Anti-hallucination verification: detect out-of-domain or ungrounded queries
-    tender_and_evidence = [
-        e
-        for e in state.get("retrieved_evidence", [])
-        if e.get("type") in ("TENDER", "EVIDENCE", "PROFILE")
-    ]
-    raw_tokens = [w.lower() for w in re.findall(r"\w+", query) if len(w) > 2]
-    substantive_kws = [
-        k
-        for k in raw_tokens
-        if k not in STOP_WORDS
-        and k
-        not in (
-            "tender",
-            "document",
-            "documents",
-            "bid",
-            "bids",
-            "clause",
-            "what",
-            "where",
-            "our",
-            "company",
-        )
-    ]
-
-    if (
-        substantive_kws
-        and not tender_and_evidence
-        and intent not in ("FINANCIAL_AUDIT", "BID_DECISION", "STATUTORY_CREDENTIALS", "GREETING")
-    ):
-        uncertainties.append(
-            {
-                "type": "LACK_OF_EVIDENCE",
-                "summary": f"No documentary evidence or clause found in the tender documents or company vault regarding '{query.strip()}'.",
-            }
-        )
-
+    # Anti-hallucination verification: reserve LACK_OF_EVIDENCE strictly for out-of-domain queries.
+    # For legitimate procurement queries where a clause is not in ingested documents,
+    # do not flag LACK_OF_EVIDENCE so the Copilot can answer conversationally as an experienced bidding consultant.
     return {"uncertainties": uncertainties}
 
 
-async def response_synthesis_node(state: ChatWorkflowState) -> dict[str, Any]:
-    """Synthesizes structured Markdown response with citations, financial cards, and suggestions."""
-    intent = state.get("routed_intent", "GENERAL")
-    citations = list(state.get("citations", []))
-    uncertainties = list(state.get("uncertainties", []))
-    query = state.get("query", "")
-    sec_ctx = state.get("security_context")
+def _build_financial_summary(state: ChatWorkflowState) -> FinancialSummaryCardDto | None:
+    """Builds a unified, deterministic FinancialSummaryCardDto for UI rendering."""
+    if state.get("routed_intent") != "FINANCIAL_AUDIT":
+        return None
+    evidence_items = state.get("retrieved_evidence", [])
+    fin = next((e["data"] for e in evidence_items if e.get("type") == "FINANCIALS"), {})
+    avg_turnover = fin.get("averageTurnoverInrCrores")
 
+    if avg_turnover is None:
+        return FinancialSummaryCardDto(
+            evaluated=False,
+            metric_name="Minimum Average Annual Turnover (MAAT)",
+            required_value="Pending Evaluation",
+            actual_value="No Records",
+            verdict="NOT_EVALUATED",
+            details="No audited turnover records or CA certificates uploaded in company vault.",
+        )
+
+    cap_data = next((e["data"] for e in evidence_items if e.get("type") == "CAPACITY"), {})
+    req_turnover = (
+        cap_data.get("requiredTurnoverInrCrores")
+        or state.get("context", {}).get("required_turnover_inr_crores")
+        or state.get("context", {}).get("requiredTurnoverInrCrores")
+    )
+    if req_turnover is not None:
+        req_num = float(req_turnover)
+        required_val = f"INR {req_num:.2f} Cr"
+        verdict = "PASS" if avg_turnover >= req_num else "FAIL"
+    else:
+        required_val = "INR 25.00 Cr"
+        verdict = "PASS" if avg_turnover >= 25.0 else "FAIL"
+
+    actual_val = f"INR {avg_turnover:.2f} Cr"
+    udin_str = fin.get("auditedUdin") or "Pending UDIN Verification"
+
+    return FinancialSummaryCardDto(
+        evaluated=True,
+        metric_name="Minimum Average Annual Turnover (MAAT)",
+        required_value=required_val,
+        actual_value=actual_val,
+        verdict=verdict,
+        udin=udin_str,
+        details="Audited 3-year average turnover across preceding financial years based on CA Certificate.",
+    )
+
+
+def _synthesize_deterministic_template(
+    state: ChatWorkflowState,
+    citations: list[CitationDto],
+    uncertainties: list[dict[str, Any]],
+    intent: str,
+    query: str,
+    sec_ctx: SecurityContext | None,
+) -> tuple[str, FinancialSummaryCardDto | None, list[str], list[CitationDto]]:
     raw_tokens = [w.lower() for w in re.findall(r"\w+", query) if len(w) > 2]
     substantive_kws = [
         k
@@ -523,6 +873,7 @@ async def response_synthesis_node(state: ChatWorkflowState) -> dict[str, Any]:
     lines: list[str] = []
     financial_summary: FinancialSummaryCardDto | None = None
     suggested_followups: list[str] = []
+    matching_gst_doc: dict[str, Any] | None = None
 
     # Greeting Synthesis
     if intent == "GREETING":
@@ -557,16 +908,12 @@ async def response_synthesis_node(state: ChatWorkflowState) -> dict[str, Any]:
             registry = ChatToolRegistry(state.get("context"), security_context=sec_ctx)
             prof = registry.get_company_profile(state.get("company_id"))
 
-        legal_name = prof.get("legalName") or prof.get("companyName") or "Ashoka Buildcon Limited"
-        gstin = prof.get("gstin") or "27AAACA1234F1Z9"
-        pan = prof.get("pan") or "AAACA1234F"
-        cin = prof.get("cin") or "L45200MH1993PLC071970"
-        constitution = prof.get("constitution") or "Public Limited Company"
+        legal_name = prof.get("legalName") or prof.get("companyName") or ""
+        gstin = prof.get("gstin") or ""
+        pan = prof.get("pan") or ""
+        cin = prof.get("cin") or ""
+        constitution = prof.get("constitution") or ""
         gstin_verified_at = prof.get("gstinVerifiedAt")
-
-        verified_text = (
-            f" (Verified: {gstin_verified_at})" if gstin_verified_at else " (Verified on file)"
-        )
 
         evidence_items = [
             e["data"] for e in state.get("retrieved_evidence", []) if e.get("type") == "EVIDENCE"
@@ -586,62 +933,84 @@ async def response_synthesis_node(state: ChatWorkflowState) -> dict[str, Any]:
             None,
         )
 
-        lines.append(
-            f"Your company **{legal_name}** has verified GST registration records on file:"
-        )
-        lines.append(f"- **GSTIN**: `{gstin}`{verified_text} [^1]")
-        lines.append(f"- **Legal Name**: {legal_name}")
-        lines.append(f"- **Permanent Account Number (PAN)**: `{pan}`")
-        if cin:
-            lines.append(f"- **Corporate Identification Number (CIN)**: `{cin}`")
-        if constitution:
-            lines.append(f"- **Constitution**: {constitution}")
-        if prof.get("udyamId"):
-            lines.append(f"- **Udyam / MSME Registration**: `{prof.get('udyamId')}`")
-
-        if matching_gst_doc:
-            doc_name = (
-                matching_gst_doc.get("documentName")
-                or matching_gst_doc.get("fileName")
-                or "GST_Registration_Certificate.pdf"
-            )
-            doc_cit_idx = next(
-                (i + 1 for i, c in enumerate(citations) if c.document_name == doc_name),
-                2 if len(citations) >= 2 else 1,
-            )
+        if not gstin and not pan and not cin and not matching_gst_doc:
+            lines.append("### Statutory Credentials Status")
             lines.append(
-                f"- **Vault Document**: `{doc_name}` (Category: GST Registration) [^{doc_cit_idx}]"
+                f"No verified GSTIN, PAN, or statutory credentials were found for **{legal_name or 'your company'}**."
             )
-        elif evidence_items:
-            doc_name = (
-                evidence_items[0].get("documentName")
-                or evidence_items[0].get("fileName")
-                or "Company_Evidence.pdf"
-            )
-            doc_cit_idx = next(
-                (i + 1 for i, c in enumerate(citations) if c.document_name == doc_name),
-                2 if len(citations) >= 2 else 1,
-            )
+            lines.append("")
             lines.append(
-                f"- **Vault Document**: `{doc_name}` (Category: Company Evidence) [^{doc_cit_idx}]"
+                "> **Action Required:** Please add and verify your GSTIN and company credentials in your Company Profile."
             )
+            citations = []
+            suggested_followups = [
+                "How do I add our GSTIN to the company profile?",
+                "What documents are required for statutory verification?",
+            ]
         else:
+            verified_text = (
+                f" (Verified: {gstin_verified_at})"
+                if gstin_verified_at
+                else " (Unverified · Pending Verification)"
+            )
+            lines.append(f"Statutory credentials on file for **{legal_name or 'your company'}**:")
+            if gstin:
+                lines.append(f"- **GSTIN**: `{gstin}`{verified_text} [^1]")
+            if legal_name:
+                lines.append(f"- **Legal Name**: {legal_name}")
+            if pan:
+                lines.append(f"- **Permanent Account Number (PAN)**: `{pan}`")
+            if cin:
+                lines.append(f"- **Corporate Identification Number (CIN)**: `{cin}`")
+            if constitution:
+                lines.append(f"- **Constitution**: {constitution}")
+            if prof.get("udyamId"):
+                lines.append(f"- **Udyam / MSME Registration**: `{prof.get('udyamId')}`")
+
+            if matching_gst_doc:
+                doc_name = (
+                    matching_gst_doc.get("documentName")
+                    or matching_gst_doc.get("fileName")
+                    or "GST_Registration_Certificate.pdf"
+                )
+                doc_cit_idx = next(
+                    (i + 1 for i, c in enumerate(citations) if c.document_name == doc_name),
+                    2 if len(citations) >= 2 else 1,
+                )
+                lines.append(
+                    f"- **Vault Document**: `{doc_name}` (Category: GST Registration) [^{doc_cit_idx}]"
+                )
+            elif evidence_items:
+                doc_name = (
+                    evidence_items[0].get("documentName")
+                    or evidence_items[0].get("fileName")
+                    or "Company_Evidence.pdf"
+                )
+                doc_cit_idx = next(
+                    (i + 1 for i, c in enumerate(citations) if c.document_name == doc_name),
+                    2 if len(citations) >= 2 else 1,
+                )
+                lines.append(
+                    f"- **Vault Document**: `{doc_name}` (Category: Company Evidence) [^{doc_cit_idx}]"
+                )
+            else:
+                lines.append(
+                    "- **Vault Document**: *No GST certificate document currently uploaded in vault.*"
+                )
+
             lines.append(
-                "- **Vault Document**: *No GST certificate document currently uploaded in vault (GSTIN verified via company registration profile).*"
+                "\nThese statutory credentials can be cross-referenced against tender eligibility or tax compliance requirements. Would you like me to check the tender documents for tax and registration clauses?"
             )
 
-        lines.append(
-            "\nThese statutory credentials satisfy standard government e-procurement GST registration and PAN verification requirements. Would you like me to cross-reference this against the tender's eligibility or tax compliance requirements?"
-        )
-
-        suggested_followups = [
-            "Does our GST registration satisfy the tender's state-specific registration clause?",
-            "What is our turnover qualification according to the CA certificate?",
-            "Review tender documents for tax and statutory compliance clauses.",
-        ]
+            suggested_followups = [
+                "Does our GST registration satisfy the tender's state-specific registration clause?",
+                "What is our turnover qualification according to the CA certificate?",
+                "Review tender documents for tax and statutory compliance clauses.",
+            ]
 
     # Financial Synthesis
     elif intent == "FINANCIAL_AUDIT":
+        financial_summary = _build_financial_summary(state)
         fin = next(
             (
                 e["data"]
@@ -650,43 +1019,61 @@ async def response_synthesis_node(state: ChatWorkflowState) -> dict[str, Any]:
             ),
             {},
         )
-        avg_turnover = fin.get("averageTurnoverInrCrores", 37.67)
-        required_val = "INR 25.00 Cr"
-        actual_val = f"INR {avg_turnover:.2f} Cr"
-        verdict = "PASS" if avg_turnover >= 25.0 else "FAIL"
+        avg_turnover = fin.get("averageTurnoverInrCrores")
 
-        financial_summary = FinancialSummaryCardDto(
-            evaluated=True,
-            metric_name="Minimum Average Annual Turnover (MAAT)",
-            required_value=required_val,
-            actual_value=actual_val,
-            verdict=verdict,
-            udin=fin.get("auditedUdin", "24089123AAAAAA9999"),
-            details="Audited 3-year average turnover across FY 2021-24 based on CA Certificate with valid UDIN.",
-        )
+        if avg_turnover is None or not financial_summary or not financial_summary.evaluated:
+            lines.append("### Financial Turnover & Qualification Analysis")
+            lines.append(
+                "No audited financial turnover records or CA certificates have been uploaded for your company yet."
+            )
+            lines.append("")
+            lines.append(
+                "> **Action Required:** Please upload your CA-audited balance sheet or turnover certificate with valid UDIN to your Company Vault to evaluate financial eligibility."
+            )
+            citations = []
+            suggested_followups = [
+                "How do I upload audited turnover certificates?",
+                "What other requirements exist in this tender?",
+            ]
+        else:
+            required_val = financial_summary.required_value
+            actual_val = financial_summary.actual_value
+            verdict = financial_summary.verdict
+            udin_str = financial_summary.udin or "Pending UDIN Verification"
 
-        lines.append("### Financial Turnover & Qualification Analysis")
-        lines.append(
-            "Based on **Clause 8.2** of the tender and your **CA Turnover Certificate** [^1]:"
-        )
-        lines.append(
-            f"- **Tender Requirement**: {required_val} average turnover across the preceding 3 financial years."
-        )
-        lines.append(
-            f"- **Company Track Record**: **{actual_val}** (FY 21-22: INR 32.5 Cr, FY 22-23: INR 38.0 Cr, FY 23-24: INR 42.5 Cr)."
-        )
-        lines.append(
-            f"- **Statutory Grounding**: Certified by Chartered Accountant under UDIN `{financial_summary.udin}`."
-        )
-        lines.append(
-            f"- **Eligibility Verdict**: **{verdict}** — The company comfortably satisfies the technical financial criteria."
-        )
+            turnover_records = fin.get("turnoverRecords", [])
+            records_str = (
+                ", ".join(
+                    f"FY {r.get('financialYear')}: INR {r.get('turnoverInrCrores')} Cr"
+                    for r in turnover_records
+                    if r.get("turnoverInrCrores") is not None
+                )
+                if turnover_records
+                else ""
+            )
 
-        suggested_followups = [
-            "What is the required EMD and performance bank guarantee?",
-            "Do we satisfy the similar project experience criteria?",
-            "What are the stamp paper and notarization rules for this bid?",
-        ]
+            lines.append("### Financial Turnover & Qualification Analysis")
+            lines.append(
+                "Based on the tender requirements and your uploaded financial records [^1]:"
+            )
+            lines.append(
+                f"- **Tender Requirement**: {required_val} average turnover across the preceding 3 financial years."
+            )
+            lines.append(
+                f"- **Company Track Record**: **{actual_val}**"
+                + (f" ({records_str})" if records_str else "")
+                + "."
+            )
+            lines.append(f"- **Statutory Grounding**: Certified under UDIN `{udin_str}`.")
+            lines.append(
+                f"- **Eligibility Verdict**: **{verdict}** — {'The company satisfies the financial threshold.' if verdict == 'PASS' else 'The company does not satisfy the financial threshold.'}"
+            )
+
+            suggested_followups = [
+                "What is the required EMD and performance bank guarantee?",
+                "Do we satisfy the similar project experience criteria?",
+                "What are the stamp paper and notarization rules for this bid?",
+            ]
 
     # Experience Synthesis
     elif intent == "COMPANY_EXPERIENCE":
@@ -728,19 +1115,32 @@ async def response_synthesis_node(state: ChatWorkflowState) -> dict[str, Any]:
                         "summary": f"No documentary evidence found regarding '{query.strip()}'.",
                     }
                 )
-        else:
+        elif not exp_items:
             lines.append("### Past Project Experience & Credentials")
             lines.append(
-                "According to **Clause 10.4** of the tender documentation, bidders must demonstrate completion of similar government infrastructure works."
+                "No past project credentials, work orders, or completion certificates were found in your company profile."
             )
-            lines.append("From your Company Evidence Vault [^1]:")
+            lines.append("")
             lines.append(
-                "- **NHAI Highway Widening Package-4**: Completed value of **INR 28.50 Crores** (Completion: Jan 2024). Meets the single project requirement of INR 20.00 Cr."
+                "> **Action Required:** Please upload your past work completion certificates or work orders to your Company Vault to evaluate technical eligibility."
             )
-            lines.append(
-                "- **Maharashtra PWD Flyover**: Completed value of **INR 15.20 Crores** (Completion: Sep 2022)."
-            )
-            lines.append("Both project completion certificates are verified on record.")
+            citations = []
+            suggested_followups = [
+                "How do I upload project credentials to the vault?",
+                "What are the technical qualification criteria for this tender?",
+            ]
+        else:
+            lines.append("### Past Project Experience & Credentials")
+            lines.append("Based on the company vault project track record [^1]:")
+            for idx, exp in enumerate(exp_items[:3]):
+                val = (
+                    f" valued at INR {exp.get('completedValueInrCrores')} Cr"
+                    if exp.get("completedValueInrCrores")
+                    else ""
+                )
+                lines.append(
+                    f"- **{exp.get('title', exp.get('projectName', 'Project'))}** ({exp.get('client', 'Client')}){val} — Completed: {exp.get('completionDate', 'N/A')}. Scope: {exp.get('scope', 'General Works')}."
+                )
 
             suggested_followups = [
                 "Are our ISO certifications valid for this submission?",
@@ -782,22 +1182,28 @@ async def response_synthesis_node(state: ChatWorkflowState) -> dict[str, Any]:
                         "summary": f"No documentary evidence found regarding '{query.strip()}'.",
                     }
                 )
+        elif not comp_items:
+            lines.append("### Compliance & Execution Rules")
+            lines.append(
+                "No extracted compliance items or mandatory clauses have been generated for this tender yet."
+            )
+            lines.append("")
+            lines.append(
+                "> **Action Required:** Please upload tender documents (NIT, RFP) to extract compliance matrix items."
+            )
+            citations = []
+            suggested_followups = [
+                "How do I upload tender documents for extraction?",
+                "What is the status of document processing for this bid?",
+            ]
         else:
             lines.append("### Compliance Matrix & Execution Obligations")
             lines.append("Here is the status of key statutory and tender execution rules [^1]:")
-            lines.append("| Requirement | Category | Execution Rules | Status |")
-            lines.append("| :--- | :--- | :--- | :--- |")
-            lines.append(
-                "| Earnest Money Deposit (EMD) | COMMERCIAL | INR 100 Stamp Paper | **FLAGGED** |"
-            )
-            lines.append(
-                "| Integrity Pact Affidavit | EXECUTION | INR 500 Stamp Paper, Notarized | **FLAGGED** |"
-            )
-            lines.append("| Annual Turnover (MAAT) | TECHNICAL | UDIN Required | **PASS** |")
-            lines.append("")
-            lines.append(
-                "> **Important:** Ensure the Non-Blacklisting Affidavit and Integrity Pact are notarized on the prescribed stamp denomination before final envelope sealing."
-            )
+            for idx, item in enumerate(comp_items[:4]):
+                flag = " ⚠️ Flagged" if item.get("flagged") else " ✅ Clear"
+                lines.append(
+                    f"- **{item.get('category', 'Statutory')}**: {item.get('requirement', item.get('title', 'Requirement'))} — *Status: {item.get('status', 'PENDING')}*{flag}"
+                )
 
             suggested_followups = [
                 "What are the liquidated damages penalties in this contract?",
@@ -807,23 +1213,73 @@ async def response_synthesis_node(state: ChatWorkflowState) -> dict[str, Any]:
 
     # Bid Decision Synthesis
     elif intent == "BID_DECISION":
-        lines.append("### Bid Intelligence & Pursuit Recommendation")
-        lines.append("- **AI Proposed Verdict**: **GO (Pursue Bid)** [^1]")
-        lines.append("- **Readiness Score**: **88%**")
-        lines.append("- **Key Strengths**:")
-        lines.append(
-            "  - 3-Year Average Turnover of INR 37.67 Cr comfortably surpasses the INR 25.00 Cr threshold."
+        dec = next(
+            (e["data"] for e in state.get("retrieved_evidence", []) if e.get("type") == "DECISION"),
+            {},
         )
-        lines.append("  - NHAI Package-4 credential (INR 28.50 Cr) fulfills similar work criteria.")
-        lines.append("- **Action Required Before Submission**:")
-        lines.append("  - Procure INR 500 non-judicial stamp paper for the Integrity Pact.")
-        lines.append("  - Remit EMD of INR 5,00,000 via approved bank guarantee.")
+        if not dec:
+            registry = ChatToolRegistry(state.get("context"), security_context=sec_ctx)
+            dec = registry.get_bid_decision_summary(state.get("bid_id"), state.get("company_id"))
 
-        suggested_followups = [
-            "What clauses carry commercial risks or delivery penalties?",
-            "Verify all statutory certificates in the company vault.",
-            "Review tender documents for liquidated damages.",
-        ]
+        verdict = dec.get("verdict", "NOT_EVALUATED")
+        readiness = dec.get("readinessScore", 0.0)
+        reasons_pursue = dec.get("reasonsToPursue", [])
+        reasons_not = dec.get("reasonsNotToPursue", [])
+        hard_disq = dec.get("hardDisqualifiers", [])
+        comm_risks = dec.get("commercialRisks", [])
+        missing_info = dec.get("missingInformation", [])
+
+        lines.append("### Bid Intelligence & Pursuit Recommendation")
+        if verdict == "NOT_EVALUATED":
+            lines.append("- **Evaluation Status**: **NOT EVALUATED**")
+            lines.append("- **Readiness Score**: **Not Evaluated (0 / 100)**")
+            lines.append(
+                "\nNo deterministic bid decision evaluation has been executed for this tender yet."
+            )
+            lines.append(
+                "\n> **Next Step:** Upload tender documents (NIT, RFP) and trigger the Bid Decision Evaluation on the Bid Detail page to calculate eligibility, readiness score, and risk matrix."
+            )
+            citations = []
+            suggested_followups = [
+                "What documents are required to run bid evaluation?",
+                "What are the general technical requirements for this tender?",
+            ]
+        else:
+            score_pct = int(round(readiness * 100)) if readiness <= 1.0 else int(round(readiness))
+            lines.append(f"- **AI Verdict**: **{verdict.replace('_', ' ')}**")
+            lines.append(f"- **Readiness Score**: **{score_pct} / 100**")
+            if reasons_pursue:
+                lines.append("- **Key Strengths / Reasons to Pursue**:")
+                for r in reasons_pursue[:3]:
+                    lines.append(f"  - {r}")
+            if reasons_not:
+                lines.append("- **Reasons Not to Pursue**:")
+                for r in reasons_not[:3]:
+                    lines.append(f"  - {r}")
+            if hard_disq:
+                lines.append("- **Hard Disqualifiers**:")
+                for d in hard_disq[:3]:
+                    lines.append(f"  - {d}")
+            if comm_risks:
+                lines.append("- **Commercial & Delivery Risks**:")
+                for c in comm_risks[:2]:
+                    title = c.get("title") if isinstance(c, dict) else str(c)
+                    lines.append(f"  - {title}")
+            if missing_info:
+                lines.append("- **Action Required / Missing Information**:")
+                for m in missing_info[:2]:
+                    req = (
+                        m.get("requirementTitle") or m.get("missingFactor")
+                        if isinstance(m, dict)
+                        else str(m)
+                    )
+                    lines.append(f"  - {req}")
+
+            suggested_followups = [
+                "What clauses carry commercial risks or delivery penalties?",
+                "Verify all statutory certificates in the company vault.",
+                "Review tender documents for liquidated damages.",
+            ]
 
     # Default / Tender Specification Synthesis
     else:
@@ -873,22 +1329,44 @@ async def response_synthesis_node(state: ChatWorkflowState) -> dict[str, Any]:
                 "Summarize the overall Bid/No-Bid assessment.",
             ]
         else:
-            lines.append("### Grounded Evidence Assessment")
-            lines.append(
-                f'No verifiable evidence or clause mentioning **"{query}"** was found in the ingested tender documents (NIT, RFP, GCC, SCC) or the company credentials vault.'
-            )
-            lines.append("")
-            lines.append(
-                "> **Anti-Hallucination Policy:** TenderPulse AI strictly grounds all answers in verified procurement clauses. Because no evidentiary record exists for this inquiry, this information cannot be substantiated without official documentary addenda."
-            )
-            citations = []
-            if not any(u.get("type") == "LACK_OF_EVIDENCE" for u in uncertainties):
-                uncertainties.append(
-                    {
-                        "type": "LACK_OF_EVIDENCE",
-                        "summary": f"No documentary evidence found regarding '{query.strip()}'.",
-                    }
+            if is_out_of_domain(query):
+                lines.append("### Grounded Evidence Assessment")
+                lines.append(
+                    f'No verifiable evidence or clause mentioning **"{query}"** was found in the ingested tender documents (NIT, RFP, GCC, SCC) or the company credentials vault.'
                 )
+                lines.append("")
+                lines.append(
+                    "> **Anti-Hallucination Policy:** TenderPulse AI strictly grounds all answers in verified procurement clauses. Because no evidentiary record exists for this inquiry, this information cannot be substantiated without official documentary addenda."
+                )
+                citations = []
+                if not any(u.get("type") == "LACK_OF_EVIDENCE" for u in uncertainties):
+                    uncertainties.append(
+                        {
+                            "type": "LACK_OF_EVIDENCE",
+                            "summary": f"No documentary evidence found regarding '{query.strip()}'.",
+                        }
+                    )
+            else:
+                lines.append("### Procurement Consultation & Document Assessment")
+                lines.append(
+                    f'I reviewed the ingested tender documents and company vault credentials for **"{query}"**, but could not locate a matching clause or certificate in the current project files.'
+                )
+                lines.append("\n**Standard Procurement Practice & Context:**")
+                lines.append(
+                    "- In standard government and infrastructure tenders (e.g., NHAI, CPWD, MoRTH), this subject is typically governed by the General Conditions of Contract (GCC) or Special Conditions of Contract (SCC)."
+                )
+                lines.append(
+                    "- If omitted from the Notice Inviting Tender (NIT) or RFP volume, model standard bidding document (SBD) guidelines usually apply."
+                )
+                lines.append("\n**Recommended Next Steps:**")
+                lines.append(
+                    "- Submit a formal Pre-Bid Query during the tender clarification window requesting official clarification from the tendering authority."
+                )
+                lines.append(
+                    "- Verify whether a Corrigendum / Addendum has been issued modifying this provision."
+                )
+                citations = []
+
             suggested_followups = [
                 "What is our turnover qualification according to the CA certificate?",
                 "What are the specific execution rules and stamp paper requirements?",
@@ -902,54 +1380,119 @@ async def response_synthesis_node(state: ChatWorkflowState) -> dict[str, Any]:
                 lines.append(f"- {u['summary']}")
 
     content = "\n".join(lines)
+    return content, financial_summary, suggested_followups, citations
 
-    # Live LLM generation attempt if API key is provided and query is not adversarial lacking evidence
-    from tenderpulse_ai.config import settings
 
-    if (
-        settings.llm_api_key
-        and intent != "GREETING"
-        and not any(u.get("type") == "LACK_OF_EVIDENCE" for u in uncertainties)
-    ):
-        from tenderpulse_ai.infrastructure.llm.openai_compatible_client import (
-            OpenAICompatibleLlmClient,
+async def response_synthesis_node(state: ChatWorkflowState) -> dict[str, Any]:
+    """Synthesizes structured Markdown response with citations, financial cards, and suggestions.
+    Attempts live LLM synthesis first with explicit footnote mapping, falling back to deterministic template."""
+    intent = state.get("routed_intent", "GENERAL")
+    citations = list(state.get("citations", []))
+    uncertainties = list(state.get("uncertainties", []))
+    query = state.get("query", "")
+    sec_ctx = state.get("security_context")
+
+    if is_out_of_domain(query) and not uncertainties:
+        uncertainties.append(
+            {
+                "type": "LACK_OF_EVIDENCE",
+                "summary": "This query does not pertain to the ingested tender documents, Indian public procurement regulations, or bidder qualification records.",
+            }
         )
 
+    llm_client = get_llm_client()
+    llm_succeeded = False
+    content = ""
+    financial_summary: FinancialSummaryCardDto | None = _build_financial_summary(state)
+    suggested_followups: list[str] = []
+
+    if llm_client and intent != "GREETING" and not is_out_of_domain(query):
+        citations_context_lines = []
+        for idx, cit in enumerate(citations, 1):
+            doc = cit.document_name or "Document"
+            clause = f", {cit.clause_reference}" if cit.clause_reference else ""
+            page = f", Page {cit.page_number}" if cit.page_number else ""
+            quote = cit.verbatim_quote.strip() if cit.verbatim_quote else ""
+            citations_context_lines.append(f'[^{idx}]: {doc}{clause}{page} - "{quote}"')
+        citations_context_str = (
+            "\n".join(citations_context_lines) if citations_context_lines else "None"
+        )
+
+        system_prompt = (
+            "You are TenderPulse AI Copilot, a conversational and intelligent procurement assistant for infrastructure bids. "
+            "Respond conversationally, warmly, and professionally using clear Markdown formatting with bullet points. "
+            "Ground all facts strictly in the provided retrieved evidence and citations without hallucinating.\n\n"
+            "Available Citations to Ground Your Answer:\n"
+            f"{citations_context_str}\n\n"
+            "Instructions:\n"
+            "- When referencing documents, credentials, or clauses from the retrieved evidence, cite them using markdown footnotes like [^1], [^2], corresponding precisely to the citation numbers above.\n"
+            "- When referencing documents or certificates from the retrieved evidence, cite their exact file names (e.g. Tata_Projects_GST_Registration.pdf, Audited_Balance_Sheet_and_CA_Certificate_FY25.pdf).\n"
+            "- When discussing statutory execution rules, explicitly mention **Stamp Paper** and **Notarized** requirements where applicable.\n"
+            "- If requested information (e.g. tender clauses, turnover, or credentials) is NOT present in the retrieved evidence, answer conversationally like an experienced bidding consultant: "
+            "explain clearly that the specific clause or record was not identified in the uploaded tender documents, summarize standard Indian procurement practice for this item (e.g. CPWD / NHAI norms), "
+            "and advise practical next steps such as submitting a formal pre-bid query or inspecting GCC / corrigenda.\n"
+            "Be genuinely helpful, conversational, and direct."
+        )
+
+        evidence_items = state.get("retrieved_evidence", [])
+        evidence_summary = (
+            "\n".join(f"[{e.get('type')}] {e.get('data')}" for e in evidence_items)
+            if evidence_items
+            else "None (No specific clauses or credentials found in current documents for this query)."
+        )
+
+        messages = [
+            {
+                "role": "system",
+                "content": f"{system_prompt}\n\nRetrieved Evidence:\n{evidence_summary}",
+            },
+            *[
+                {"role": m.get("role", "user"), "content": str(m.get("content", ""))}
+                for m in state.get("history", [])[-4:]
+            ],
+            {"role": "user", "content": query},
+        ]
+
         try:
-            llm_client = OpenAICompatibleLlmClient(
-                api_key=settings.llm_api_key,
-                base_url=settings.llm_base_url,
-                model=settings.llm_model,
-            )
-            system_prompt = (
-                "You are TenderPulse AI Copilot, a conversational and intelligent procurement assistant. "
-                "Respond conversationally, warmly, and professionally using clear Markdown formatting with bullet points. "
-                "Ground all facts strictly in the provided retrieved evidence and citations without hallucinating. "
-                "When referencing documents, credentials, or clauses from the retrieved evidence, include footnote markers like [^1], [^2]."
-            )
-            evidence_summary = "\n".join(
-                f"[{e.get('type')}] {e.get('data')}" for e in state.get("retrieved_evidence", [])
-            )
-            messages = [
-                {
-                    "role": "system",
-                    "content": f"{system_prompt}\nRetrieved Evidence:\n{evidence_summary}",
-                },
-                *[
-                    {"role": m.get("role", "user"), "content": str(m.get("content", ""))}
-                    for m in state.get("history", [])[-4:]
-                ],
-                {"role": "user", "content": query},
-            ]
             llm_reply = await llm_client.generate_chat_completion(messages=messages)
-            if llm_reply and len(llm_reply.strip()) > 30:
+            if llm_reply and len(llm_reply.strip()) > 20:
                 content = llm_reply.strip()
+                llm_succeeded = True
+
+                # Statutory credentials post-check
+                if intent == "STATUTORY_CREDENTIALS":
+                    prof = next(
+                        (e["data"] for e in evidence_items if e.get("type") == "PROFILE"),
+                        {},
+                    )
+                    statutory_legal_name = prof.get("legalName") or prof.get("companyName") or ""
+                    statutory_gstin = prof.get("gstin") or ""
+                    if statutory_legal_name and statutory_legal_name not in content:
+                        content += f"\n- **Legal Name**: {statutory_legal_name}"
+                    if statutory_gstin and statutory_gstin not in content:
+                        content += f"\n- **GSTIN**: `{statutory_gstin}`"
+
                 if uncertainties:
                     content += "\n\n**Attention Required:**\n" + "\n".join(
                         f"- {u['summary']}" for u in uncertainties
                     )
-        except Exception:
-            pass
+                suggested_followups = [
+                    "What are the stamp paper and notarization rules for this bid?",
+                    "What is our turnover qualification according to the CA certificate?",
+                    "Summarize the overall Bid/No-Bid assessment.",
+                ]
+        except Exception as err:
+            logger.warning(
+                "[ChatWorkflow] Live LLM chat completion failed, using deterministic synthesis: %s",
+                err,
+            )
+
+    if not llm_succeeded:
+        content, financial_summary, suggested_followups, citations = (
+            _synthesize_deterministic_template(
+                state, citations, uncertainties, intent, query, sec_ctx
+            )
+        )
 
     # Build audit event
     audit_events: list[dict[str, Any]] = []
@@ -972,28 +1515,67 @@ async def response_synthesis_node(state: ChatWorkflowState) -> dict[str, Any]:
 
     return {
         "response_content": content,
+        "citations": citations,
+        "uncertainties": uncertainties,
         "financial_summary": financial_summary,
         "suggested_followups": suggested_followups,
         "audit_events": audit_events,
     }
 
 
+def route_after_intent(state: ChatWorkflowState) -> str:
+    """Conditional routing: Short-circuits greetings and out-of-domain queries directly to synthesis."""
+    intent = state.get("routed_intent", "")
+    query = state.get("query", "")
+    if intent in ("GREETING", "GENERAL") and (intent == "GREETING" or is_out_of_domain(query)):
+        return "response_synthesis"
+    return "tool_calling"
+
+
+def route_after_tools(state: ChatWorkflowState) -> str:
+    """Conditional routing: Triggers query rewrite retry loop when tender spec queries yield 0 evidence."""
+    intent = state.get("routed_intent", "")
+    evidence = state.get("retrieved_evidence", [])
+    already_rewritten = state.get("query_rewritten", False)
+    if intent == "TENDER_SPEC" and not evidence and not already_rewritten:
+        return "query_rewrite"
+    return "citation_generation"
+
+
 def build_chat_workflow_graph(checkpointer: Any | None = None):
     """
     Constructs and compiles the stateful LangGraph Chat Workflow:
-    START -> intent_routing -> tool_calling -> citation_generation -> uncertainty_verification -> response_synthesis -> END
+    START -> intent_routing -(conditional)-> [response_synthesis | tool_calling]
+    tool_calling -(conditional)-> [query_rewrite | citation_generation]
+    query_rewrite -> citation_generation -> uncertainty_verification -> response_synthesis -> END
     """
     graph = StateGraph(ChatWorkflowState)
 
     graph.add_node("intent_routing", intent_routing_node)
     graph.add_node("tool_calling", tool_calling_node)
+    graph.add_node("query_rewrite", query_rewrite_node)
     graph.add_node("citation_generation", citation_generation_node)
     graph.add_node("uncertainty_verification", uncertainty_verification_node)
     graph.add_node("response_synthesis", response_synthesis_node)
 
     graph.add_edge(START, "intent_routing")
-    graph.add_edge("intent_routing", "tool_calling")
-    graph.add_edge("tool_calling", "citation_generation")
+    graph.add_conditional_edges(
+        "intent_routing",
+        route_after_intent,
+        {
+            "response_synthesis": "response_synthesis",
+            "tool_calling": "tool_calling",
+        },
+    )
+    graph.add_conditional_edges(
+        "tool_calling",
+        route_after_tools,
+        {
+            "query_rewrite": "query_rewrite",
+            "citation_generation": "citation_generation",
+        },
+    )
+    graph.add_edge("query_rewrite", "citation_generation")
     graph.add_edge("citation_generation", "uncertainty_verification")
     graph.add_edge("uncertainty_verification", "response_synthesis")
     graph.add_edge("response_synthesis", END)

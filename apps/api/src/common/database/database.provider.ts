@@ -5,6 +5,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { PGlite } from '@electric-sql/pglite';
 import { drizzle } from 'drizzle-orm/pglite';
+import { ConfigService } from '@nestjs/config';
 import * as schema from '@/common/database/schema.js';
 import { initDatabaseDdl } from './ddl.js';
 import { seedDatabase, type SeedDatabaseOptions } from './seed-database.js';
@@ -56,8 +57,13 @@ export async function getDatabase(dataDir?: string): Promise<PGlite> {
 
 export type InitDatabaseOptions = SeedDatabaseOptions;
 
-export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): Promise<void> {
-  let seedDemoEnv = process.env.SEED_DEMO_DATA;
+export async function initDatabase(
+  db: PGlite,
+  options?: InitDatabaseOptions,
+  configService?: ConfigService,
+): Promise<void> {
+  const config = configService ?? new ConfigService();
+  let seedDemoEnv = config.get<string>('SEED_DEMO_DATA');
   const envFilePath = path.resolve(process.cwd(), '.env');
   if (fs.existsSync(envFilePath)) {
     try {

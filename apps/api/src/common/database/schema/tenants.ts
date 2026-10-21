@@ -48,6 +48,7 @@ export const subscriptions = pgTable('subscriptions', {
 });
 
 export type Subscription = typeof subscriptions.$inferSelect;
+export type NewSubscription = typeof subscriptions.$inferInsert;
 
 export const usageRecords = pgTable('usage_records', {
   id: pk(),
@@ -59,3 +60,4 @@ export const usageRecords = pgTable('usage_records', {
 });
 
 export type UsageRecord = typeof usageRecords.$inferSelect;
+export type NewUsageRecord = typeof usageRecords.$inferInsert;

@@ -6,7 +6,8 @@
  * to timing attacks.
  */
 
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import crypto from 'node:crypto';
 import { UnauthorizedError } from '@/common/errors/errors.js';
 import type { UserRole, Permission } from '@/common/security/permissions.js';
@@ -36,16 +37,19 @@ export class TokenService {
   private readonly accessTokenTtlSeconds: number;
   private readonly refreshTokenTtlSeconds: number;
 
-  constructor() {
-    const secret = process.env['JWT_SECRET'];
+  constructor(@Optional() private readonly configService?: ConfigService) {
+    const config = this.configService ?? new ConfigService();
+    const secret = config.get<string>('JWT_SECRET');
     if (!secret) {
       throw new Error(
         'FATAL: JWT_SECRET environment variable is missing. Please configure JWT_SECRET in your .env file.',
       );
     }
     this.secret = secret;
-    this.accessTokenTtlSeconds = Number(process.env['JWT_ACCESS_TTL_SECONDS']) || 3600; // 1 hour
-    this.refreshTokenTtlSeconds = Number(process.env['JWT_REFRESH_TTL_SECONDS']) || 7 * 24 * 3600; // 7 days
+    this.accessTokenTtlSeconds =
+      Number(config.get<string | number>('JWT_ACCESS_TTL_SECONDS')) || 3600; // 1 hour
+    this.refreshTokenTtlSeconds =
+      Number(config.get<string | number>('JWT_REFRESH_TTL_SECONDS')) || 7 * 24 * 3600; // 7 days
   }
 
   /**

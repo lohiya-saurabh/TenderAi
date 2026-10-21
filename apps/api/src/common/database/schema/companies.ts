@@ -47,6 +47,7 @@ export const companies = pgTable('companies', {
 });
 
 export type Company = typeof companies.$inferSelect;
+export type NewCompany = typeof companies.$inferInsert;
 
 export const companyProfileVersions = pgTable('company_profile_versions', {
   id: pk(),
@@ -62,6 +63,7 @@ export const companyProfileVersions = pgTable('company_profile_versions', {
 });
 
 export type CompanyProfileVersion = typeof companyProfileVersions.$inferSelect;
+export type NewCompanyProfileVersion = typeof companyProfileVersions.$inferInsert;
 
 export const companyProfiles = pgTable('company_profiles', {
   id: pk(),
@@ -74,6 +76,7 @@ export const companyProfiles = pgTable('company_profiles', {
 });
 
 export type CompanyProfile = typeof companyProfiles.$inferSelect;
+export type NewCompanyProfile = typeof companyProfiles.$inferInsert;
 
 export const companyEvidenceDocuments = pgTable('company_evidence_documents', {
   id: pk(),
@@ -112,6 +115,7 @@ export const companyEvidenceDocuments = pgTable('company_evidence_documents', {
 });
 
 export type CompanyEvidenceDocument = typeof companyEvidenceDocuments.$inferSelect;
+export type NewCompanyEvidenceDocument = typeof companyEvidenceDocuments.$inferInsert;
 
 export const evidenceVerificationHistory = pgTable('evidence_verification_history', {
   id: pk(),
@@ -132,6 +136,7 @@ export const evidenceVerificationHistory = pgTable('evidence_verification_histor
 });
 
 export type EvidenceVerificationHistoryRecord = typeof evidenceVerificationHistory.$inferSelect;
+export type NewEvidenceVerificationHistoryRecord = typeof evidenceVerificationHistory.$inferInsert;
 
 export const companyEvidenceChunks = pgTable('company_evidence_chunks', {
   id: pk(),
@@ -154,3 +159,4 @@ export const companyEvidenceChunks = pgTable('company_evidence_chunks', {
 });
 
 export type CompanyEvidenceChunk = typeof companyEvidenceChunks.$inferSelect;
+export type NewCompanyEvidenceChunk = typeof companyEvidenceChunks.$inferInsert;

@@ -4,7 +4,8 @@
  * Some endpoints (mock upload/download, SSE) need raw access to the Express Request/Response
  * objects, so they use @Req() and @Res() decorators with passthrough mode.
  */
-import { Controller, Get, Post, Put, Delete, Param, Body, Req, Res, Headers, Inject } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Req, Res, Headers, Inject, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -15,7 +16,10 @@ import { Permissions } from '@/common/security/permissions.js';
 
 @Controller('api/v1')
 export class DocumentsController {
-  constructor(@Inject(DocumentsService) private readonly documentsService: DocumentsService) {}
+  constructor(
+    @Inject(DocumentsService) private readonly documentsService: DocumentsService,
+    @Optional() private readonly configService?: ConfigService,
+  ) {}
 
   @Delete('bids/:bidId/documents/:docId')
   @RequirePermission(Permissions.BIDS_DELETE)
@@ -55,7 +59,8 @@ export class DocumentsController {
     @Req() req: Request,
     @Res() res: Response,
   ): void {
-    if (process.env.NODE_ENV === 'production') {
+    const isProd = this.configService?.get<string>('NODE_ENV') === 'production';
+    if (isProd) {
       res.status(403).json({
         status: 'FORBIDDEN',
         message:

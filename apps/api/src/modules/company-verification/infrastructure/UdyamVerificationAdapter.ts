@@ -4,7 +4,8 @@
  * Calls the official Udyam Registration Verification API.
  * Maps government portal payload into domain MsmeEnterpriseDetails with strict error handling.
  */
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import type {
   IMsmeVerificationPort,
   MsmeEnterpriseDetails,
@@ -39,13 +40,14 @@ export class UdyamVerificationAdapter implements IMsmeVerificationPort {
   private readonly clientId?: string;
   private readonly timeoutMs: number;
 
-  constructor() {
+  constructor(@Optional() private readonly configService?: ConfigService) {
     this.baseUrl = (
-      process.env.UDYAM_API_BASE_URL || 'https://udyamregistration.gov.in/api/v1'
+      this.configService?.get<string>('UDYAM_API_BASE_URL') || ''
     ).replace(/\/$/, '');
-    this.apiKey = process.env.UDYAM_API_KEY;
-    this.clientId = process.env.UDYAM_CLIENT_ID;
-    this.timeoutMs = parseInt(process.env.UDYAM_TIMEOUT_MS || '10000', 10);
+    this.apiKey = this.configService?.get<string>('UDYAM_API_KEY');
+    this.clientId = this.configService?.get<string>('UDYAM_CLIENT_ID');
+    const timeout = this.configService?.get<string>('UDYAM_TIMEOUT_MS');
+    this.timeoutMs = timeout ? parseInt(timeout, 10) : 10000;
   }
 
   public async verifyUdyam(udyamNumber: string): Promise<MsmeEnterpriseDetails> {

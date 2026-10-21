@@ -635,7 +635,30 @@ def test_expanded_date_formats(comp_date: str, max_date: str, expected_verdict: 
 
 def test_keyword_inflection_and_plurals():
     """Asserts that plural and inflected queries match corresponding singular or plural clauses."""
-    registry = ChatToolRegistry()
+    context = {
+        "tender_chunks": [
+            {
+                "chunkId": "chk_legal_01",
+                "documentId": "doc_nit_01",
+                "documentName": "NIT_Document.pdf",
+                "pageNumber": 14,
+                "clauseReference": "Clause 14.2",
+                "sectionTitle": "Liquidated Damages & Execution Penalties",
+                "content": "Liquidated damages for delay in project completion shall be levied at the rate of 0.5% of the contract value per week of delay, subject to a maximum penalty cap of 10% of the total contract value.",
+            }
+        ],
+        "company_evidence": [
+            {
+                "chunkId": "ev_chk_turnover_01",
+                "documentId": "doc_ca_cert_01",
+                "documentName": "CA_Turnover_Certificate.pdf",
+                "pageNumber": 1,
+                "evidenceType": "CA_CERTIFICATE",
+                "content": "Chartered Accountant Certificate: Audited annual turnovers for the company across the preceding three financial years.",
+            }
+        ],
+    }
+    registry = ChatToolRegistry(context)
     # chk_legal_01 has "Liquidated Damages & Execution Penalties"
     res_singular = registry.search_tender_documents("What is the penalty?")
     assert len(res_singular) >= 1

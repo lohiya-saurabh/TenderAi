@@ -32,6 +32,14 @@ export const CapabilityStatusBadge: React.FC<CapabilityStatusBadgeProps> = ({
           color: 'var(--status-pass-text)',
           border: '1px solid var(--status-pass-border)',
         };
+      case 'UNVERIFIED':
+        return {
+          defaultLabel: 'Unverified',
+          icon: MissingIcon,
+          bg: 'var(--status-na-bg)',
+          color: 'var(--color-surface-muted)',
+          border: '1px dashed var(--color-surface-border)',
+        };
       case 'IMPORTED':
         return {
           defaultLabel: 'Imported',
