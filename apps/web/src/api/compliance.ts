@@ -82,7 +82,7 @@ export interface ComplianceItem {
   // Core requirement info
   requirement: string;
   description: string;
-  category: 'LEGAL' | 'TECHNICAL' | 'FINANCIAL' | 'STATUTORY' | 'EXECUTION' | 'COMMERCIAL';
+  category: 'LEGAL' | 'TECHNICAL' | 'FINANCIAL' | 'STATUTORY' | 'EXECUTION' | 'COMMERCIAL' | 'OPERATIONAL';
   subCategory?: string;
   isMandatory: boolean;
   tenderClauseRef?: string;

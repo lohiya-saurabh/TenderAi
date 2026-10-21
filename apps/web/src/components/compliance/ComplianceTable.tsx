@@ -8,7 +8,26 @@ import { AssessmentPanel } from '@/components/compliance/AssessmentPanel.js';
 import { EmptyState } from '@/components/common/EmptyState.js';
 import { ColumnSorter, type SortConfig } from '@/components/common/ColumnSorter.js';
 import { Button } from '@/components/common/Button.js';
-import { SearchIcon, CloseIcon, FilterIcon } from '@/components/common/Icons.js';
+import { SearchIcon, CloseIcon, FilterIcon, ChevronRightIcon, ChevronDownIcon } from '@/components/common/Icons.js';
+
+export type ComplianceGroupBy = 'NONE' | 'CATEGORY' | 'CLAUSE';
+
+export function getClauseGroupKey(tenderClauseRef?: string): string {
+  if (!tenderClauseRef) return 'General Tender Conditions';
+  // Match named schedules/annexures/articles first (e.g. "Schedule G", "Article 7", "Annexure I")
+  const namedMatch = tenderClauseRef.match(/^(Schedule|Annexure|Appendix|Article|Part)\s*[-–—]?\s*([A-Za-z0-9]+)/i);
+  if (namedMatch && namedMatch[1] && namedMatch[2]) {
+    const prefix = namedMatch[1];
+    const ident = namedMatch[2];
+    return `${prefix.charAt(0).toUpperCase() + prefix.slice(1).toLowerCase()} ${ident.toUpperCase()}`;
+  }
+  // Group decimal/numbered clauses by their top-level major number (e.g. "4.1.3" -> "Section / Clause 4", "4 (i)" -> "Section / Clause 4")
+  const numMatch = tenderClauseRef.match(/^(\d+)/);
+  if (numMatch && numMatch[1]) {
+    return `Section / Clause ${numMatch[1]}`;
+  }
+  return tenderClauseRef;
+}
 
 export interface ComplianceTableProps {
   items: ComplianceItem[];
@@ -41,6 +60,7 @@ const CATEGORIES = [
   'STATUTORY',
   'EXECUTION',
   'COMMERCIAL',
+  'OPERATIONAL',
 ] as const;
 const RISKS = ['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const;
 const MANDATORY_OPTIONS = [
@@ -228,6 +248,35 @@ export const ComplianceTable: React.FC<ComplianceTableProps> = ({
     setExpandedRowId((prev) => (prev === id ? null : id));
   }, []);
 
+  // Group By state
+  const [groupBy, setGroupBy] = useState<ComplianceGroupBy>('NONE');
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+
+  const toggleGroupCollapse = useCallback((groupName: string) => {
+    setCollapsedGroups((prev) => ({
+      ...prev,
+      [groupName]: !prev[groupName],
+    }));
+  }, []);
+
+  const groupedItems = useMemo(() => {
+    if (groupBy === 'NONE') return null;
+    const groupMap = new Map<string, ComplianceItem[]>();
+    for (const item of filteredItems) {
+      const key =
+        groupBy === 'CATEGORY'
+          ? (item.category || 'OTHER')
+          : getClauseGroupKey(item.tenderClauseRef);
+      const list = groupMap.get(key) || [];
+      list.push(item);
+      groupMap.set(key, list);
+    }
+    return Array.from(groupMap.entries()).map(([groupName, items]) => ({
+      groupName,
+      items,
+    }));
+  }, [filteredItems, groupBy]);
+
   // Handlers for drawers
   const handleInspectEvidence = useCallback(
     (item: ComplianceItem) => {
@@ -295,65 +344,82 @@ export const ComplianceTable: React.FC<ComplianceTableProps> = ({
           </div>
         </div>
 
-        {/* Secondary Row: Attribute Filters */}
-        <div className="flex items-center gap-2.5 flex-wrap pt-1 text-xs text-muted-foreground">
-          <div className="flex items-center gap-1.5 font-medium text-foreground">
-            <FilterIcon size={13} />
-            <span className="text-[11px] uppercase tracking-wider font-semibold">Filter:</span>
+        {/* Secondary Row: Attribute Filters & Group By */}
+        <div className="flex items-center gap-2.5 flex-wrap pt-1 text-xs text-muted-foreground justify-between">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <div className="flex items-center gap-1.5 font-medium text-foreground">
+              <FilterIcon size={13} />
+              <span className="text-[11px] uppercase tracking-wider font-semibold">Filter:</span>
+            </div>
+
+            {/* Category Select */}
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="bg-background text-foreground border border-border rounded-md px-2.5 py-1 text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-foreground"
+              aria-label="Filter by Category"
+            >
+              {CATEGORIES.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat === 'ALL' ? 'All Categories' : cat}
+                </option>
+              ))}
+            </select>
+
+            {/* Risk Select */}
+            <select
+              value={riskFilter}
+              onChange={(e) => setRiskFilter(e.target.value)}
+              className="bg-background text-foreground border border-border rounded-md px-2.5 py-1 text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-foreground"
+              aria-label="Filter by Risk"
+            >
+              {RISKS.map((r) => (
+                <option key={r} value={r}>
+                  {r === 'ALL' ? 'All Risks' : `${r} Risk`}
+                </option>
+              ))}
+            </select>
+
+            {/* Mandatory Select */}
+            <select
+              value={mandatoryFilter}
+              onChange={(e) => setMandatoryFilter(e.target.value)}
+              className="bg-background text-foreground border border-border rounded-md px-2.5 py-1 text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-foreground"
+              aria-label="Filter by Mandatory Status"
+            >
+              {MANDATORY_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+
+            {/* Reset Filters */}
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="text-xs text-orange-600 hover:text-orange-700 font-medium underline underline-offset-2 ml-1"
+              >
+                Reset filters ({filteredItems.length} of {dedupedItems.length})
+              </button>
+            )}
           </div>
 
-          {/* Category Select */}
-          <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="bg-background text-foreground border border-border rounded-md px-2.5 py-1 text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-foreground"
-            aria-label="Filter by Category"
-          >
-            {CATEGORIES.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat === 'ALL' ? 'All Categories' : cat}
-              </option>
-            ))}
-          </select>
-
-          {/* Risk Select */}
-          <select
-            value={riskFilter}
-            onChange={(e) => setRiskFilter(e.target.value)}
-            className="bg-background text-foreground border border-border rounded-md px-2.5 py-1 text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-foreground"
-            aria-label="Filter by Risk"
-          >
-            {RISKS.map((r) => (
-              <option key={r} value={r}>
-                {r === 'ALL' ? 'All Risks' : `${r} Risk`}
-              </option>
-            ))}
-          </select>
-
-          {/* Mandatory Select */}
-          <select
-            value={mandatoryFilter}
-            onChange={(e) => setMandatoryFilter(e.target.value)}
-            className="bg-background text-foreground border border-border rounded-md px-2.5 py-1 text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-foreground"
-            aria-label="Filter by Mandatory Status"
-          >
-            {MANDATORY_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-
-          {/* Reset Filters */}
-          {hasActiveFilters && (
-            <button
-              type="button"
-              onClick={handleResetFilters}
-              className="text-xs text-orange-600 hover:text-orange-700 font-medium underline underline-offset-2 ml-1"
+          {/* Group By Selector */}
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Group by:</span>
+            <select
+              value={groupBy}
+              onChange={(e) => setGroupBy(e.target.value as ComplianceGroupBy)}
+              className="bg-background text-foreground border border-border rounded-md px-2.5 py-1 text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-foreground font-medium"
+              aria-label="Group by"
             >
-              Reset filters ({filteredItems.length} of {dedupedItems.length})
-            </button>
-          )}
+              <option value="NONE">None</option>
+              <option value="CATEGORY">Category</option>
+              <option value="CLAUSE">Clause</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -384,6 +450,51 @@ export const ComplianceTable: React.FC<ComplianceTableProps> = ({
                   </Button>
                 }
               />
+            </div>
+          ) : groupedItems ? (
+            <div className="divide-y divide-border/70">
+              {groupedItems.map((group) => {
+                const isCollapsed = Boolean(collapsedGroups[group.groupName]);
+                return (
+                  <div key={group.groupName} className="border-b border-border/80 last:border-b-0">
+                    <button
+                      type="button"
+                      onClick={() => toggleGroupCollapse(group.groupName)}
+                      className="w-full flex items-center justify-between px-5 py-2.5 bg-muted/40 hover:bg-muted/60 transition-colors text-left select-none cursor-pointer border-l-2 border-l-orange-500"
+                    >
+                      <div className="flex items-center gap-2">
+                        {isCollapsed ? (
+                          <ChevronRightIcon size={14} className="text-muted-foreground" />
+                        ) : (
+                          <ChevronDownIcon size={14} color="#ea580c" />
+                        )}
+                        <span className="text-xs font-semibold uppercase tracking-wider text-foreground">
+                          {group.groupName}
+                        </span>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-muted font-bold text-muted-foreground">
+                          {group.items.length}
+                        </span>
+                      </div>
+                    </button>
+                    {!isCollapsed && (
+                      <div className="divide-y divide-border/70">
+                        {group.items.map((item) => (
+                          <ComplianceRow
+                            key={item.id}
+                            item={item}
+                            isExpanded={expandedRowId === item.id}
+                            onToggleExpand={toggleExpanded}
+                            onReview={onReviewItem}
+                            onInspectEvidence={handleInspectEvidence}
+                            onInspectCitation={handleInspectCitation}
+                            onInspectAssessment={handleInspectAssessment}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <div className="divide-y divide-border/70">

@@ -50,6 +50,8 @@ class StructuredLLMClient:
             self.live_client = live_client
         elif enable_live_client is False:
             self.live_client = None
+        elif extractor_fn is not None and enable_live_client is not True:
+            self.live_client = None
         elif settings.llm_api_key:
             from tenderpulse_ai.infrastructure.llm.openai_compatible_client import (
                 OpenAICompatibleLlmClient,

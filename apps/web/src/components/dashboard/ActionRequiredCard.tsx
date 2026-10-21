@@ -35,6 +35,7 @@ const CATEGORY_BADGE_VARIANT: Record<
   STATUTORY: 'destructive',
   EXECUTION: 'secondary',
   COMMERCIAL: 'secondary',
+  OPERATIONAL: 'secondary',
 };
 
 function ActionIcon({ item }: { item: ActionItem }) {

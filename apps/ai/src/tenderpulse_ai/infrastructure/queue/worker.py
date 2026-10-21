@@ -167,27 +167,6 @@ class DocumentQueueConsumerWorker:
 
                 pages: list[NormalizedPage] = []
                 download_url = body.download_url
-                if not download_url and body.storage_reference and settings.aws_s3_bucket:
-                    try:
-                        import boto3
-
-                        s3_client = boto3.client(
-                            "s3", region_name=settings.aws_region or "ap-south-1"
-                        )
-                        download_url = s3_client.generate_presigned_url(
-                            "get_object",
-                            Params={
-                                "Bucket": settings.aws_s3_bucket,
-                                "Key": body.storage_reference,
-                            },
-                            ExpiresIn=3600,
-                        )
-                        logger.info(
-                            "Generated presigned S3 download URL for storage reference: %s",
-                            body.storage_reference,
-                        )
-                    except Exception as s3_err:
-                        logger.warning("Could not generate presigned S3 download URL: %s", s3_err)
 
                 if not download_url and not pages and body.storage_reference:
                     ref_path = Path(body.storage_reference)
@@ -217,11 +196,32 @@ class DocumentQueueConsumerWorker:
                                 )
                             ]
 
-                if not download_url and not pages:
-                    raise ValueError(
-                        f"Cannot process extraction job {body.job_id} for doc '{body.document_id}': "
-                        f"no download URL, page contents, or accessible storage reference found ({body.storage_reference})."
-                    )
+                if (
+                    not download_url
+                    and not pages
+                    and body.storage_reference
+                    and settings.aws_s3_bucket
+                ):
+                    try:
+                        import boto3
+
+                        s3_client = boto3.client(
+                            "s3", region_name=settings.aws_region or "ap-south-1"
+                        )
+                        download_url = s3_client.generate_presigned_url(
+                            "get_object",
+                            Params={
+                                "Bucket": settings.aws_s3_bucket,
+                                "Key": body.storage_reference,
+                            },
+                            ExpiresIn=3600,
+                        )
+                        logger.info(
+                            "Generated presigned S3 download URL for storage reference: %s",
+                            body.storage_reference,
+                        )
+                    except Exception as s3_err:
+                        logger.warning("Could not generate presigned S3 download URL: %s", s3_err)
 
                 extraction_request = DocumentExtractionRequest(
                     security_context=security_context,

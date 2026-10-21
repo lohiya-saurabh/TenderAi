@@ -208,7 +208,7 @@ export const SourceCitationDrawer: React.FC<SourceCitationDrawerProps> = ({
               fontSize: 'var(--text-xs)',
               lineHeight: 1.7,
               color: 'var(--color-surface-text)',
-              whiteSpace: 'pre-wrap',
+              whiteSpace: 'normal',
               wordBreak: 'break-word',
             }}
           >

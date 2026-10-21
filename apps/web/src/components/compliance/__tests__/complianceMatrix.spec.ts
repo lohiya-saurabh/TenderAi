@@ -289,4 +289,16 @@ describe('Requirement / Compliance Matrix Data & Logic', () => {
     expect(item.version).toBe(2);
     expect(item.reviewNotes).toBeDefined();
   });
+
+  it('normalizes clause references to prevent 1-item buckets via getClauseGroupKey', async () => {
+    const { getClauseGroupKey } = await import('@/components/compliance/ComplianceTable.js');
+
+    expect(getClauseGroupKey('4.1.3')).toBe('Section / Clause 4');
+    expect(getClauseGroupKey('4.2')).toBe('Section / Clause 4');
+    expect(getClauseGroupKey('4 (i)')).toBe('Section / Clause 4');
+    expect(getClauseGroupKey('Schedule G')).toBe('Schedule G');
+    expect(getClauseGroupKey('Article 7')).toBe('Article 7');
+    expect(getClauseGroupKey('Annexure I')).toBe('Annexure I');
+    expect(getClauseGroupKey(undefined)).toBe('General Tender Conditions');
+  });
 });

@@ -88,10 +88,18 @@ export const ComplianceRow: React.FC<ComplianceRowProps> = ({
             >
               {item.requirement}
             </div>
+            {item.description &&
+              item.description.trim().toLowerCase() !== item.requirement.trim().toLowerCase() && (
+                <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5 leading-relaxed break-words">
+                  {item.description}
+                </p>
+              )}
             <div className="flex items-center gap-2 mt-1">
               {item.tenderClauseRef && (
                 <span className="text-[10px] font-mono font-medium text-foreground bg-muted px-1.5 py-0.5 rounded">
-                  Clause {item.tenderClauseRef}
+                  {/^(Schedule|Annexure|Appendix|Article|Part|Clause|Section)\b/i.test(item.tenderClauseRef)
+                    ? item.tenderClauseRef
+                    : `Clause ${item.tenderClauseRef}`}
                 </span>
               )}
               {item.subCategory && (
@@ -376,6 +384,8 @@ function getCategoryBadgeVariant(category: ComplianceItem['category']): BadgeVar
       return 'danger';
     case 'COMMERCIAL':
       return 'neutral';
+    case 'OPERATIONAL':
+      return 'primary';
     default:
       return 'neutral';
   }

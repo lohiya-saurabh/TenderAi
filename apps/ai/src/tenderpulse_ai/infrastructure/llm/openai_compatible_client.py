@@ -7,6 +7,7 @@ from typing import Any
 
 import httpx
 
+from tenderpulse_ai.agent.validation import clean_whitespace, normalize_category
 from tenderpulse_ai.domain.models import (
     CandidateComplianceItem,
     ExecutionRulesProps,
@@ -326,6 +327,11 @@ class OpenAICompatibleLlmClient:
 
                     if response.status_code in (500, 502, 503, 504):
                         response_text = response.text
+                        last_error = httpx.HTTPStatusError(
+                            f"HTTP {response.status_code}: {response_text[:200]}",
+                            request=response.request,
+                            response=response,
+                        )
                         logger.warning(
                             "[OpenAICompatibleClient] Transient upstream error %d on model %s attempt %d: %s",
                             response.status_code,
@@ -478,10 +484,15 @@ class OpenAICompatibleLlmClient:
             or raw.get("obligation_type")
             or "Extracted Requirement"
         )
-        category = str(
+        raw_cat = str(
             raw.get("category") or raw.get("obligation_category") or raw.get("type") or "STATUTORY"
-        ).upper()
-        description = (
+        )
+        try:
+            category = normalize_category(raw_cat)
+        except Exception:
+            category = "STATUTORY"
+
+        description = clean_whitespace(
             raw.get("description")
             or raw.get("summary")
             or raw.get("requirement")
@@ -558,6 +569,7 @@ class OpenAICompatibleLlmClient:
             or raw.get("text")
             or ""
         )
+        clean_quote = clean_whitespace(str(quote)) if quote else "Operative Requirement"
         conf = float(raw_prov.get("confidence_score") or raw_prov.get("confidenceScore") or 0.95)
 
         provenance = ProvenanceProps(
@@ -565,7 +577,7 @@ class OpenAICompatibleLlmClient:
             source_file_name=str(file_name),
             page_number=int(page_num),
             clause_reference=str(clause_ref),
-            verbatim_quote=str(quote) if quote else "Operative Requirement",
+            verbatim_quote=clean_quote,
             confidence_score=conf,
         )
 

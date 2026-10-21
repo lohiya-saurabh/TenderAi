@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
+from tenderpulse_ai.agent.validation import clean_whitespace
 from tenderpulse_ai.domain.models import (
     CandidateComplianceItem,
     ExecutionRulesProps,
@@ -2599,6 +2600,16 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
     return candidates
 
 
+def _titles_are_related(title_a: str, title_b: str) -> bool:
+    stop = {"and", "the", "for", "of", "in", "to", "on", "with", "by", "or", "a"}
+    tokens_a = {w for w in re.findall(r"\w+", title_a.lower()) if w not in stop and len(w) > 2}
+    tokens_b = {w for w in re.findall(r"\w+", title_b.lower()) if w not in stop and len(w) > 2}
+    if not tokens_a or not tokens_b:
+        return False
+    overlap = len(tokens_a & tokens_b) / min(len(tokens_a), len(tokens_b))
+    return overlap >= 0.4
+
+
 class ProductionExtractionPipeline:
     """
     Executes the end-to-end production AI extraction pipeline:
@@ -2767,20 +2778,50 @@ class ProductionExtractionPipeline:
             all_verified_items.extend(final_state.get("verified_items", []))
             all_audit_events.extend(final_state.get("audit_events", []))
 
-        # Consolidate and deduplicate items across pages by (category, normalized_title)
-        consolidated_map: dict[tuple[str, str], dict[str, Any]] = {}
+        # Consolidate and deduplicate items across pages by (category, title) AND quote overlap
+        consolidated_items: list[dict[str, Any]] = []
         for item in all_verified_items:
             payload = item.to_api_payload()
-            key = (payload["category"], payload["title"].strip().lower())
+            norm_title = payload["title"].strip().lower()
+            payload_cat = payload["category"]
+            cur_quote_raw = payload["provenance"]["verbatimQuote"] or ""
+            cur_quote_clean = clean_whitespace(cur_quote_raw).lower()
+            cur_page = payload["provenance"]["pageNumber"]
 
-            if key not in consolidated_map:
-                payload["supporting_pages"] = [payload["provenance"]["pageNumber"]]
-                consolidated_map[key] = payload
+            matched_existing: dict[str, Any] | None = None
+            for existing in consolidated_items:
+                if existing["category"] != payload_cat:
+                    continue
+
+                # 1. Exact title match within category
+                if existing["title"].strip().lower() == norm_title:
+                    matched_existing = existing
+                    break
+
+                # 2. Quote overlap match (Category matched, differing page OR related titles)
+                ex_quote_raw = existing["provenance"]["verbatimQuote"] or ""
+                ex_quote_clean = clean_whitespace(ex_quote_raw).lower()
+                if cur_quote_clean and ex_quote_clean:
+                    quote_len_min = min(len(cur_quote_clean), len(ex_quote_clean))
+                    is_quote_match = (cur_quote_clean == ex_quote_clean) or (
+                        quote_len_min >= 35
+                        and (cur_quote_clean in ex_quote_clean or ex_quote_clean in cur_quote_clean)
+                    )
+                    if is_quote_match:
+                        ex_page = existing["provenance"]["pageNumber"]
+                        if ex_page != cur_page or _titles_are_related(
+                            payload["title"], existing["title"]
+                        ):
+                            matched_existing = existing
+                            break
+
+            if matched_existing is None:
+                payload["supporting_pages"] = [cur_page]
+                consolidated_items.append(payload)
             else:
-                existing = consolidated_map[key]
-                page_no = payload["provenance"]["pageNumber"]
-                if page_no not in existing["supporting_pages"]:
-                    existing["supporting_pages"].append(page_no)
+                existing = matched_existing
+                if cur_page not in existing["supporting_pages"]:
+                    existing["supporting_pages"].append(cur_page)
 
                 # Rule fusion (most restrictive requirements win)
                 ex_rules = existing["executionRules"]
@@ -2800,10 +2841,11 @@ class ProductionExtractionPipeline:
                 if new_rules.get("udinRequired"):
                     ex_rules["udinRequired"] = True
 
-                cur_quote = payload["provenance"]["verbatimQuote"] or ""
                 ex_quote = existing["provenance"]["verbatimQuote"] or ""
                 cur_has_numbers = bool(
-                    re.search(r"\b(rs\.?|inr|crore|lakh|\d+\.?\d*%)\b", cur_quote, re.IGNORECASE)
+                    re.search(
+                        r"\b(rs\.?|inr|crore|lakh|\d+\.?\d*%)\b", cur_quote_raw, re.IGNORECASE
+                    )
                 )
                 ex_has_numbers = bool(
                     re.search(r"\b(rs\.?|inr|crore|lakh|\d+\.?\d*%)\b", ex_quote, re.IGNORECASE)
@@ -2812,12 +2854,12 @@ class ProductionExtractionPipeline:
                     payload["provenance"]["confidenceScore"]
                     > existing["provenance"]["confidenceScore"]
                     or (cur_has_numbers and not ex_has_numbers)
-                    or (len(ex_quote) < 60 and len(cur_quote) >= 60)
+                    or (len(ex_quote) < 60 and len(cur_quote_raw) >= 60)
                     or (
                         payload["provenance"]["confidenceScore"]
                         == existing["provenance"]["confidenceScore"]
                         and (cur_has_numbers == ex_has_numbers)
-                        and len(cur_quote) > len(ex_quote)
+                        and len(cur_quote_raw) > len(ex_quote)
                     )
                 )
                 if prefer_new_quote:
@@ -2837,7 +2879,13 @@ class ProductionExtractionPipeline:
                     existing["provenance"]["sectionOrClause"] = clause_ref
                     existing["provenance"]["pageNumber"] = payload["provenance"]["pageNumber"]
 
-        formatted_items = list(consolidated_map.values())
+                # Retain the more informative title (prefer longer descriptive title)
+                if len(payload["title"]) > len(existing["title"]) and (
+                    prefer_new_quote or _titles_are_related(payload["title"], existing["title"])
+                ):
+                    existing["title"] = payload["title"]
+
+        formatted_items = consolidated_items
         for item in formatted_items:
             pages = sorted(item.pop("supporting_pages", [item["provenance"]["pageNumber"]]))
             if len(pages) > 1:
