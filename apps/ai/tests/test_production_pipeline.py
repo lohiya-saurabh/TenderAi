@@ -2,6 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tenderpulse_ai.main import app
+from tenderpulse_ai.models.llm_client import StructuredLLMClient
 from tenderpulse_ai.pipeline import (
     DocumentExtractionRequest,
     NormalizedPage,
@@ -24,7 +25,9 @@ def valid_sec_context():
 
 @pytest.mark.asyncio
 async def test_production_pipeline_extraction_success(valid_sec_context):
-    pipeline = ProductionExtractionPipeline()
+    pipeline = ProductionExtractionPipeline(
+        llm_client=StructuredLLMClient(enable_live_client=False)
+    )
 
     request = DocumentExtractionRequest(
         security_context=valid_sec_context,
@@ -59,10 +62,17 @@ async def test_production_pipeline_extraction_success(valid_sec_context):
     assert emd_item["provenance"]["sourceDocumentId"] == "doc_nit_555"
     assert emd_item["provenance"]["sourceFileName"] == "NIT_Highway_Package.pdf"
 
-    # Check Technical / Turnover extraction
-    tech_item = next((i for i in response.items if i["category"] == "TECHNICAL"), None)
-    assert tech_item is not None
-    assert tech_item["executionRules"]["udinRequired"] is True
+    # Check Turnover extraction
+    turnover_item = next(
+        (
+            i
+            for i in response.items
+            if "turnover" in i["title"].lower() or "turnover" in i["description"].lower()
+        ),
+        None,
+    )
+    assert turnover_item is not None
+    assert turnover_item["executionRules"]["udinRequired"] is True
 
 
 @pytest.mark.asyncio
@@ -79,7 +89,9 @@ async def test_emd_provenance_quote_includes_sentence_across_pdf_line_wrap(valid
         "BGs or FDRs shall be uploaded along with bid documents."
     )
 
-    response = await ProductionExtractionPipeline().execute(
+    response = await ProductionExtractionPipeline(
+        llm_client=StructuredLLMClient(enable_live_client=False)
+    ).execute(
         DocumentExtractionRequest(
             security_context=valid_sec_context,
             bid_id="bid_emd",
@@ -112,7 +124,9 @@ async def test_annual_turnover_quote_stays_with_numbered_item_and_page(valid_sec
         "¥ÀæªÀiÁt ¥ÀvÀæ ºÁUÀÆ ªÁ¶ðPÀªÁgÀÄ ªÀ»ªÁlÄUÀ¼À Drmï ªÀgÀ¢\n"
         "8. Income tax payment certificate."
     )
-    response = await ProductionExtractionPipeline().execute(
+    response = await ProductionExtractionPipeline(
+        llm_client=StructuredLLMClient(enable_live_client=False)
+    ).execute(
         DocumentExtractionRequest(
             security_context=valid_sec_context,
             bid_id="bid_turnover",
@@ -269,7 +283,9 @@ async def test_toc_and_glossary_definitions_rejected_in_favor_of_operative_claus
         ],
     )
 
-    response = await ProductionExtractionPipeline().execute(request)
+    response = await ProductionExtractionPipeline(
+        llm_client=StructuredLLMClient(enable_live_client=False)
+    ).execute(request)
     assert response.status in ("REVIEW_READY", "HUMAN_REVIEW_REQUIRED")
 
     # Defect liability was only in TOC — should NOT be emitted
@@ -308,7 +324,9 @@ async def test_presigned_download_url_handover(valid_sec_context):
         sample_pdf = Path.cwd() / "samples" / "work_975754" / "NIT8.pdf"
     assert sample_pdf.is_file(), f"Sample NIT8.pdf should exist at {sample_pdf}"
 
-    pipeline = ProductionExtractionPipeline()
+    pipeline = ProductionExtractionPipeline(
+        llm_client=StructuredLLMClient(enable_live_client=False)
+    )
     request = DocumentExtractionRequest(
         security_context=valid_sec_context,
         bid_id="bid_presigned_test",

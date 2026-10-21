@@ -231,19 +231,38 @@ class StorageDocumentResolver:
             return [NormalizedPage(page_number=1, text=blob_text)]
 
         candidate_path = Path(storage_reference)
+        if not candidate_path.is_file():
+            repo_candidate = Path(__file__).resolve().parents[4] / storage_reference
+            if repo_candidate.is_file():
+                candidate_path = repo_candidate
+
         if candidate_path.is_file():
+            if candidate_path.suffix.lower() == ".pdf":
+                try:
+                    from pypdf import PdfReader
+
+                    reader = PdfReader(str(candidate_path))
+                    resolved_pages = []
+                    for idx, page in enumerate(reader.pages, start=1):
+                        txt = page.extract_text() or ""
+                        if txt.strip():
+                            resolved_pages.append(NormalizedPage(page_number=idx, text=txt))
+                    if resolved_pages:
+                        return resolved_pages
+                except Exception as exc:
+                    logger.warning(
+                        "Failed to extract PDF text from candidate path %s: %s", candidate_path, exc
+                    )
             return [
                 NormalizedPage(
                     page_number=1, text=candidate_path.read_text(encoding="utf-8", errors="ignore")
                 )
             ]
 
-        generated_text = (
-            f"The bidder must submit an Earnest Money Deposit (EMD) of INR 5,00,000 on a 100 Rupee stamp paper. "
-            f"The {document_type} document {file_name} requires all submissions to be signed by the authorized signatory. "
-            f"Document source: {storage_reference}."
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Storage document '{storage_reference}' could not be resolved from storage or filesystem.",
         )
-        return [NormalizedPage(page_number=1, text=generated_text)]
 
 
 def verify_internal_key(

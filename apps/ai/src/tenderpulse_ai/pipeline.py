@@ -100,6 +100,7 @@ def extract_monetary_amounts(text: str) -> list[dict[str, Any]]:
     """
     Extracts arbitrary monetary amounts from text (e.g., Rs. 40.09 crore, ₹25 lakh, 25,00,000, Rs. 2 crore).
     Document-driven, independent of any sample tender.
+    Normalizes value_in_inr across all patterns for safe deduplication and comparison.
     """
     results: list[dict[str, Any]] = []
 
@@ -113,9 +114,24 @@ def extract_monetary_amounts(text: str) -> list[dict[str, Any]]:
         unit = m.group(2).lower()
         val = float(raw_num) if "." in raw_num else int(raw_num)
         norm_unit = "Crore" if "cr" in unit else ("Lakh" if "la" in unit else unit.capitalize())
+
+        unit_mult = 1
+        if "cr" in unit:
+            unit_mult = 10_000_000
+        elif "la" in unit:
+            unit_mult = 100_000
+        elif "thous" in unit:
+            unit_mult = 1_000
+        elif "mill" in unit:
+            unit_mult = 1_000_000
+        elif "bill" in unit:
+            unit_mult = 1_000_000_000
+        val_inr = float(val * unit_mult)
+
         results.append(
             {
                 "value": val,
+                "value_in_inr": val_inr,
                 "unit": norm_unit.lower(),
                 "formatted": f"Rs. {val} {norm_unit}",
                 "currency": "INR",
@@ -133,10 +149,13 @@ def extract_monetary_amounts(text: str) -> list[dict[str, Any]]:
         unit = m.group(2).lower()
         val = float(raw_num) if "." in raw_num else int(raw_num)
         norm_unit = "Crore" if "cr" in unit else "Lakh"
-        if not any(abs(r["value"] - val) < 0.001 for r in results):
+        val_inr = float(val * (10_000_000 if "cr" in unit else 100_000))
+
+        if not any(abs(r.get("value_in_inr", 0) - val_inr) < 1.0 for r in results):
             results.append(
                 {
                     "value": val,
+                    "value_in_inr": val_inr,
                     "unit": norm_unit.lower(),
                     "formatted": f"Rs. {val} {norm_unit}",
                     "currency": "INR",
@@ -153,16 +172,20 @@ def extract_monetary_amounts(text: str) -> list[dict[str, Any]]:
         raw_str = m.group(1)
         num_clean = raw_str.replace(",", "")
         val = float(num_clean) if "." in num_clean else int(num_clean)
+        val_inr = float(val)
+
         if val >= 10000000:
             formatted = f"Rs. {val / 10000000:.2f} Crore".rstrip("0").rstrip(".")
         elif val >= 100000:
             formatted = f"Rs. {val / 100000:.2f} Lakh".rstrip("0").rstrip(".")
         else:
             formatted = f"Rs. {val:,}"
-        if not any(r["formatted"] == formatted for r in results):
+
+        if not any(abs(r.get("value_in_inr", 0) - val_inr) < 1.0 for r in results):
             results.append(
                 {
                     "value": val,
+                    "value_in_inr": val_inr,
                     "unit": "INR",
                     "formatted": formatted,
                     "currency": "INR",
@@ -205,9 +228,9 @@ def _extract_clause_reference(text: str, page_no: int) -> str:
     - Schedule IV, Schedule-G, Schedule K
     - Annexure A, Appendix IB
     """
-    # 1. Explicit Named Divisions
+    # 1. Explicit Named Divisions (requiring real identifier and excluding English prepositions/stopwords)
     named_match = re.search(
-        r"\b((?:Schedule|Annexure|Appendix|Article|Section|Part|Clause|Sub-Clause|ITB|BDS|GCC|SCC|Table)\s*[-–—]?\s*(?:No\.?)?\s*[A-Za-z\dIVX]+(?:\.[A-Za-z\dIVX]+)*)",
+        r"\b((?:Schedule|Annexure|Appendix|Article|Section|Part|Clause|Sub-Clause|ITB|BDS|GCC|SCC|Table)\s*[-–—]?\s*(?:No\.?\s*)?(?!(?:of|the|in|for|and|to|at|by|with|under|as|per|or|is|shall|must)\b)(?:[A-Za-z]?\d+[A-Za-z\d]*(?:\.[A-Za-z\d]+)*|[IVXLCDM]+[A-Za-z\d]*|[A-Z]\b))",
         text,
         re.IGNORECASE,
     )
@@ -921,10 +944,14 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 "contracts of similar size",
                 "specific construction experience",
                 "historical contract non-performance",
+                "o&m project",
+                "o & m project",
+                "dpr assignments",
+                "four/six laning",
             )
         ):
             res = get_clause_and_quote(
-                r"(?:similar work|past experience|contracts of similar size)",
+                r"(?:similar work|past experience|contracts of similar size|o&m project|o & m project|four/six laning)",
                 "similar work",
                 [
                     "similar work",
@@ -932,6 +959,10 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                     "contracts of similar size",
                     "specific construction experience",
                     "historical contract non-performance",
+                    "o&m project",
+                    "o & m project",
+                    "dpr assignments",
+                    "four/six laning",
                 ],
             )
             if res:
@@ -1131,8 +1162,29 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                     )
                 )
 
-        # 11. Legal: Delay Damages & Liquidated Damages
-        if any(
+        # Check if this page's LD reference is specifically for project milestones / COD delay
+        is_milestone_delay_ld = (
+            any(
+                k in text_lower
+                for k in (
+                    "liquidated damages",
+                    "damages for delay",
+                    "fails to achieve any project milestone",
+                    "fails to achieve milestone",
+                    "cod does not occur",
+                )
+            )
+            and any(
+                k in text_lower for k in ("performance security", "delay", "damages", "penalty")
+            )
+            and any(
+                k in text_lower
+                for k in ("milestone", "cod", "scheduled completion date", "commercial operation")
+            )
+        )
+
+        # 11. Legal: Delay Damages & Liquidated Damages (General completion delay, mutually exclusive with milestone/COD LD)
+        if not is_milestone_delay_ld and any(
             k in text_lower for k in ("delay damages", "liquidated damages", "time for completion")
         ):
             res = get_clause_and_quote(
@@ -1474,7 +1526,7 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 candidates.append(
                     CandidateComplianceItem(
                         category="FINANCIAL",
-                        title=f"Performance Security Release Threshold ({pct_str} Total Project Cost)",
+                        title="Performance Security Release Threshold",
                         description=f"Performance Security released upon certified expenditure of at least {pct_str} of Total Project Cost on construction works.",
                         execution_rules=ExecutionRulesProps(
                             stamp_paper_required=False,
@@ -1540,8 +1592,8 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                     )
                     clean_scope = scope_m.group(1).strip() if scope_m else "Project"
 
-                title = f"Scheduled {clean_scope} Completion Date ({duration_label})"
-                description = f"Mandatory completion of {clean_scope} on or before the {day_target} from the Appointed Date."
+                title = "Scheduled Project Completion Date (COD)"
+                description = f"Mandatory completion of {clean_scope} on or before the {day_target} ({duration_label}) from the Appointed Date."
                 candidates.append(
                     CandidateComplianceItem(
                         category="EXECUTION",
@@ -1913,7 +1965,7 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 candidates.append(
                     CandidateComplianceItem(
                         category="FINANCIAL",
-                        title=f"State Construction Support Grant ({amount_str} in {tranche_str})",
+                        title="State Construction Support Grant",
                         description=f"Entitlement to {amount_str} construction grant payable by the Authority in {tranche_str} linked to certified physical construction milestones.",
                         execution_rules=ExecutionRulesProps(
                             stamp_paper_required=False,
@@ -1953,8 +2005,8 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 candidates.append(
                     CandidateComplianceItem(
                         category="FINANCIAL",
-                        title=f"{tier_label}Escrow Account Withdrawal Priority Waterfall",
-                        description="Mandatory statutory withdrawal priority waterfall governing all project revenues: Taxes -> Construction -> O&M Expenses -> Concession Fee -> Senior Debt Service -> Damages -> Subordinated Debt -> Equity.",
+                        title="Escrow Account Withdrawal Priority Waterfall",
+                        description=f"Mandatory statutory {tier_label}withdrawal priority waterfall governing all project revenues: Taxes -> Construction -> O&M Expenses -> Concession Fee -> Senior Debt Service -> Damages -> Subordinated Debt -> Equity.",
                         execution_rules=ExecutionRulesProps(
                             stamp_paper_required=True,
                             stamp_paper_denomination_inr=100,
@@ -2130,7 +2182,7 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 candidates.append(
                     CandidateComplianceItem(
                         category="FINANCIAL",
-                        title=f"Change of Scope {pct_label} Mobilization Advance & Cumulative Cost Caps",
+                        title="Change of Scope Mobilization Advance & Cumulative Cost Caps",
                         description=f"{pct_label} mobilization advance within stipulated timeline for Change of Scope orders, subject to cumulative cost caps.",
                         execution_rules=ExecutionRulesProps(
                             stamp_paper_required=False,
@@ -2223,12 +2275,325 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 candidates.append(
                     CandidateComplianceItem(
                         category="LEGAL",
-                        title=f"Post-Termination {dur_label} Defect Liability & Escrow Retention",
-                        description=f"{dur_text} post-termination defect liability backed by retention or bank guarantee, with Authority right to rectify at contractor's risk and cost.",
+                        title="Post-Termination Defect Liability & Escrow Retention",
+                        description=f"{dur_text} ({dur_label}) post-termination defect liability backed by retention or bank guarantee, with Authority right to rectify at contractor's risk and cost.",
                         execution_rules=ExecutionRulesProps(
                             stamp_paper_required=False,
                             notarization_required=False,
                             signing_authority_rank="Independent Engineer / Escrow Bank",
+                        ),
+                        provenance=ProvenanceProps(
+                            source_document_id=doc_id,
+                            source_file_name="tender_document.pdf",
+                            page_number=page_no,
+                            clause_reference=ref,
+                            verbatim_quote=quote,
+                            confidence_score=conf,
+                        ),
+                    )
+                )
+
+        # 37. Financial: RFP Document Fee / Cost of Tender
+        if any(
+            k in text_lower
+            for k in (
+                "non- refundable fee",
+                "non-refundable fee",
+                "cost of rfp",
+                "cost of tender",
+                "tender fee",
+                "document fee",
+            )
+        ) and any(k in text_lower for k in ("rs.", "inr", "neft", "rtgs", "pay the non")):
+            res = get_clause_and_quote(
+                r"(?:non-?\s*refundable fee.*?rs\.?\s*[\d,]+|pay the non-?\s*refundable fee|cost of rfp)",
+                "document fee",
+                ["non- refundable fee", "non-refundable fee", "rfp document", "fee of rs"],
+            )
+            if res:
+                quote, ref, conf = res
+                candidates.append(
+                    CandidateComplianceItem(
+                        category="FINANCIAL",
+                        title="RFP Document Fee Payment",
+                        description="Mandatory payment of non-refundable tender / RFP document fee through electronic fund transfer (NEFT/RTGS).",
+                        execution_rules=ExecutionRulesProps(
+                            stamp_paper_required=False,
+                            notarization_required=False,
+                            signing_authority_rank="Authorized Signatory / Finance Head",
+                        ),
+                        provenance=ProvenanceProps(
+                            source_document_id=doc_id,
+                            source_file_name="tender_document.pdf",
+                            page_number=page_no,
+                            clause_reference=ref,
+                            verbatim_quote=quote,
+                            confidence_score=conf,
+                        ),
+                    )
+                )
+
+        # 38. Technical: Mandatory Portal Enlistment & Team Formation (INFRACON / CPPP / GeM)
+        if any(
+            k in text_lower for k in ("infracon", "gem portal", "cppp", "e-procurement portal")
+        ) and any(
+            k in text_lower
+            for k in ("mandatorily register", "enlist themselves", "team id", "form a team")
+        ):
+            res = get_clause_and_quote(
+                r"(?:mandatorily register and enlist|form a team on.*?infracon|infracon team id)",
+                "infracon",
+                ["infracon", "mandatorily register", "team id", "upload all relevant information"],
+            )
+            if res:
+                quote, ref, conf = res
+                candidates.append(
+                    CandidateComplianceItem(
+                        category="TECHNICAL",
+                        title="Mandatory INFRACON Portal Registration & Team ID",
+                        description="Consulting firm and all key personnel must mandatorily register on MoRT&H INFRACON portal and furnish unique Team ID.",
+                        execution_rules=ExecutionRulesProps(
+                            stamp_paper_required=False,
+                            notarization_required=False,
+                            signing_authority_rank="Authorized Signatory / Proposed Team Leader",
+                        ),
+                        provenance=ProvenanceProps(
+                            source_document_id=doc_id,
+                            source_file_name="tender_document.pdf",
+                            page_number=page_no,
+                            clause_reference=ref,
+                            verbatim_quote=quote,
+                            confidence_score=conf,
+                        ),
+                    )
+                )
+
+        # 39. Statutory: Form 26AS Income Tax Verification for Key Personnel
+        if any(k in text_lower for k in ("form-26 as", "form 26as", "form 26 as")) and any(
+            k in text_lower
+            for k in (
+                "permanent key personnel",
+                "certify their permanent",
+                "consulting firms shall submit",
+            )
+        ):
+            res = get_clause_and_quote(
+                r"(?:form-?26\s*as.*?permanent key personnel|consulting firms shall submit form-?26\s*as)",
+                "form 26as",
+                ["form-26 as", "form 26as", "permanent key personnel"],
+            )
+            if res:
+                quote, ref, conf = res
+                candidates.append(
+                    CandidateComplianceItem(
+                        category="STATUTORY",
+                        title="Form-26AS Income Tax Certification for Permanent Key Personnel",
+                        description="Submission of statutory Income Tax Form-26AS to certify employment history and retention of permanent key personnel.",
+                        execution_rules=ExecutionRulesProps(
+                            stamp_paper_required=False,
+                            notarization_required=False,
+                            udin_required=False,
+                            signing_authority_rank="Authorized Signatory / HR Head",
+                        ),
+                        provenance=ProvenanceProps(
+                            source_document_id=doc_id,
+                            source_file_name="tender_document.pdf",
+                            page_number=page_no,
+                            clause_reference=ref,
+                            verbatim_quote=quote,
+                            confidence_score=conf,
+                        ),
+                    )
+                )
+
+        # 40. Execution: Mandatory Electronic Proposal Submission via E-Portal
+        if any(
+            k in text_lower
+            for k in (
+                "submitted only in electronic form",
+                "uploaded on the e-portal",
+                "electronic form (to be uploaded",
+                "no physical document shall be accepted",
+            )
+        ):
+            res = get_clause_and_quote(
+                r"(?:submitted only in electronic form|no physical document shall be accepted)",
+                "electronic submission",
+                [
+                    "submitted only in electronic form",
+                    "uploaded on the e-portal",
+                    "no physical document",
+                ],
+            )
+            if res:
+                quote, ref, conf = res
+                candidates.append(
+                    CandidateComplianceItem(
+                        category="EXECUTION",
+                        title="Mandatory Electronic Proposal Submission on E-Portal",
+                        description="Proposals must be submitted strictly in electronic format via the designated e-portal; physical submissions are rejected.",
+                        execution_rules=ExecutionRulesProps(
+                            stamp_paper_required=False,
+                            notarization_required=False,
+                            signing_authority_rank="Authorized Signatory",
+                        ),
+                        provenance=ProvenanceProps(
+                            source_document_id=doc_id,
+                            source_file_name="tender_document.pdf",
+                            page_number=page_no,
+                            clause_reference=ref,
+                            verbatim_quote=quote,
+                            confidence_score=conf,
+                        ),
+                    )
+                )
+
+        # 41. Operational: Data Lake Portal & Digital Communications
+        if any(k in text_lower for k in ("data lake portal", "data lake", "pmis portal")) and any(
+            k in text_lower
+            for k in ("contractual correspondence", "communicate with nhai", "portal available on")
+        ):
+            res = get_clause_and_quote(
+                r"(?:data lake portal.*?contractual correspondence|use the link .*?data lake portal)",
+                "data lake",
+                ["data lake portal", "contractual correspondence", "nhai website"],
+            )
+            if res:
+                quote, ref, conf = res
+                candidates.append(
+                    CandidateComplianceItem(
+                        category="OPERATIONAL",
+                        title="Data Lake Portal Utilization for Contractual Correspondence",
+                        description="Mandatory utilization of Client Data Lake Portal for all formal contractual correspondence, project deliverables, and monitoring.",
+                        execution_rules=ExecutionRulesProps(
+                            stamp_paper_required=False,
+                            notarization_required=False,
+                            signing_authority_rank="Authorized Signatory / Team Leader",
+                        ),
+                        provenance=ProvenanceProps(
+                            source_document_id=doc_id,
+                            source_file_name="tender_document.pdf",
+                            page_number=page_no,
+                            clause_reference=ref,
+                            verbatim_quote=quote,
+                            confidence_score=conf,
+                        ),
+                    )
+                )
+
+        # 42. Operational: Assignment Duration & Service Period
+        if any(
+            k in text_lower
+            for k in (
+                "total time period for the assignment",
+                "period for the assignment as",
+                "period of assignment will be",
+            )
+        ):
+            res = get_clause_and_quote(
+                r"(?:total time period for the assignment.*?will be for \d+\s*months|time period for the assignment)",
+                "period of assignment",
+                ["total time period for the assignment", "will be for", "months"],
+            )
+            if res:
+                quote, ref, conf = res
+                durations = extract_temporal_durations(quote)
+                dur_text = (
+                    f"{durations[0]['value']}-{durations[0]['unit'].capitalize()}"
+                    if durations
+                    else "Stipulated Period"
+                )
+                candidates.append(
+                    CandidateComplianceItem(
+                        category="OPERATIONAL",
+                        title="Assignment Duration & Period of Service",
+                        description=f"Commitment to mobilize and perform consultancy supervision services for the entire {dur_text} contract duration.",
+                        execution_rules=ExecutionRulesProps(
+                            stamp_paper_required=False,
+                            notarization_required=False,
+                            signing_authority_rank="Authorized Signatory",
+                        ),
+                        provenance=ProvenanceProps(
+                            source_document_id=doc_id,
+                            source_file_name="tender_document.pdf",
+                            page_number=page_no,
+                            clause_reference=ref,
+                            verbatim_quote=quote,
+                            confidence_score=conf,
+                        ),
+                    )
+                )
+
+        # 43. Legal: Public Domain Disclosure Undertaking for Credentials
+        if any(
+            k in text_lower
+            for k in ("in public domain", "hoisting of their credentials", "uploading/hoisting")
+        ) and any(
+            k in text_lower
+            for k in (
+                "credentials submitted",
+                "consultants at bidding stage",
+                "individual key personnel",
+            )
+        ):
+            res = get_clause_and_quote(
+                r"(?:keep the credentials.*?in public domain|uploading/hoisting of their credentials in public domain)",
+                "public domain",
+                ["in public domain", "credentials submitted", "uploading/hoisting"],
+            )
+            if res:
+                quote, ref, conf = res
+                candidates.append(
+                    CandidateComplianceItem(
+                        category="LEGAL",
+                        title="Public Domain Hosting Consent for Consultant & Personnel Credentials",
+                        description="Undertaking consenting to the publication of firm and key personnel credentials on client public portals.",
+                        execution_rules=ExecutionRulesProps(
+                            stamp_paper_required=False,
+                            notarization_required=False,
+                            signing_authority_rank="Authorized Signatory & All Key Personnel",
+                        ),
+                        provenance=ProvenanceProps(
+                            source_document_id=doc_id,
+                            source_file_name="tender_document.pdf",
+                            page_number=page_no,
+                            clause_reference=ref,
+                            verbatim_quote=quote,
+                            confidence_score=conf,
+                        ),
+                    )
+                )
+
+        # 44. Commercial: Bid Due Date & Technical Proposal Opening Schedule
+        if any(
+            k in text_lower
+            for k in (
+                "bid due date",
+                "submission must be received not later than",
+                "bids (technical) would be opened on",
+                "technical bids would be opened",
+            )
+        ):
+            res = get_clause_and_quote(
+                r"(?:submission must be received not later than.*?bid due date|bids \(technical\) would be opened on)",
+                "bid due date",
+                [
+                    "bid due date",
+                    "submission must be received not later than",
+                    "bids (technical) would be opened",
+                ],
+            )
+            if res:
+                quote, ref, conf = res
+                candidates.append(
+                    CandidateComplianceItem(
+                        category="COMMERCIAL",
+                        title="Bid Due Date & Technical Proposal Opening Schedule",
+                        description="Strict adherence to bid submission deadline and attendance at technical proposal electronic opening.",
+                        execution_rules=ExecutionRulesProps(
+                            stamp_paper_required=False,
+                            notarization_required=False,
+                            signing_authority_rank="Authorized Signatory",
                         ),
                         provenance=ProvenanceProps(
                             source_document_id=doc_id,
@@ -2271,22 +2636,15 @@ class ProductionExtractionPipeline:
                 )
             except Exception as exc:
                 logger.warning(
-                    "Could not resolve PDF pages from download URL for doc %s: %s. Using document stub.",
+                    "Could not resolve PDF pages from download URL for doc %s: %s.",
                     request.document_id,
                     exc,
                 )
 
         if not request.pages:
-            text_stub = (
-                f"The bidder must submit an Earnest Money Deposit (EMD) of INR 5,00,000 on a 100 Rupee stamp paper. "
-                f"The {request.document_type} document {request.file_name} requires all submissions to be signed by the authorized signatory."
+            raise ValueError(
+                f"No extractable pages found for document '{request.document_id}' ({request.file_name})."
             )
-            request.pages = [NormalizedPage(page_number=1, text=text_stub)]
-
-        if len(request.pages) > 40:
-            from tenderpulse_ai.domain.pdf_resolver import filter_candidate_pages
-
-            request.pages = filter_candidate_pages(request.pages)
 
         # Hoist document parsing, structure building, candidate detection, and context assembly once upfront
         from tenderpulse_ai.domain.candidate_detector import CandidateDetector
@@ -2295,6 +2653,7 @@ class ProductionExtractionPipeline:
         from tenderpulse_ai.domain.structure_builder import DocumentStructureBuilder
         from tenderpulse_ai.domain.tender_chunker import TenderChunker
 
+        # 1. Parse and chunk the FULL document first to generate wire_chunks across all pages
         doc_parser = DoclingParserEngine()
         docling_doc = doc_parser.parse_document(
             document_id=request.document_id,
@@ -2316,11 +2675,28 @@ class ProductionExtractionPipeline:
         assembler = ContextAssembler()
         assembled_contexts = assembler.assemble_contexts(docling_doc, doc_tree, detected_candidates)
 
+        # 2. Pre-group detected_candidates, unselected_passages, and assembled_contexts by page_number
+        candidates_by_page: dict[int, list[dict[str, Any]]] = {}
+        for c in detected_candidates:
+            candidates_by_page.setdefault(c.page_number, []).append(c.model_dump())
+
+        unselected_by_page: dict[int, list[dict[str, Any]]] = {}
+        for u in unselected_passages:
+            unselected_by_page.setdefault(u.page_number, []).append(u.model_dump())
+
+        contexts_by_page: dict[int, list[dict[str, Any]]] = {}
+        for a in assembled_contexts:
+            contexts_by_page.setdefault(a.page_number, []).append(a.model_dump())
+
         shared_docling_dict = docling_doc.model_dump()
         shared_structure_dict = doc_tree.model_dump()
-        shared_candidates_list = [c.model_dump() for c in detected_candidates]
-        shared_unselected_list = [u.model_dump() for u in unselected_passages]
-        shared_contexts_list = [a.model_dump() for a in assembled_contexts]
+
+        # 3. Only filter candidate pages for the compliance extraction loop
+        candidate_pages = list(request.pages)
+        if len(candidate_pages) > 40:
+            from tenderpulse_ai.domain.pdf_resolver import filter_candidate_pages
+
+            candidate_pages = filter_candidate_pages(candidate_pages)
 
         # Process candidate pages through LangGraph compliance workflow (bounded concurrency)
         sem = asyncio.Semaphore(5)
@@ -2371,9 +2747,9 @@ class ProductionExtractionPipeline:
                     "pages": [{"page_number": page.page_number, "text": page.text}],
                     "docling_document": shared_docling_dict,
                     "document_structure": shared_structure_dict,
-                    "detected_candidates": shared_candidates_list,
-                    "unselected_passages": shared_unselected_list,
-                    "assembled_contexts": shared_contexts_list,
+                    "detected_candidates": candidates_by_page.get(page.page_number, []),
+                    "unselected_passages": unselected_by_page.get(page.page_number, []),
+                    "assembled_contexts": contexts_by_page.get(page.page_number, []),
                     "retrieved_chunks": [],
                     "extracted_candidates": [],
                     "verified_items": [],
@@ -2394,7 +2770,7 @@ class ProductionExtractionPipeline:
                 final_state = await graph.ainvoke(initial_state, config=config)
                 return final_state
 
-        page_results = await asyncio.gather(*(_process_page(p) for p in request.pages))
+        page_results = await asyncio.gather(*(_process_page(p) for p in candidate_pages))
         for final_state in page_results:
             if final_state.get("human_review_required", False):
                 human_review_required = True
@@ -2474,7 +2850,14 @@ class ProductionExtractionPipeline:
         for item in formatted_items:
             pages = sorted(item.pop("supporting_pages", [item["provenance"]["pageNumber"]]))
             if len(pages) > 1:
-                combined_clause = f"Clauses across Pages {', '.join(str(p) for p in pages)}"
+                base_ref = (
+                    item["provenance"].get("clauseReference")
+                    or item["provenance"].get("sectionOrClause")
+                    or "Clause"
+                )
+                base_ref_clean = re.sub(r"\s*\(Pages?\s+[\d,\s]+\)\s*$", "", base_ref)
+                base_ref_clean = re.sub(r"\s*\(Page\s+\d+\)\s*$", "", base_ref_clean)
+                combined_clause = f"{base_ref_clean} (Pages {', '.join(str(p) for p in pages)})"
                 item["provenance"]["clauseReference"] = combined_clause
                 item["provenance"]["sectionOrClause"] = combined_clause
             item["provenance"]["sourceDocumentId"] = request.document_id

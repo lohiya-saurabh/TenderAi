@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     # LLM Gateway Settings (OpenRouter / OpenAI-Compatible)
     llm_api_key: str | None = None
     llm_base_url: str = "https://openrouter.ai/api/v1"
-    llm_model: str = "nvidia/nemotron-3.5-lightning:free"
+    llm_model: str = "openrouter/free"
     llm_timeout_seconds: float = 45.0
     llm_max_retries: int = 2
 

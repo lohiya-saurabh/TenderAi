@@ -63,13 +63,19 @@ class CompanyEvidenceExtractor:
                 )
 
         if not pages:
-            # Fallback to single page using filename
-            text_stub = (
-                f"Company Evidence Document: {request.file_name}. "
-                f"Evidence Type: {request.evidence_type}. "
-                f"Document ID: {request.evidence_document_id}."
+            logger.error(
+                "No extractable pages found for evidence document %s",
+                request.evidence_document_id,
             )
-            pages = [NormalizedPage(page_number=1, text=text_stub)]
+            return CompanyEvidenceExtractionResponse(
+                evidence_document_id=request.evidence_document_id,
+                organization_id=request.organization_id,
+                company_id=request.company_id,
+                status="FAILED",
+                extracted_attributes={},
+                chunks=[],
+                error="Document contains no extractable text or downloadable pages.",
+            )
 
         combined_text = "\n\n".join(f"[Page {p.page_number}]\n{p.text}" for p in pages)
         evidence_type = (request.evidence_type or "OTHER").upper()

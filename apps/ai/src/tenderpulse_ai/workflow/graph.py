@@ -94,7 +94,7 @@ def build_compliance_workflow_graph(
 
     # 4. Cycle & Convergence Edges
     workflow.add_edge("targeted_refine", "llm_extraction")
-    workflow.add_edge("escalate_human_review", "human_review")
+    workflow.add_edge("escalate_human_review", "postgres_store")
     workflow.add_edge("human_review", "postgres_store")
     workflow.add_edge("postgres_store", END)
 

@@ -120,9 +120,9 @@ def test_regression_different_durations_same_pipeline():
     item_b = next(i for i in items_b if "Post-Termination" in i.title)
     item_c = next(i for i in items_c if "Post-Termination" in i.title)
 
-    assert "120-Day" in item_a.title
-    assert "90-Day" in item_b.title
-    assert "180-Day" in item_c.title
+    assert item_a.title == "Post-Termination Defect Liability & Escrow Retention"
+    assert item_b.title == "Post-Termination Defect Liability & Escrow Retention"
+    assert item_c.title == "Post-Termination Defect Liability & Escrow Retention"
 
     assert "120-day" in item_a.description
     assert "90-day" in item_b.description
@@ -206,12 +206,16 @@ def test_regression_different_monetary_amounts_same_pipeline():
     item_b = next(i for i in items_b if "State Construction Support Grant" in i.title)
     item_c = next(i for i in items_c if "State Construction Support Grant" in i.title)
 
-    assert "40.09 Crore" in item_a.title
-    assert "10 Tranches" in item_a.title
-    assert "25 Crore" in item_b.title
-    assert "5 Tranches" in item_b.title
-    assert "2.5 Crore" in item_c.title
-    assert "4 Tranches" in item_c.title
+    assert item_a.title == "State Construction Support Grant"
+    assert item_b.title == "State Construction Support Grant"
+    assert item_c.title == "State Construction Support Grant"
+
+    assert "40.09 Crore" in item_a.description
+    assert "10 Tranches" in item_a.description
+    assert "25 Crore" in item_b.description
+    assert "5 Tranches" in item_b.description
+    assert "2.5 Crore" in item_c.description
+    assert "4 Tranches" in item_c.description
 
 
 def test_regression_different_accident_liabilities_same_pipeline():

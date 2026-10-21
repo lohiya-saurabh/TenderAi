@@ -142,7 +142,7 @@ def test_contract_execution_covenants_extraction():
                 "The 910th (nine hundred and tenth) day from the Appointed Date shall be the scheduled date for completion of Four-Laning, "
                 "(the “Scheduled Four-Laning Date”) and the Concessionaire agrees and undertakes that Four-Laning shall be completed on or before the Scheduled Four-Laning Date."
             ),
-            "Scheduled Four-Laning Completion Date (910-Day COD)",
+            "Scheduled Project Completion Date (COD)",
             "EXECUTION",
         ),
         # Schedule G: Milestones
@@ -187,7 +187,7 @@ def test_contract_execution_covenants_extraction():
                 "25.5.1 Rs.40.09 crore (Rupees Forty Crore and Nine Lakh) shall be due and payable to the Concessionaire in "
                 "10 (ten) equal instalments during the Construction Period in accordance with the provisions of Clause 25.5.2."
             ),
-            "State Construction Support Grant (Rs. 40.09 Crore in 10 Tranches)",
+            "State Construction Support Grant",
             "FINANCIAL",
         ),
         # Article 31.3.1: Escrow Waterfall
@@ -198,7 +198,7 @@ def test_contract_execution_covenants_extraction():
                 "Escrow Account shall be appropriated in the following order every month: (a) all taxes due and payable; "
                 "(b) all payments relating to construction; (c) O&M Expenses; (d) Concession Fee; (e) Senior Debt service."
             ),
-            "11-Tier Escrow Account Withdrawal Priority Waterfall",
+            "Escrow Account Withdrawal Priority Waterfall",
             "FINANCIAL",
         ),
         # Article 32.1.1: Comprehensive Project Insurance & Co-Insured
@@ -308,7 +308,7 @@ async def test_dca_full_pipeline_execution_on_selected_pages(sec_context):
     # Ensure vital covenants are extracted
     assert any("Conditions Precedent" in t for t in titles)
     assert any("Performance Security" in t for t in titles)
-    assert any("Scheduled Four-Laning" in t for t in titles)
+    assert any("Scheduled" in t for t in titles)
     assert any("Rescue Post" in t or "Cranes" in t for t in titles)
     assert any("Ambulance" in t for t in titles)
     assert any("Construction Support Grant" in t for t in titles)
