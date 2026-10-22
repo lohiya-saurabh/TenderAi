@@ -532,6 +532,7 @@ export const ComplianceTable: React.FC<ComplianceTableProps> = ({
           citation={activeCitationItem.sourceCitation}
           provenance={activeCitationItem.provenance}
           requirementTitle={activeCitationItem.requirement}
+          description={activeCitationItem.description}
         />
       )}
 

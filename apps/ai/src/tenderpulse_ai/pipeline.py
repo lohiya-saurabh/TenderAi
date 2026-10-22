@@ -220,6 +220,147 @@ def extract_percentages(text: str) -> list[dict[str, Any]]:
     return results
 
 
+ABBREVIATIONS = {
+    "hrs",
+    "rs",
+    "e.g",
+    "i.e",
+    "viz",
+    "co",
+    "ltd",
+    "pvt",
+    "no",
+    "sr",
+    "sl",
+    "dr",
+    "mr",
+    "mrs",
+    "ms",
+    "prof",
+    "dept",
+    "govt",
+    "inc",
+    "corp",
+    "sq",
+    "mt",
+    "km",
+    "ft",
+    "in",
+    "min",
+    "sec",
+    "approx",
+    "ref",
+    "cl",
+}
+
+DIVISION_KEYWORDS_PATTERN = (
+    r"(?:(?:GC|CC|GCC|SCC|ITB|BDS)\s*)?"
+    r"(?:Schedule|Annexure|Appendix|Article|Section|Part|Clause|Sub-Clause|ITB|BDS|GCC|SCC|Table)\b"
+)
+
+
+def _is_calendar_date_or_measurement(token: str, full_context: str = "") -> bool:
+    """Returns True if the token is a calendar date (DD.MM.YYYY), decimal fraction (0.5), or measurement (9.45 km)."""
+    clean = token.strip()
+    if re.match(r"^\d{1,2}\.\d{1,2}\.\d{2,4}$", clean):
+        return True
+    if re.match(r"^0\.\d+", clean):
+        return True
+    if re.search(
+        r"\b\d+(?:\.\d+)?\s*(?:(?:km|kms|mtr|meters|hrs|hours|am|pm|crore|crores|cr|lakh|lakhs|percent)\b|%)",
+        clean,
+        re.IGNORECASE,
+    ):
+        return True
+    if full_context:
+        for m in re.finditer(r"(?<!\w)" + re.escape(clean), full_context):
+            start = m.start()
+            end = m.end()
+            after = full_context[end : end + 30]
+            if after and after[0].isdigit():
+                continue
+            if re.match(r"^\.\d+", after):
+                return True
+            if re.match(
+                r"^\s*(?:(?:km|kms|mtr|meters|hrs|hours|am|pm|crore|crores|cr|lakh|lakhs|percent)\b|%)",
+                after,
+                re.IGNORECASE,
+            ):
+                return True
+            before = full_context[max(0, start - 30) : start]
+            if re.search(
+                r"(?:\b(?:km|km\.|less than|more than|upto|at least|minimum)|(?:rs\.?|inr|₹))\s*$",
+                before,
+                re.IGNORECASE,
+            ):
+                return True
+    return False
+
+
+def _is_abbreviation_or_number_period(text: str, period_idx: int) -> bool:
+    """Checks if a period at period_idx in text is part of an abbreviation, decimal number, or date."""
+    if period_idx < 0 or period_idx >= len(text):
+        return False
+    if period_idx > 0 and text[period_idx - 1].isdigit():
+        if period_idx + 1 < len(text) and text[period_idx + 1].isdigit():
+            return True
+    pre_match = re.search(r"([A-Za-z.]+)\Z", text[:period_idx])
+    if pre_match:
+        token = pre_match.group(1).lower().rstrip(".")
+        if token in ABBREVIATIONS:
+            return True
+        if len(token) == 1 and token.isalpha():
+            return True
+    return False
+
+
+def _extract_clause_from_clause_text(clause_text: str, page_no: int) -> str | None:
+    """Extracts the most specific clause reference from a clause snippet."""
+    # 1. Division heading at beginning of clause (e.g. "Clause 11", "Section 1", "ARTICLE 12")
+    start_div = re.search(
+        r"^\s*(" + DIVISION_KEYWORDS_PATTERN + r"\s*[-–—]?\s*(?:No\.?\s*)?"
+        r"(?!(?:of|the|in|for|and|to|at|by|with|under|as|per|or|is|shall|must)\b)"
+        r"(?:[A-Za-z]?\d+[A-Za-z\d]*(?:\.[A-Za-z\d]+)*|(?:[IVXLCDM]+(?:[-–—][A-Za-z\d]+|[A-Z])?)\b|[A-Z]\b))",
+        clause_text,
+        re.IGNORECASE,
+    )
+    if start_div:
+        val = start_div.group(1).strip()
+        if not _is_calendar_date_or_measurement(val, clause_text):
+            return f"{val} (Page {page_no})"
+
+    # 2. Numbered item at beginning of clause (e.g. "20. RFP submission...", "6. The Consultant...")
+    start_num = re.search(
+        r"^\s*(?!\d{1,2}\.\d{1,2}\.\d{2,4}\b)([1-9]\d*(?:\.\d+)*)[.)]?[ \t]+[A-Za-z\d]",
+        clause_text,
+    )
+    if start_num:
+        val = start_num.group(1).strip()
+        if not _is_calendar_date_or_measurement(val, clause_text):
+            return f"Clause {val} (Page {page_no})"
+
+    # 3. Explicit named division anywhere in clause
+    named_match = re.search(
+        r"\b(" + DIVISION_KEYWORDS_PATTERN + r"\s*[-–—]?\s*(?:No\.?\s*)?"
+        r"(?!(?:of|the|in|for|and|to|at|by|with|under|as|per|or|is|shall|must)\b)"
+        r"(?:[A-Za-z]?\d+[A-Za-z\d]*(?:\.[A-Za-z\d]+)*|(?:[IVXLCDM]+(?:[-–—][A-Za-z\d]+|[A-Z])?)\b|[A-Z]\b))",
+        clause_text,
+        re.IGNORECASE,
+    )
+    if named_match:
+        val = named_match.group(1).strip()
+        if not _is_calendar_date_or_measurement(val, clause_text):
+            return f"{val} (Page {page_no})"
+
+    # 4. Decimal clause hierarchy anywhere in clause (excluding dates and measurements)
+    for dm in re.finditer(r"\b([1-9]\d*(?:\.\d+)+)\b", clause_text):
+        cand = dm.group(1).strip()
+        if not _is_calendar_date_or_measurement(cand, clause_text):
+            return f"Clause {cand} (Page {page_no})"
+
+    return None
+
+
 def _extract_clause_reference(text: str, page_no: int) -> str:
     """
     Dynamically discovers clause, section, article, schedule, annexure, and appendix references.
@@ -229,24 +370,51 @@ def _extract_clause_reference(text: str, page_no: int) -> str:
     - Schedule IV, Schedule-G, Schedule K
     - Annexure A, Appendix IB
     """
-    # 1. Explicit Named Divisions (requiring real identifier and excluding English prepositions/stopwords)
+    # 1. Structured clause or named division at start of line
+    line_start_div = re.search(
+        r"(?m)^\s*(" + DIVISION_KEYWORDS_PATTERN + r"\s*[-–—]?\s*(?:No\.?\s*)?"
+        r"(?!(?:of|the|in|for|and|to|at|by|with|under|as|per|or|is|shall|must)\b)"
+        r"(?:[A-Za-z]?\d+[A-Za-z\d]*(?:\.[A-Za-z\d]+)*|(?:[IVXLCDM]+(?:[-–—][A-Za-z\d]+|[A-Z])?)\b|[A-Z]\b))",
+        text,
+        re.IGNORECASE,
+    )
+    if line_start_div:
+        val = line_start_div.group(1).strip()
+        if not _is_calendar_date_or_measurement(val, text):
+            return f"{val} (Page {page_no})"
+
+    # 2. Decimal clause hierarchy at start of line: 1.1, 1.1.1, 4.2.7, 7.3.2, 9.1.1, 12.4.1, 14.8
+    decimal_match = re.search(
+        r"(?m)^\s*(?!\d{1,2}\.\d{1,2}\.\d{2,4}\b)([1-9]\d*(?:\.\d+)+)\b",
+        text,
+    )
+    if decimal_match:
+        val = decimal_match.group(1).strip()
+        if not _is_calendar_date_or_measurement(val, text):
+            return f"Clause {val} (Page {page_no})"
+
+    # 3. Single-number clause or item heading at line start: 1, 2, 1., 2.
+    single_match = re.search(
+        r"(?m)^\s*(?!\d{1,2}\.\d{1,2}\.\d{2,4}\b)([1-9]\d*)(?:[.)][ \t]+|[ \t]+)[A-Za-z\d]",
+        text,
+    )
+    if single_match:
+        val = single_match.group(1).strip()
+        if not _is_calendar_date_or_measurement(val, text):
+            return f"Clause {val} (Page {page_no})"
+
+    # 4. Explicit Named Divisions anywhere in text (requiring real identifier, excluding English prepositions/stopwords)
     named_match = re.search(
-        r"\b((?:Schedule|Annexure|Appendix|Article|Section|Part|Clause|Sub-Clause|ITB|BDS|GCC|SCC|Table)\s*[-–—]?\s*(?:No\.?\s*)?(?!(?:of|the|in|for|and|to|at|by|with|under|as|per|or|is|shall|must)\b)(?:[A-Za-z]?\d+[A-Za-z\d]*(?:\.[A-Za-z\d]+)*|[IVXLCDM]+[A-Za-z\d]*|[A-Z]\b))",
+        r"\b(" + DIVISION_KEYWORDS_PATTERN + r"\s*[-–—]?\s*(?:No\.?\s*)?"
+        r"(?!(?:of|the|in|for|and|to|at|by|with|under|as|per|or|is|shall|must)\b)"
+        r"(?:[A-Za-z]?\d+[A-Za-z\d]*(?:\.[A-Za-z\d]+)*|(?:[IVXLCDM]+(?:[-–—][A-Za-z\d]+|[A-Z])?)\b|[A-Z]\b))",
         text,
         re.IGNORECASE,
     )
     if named_match:
-        return f"{named_match.group(1).strip()} (Page {page_no})"
-
-    # 2. Decimal clause hierarchy at start of line: 1.1, 1.1.1, 4.2.7, 7.3.2, 9.1.1, 12.4.1, 14.8
-    decimal_match = re.search(r"^\s*(\d+(?:\.\d+)+)\b", text, re.MULTILINE)
-    if decimal_match:
-        return f"Clause {decimal_match.group(1)} (Page {page_no})"
-
-    # 3. Single-number clause or item heading at line start: 1, 2, 1., 2.
-    single_match = re.search(r"^\s*(\d+)(?:[.)]|\s+)\s*[A-Z]", text, re.MULTILINE)
-    if single_match:
-        return f"Clause {single_match.group(1)} (Page {page_no})"
+        val = named_match.group(1).strip()
+        if not _is_calendar_date_or_measurement(val, text):
+            return f"{val} (Page {page_no})"
 
     return f"Clause on Page {page_no}"
 
@@ -266,36 +434,46 @@ def _extract_sentence(pattern: str, text: str) -> str | None:
             punctuation_search_start = list_items[-1].end()
         else:
             punctuation_search_start = line_start
-        preceding_punctuation = max(
-            normalized_text.rfind(".", punctuation_search_start, keyword.start()),
-            normalized_text.rfind("?", punctuation_search_start, keyword.start()),
-            normalized_text.rfind("!", punctuation_search_start, keyword.start()),
-        )
-        if preceding_punctuation >= punctuation_search_start:
-            sentence_start = preceding_punctuation + 1
 
-        period_position = normalized_text.find(".", keyword.end())
+        preceding_punct_pos = -1
+        sub_pre = normalized_text[punctuation_search_start : keyword.start()]
+        for p_match in re.finditer(r"[.?!](?:\s+|$)", sub_pre):
+            abs_idx = punctuation_search_start + p_match.start()
+            if normalized_text[abs_idx] == "." and _is_abbreviation_or_number_period(
+                normalized_text, abs_idx
+            ):
+                continue
+            preceding_punct_pos = abs_idx
+
+        if preceding_punct_pos >= punctuation_search_start:
+            sentence_start = preceding_punct_pos + 1
+
+        sentence_end = len(normalized_text)
+        sub_post = normalized_text[keyword.end() :]
+        for p_match in re.finditer(r"\.(?:\s+[A-Z]|\s*\n|$)", sub_post):
+            abs_idx = keyword.end() + p_match.start()
+            if _is_abbreviation_or_number_period(normalized_text, abs_idx):
+                continue
+            sentence_end = abs_idx + 1
+            break
+
         paragraph_position = normalized_text.find("\n\n", keyword.end())
         next_list_item = re.search(r"(?m)^\s*\d+[.)]\s+", normalized_text[keyword.end() :])
         end_candidates = [
-            position
-            for position in (
-                period_position + 1 if period_position >= 0 else -1,
-                paragraph_position,
+            pos
+            for pos in (
+                sentence_end,
+                paragraph_position if paragraph_position >= 0 else -1,
                 keyword.end() + next_list_item.start() if next_list_item else -1,
             )
-            if position >= 0
+            if pos >= 0
         ]
         sentence_end = min(end_candidates) if end_candidates else len(normalized_text)
 
         sentence = normalized_text[sentence_start:sentence_end].strip()
         if len(sentence) > 15:
-            # Joining only the selected clause prevents earlier line-wrapped page
-            # content from leaking into the provenance quote.
             return re.sub(r"\s+", " ", sentence)
 
-    # If the keyword itself wraps across extracted lines, fall back to normalized
-    # text while retaining blank lines as paragraph boundaries.
     normalized_text = re.sub(r"(?<!\n)\n(?!\n)", " ", normalized_text)
     match = re.search(
         r"([^.\n]*?" + pattern + r"[^.\n]*?(?:\.|\n|$))",
@@ -313,19 +491,56 @@ def is_toc_or_definition(text: str) -> bool:
     clean = text.strip()
     if not clean:
         return True
-    if re.search(r"(\.{2,}|\s{3,})\s*\d+\s*$", clean) or re.search(r"\s+\d+\s*$", clean):
-        return True
-    if re.match(
-        r"^(?:(?:\d+(?:\.\d+)*\.?|[A-Z]\.?|\([a-z\d]+\))\s*)?[A-Za-z\s,/&\-–—]{3,60}\s*\.?$",
-        clean,
-    ) and not re.search(
-        r"\b(shall|must|required|furnish|submit|pay|forfeit|deposit|within|days|percent|%|inr|rs|turnover|guarantee)\b",
-        clean,
-        re.IGNORECASE,
+
+    # 1. Dot leaders followed by numbers (TOC entries like 'Performance Security ...... 34')
+    # Checked unconditionally so that 'forfeiture' or 'guarantee' in title does not bypass TOC detection
+    if re.search(r"(?:\.{2,}|\u2026|[-–—]{3,})\s*\d+", clean) or re.search(
+        r"(\.{2,}|\s{3,})\s*\d+\s*$", clean
     ):
         return True
+
+    # 2. Operative obligations / modal verbs
+    has_modal = bool(
+        re.search(
+            r"\b(shall|must|is required to|are required to|will be forfeited|undertakes to|payable|repair and rectify)\b",
+            clean,
+            re.IGNORECASE,
+        )
+    )
+
+    if not has_modal:
+        # Consecutive clause headings / multi-column TOC listings without dot leaders
+        # e.g. "33 Performance Security 15 Bid Validity 34 Advances 16 Earnest Money"
+        # or "Clause 1 Scope 5 Clause 2 Tender Value 6"
+        if re.search(
+            r"(?:^|\s)(?:(?:(?:GC|CC|GCC|SCC|ITB|BDS)\s*)?(?:Sub-Clause|Clause|Section|Article|Part|Schedule|Annexure|Appendix)\s*[\dA-Za-z.]+|\d{1,3})\s+[A-Z][A-Za-z\s/&–-]{2,40}\s+\d{1,4}\s+(?:(?:(?:GC|CC|GCC|SCC|ITB|BDS)\s*)?(?:Sub-Clause|Clause|Section|Article|Part|Schedule|Annexure|Appendix)|\d{1,3})\b",
+            clean,
+        ) or re.search(r"\b\d{1,3}\s+[A-Z][A-Za-z\s/&–-]{2,35}\s+\d{1,3}\s+[A-Z]", clean):
+            return True
+
+        # Short TOC line ending with a page number
+        if re.search(r"\s+\d{1,4}\s*$", clean) and len(clean) < 120:
+            return True
+
+        # Bare title or heading (e.g. "Clause 14 Forfeiture of Bid Security", "Section 14: Financial Securities")
+        if re.match(
+            r"^(?:(?:(?:Section|Clause|Article|Schedule|Part|Table)\s*[-–—]?\s*(?:No\.?\s*)?[\dA-Za-z.]+:?\s*)|(?:\d+(?:\.\d+)*\.?|[A-Z]\.?|\([a-z\d]+\))\s*)?[A-Za-z\s,/&\-–—:]{3,80}\s*\.?$",
+            clean,
+            re.IGNORECASE,
+        ) and not re.search(
+            r"\b(within\s+\d+\s+days|not\s+later\s+than|at\s+least|nil|limits:)\b",
+            clean,
+            re.IGNORECASE,
+        ):
+            return True
+
+    # 3. Bare definitions
     return bool(
-        re.match(r"^[“\"\'\s]*[A-Za-z\s]+[”\"\'\s]*(?:means|shall\s+mean)\b", clean, re.IGNORECASE)
+        re.match(
+            r"^(?:(?:Article|Clause|Section)\s+[\dA-Za-z.]+[:\s]+)?[“\"\'\s]*[A-Za-z\s]+[”\"\'\s]*(?:means|shall\s+mean)\b",
+            clean,
+            re.IGNORECASE,
+        )
         and not re.search(
             r"\b(contractor shall|bidder shall|must furnish|within \d+ days|will be forfeited)\b",
             clean,
@@ -355,12 +570,15 @@ def _extract_operative_clause(
         search_start = max(0, start_pos - 400)
         scoped_pre = pre_text[search_start:]
 
-        header_matches = list(
-            re.finditer(
-                r"(?m)^\s*(?:(?:(?:GC|CC|GCC|SCC|ITB|BDS)\s*)?(?:Sub-Clause|Clause|Section|Article|Part|Schedule|Annexure|Appendix)\s*[-–—]?\s*[\dA-Za-z\.]+|[\d]+(?:\.[\dA-Za-z]+)*[.)]?\s+|[•\-\*]\s+)",
-                scoped_pre,
-            )
-        )
+        header_matches = []
+        for hm in re.finditer(
+            r"(?m)^\s*(?:(?:(?:GC|CC|GCC|SCC|ITB|BDS)\s*)?(?:Sub-Clause|Clause|Section|Article|Part|Schedule|Annexure|Appendix|Table)\b[ \t]*[-–—]?[ \t]*(?:No\.?[ \t]*)?[\dA-Za-z\.]+|(?!\d{1,2}\.\d{1,2}\.\d{2,4}\b)[1-9]\d*(?:\.\d+)*[.)][ \t]+[A-Za-z\d]|(?!\d{1,2}\.\d{1,2}\.\d{2,4}\b)[1-9]\d*(?:\.\d+)+[ \t]+[A-Za-z\d]|[•\-\*][ \t]+)",
+            scoped_pre,
+        ):
+            header_text = hm.group(0).strip()
+            if _is_calendar_date_or_measurement(header_text, scoped_pre):
+                continue
+            header_matches.append(hm)
 
         if header_matches:
             clause_start = search_start + header_matches[-1].start()
@@ -373,9 +591,13 @@ def _extract_operative_clause(
                 if last_nl != -1 and (len(scoped_pre) - last_nl) < 180:
                     clause_start = search_start + last_nl + 1
                 else:
-                    last_period = max(scoped_pre.rfind(". "), scoped_pre.rfind(".\n"))
-                    if last_period != -1:
-                        clause_start = search_start + last_period + 2
+                    found_period = -1
+                    for p_match in re.finditer(r"\.(?:\s+|\n)", scoped_pre):
+                        p_idx = p_match.start()
+                        if not _is_abbreviation_or_number_period(scoped_pre, p_idx):
+                            found_period = p_idx
+                    if found_period != -1:
+                        clause_start = search_start + found_period + 2
                     else:
                         clause_start = search_start
 
@@ -384,7 +606,7 @@ def _extract_operative_clause(
         scoped_post = post_text[:max_search]
 
         next_item = re.search(
-            r"(?m)^\s*(?:(?:(?:GC|CC|GCC|SCC|ITB|BDS)\s*)?(?:Sub-Clause|Clause|Section|Article|Part|Schedule|Annexure|Appendix)\s*[-–—]?\s*[\dA-Za-z\.]+|[\d]+(?:\.[\dA-Za-z]+)*[.)]?\s+|[•\-\*]\s+)",
+            r"(?m)^\s*(?:(?:(?:GC|CC|GCC|SCC|ITB|BDS)\s*)?(?:Sub-Clause|Clause|Section|Article|Part|Schedule|Annexure|Appendix|Table)\b[ \t]*[-–—]?[ \t]*(?:No\.?[ \t]*)?[\dA-Za-z\.]+|(?!\d{1,2}\.\d{1,2}\.\d{2,4}\b)[1-9]\d*(?:\.\d+)*[.)][ \t]+[A-Za-z\d]|(?!\d{1,2}\.\d{1,2}\.\d{2,4}\b)[1-9]\d*(?:\.\d+)+[ \t]+[A-Za-z\d]|[•\-\*][ \t]+)",
             scoped_post,
         )
         next_para = scoped_post.find("\n\n")
@@ -396,8 +618,11 @@ def _extract_operative_clause(
             end_offsets.append(next_para)
 
         for p_match in re.finditer(r"\.(?:\s+[A-Z]|\s*\n|$)", scoped_post):
-            if p_match.start() > 30:
-                end_offsets.append(p_match.start() + 1)
+            p_idx = p_match.start()
+            if _is_abbreviation_or_number_period(scoped_post, p_idx):
+                continue
+            if p_idx > 30:
+                end_offsets.append(p_idx + 1)
                 break
 
         if end_offsets:
@@ -436,16 +661,7 @@ def _extract_operative_clause(
         if len(normalized_clause) >= 100:
             score += 5
 
-        ref_match = re.search(
-            r"\b((?:(?:GC|CC|GCC|SCC|ITB|BDS)\s*)?(?:Sub-Clause|Clause|Section|Article|Part|Schedule|Annexure|Appendix)\s*[-–—]?\s*[A-Za-z\d\.]+|[\d]+(?:\.[\d]+)+)\b",
-            normalized_clause,
-            re.IGNORECASE,
-        )
-        if not ref_match:
-            item_match = re.search(r"^\s*(\d+(?:\.\d+)*)[.)]?\s+", normalized_clause)
-            clause_ref = f"Clause {item_match.group(1)} (Page {page_no})" if item_match else None
-        else:
-            clause_ref = f"{ref_match.group(0).strip()} (Page {page_no})"
+        clause_ref = _extract_clause_from_clause_text(normalized_clause, page_no)
 
         scored_candidates.append((score, normalized_clause, clause_ref))
 
@@ -495,12 +711,7 @@ def _resolve_quote(
 
     # 2. Try clean single sentence extraction
     if sentence and not is_toc_or_definition(sentence):
-        ref_match = re.search(
-            r"\b((?:(?:GC|CC|GCC|SCC|ITB|BDS)\s*)?(?:Sub-Clause|Clause|Section|Article|Part|Schedule|Annexure|Appendix)\s*[-–—]?\s*[A-Za-z\d\.]+|[\d]+(?:\.[\d]+)+)\b",
-            sentence,
-            re.IGNORECASE,
-        )
-        clause_ref = f"{ref_match.group(0).strip()} (Page {page_no})" if ref_match else None
+        clause_ref = _extract_clause_from_clause_text(sentence, page_no)
         return sentence, clause_ref
 
     # 3. Fallback to op_res even if without explicit modal
@@ -904,7 +1115,13 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
                 )
 
         # 6. Execution: Joint Venture / Consortium Agreement
-        if any(
+        is_jv_prohibited = bool(
+            re.search(
+                r"\b(?:bids (?:from|by) joint ventures are not (?:allowed|permitted)|joint ventures? (?:is|are) not (?:allowed|permitted)|jv not allowed|no joint venture)\b",
+                text_lower,
+            )
+        )
+        if not is_jv_prohibited and any(
             k in text_lower for k in ("joint venture", "jv agreement", "consortium", "jv must meet")
         ):
             res = get_clause_and_quote(
@@ -914,30 +1131,40 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
             )
             if res:
                 quote, ref, conf = res
-                candidates.append(
-                    CandidateComplianceItem(
-                        category="EXECUTION",
-                        title="Joint Venture & Consortium Agreement Requirements",
-                        description="Joint Venture agreement / Consortium MOU defining lead member equity and joint-and-several liability.",
-                        execution_rules=ExecutionRulesProps(
-                            stamp_paper_required=True,
-                            stamp_paper_denomination_inr=100,
-                            notarization_required=True,
-                            signing_authority_rank="All JV / Consortium Partner Authorized Signatories",
-                        ),
-                        provenance=ProvenanceProps(
-                            source_document_id=doc_id,
-                            source_file_name="tender_document.pdf",
-                            page_number=page_no,
-                            clause_reference=ref,
-                            verbatim_quote=quote,
-                            confidence_score=conf,
-                        ),
+                if not re.search(
+                    r"\b(?:bids (?:from|by) joint ventures are not (?:allowed|permitted)|joint ventures? (?:is|are) not (?:allowed|permitted)|jv not allowed)\b",
+                    quote.lower(),
+                ):
+                    candidates.append(
+                        CandidateComplianceItem(
+                            category="EXECUTION",
+                            title="Joint Venture & Consortium Agreement Requirements",
+                            description="Joint Venture agreement / Consortium MOU defining lead member equity and joint-and-several liability.",
+                            execution_rules=ExecutionRulesProps(
+                                stamp_paper_required=True,
+                                stamp_paper_denomination_inr=100,
+                                notarization_required=True,
+                                signing_authority_rank="All JV / Consortium Partner Authorized Signatories",
+                            ),
+                            provenance=ProvenanceProps(
+                                source_document_id=doc_id,
+                                source_file_name="tender_document.pdf",
+                                page_number=page_no,
+                                clause_reference=ref,
+                                verbatim_quote=quote,
+                                confidence_score=conf,
+                            ),
+                        )
                     )
-                )
 
         # 7. Technical: Similar Work Experience
-        if any(
+        is_negative_exclusion = bool(
+            re.search(
+                r"\b(?:the following assignments would not be counted|would not be counted for the purposes of)\b",
+                text_lower,
+            )
+        )
+        if not is_negative_exclusion and any(
             k in text_lower
             for k in (
                 "similar work",
@@ -968,27 +1195,31 @@ def default_tender_extractor(system_prompt: str, user_prompt: str) -> list[Candi
             )
             if res:
                 quote, ref, conf = res
-                candidates.append(
-                    CandidateComplianceItem(
-                        category="TECHNICAL",
-                        title="Technical Qualification & Similar Work Experience",
-                        description="Demonstrated technical threshold capacity through prior successful execution of similar projects.",
-                        execution_rules=ExecutionRulesProps(
-                            stamp_paper_required=False,
-                            notarization_required=False,
-                            udin_required=False,
-                            signing_authority_rank="Project Director / Client Superintending Engineer",
-                        ),
-                        provenance=ProvenanceProps(
-                            source_document_id=doc_id,
-                            source_file_name="tender_document.pdf",
-                            page_number=page_no,
-                            clause_reference=ref,
-                            verbatim_quote=quote,
-                            confidence_score=conf,
-                        ),
+                if not re.search(
+                    r"\b(?:would not be counted|not be counted for the purposes of)\b",
+                    quote.lower(),
+                ):
+                    candidates.append(
+                        CandidateComplianceItem(
+                            category="TECHNICAL",
+                            title="Technical Qualification & Similar Work Experience",
+                            description="Demonstrated technical threshold capacity through prior successful execution of similar projects.",
+                            execution_rules=ExecutionRulesProps(
+                                stamp_paper_required=False,
+                                notarization_required=False,
+                                udin_required=False,
+                                signing_authority_rank="Project Director / Client Superintending Engineer",
+                            ),
+                            provenance=ProvenanceProps(
+                                source_document_id=doc_id,
+                                source_file_name="tender_document.pdf",
+                                page_number=page_no,
+                                clause_reference=ref,
+                                verbatim_quote=quote,
+                                confidence_score=conf,
+                            ),
+                        )
                     )
-                )
 
         # 8. Technical: Key Technical Personnel
         is_toc_personnel = is_toc_or_definition(text) or bool(

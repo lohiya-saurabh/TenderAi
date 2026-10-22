@@ -10,6 +10,7 @@ export interface SourceCitationDrawerProps {
   citation: SourceCitation;
   provenance: Provenance;
   requirementTitle: string;
+  description?: string;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -18,6 +19,7 @@ export const SourceCitationDrawer: React.FC<SourceCitationDrawerProps> = ({
   citation,
   provenance,
   requirementTitle,
+  description,
   isOpen,
   onClose,
 }) => {
@@ -159,6 +161,36 @@ export const SourceCitationDrawer: React.FC<SourceCitationDrawerProps> = ({
             )}
           </div>
         </Card>
+
+        {/* Plain-Language Requirement Description */}
+        {description && (
+          <Card padding="md" data-testid="drawer-plain-description">
+            <h5
+              style={{
+                fontSize: 'var(--text-xs)',
+                fontWeight: 'var(--font-semibold)' as unknown as number,
+                color: 'var(--color-surface-muted)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                margin: '0 0 0.5rem',
+              }}
+            >
+              Plain-Language Requirement Description
+            </h5>
+            <p
+              style={{
+                fontSize: 'var(--text-xs)',
+                lineHeight: 1.6,
+                color: 'var(--color-surface-text)',
+                margin: 0,
+                whiteSpace: 'normal',
+                wordBreak: 'break-word',
+              }}
+            >
+              {description}
+            </p>
+          </Card>
+        )}
 
         {/* Verbatim Quote Card */}
         <Card padding="md">

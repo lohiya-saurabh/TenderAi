@@ -614,6 +614,7 @@ export const ComplianceReviewPage: React.FC = () => {
         citation={item.sourceCitation}
         provenance={item.provenance}
         requirementTitle={item.requirement}
+        description={item.description}
         isOpen={isCitationDrawerOpen}
         onClose={() => setIsCitationDrawerOpen(false)}
       />

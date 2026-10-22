@@ -477,13 +477,16 @@ class OpenAICompatibleLlmClient:
         return candidates
 
     def _build_candidate(self, raw: dict[str, Any]) -> CandidateComplianceItem | None:
-        title = (
+        raw_title = (
             raw.get("title")
             or raw.get("name")
             or raw.get("requirement")
             or raw.get("obligation_type")
-            or "Extracted Requirement"
+            or ""
         )
+        title = clean_whitespace(str(raw_title))
+        if not title:
+            return None
         raw_cat = str(
             raw.get("category") or raw.get("obligation_category") or raw.get("type") or "STATUTORY"
         )
@@ -569,7 +572,9 @@ class OpenAICompatibleLlmClient:
             or raw.get("text")
             or ""
         )
-        clean_quote = clean_whitespace(str(quote)) if quote else "Operative Requirement"
+        clean_quote = clean_whitespace(str(quote))
+        if not clean_quote:
+            return None
         conf = float(raw_prov.get("confidence_score") or raw_prov.get("confidenceScore") or 0.95)
 
         provenance = ProvenanceProps(

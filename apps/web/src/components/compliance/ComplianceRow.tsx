@@ -88,12 +88,6 @@ export const ComplianceRow: React.FC<ComplianceRowProps> = ({
             >
               {item.requirement}
             </div>
-            {item.description &&
-              item.description.trim().toLowerCase() !== item.requirement.trim().toLowerCase() && (
-                <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5 leading-relaxed break-words">
-                  {item.description}
-                </p>
-              )}
             <div className="flex items-center gap-2 mt-1">
               {item.tenderClauseRef && (
                 <span className="text-[10px] font-mono font-medium text-foreground bg-muted px-1.5 py-0.5 rounded">
@@ -200,9 +194,24 @@ export const ComplianceRow: React.FC<ComplianceRowProps> = ({
                 </Badge>
               )}
             </div>
-            <p className="text-xs sm:text-sm text-foreground leading-relaxed mb-3">
+            <p className="text-xs sm:text-sm font-semibold text-foreground leading-relaxed mb-2">
               {item.requirement}
             </p>
+
+            {/* Plain-Language Description Revealed inside Question 1 */}
+            {item.description && (
+              <div
+                data-testid="compliance-plain-description"
+                className="mb-3 p-3 rounded-md bg-muted/30 border border-border/60 text-xs leading-relaxed text-foreground"
+              >
+                <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">
+                  Plain-Language Description
+                </div>
+                <p className="text-xs text-foreground/90 whitespace-pre-line break-words">
+                  {item.description}
+                </p>
+              </div>
+            )}
 
             {/* Execution / Statutory Rules Card */}
             {item.executionRules && <ExecutionRulesCard executionRules={item.executionRules} />}

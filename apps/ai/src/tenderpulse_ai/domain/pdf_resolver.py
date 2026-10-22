@@ -244,12 +244,24 @@ def is_pure_toc_page(text: str) -> bool:
         return True
     text_lower = text.lower()
     is_toc_title = any(
-        kw in text_lower for kw in ("table of contents", "index of clauses", "brief contents")
+        kw in text_lower
+        for kw in (
+            "table of contents",
+            "index of clauses",
+            "brief contents",
+            "table of clauses",
+            "contents",
+            "schedule of requirements",
+            "list of clauses",
+        )
     )
     toc_lines = 0
     for line in lines:
-        if re.search(r"\.{3,}|\u2026|\s+\d+$", line) or re.search(
-            r"^(section|clause|chapter|part)\s+[\dIVXLCDM]+", line, re.IGNORECASE
+        if (
+            re.search(r"\.{3,}|\u2026|\s+\d+$", line)
+            or re.search(r"^(section|clause|chapter|part)\s+[\dIVXLCDM]+", line, re.IGNORECASE)
+            or (is_toc_title and re.search(r"^\s*(?:[A-Z]\.|\d{1,3}[.)]?)\s+[A-Za-z]", line))
+            or re.search(r"\b\d{1,3}\s+[A-Za-z\s/&–-]+\s+\d{1,3}\b", line)
         ):
             toc_lines += 1
     toc_ratio = toc_lines / len(lines)

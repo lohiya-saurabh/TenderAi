@@ -61,3 +61,7 @@ graphify-out/
 /e2e/screenshots/
 playwright-screenshots/
 
+# Teamwork Multi-Agent Swarm
+.agents/
+
+

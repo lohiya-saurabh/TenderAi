@@ -34,7 +34,7 @@ class ProvenanceProps(BaseModel):
     page_number: int = Field(default=1, ge=1)
     clause_reference: str = Field(default="Clause Reference")
     verbatim_quote: str = Field(
-        default="Requirement extracted from tender documentation.",
+        default="",
         description="Verbatim quote from source text for grounding",
     )
     confidence_score: float = Field(default=0.95, ge=0.0, le=1.0)
@@ -57,9 +57,7 @@ class ProvenanceProps(BaseModel):
     @field_validator("verbatim_quote", mode="before")
     @classmethod
     def validate_quote(cls, v: Any) -> str:
-        return (
-            str(v) if v and str(v).strip() else "Requirement extracted from tender documentation."
-        )
+        return str(v).strip() if v else ""
 
     @field_validator("page_number", mode="before")
     @classmethod
