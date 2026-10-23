@@ -43,6 +43,99 @@ class OpenAICompatibleLlmClient:
             return self._custom_client
         return httpx.AsyncClient(timeout=self.timeout)
 
+    async def generate_chat_completion(
+        self,
+        messages: list[dict[str, str]],
+        system_prompt: str | None = None,
+        max_retries: int = 2,
+        temperature: float = 0.2,
+    ) -> str:
+        """
+        Generates a fluid conversational chat completion using the OpenAI-compatible API.
+        """
+        endpoint = f"{self.base_url}/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://tenderpulse.ai",
+            "X-Title": "TenderPulse Intelligence Engine",
+        }
+
+        full_messages = []
+        if system_prompt:
+            full_messages.append({"role": "system", "content": system_prompt})
+        full_messages.extend(messages)
+
+        payload: dict[str, Any] = {
+            "model": self.model,
+            "messages": full_messages,
+            "max_tokens": self.max_tokens,
+            "temperature": temperature,
+        }
+
+        models_to_try = [self.model]
+        FALLBACK_FREE_MODELS = [
+            "nvidia/nemotron-3.5-lightning:free",
+            "liquid/lfm-2.5-2.6b:free",
+            "minimax/minimax-m3.1-flash:free",
+        ]
+        for fb in FALLBACK_FREE_MODELS:
+            if fb != self.model:
+                models_to_try.append(fb)
+
+        last_error: Exception | None = None
+        for current_model in models_to_try:
+            payload["model"] = current_model
+            for attempt in range(max_retries + 1):
+                try:
+                    client = self._get_client()
+                    if self._custom_client is not None:
+                        response = await client.post(endpoint, headers=headers, json=payload)
+                    else:
+                        async with client:
+                            response = await client.post(endpoint, headers=headers, json=payload)
+
+                    if response.status_code in (429, 500, 502, 503, 504):
+                        if attempt < max_retries:
+                            await asyncio.sleep(0.5 * (2**attempt))
+                            continue
+                        # If rate limited on this model, break attempt loop to try next fallback model
+                        break
+
+                    if response.status_code in (400, 402, 404):
+                        # Payment required or model not found, try next model
+                        break
+
+                    response.raise_for_status()
+                    data = response.json()
+                    choices = data.get("choices", [])
+                    if choices:
+                        res_content = str(choices[0].get("message", {}).get("content", "")).strip()
+                        if res_content:
+                            return res_content
+                    break
+                except (httpx.RequestError, httpx.HTTPStatusError) as exc:
+                    last_error = exc
+                    if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code in (
+                        400,
+                        401,
+                        402,
+                        403,
+                        404,
+                    ):
+                        break
+                    if attempt < max_retries:
+                        await asyncio.sleep(0.5 * (2**attempt))
+                        continue
+                    break
+                except Exception as exc:  # noqa: BLE001
+                    last_error = exc
+                    break
+
+        if last_error:
+            logger.warning("[OpenAICompatibleClient] Chat completion failed: %s", last_error)
+        return ""
+
     async def extract_compliance(
         self,
         system_prompt: str,

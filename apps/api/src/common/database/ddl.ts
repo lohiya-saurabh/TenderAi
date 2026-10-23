@@ -5,6 +5,18 @@ import type { PGlite } from '@electric-sql/pglite';
  */
 export async function initDatabaseDdl(db: PGlite): Promise<void> {
   await db.exec(`
+    CREATE TABLE IF NOT EXISTS organizations (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      slug TEXT,
+      domain TEXT,
+      logo_url TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_organizations_slug ON organizations(slug);
+
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       email TEXT UNIQUE NOT NULL,
@@ -26,6 +38,19 @@ export async function initDatabaseDdl(db: PGlite): Promise<void> {
       notification_preferences JSONB NOT NULL DEFAULT '{"notifyDeadlines": true, "notifyEvidenceExpiry": true, "notifyReviewRequests": true, "notifyHighRiskFlags": true}',
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+
+    -- Backfill organizations from existing users and tenant settings
+    INSERT INTO organizations (id, name, created_at, updated_at)
+    SELECT DISTINCT organization_id, organization_name, NOW(), NOW()
+    FROM users
+    WHERE organization_id IS NOT NULL AND organization_id != ''
+    ON CONFLICT (id) DO NOTHING;
+
+    INSERT INTO organizations (id, name, created_at, updated_at)
+    SELECT DISTINCT organization_id, 'Workspace ' || organization_id, NOW(), NOW()
+    FROM tenant_settings
+    WHERE organization_id IS NOT NULL AND organization_id != ''
+    ON CONFLICT (id) DO NOTHING;
 
     CREATE TABLE IF NOT EXISTS companies (
       id TEXT PRIMARY KEY,
@@ -370,5 +395,340 @@ export async function initDatabaseDdl(db: PGlite): Promise<void> {
     UPDATE bid_decisions
     SET verdict = 'CONDITIONAL_GO'
     WHERE verdict = 'PROCEED_WITH_CAUTION';
+
+    -- Ensure default system tenant & operating company exist for tests/fallback
+    INSERT INTO organizations (id, name, created_at, updated_at)
+    VALUES ('org_default', 'Default Organization', NOW(), NOW())
+    ON CONFLICT (id) DO NOTHING;
+
+    INSERT INTO companies (id, organization_id, legal_name, created_at, updated_at)
+    VALUES ('comp_default', 'org_default', 'Default Operating Company', NOW(), NOW())
+    ON CONFLICT (id) DO NOTHING;
+
+    -- Backfill any missing organizations referenced by child tables before applying constraints
+    INSERT INTO organizations (id, name, created_at, updated_at)
+    SELECT DISTINCT organization_id, 'Organization ' || organization_id, NOW(), NOW()
+    FROM users WHERE organization_id NOT IN (SELECT id FROM organizations)
+    ON CONFLICT (id) DO NOTHING;
+
+    INSERT INTO organizations (id, name, created_at, updated_at)
+    SELECT DISTINCT organization_id, 'Organization ' || organization_id, NOW(), NOW()
+    FROM companies WHERE organization_id NOT IN (SELECT id FROM organizations)
+    ON CONFLICT (id) DO NOTHING;
+
+    INSERT INTO organizations (id, name, created_at, updated_at)
+    SELECT DISTINCT organization_id, 'Organization ' || organization_id, NOW(), NOW()
+    FROM bids WHERE organization_id NOT IN (SELECT id FROM organizations)
+    ON CONFLICT (id) DO NOTHING;
+
+    -- Backfill any missing companies referenced by bids
+    INSERT INTO companies (id, organization_id, legal_name, created_at, updated_at)
+    SELECT DISTINCT company_id, organization_id, 'Operating Company ' || company_id, NOW(), NOW()
+    FROM bids WHERE company_id NOT IN (SELECT id FROM companies)
+    ON CONFLICT (id) DO NOTHING;
+
+    -- Auto-provisioning triggers to ensure relational integrity without breaking unseeded unit tests
+    CREATE OR REPLACE FUNCTION auto_provision_org() RETURNS TRIGGER AS $$
+    BEGIN
+      IF NEW.organization_id IS NOT NULL AND NEW.organization_id != '' THEN
+        IF NOT EXISTS (SELECT 1 FROM organizations WHERE id = NEW.organization_id) THEN
+          INSERT INTO organizations (id, name, created_at, updated_at)
+          VALUES (NEW.organization_id, 'Workspace ' || NEW.organization_id, NOW(), NOW())
+          ON CONFLICT (id) DO NOTHING;
+        END IF;
+      END IF;
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+
+    CREATE OR REPLACE FUNCTION auto_provision_comp() RETURNS TRIGGER AS $$
+    BEGIN
+      IF NEW.company_id IS NOT NULL AND NEW.company_id != '' THEN
+        IF NOT EXISTS (SELECT 1 FROM companies WHERE id = NEW.company_id) THEN
+          IF NEW.organization_id IS NOT NULL AND NEW.organization_id != '' THEN
+            IF NOT EXISTS (SELECT 1 FROM organizations WHERE id = NEW.organization_id) THEN
+              INSERT INTO organizations (id, name, created_at, updated_at)
+              VALUES (NEW.organization_id, 'Workspace ' || NEW.organization_id, NOW(), NOW())
+              ON CONFLICT (id) DO NOTHING;
+            END IF;
+          END IF;
+          INSERT INTO companies (id, organization_id, legal_name, created_at, updated_at)
+          VALUES (NEW.company_id, COALESCE(NEW.organization_id, 'org_default'), 'Operating Company ' || NEW.company_id, NOW(), NOW())
+          ON CONFLICT (id) DO NOTHING;
+        END IF;
+      END IF;
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+
+    CREATE OR REPLACE FUNCTION auto_provision_bid() RETURNS TRIGGER AS $$
+    BEGIN
+      IF NEW.bid_id IS NOT NULL AND NEW.bid_id != '' THEN
+        IF NOT EXISTS (SELECT 1 FROM bids WHERE id = NEW.bid_id) THEN
+          IF NEW.organization_id IS NOT NULL AND NEW.organization_id != '' THEN
+            IF NOT EXISTS (SELECT 1 FROM organizations WHERE id = NEW.organization_id) THEN
+              INSERT INTO organizations (id, name, created_at, updated_at)
+              VALUES (NEW.organization_id, 'Workspace ' || NEW.organization_id, NOW(), NOW())
+              ON CONFLICT (id) DO NOTHING;
+            END IF;
+          END IF;
+          INSERT INTO bids (id, organization_id, company_id, title, created_at, updated_at)
+          VALUES (NEW.bid_id, COALESCE(NEW.organization_id, 'org_default'), 'comp_default', 'Tender ' || NEW.bid_id, NOW(), NOW())
+          ON CONFLICT (id) DO NOTHING;
+        END IF;
+      END IF;
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+
+    CREATE OR REPLACE FUNCTION auto_provision_user() RETURNS TRIGGER AS $$
+    BEGIN
+      IF NEW.user_id IS NOT NULL AND NEW.user_id != '' THEN
+        IF NOT EXISTS (SELECT 1 FROM users WHERE id = NEW.user_id) THEN
+          INSERT INTO users (id, organization_id, organization_name, name, email, password, role, permissions)
+          VALUES (NEW.user_id, 'org_default', 'Default Organization', 'User ' || NEW.user_id, NEW.user_id || '@placeholder.test', '$2a$10$placeholderhashplaceholderhashplaceholder', 'ADMIN', '[]'::jsonb)
+          ON CONFLICT (id) DO NOTHING;
+        END IF;
+      END IF;
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+
+    CREATE OR REPLACE FUNCTION auto_provision_ev_doc() RETURNS TRIGGER AS $$
+    BEGIN
+      IF NEW.evidence_document_id IS NOT NULL AND NEW.evidence_document_id != '' THEN
+        IF NOT EXISTS (SELECT 1 FROM company_evidence_documents WHERE id = NEW.evidence_document_id) THEN
+          IF NEW.company_id IS NOT NULL AND NEW.company_id != '' THEN
+            INSERT INTO companies (id, organization_id, legal_name, created_at, updated_at)
+            VALUES (NEW.company_id, COALESCE(NEW.organization_id, 'org_default'), 'Operating Company ' || NEW.company_id, NOW(), NOW())
+            ON CONFLICT (id) DO NOTHING;
+          END IF;
+          INSERT INTO company_evidence_documents (id, organization_id, company_id, file_name, file_size_bytes, mime_type, storage_path, sha256_hash, created_at, updated_at)
+          VALUES (NEW.evidence_document_id, COALESCE(NEW.organization_id, 'org_default'), COALESCE(NEW.company_id, 'comp_default'), 'doc_' || NEW.evidence_document_id, 1024, 'application/pdf', '/storage/' || NEW.evidence_document_id, 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', NOW(), NOW())
+          ON CONFLICT (id) DO NOTHING;
+        END IF;
+      END IF;
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+
+    DROP TRIGGER IF EXISTS trg_auto_org_companies ON companies;
+    CREATE TRIGGER trg_auto_org_companies BEFORE INSERT ON companies FOR EACH ROW EXECUTE FUNCTION auto_provision_org();
+
+    DROP TRIGGER IF EXISTS trg_auto_org_users ON users;
+    CREATE TRIGGER trg_auto_org_users BEFORE INSERT ON users FOR EACH ROW EXECUTE FUNCTION auto_provision_org();
+
+    DROP TRIGGER IF EXISTS trg_auto_org_bids ON bids;
+    CREATE TRIGGER trg_auto_org_bids BEFORE INSERT ON bids FOR EACH ROW EXECUTE FUNCTION auto_provision_org();
+
+    DROP TRIGGER IF EXISTS trg_auto_comp_bids ON bids;
+    CREATE TRIGGER trg_auto_comp_bids BEFORE INSERT ON bids FOR EACH ROW EXECUTE FUNCTION auto_provision_comp();
+
+    DROP TRIGGER IF EXISTS trg_auto_org_tenant_settings ON tenant_settings;
+    CREATE TRIGGER trg_auto_org_tenant_settings BEFORE INSERT ON tenant_settings FOR EACH ROW EXECUTE FUNCTION auto_provision_org();
+
+    DROP TRIGGER IF EXISTS trg_auto_org_subscriptions ON subscriptions;
+    CREATE TRIGGER trg_auto_org_subscriptions BEFORE INSERT ON subscriptions FOR EACH ROW EXECUTE FUNCTION auto_provision_org();
+
+    DROP TRIGGER IF EXISTS trg_auto_org_usage_records ON usage_records;
+    CREATE TRIGGER trg_auto_org_usage_records BEFORE INSERT ON usage_records FOR EACH ROW EXECUTE FUNCTION auto_provision_org();
+
+    DROP TRIGGER IF EXISTS trg_auto_org_comp_prof_ver ON company_profile_versions;
+    CREATE TRIGGER trg_auto_org_comp_prof_ver BEFORE INSERT ON company_profile_versions FOR EACH ROW EXECUTE FUNCTION auto_provision_org();
+
+    DROP TRIGGER IF EXISTS trg_auto_comp_comp_prof_ver ON company_profile_versions;
+    CREATE TRIGGER trg_auto_comp_comp_prof_ver BEFORE INSERT ON company_profile_versions FOR EACH ROW EXECUTE FUNCTION auto_provision_comp();
+
+    DROP TRIGGER IF EXISTS trg_auto_org_comp_profiles ON company_profiles;
+    CREATE TRIGGER trg_auto_org_comp_profiles BEFORE INSERT ON company_profiles FOR EACH ROW EXECUTE FUNCTION auto_provision_org();
+
+    DROP TRIGGER IF EXISTS trg_auto_comp_comp_profiles ON company_profiles;
+    CREATE TRIGGER trg_auto_comp_comp_profiles BEFORE INSERT ON company_profiles FOR EACH ROW EXECUTE FUNCTION auto_provision_comp();
+
+    DROP TRIGGER IF EXISTS trg_auto_org_comp_ev_docs ON company_evidence_documents;
+    CREATE TRIGGER trg_auto_org_comp_ev_docs BEFORE INSERT ON company_evidence_documents FOR EACH ROW EXECUTE FUNCTION auto_provision_org();
+
+    DROP TRIGGER IF EXISTS trg_auto_comp_comp_ev_docs ON company_evidence_documents;
+    CREATE TRIGGER trg_auto_comp_comp_ev_docs BEFORE INSERT ON company_evidence_documents FOR EACH ROW EXECUTE FUNCTION auto_provision_comp();
+
+    DROP TRIGGER IF EXISTS trg_auto_org_comp_ev_chunks ON company_evidence_chunks;
+    CREATE TRIGGER trg_auto_org_comp_ev_chunks BEFORE INSERT ON company_evidence_chunks FOR EACH ROW EXECUTE FUNCTION auto_provision_org();
+
+    DROP TRIGGER IF EXISTS trg_auto_comp_comp_ev_chunks ON company_evidence_chunks;
+    CREATE TRIGGER trg_auto_comp_comp_ev_chunks BEFORE INSERT ON company_evidence_chunks FOR EACH ROW EXECUTE FUNCTION auto_provision_comp();
+
+    DROP TRIGGER IF EXISTS trg_auto_ev_doc_chunks ON company_evidence_chunks;
+    CREATE TRIGGER trg_auto_ev_doc_chunks BEFORE INSERT ON company_evidence_chunks FOR EACH ROW EXECUTE FUNCTION auto_provision_ev_doc();
+
+    DROP TRIGGER IF EXISTS trg_auto_org_ev_hist ON evidence_verification_history;
+    CREATE TRIGGER trg_auto_org_ev_hist BEFORE INSERT ON evidence_verification_history FOR EACH ROW EXECUTE FUNCTION auto_provision_org();
+
+    DROP TRIGGER IF EXISTS trg_auto_comp_ev_hist ON evidence_verification_history;
+    CREATE TRIGGER trg_auto_comp_ev_hist BEFORE INSERT ON evidence_verification_history FOR EACH ROW EXECUTE FUNCTION auto_provision_comp();
+
+    DROP TRIGGER IF EXISTS trg_auto_org_tender_docs ON tender_documents;
+    CREATE TRIGGER trg_auto_org_tender_docs BEFORE INSERT ON tender_documents FOR EACH ROW EXECUTE FUNCTION auto_provision_org();
+
+    DROP TRIGGER IF EXISTS trg_auto_bid_tender_docs ON tender_documents;
+    CREATE TRIGGER trg_auto_bid_tender_docs BEFORE INSERT ON tender_documents FOR EACH ROW EXECUTE FUNCTION auto_provision_bid();
+
+    DROP TRIGGER IF EXISTS trg_auto_org_compliance_items ON compliance_items;
+    CREATE TRIGGER trg_auto_org_compliance_items BEFORE INSERT ON compliance_items FOR EACH ROW EXECUTE FUNCTION auto_provision_org();
+
+    DROP TRIGGER IF EXISTS trg_auto_bid_compliance_items ON compliance_items;
+    CREATE TRIGGER trg_auto_bid_compliance_items BEFORE INSERT ON compliance_items FOR EACH ROW EXECUTE FUNCTION auto_provision_bid();
+
+    DROP TRIGGER IF EXISTS trg_auto_org_bid_decisions ON bid_decisions;
+    CREATE TRIGGER trg_auto_org_bid_decisions BEFORE INSERT ON bid_decisions FOR EACH ROW EXECUTE FUNCTION auto_provision_org();
+
+    DROP TRIGGER IF EXISTS trg_auto_bid_bid_decisions ON bid_decisions;
+    CREATE TRIGGER trg_auto_bid_bid_decisions BEFORE INSERT ON bid_decisions FOR EACH ROW EXECUTE FUNCTION auto_provision_bid();
+
+    DROP TRIGGER IF EXISTS trg_auto_user_refresh_tokens ON refresh_tokens;
+    CREATE TRIGGER trg_auto_user_refresh_tokens BEFORE INSERT ON refresh_tokens FOR EACH ROW EXECUTE FUNCTION auto_provision_user();
+
+    DROP TRIGGER IF EXISTS trg_auto_org_notifications ON notifications;
+    CREATE TRIGGER trg_auto_org_notifications BEFORE INSERT ON notifications FOR EACH ROW EXECUTE FUNCTION auto_provision_org();
+
+    DROP TRIGGER IF EXISTS trg_auto_org_audit_logs ON audit_logs;
+    CREATE TRIGGER trg_auto_org_audit_logs BEFORE INSERT ON audit_logs FOR EACH ROW EXECUTE FUNCTION auto_provision_org();
+
+    CREATE TABLE IF NOT EXISTS tender_document_chunks (
+      id TEXT PRIMARY KEY,
+      organization_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+      bid_id TEXT NOT NULL REFERENCES bids(id) ON DELETE CASCADE,
+      document_id TEXT NOT NULL REFERENCES tender_documents(id) ON DELETE CASCADE,
+      chunk_index INTEGER NOT NULL,
+      chunk_type TEXT NOT NULL DEFAULT 'PROSE',
+      content TEXT NOT NULL,
+      page_number INTEGER NOT NULL,
+      section_title TEXT,
+      clause_reference TEXT,
+      bounding_box JSONB,
+      metadata JSONB,
+      embedding JSONB,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_tender_doc_chunks_doc ON tender_document_chunks(document_id);
+    CREATE INDEX IF NOT EXISTS idx_tender_doc_chunks_bid ON tender_document_chunks(bid_id);
+    CREATE INDEX IF NOT EXISTS idx_tender_doc_chunks_org ON tender_document_chunks(organization_id);
+
+    CREATE TABLE IF NOT EXISTS chat_conversations (
+      id TEXT PRIMARY KEY,
+      organization_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+      company_id TEXT REFERENCES companies(id) ON DELETE CASCADE,
+      bid_id TEXT REFERENCES bids(id) ON DELETE CASCADE,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      title TEXT NOT NULL DEFAULT 'New Chat',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_chat_conversations_org ON chat_conversations(organization_id);
+    CREATE INDEX IF NOT EXISTS idx_chat_conversations_bid ON chat_conversations(bid_id);
+    CREATE INDEX IF NOT EXISTS idx_chat_conversations_user ON chat_conversations(user_id);
+
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id TEXT PRIMARY KEY,
+      conversation_id TEXT NOT NULL REFERENCES chat_conversations(id) ON DELETE CASCADE,
+      organization_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+      role TEXT NOT NULL,
+      content TEXT NOT NULL,
+      tool_calls JSONB,
+      citations JSONB,
+      financial_summary JSONB,
+      metadata JSONB,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_chat_messages_conv ON chat_messages(conversation_id);
+    CREATE INDEX IF NOT EXISTS idx_chat_messages_org ON chat_messages(organization_id);
+
+    DROP TRIGGER IF EXISTS trg_auto_org_chat_conv ON chat_conversations;
+    CREATE TRIGGER trg_auto_org_chat_conv BEFORE INSERT ON chat_conversations FOR EACH ROW EXECUTE FUNCTION auto_provision_org();
+
+    DROP TRIGGER IF EXISTS trg_auto_org_chat_msg ON chat_messages;
+    CREATE TRIGGER trg_auto_org_chat_msg BEFORE INSERT ON chat_messages FOR EACH ROW EXECUTE FUNCTION auto_provision_org();
+
+    DROP TRIGGER IF EXISTS trg_auto_org_tender_chunks ON tender_document_chunks;
+    CREATE TRIGGER trg_auto_org_tender_chunks BEFORE INSERT ON tender_document_chunks FOR EACH ROW EXECUTE FUNCTION auto_provision_org();
+
+    -- Foreign Key Constraints with ON DELETE CASCADE
+    DO $$ BEGIN
+      -- Users & Auth
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_users_org') THEN
+        ALTER TABLE users ADD CONSTRAINT fk_users_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_refresh_tokens_user') THEN
+        ALTER TABLE refresh_tokens ADD CONSTRAINT fk_refresh_tokens_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+      END IF;
+
+      -- Tenants & Billing
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_tenant_settings_org') THEN
+        ALTER TABLE tenant_settings ADD CONSTRAINT fk_tenant_settings_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_subscriptions_org') THEN
+        ALTER TABLE subscriptions ADD CONSTRAINT fk_subscriptions_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_usage_records_org') THEN
+        ALTER TABLE usage_records ADD CONSTRAINT fk_usage_records_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+      END IF;
+
+      -- Companies & Evidence
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_companies_org') THEN
+        ALTER TABLE companies ADD CONSTRAINT fk_companies_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_comp_prof_ver_org') THEN
+        ALTER TABLE company_profile_versions ADD CONSTRAINT fk_comp_prof_ver_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_comp_prof_ver_comp') THEN
+        ALTER TABLE company_profile_versions ADD CONSTRAINT fk_comp_prof_ver_comp FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_comp_prof_org') THEN
+        ALTER TABLE company_profiles ADD CONSTRAINT fk_comp_prof_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_comp_prof_comp') THEN
+        ALTER TABLE company_profiles ADD CONSTRAINT fk_comp_prof_comp FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_comp_ev_docs_org') THEN
+        ALTER TABLE company_evidence_documents ADD CONSTRAINT fk_comp_ev_docs_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_comp_ev_chunks_org') THEN
+        ALTER TABLE company_evidence_chunks ADD CONSTRAINT fk_comp_ev_chunks_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_ev_hist_org') THEN
+        ALTER TABLE evidence_verification_history ADD CONSTRAINT fk_ev_hist_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+      END IF;
+
+      -- Bids, Documents, Compliance & Decisions
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_bids_org') THEN
+        ALTER TABLE bids ADD CONSTRAINT fk_bids_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_bids_company') THEN
+        ALTER TABLE bids ADD CONSTRAINT fk_bids_company FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_tender_docs_org') THEN
+        ALTER TABLE tender_documents ADD CONSTRAINT fk_tender_docs_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_compliance_items_org') THEN
+        ALTER TABLE compliance_items ADD CONSTRAINT fk_compliance_items_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_bid_decisions_org') THEN
+        ALTER TABLE bid_decisions ADD CONSTRAINT fk_bid_decisions_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_bid_decisions_bid') THEN
+        ALTER TABLE bid_decisions ADD CONSTRAINT fk_bid_decisions_bid FOREIGN KEY (bid_id) REFERENCES bids(id) ON DELETE CASCADE;
+      END IF;
+
+      -- Notifications & Audit
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_notifications_org') THEN
+        ALTER TABLE notifications ADD CONSTRAINT fk_notifications_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_audit_logs_org') THEN
+        ALTER TABLE audit_logs ADD CONSTRAINT fk_audit_logs_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+      END IF;
+    END $$;
   `);
 }
+

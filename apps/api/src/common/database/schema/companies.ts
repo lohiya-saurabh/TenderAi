@@ -1,5 +1,6 @@
 import { pgTable, text, integer, bigint, jsonb } from 'drizzle-orm/pg-core';
 import { pk, orgId, tstz, tstzNow, createdAt, updatedAt } from './helpers.js';
+import { organizations } from './tenants.js';
 
 export const EvidenceVerificationStatus = {
   IMPORTED: 'IMPORTED',
@@ -25,7 +26,7 @@ export type EvidenceSourceProvider =
 
 export const companies = pgTable('companies', {
   id: pk(),
-  organizationId: orgId(),
+  organizationId: orgId().references(() => organizations.id, { onDelete: 'cascade' }),
   legalName: text('legal_name').notNull(),
   slug: text('slug'),
   gstin: text('gstin'),
@@ -46,11 +47,14 @@ export const companies = pgTable('companies', {
 });
 
 export type Company = typeof companies.$inferSelect;
+export type NewCompany = typeof companies.$inferInsert;
 
 export const companyProfileVersions = pgTable('company_profile_versions', {
   id: pk(),
-  companyId: text('company_id').notNull(),
-  organizationId: orgId(),
+  companyId: text('company_id')
+    .notNull()
+    .references(() => companies.id, { onDelete: 'cascade' }),
+  organizationId: orgId().references(() => organizations.id, { onDelete: 'cascade' }),
   version: integer('version').notNull(),
   name: text('name').notNull(),
   payload: jsonb('payload').notNull(),
@@ -59,20 +63,24 @@ export const companyProfileVersions = pgTable('company_profile_versions', {
 });
 
 export type CompanyProfileVersion = typeof companyProfileVersions.$inferSelect;
+export type NewCompanyProfileVersion = typeof companyProfileVersions.$inferInsert;
 
 export const companyProfiles = pgTable('company_profiles', {
   id: pk(),
-  companyId: text('company_id').notNull(),
-  organizationId: orgId(),
+  companyId: text('company_id')
+    .notNull()
+    .references(() => companies.id, { onDelete: 'cascade' }),
+  organizationId: orgId().references(() => organizations.id, { onDelete: 'cascade' }),
   activeVersionId: text('active_version_id').notNull(),
   updatedAt: updatedAt(),
 });
 
 export type CompanyProfile = typeof companyProfiles.$inferSelect;
+export type NewCompanyProfile = typeof companyProfiles.$inferInsert;
 
 export const companyEvidenceDocuments = pgTable('company_evidence_documents', {
   id: pk(),
-  organizationId: orgId(),
+  organizationId: orgId().references(() => organizations.id, { onDelete: 'cascade' }),
   companyId: text('company_id')
     .notNull()
     .references(() => companies.id, { onDelete: 'cascade' }),
@@ -107,11 +115,14 @@ export const companyEvidenceDocuments = pgTable('company_evidence_documents', {
 });
 
 export type CompanyEvidenceDocument = typeof companyEvidenceDocuments.$inferSelect;
+export type NewCompanyEvidenceDocument = typeof companyEvidenceDocuments.$inferInsert;
 
 export const evidenceVerificationHistory = pgTable('evidence_verification_history', {
   id: pk(),
-  organizationId: orgId(),
-  companyId: text('company_id').notNull(),
+  organizationId: orgId().references(() => organizations.id, { onDelete: 'cascade' }),
+  companyId: text('company_id')
+    .notNull()
+    .references(() => companies.id, { onDelete: 'cascade' }),
   evidenceDocumentId: text('evidence_document_id')
     .notNull()
     .references(() => companyEvidenceDocuments.id, { onDelete: 'cascade' }),
@@ -125,10 +136,11 @@ export const evidenceVerificationHistory = pgTable('evidence_verification_histor
 });
 
 export type EvidenceVerificationHistoryRecord = typeof evidenceVerificationHistory.$inferSelect;
+export type NewEvidenceVerificationHistoryRecord = typeof evidenceVerificationHistory.$inferInsert;
 
 export const companyEvidenceChunks = pgTable('company_evidence_chunks', {
   id: pk(),
-  organizationId: orgId(),
+  organizationId: orgId().references(() => organizations.id, { onDelete: 'cascade' }),
   companyId: text('company_id')
     .notNull()
     .references(() => companies.id, { onDelete: 'cascade' }),
@@ -147,3 +159,4 @@ export const companyEvidenceChunks = pgTable('company_evidence_chunks', {
 });
 
 export type CompanyEvidenceChunk = typeof companyEvidenceChunks.$inferSelect;
+export type NewCompanyEvidenceChunk = typeof companyEvidenceChunks.$inferInsert;

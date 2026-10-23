@@ -4,7 +4,8 @@
  * Implements government OAuth2 authorization handshake and pulls issued certificates
  * (MCA, GSTN, MSME, Income Tax) directly via DigiLocker REST APIs.
  */
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import crypto from 'node:crypto';
 import type {
   IDigitalLockerPort,
@@ -49,19 +50,15 @@ export class DigiLockerAdapter implements IDigitalLockerPort {
   private readonly hmacSecret: string;
   private readonly timeoutMs: number;
 
-  constructor() {
-    this.authUrl =
-      process.env.DIGILOCKER_AUTH_URL ||
-      'https://digilocker.meripehchan.gov.in/public/oauth2/1/authorize';
-    this.tokenUrl =
-      process.env.DIGILOCKER_TOKEN_URL ||
-      'https://digilocker.meripehchan.gov.in/public/oauth2/1/token';
-    this.apiUrl =
-      process.env.DIGILOCKER_API_URL || 'https://digilocker.meripehchan.gov.in/public/oauth2/1';
-    this.clientId = process.env.DIGILOCKER_CLIENT_ID || 'tenderpulse_production_client';
-    this.clientSecret = process.env.DIGILOCKER_CLIENT_SECRET || 'tenderpulse_production_secret';
-    this.hmacSecret = process.env.DIGILOCKER_STATE_SECRET || 'tenderpulse-state-secret';
-    this.timeoutMs = parseInt(process.env.DIGILOCKER_TIMEOUT_MS || '15000', 10);
+  constructor(@Optional() private readonly configService?: ConfigService) {
+    this.authUrl = this.configService?.get<string>('DIGILOCKER_AUTH_URL') ?? '';
+    this.tokenUrl = this.configService?.get<string>('DIGILOCKER_TOKEN_URL') ?? '';
+    this.apiUrl = this.configService?.get<string>('DIGILOCKER_API_URL') ?? '';
+    this.clientId = this.configService?.get<string>('DIGILOCKER_CLIENT_ID') ?? '';
+    this.clientSecret = this.configService?.get<string>('DIGILOCKER_CLIENT_SECRET') ?? '';
+    this.hmacSecret = this.configService?.get<string>('DIGILOCKER_STATE_SECRET') ?? '';
+    const timeout = this.configService?.get<string>('DIGILOCKER_TIMEOUT_MS');
+    this.timeoutMs = timeout ? parseInt(timeout, 10) : 15000;
   }
 
   public async generateAuthUrl(

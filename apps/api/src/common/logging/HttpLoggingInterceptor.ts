@@ -105,24 +105,43 @@ export class HttpLoggingInterceptor implements NestInterceptor {
               }),
               catchError((err: unknown) => {
                 const durationMs = Math.round((performance.now() - startTime) * 10) / 10;
+                const errObj =
+                  typeof err === 'object' && err !== null ? (err as Record<string, unknown>) : null;
                 const statusCode =
-                  typeof err === 'object' && err !== null && 'status' in err
-                    ? (err as { status: number }).status
-                    : 500;
+                  typeof errObj?.status === 'number'
+                    ? errObj.status
+                    : typeof errObj?.statusCode === 'number'
+                      ? errObj.statusCode
+                      : 500;
 
-                this.logger.error(
-                  'http.request.failed',
-                  `${method} ${url} failed with ${statusCode} (${durationMs}ms)`,
-                  err,
-                  {
-                    method,
-                    route: req.route?.path || url,
-                    status_code: statusCode,
-                  },
-                  {
-                    duration_ms: durationMs,
-                  },
-                );
+                if (statusCode >= 500) {
+                  this.logger.error(
+                    'http.request.failed',
+                    `${method} ${url} failed with ${statusCode} (${durationMs}ms)`,
+                    err,
+                    {
+                      method,
+                      route: req.route?.path || url,
+                      status_code: statusCode,
+                    },
+                    {
+                      duration_ms: durationMs,
+                    },
+                  );
+                } else {
+                  this.logger.warn(
+                    'http.request.client_error',
+                    `${method} ${url} ${statusCode} (${durationMs}ms)`,
+                    {
+                      method,
+                      route: req.route?.path || url,
+                      status_code: statusCode,
+                    },
+                    {
+                      duration_ms: durationMs,
+                    },
+                  );
+                }
                 throw err;
               }),
             )

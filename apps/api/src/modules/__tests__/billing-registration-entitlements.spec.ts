@@ -53,6 +53,14 @@ describe('Tenant Registration, Billing & Entitlements Engine Suite', () => {
       expect(result.user.organizationName).toBe('Sharma Infrastructure Group');
       expect(result.company?.legalName).toBe('Sharma Highway Projects Pvt Ltd');
 
+      // Verify organization record created in organizations table
+      const orgRows = await pglite.query<{ id: string; name: string }>(
+        `SELECT id, name FROM organizations WHERE id = $1`,
+        [result.user.organizationId],
+      );
+      expect(orgRows.rows.length).toBe(1);
+      expect(orgRows.rows[0]?.name).toBe('Sharma Infrastructure Group');
+
       // Verify subscription created
       const sub = await billingService.getSubscription(result.user.organizationId);
       expect(sub.planTier).toBe('FREE');

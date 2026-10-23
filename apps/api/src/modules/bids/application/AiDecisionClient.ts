@@ -103,10 +103,13 @@ export interface AiBidDecisionResponse {
   error?: string | null;
 }
 
+import type { ConfigService } from '@nestjs/config';
+
 export interface AiDecisionClientConfig {
   aiBaseUrl?: string;
   internalServiceKey?: string;
   timeoutMs?: number;
+  configService?: ConfigService;
   customFetch?: (
     url: string,
     init: RequestInit,
@@ -120,12 +123,20 @@ export class AiDecisionClient {
   private readonly customFetch?: AiDecisionClientConfig['customFetch'];
 
   constructor(config: AiDecisionClientConfig = {}) {
-    this.aiBaseUrl = config.aiBaseUrl ?? process.env.AI_ENGINE_URL ?? 'http://localhost:8000';
+    const configService = config.configService;
+    this.aiBaseUrl =
+      config.aiBaseUrl ??
+      configService?.get<string>('AI_ENGINE_URL') ??
+      '';
     this.internalServiceKey =
       config.internalServiceKey ??
-      process.env.INTERNAL_SERVICE_KEY ??
-      'tenderpulse-internal-secret-2026';
-    this.timeoutMs = config.timeoutMs ?? 5000;
+      configService?.get<string>('INTERNAL_SERVICE_KEY') ??
+      '';
+    this.timeoutMs =
+      config.timeoutMs ??
+      (configService?.get<string>('AI_DECISION_TIMEOUT_MS')
+        ? parseInt(configService.get<string>('AI_DECISION_TIMEOUT_MS')!, 10)
+        : 5000);
     this.customFetch = config.customFetch;
   }
 

@@ -2,6 +2,7 @@
  * AppModule — Root NestJS module that imports all feature and infrastructure modules.
  */
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from '@/common/database/database.module.js';
 import { SecurityModule } from '@/common/security/security.module.js';
 import { StorageModule } from '@/infrastructure/storage/storage.module.js';
@@ -20,9 +21,13 @@ import { TeamsModule } from '@/modules/teams/teams.module.js';
 import { NotificationsModule } from '@/modules/notifications/notifications.module.js';
 import { BillingModule } from '@/modules/billing/billing.module.js';
 import { CompanyVerificationModule } from '@/modules/company-verification/company-verification.module.js';
+import { ChatModule } from '@/modules/chat/chat.module.js';
 
 @Module({
   imports: [
+    // Configuration
+    ConfigModule.forRoot({ isGlobal: true }),
+
     // Infrastructure (global providers)
     DatabaseModule,
     SecurityModule,
@@ -44,6 +49,7 @@ import { CompanyVerificationModule } from '@/modules/company-verification/compan
     TeamsModule,
     NotificationsModule,
     BillingModule,
+    ChatModule,
   ],
 })
 export class AppModule {}

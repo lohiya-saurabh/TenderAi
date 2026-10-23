@@ -43,6 +43,7 @@ class DocumentExtractionResponse(BaseModel):
     document_id: str
     status: str
     items: list[dict[str, Any]]
+    chunks: list[dict[str, Any]] = Field(default_factory=list)
     human_review_required: bool
     audit_events: list[dict[str, Any]]
 
@@ -2292,6 +2293,7 @@ class ProductionExtractionPipeline:
         from tenderpulse_ai.domain.context_assembler import ContextAssembler
         from tenderpulse_ai.domain.docling_parser import DoclingParserEngine
         from tenderpulse_ai.domain.structure_builder import DocumentStructureBuilder
+        from tenderpulse_ai.domain.tender_chunker import TenderChunker
 
         doc_parser = DoclingParserEngine()
         docling_doc = doc_parser.parse_document(
@@ -2301,6 +2303,10 @@ class ProductionExtractionPipeline:
         )
         doc_builder = DocumentStructureBuilder()
         doc_tree = doc_builder.build_structure(docling_doc)
+
+        chunker = TenderChunker()
+        extracted_chunks = chunker.chunk_document(docling_doc, doc_tree)
+        wire_chunks = [c.to_wire_dict() for c in extracted_chunks]
 
         detector = CandidateDetector()
         detected_candidates, unselected_passages = detector.detect_candidates_with_unselected(
@@ -2479,6 +2485,7 @@ class ProductionExtractionPipeline:
             document_id=request.document_id,
             status="REVIEW_READY" if not human_review_required else "HUMAN_REVIEW_REQUIRED",
             items=formatted_items,
+            chunks=wire_chunks,
             human_review_required=human_review_required,
             audit_events=all_audit_events,
         )

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button.js';
 import { CheckCircle2, Clock, ArrowUpRight } from 'lucide-react';
+import { useCompany } from '@/context/useCompany.js';
 
 export interface BidSignoffDockProps {
   onApproveBid?: () => void;
@@ -12,6 +13,11 @@ export const BidSignoffDock: React.FC<BidSignoffDockProps> = ({
   onApproveBid,
   onSubmitPreBidQuery,
 }) => {
+  const { selectedCompany } = useCompany();
+  const isGstVerified = Boolean(selectedCompany?.gstinVerifiedAt);
+  const isMcaVerified = Boolean(selectedCompany?.mcaVerifiedAt);
+  const isUdyamVerified = Boolean(selectedCompany?.udyamVerifiedAt);
+
   const scrollTo = (id: string) => {
     const el = document.getElementById(id);
     if (el) {
@@ -127,27 +133,51 @@ export const BidSignoffDock: React.FC<BidSignoffDockProps> = ({
         </div>
       </div>
 
-      {/* 3. Verified Evidence Vault Summary */}
+      {/* 3. Evidence Vault Summary */}
       <div className="p-4 border border-border rounded-lg bg-card/60 shadow-xs space-y-2 text-[11px] transition-colors">
         <div className="mono uppercase font-semibold text-muted-foreground">
-          Verified Evidence Vault
+          Evidence Vault Status
         </div>
         <div className="flex items-center gap-1.5 font-medium">
-          <span className="w-1.5 h-1.5 rounded-full inline-block bg-emerald-500" />
-          <span className="text-emerald-700 dark:text-emerald-400 font-medium">
-            IRIS GST Verified (Active)
+          <span
+            className={`w-1.5 h-1.5 rounded-full inline-block ${isGstVerified ? 'bg-emerald-500' : 'bg-muted-foreground/40'}`}
+          />
+          <span
+            className={
+              isGstVerified
+                ? 'text-emerald-700 dark:text-emerald-400 font-medium'
+                : 'text-muted-foreground'
+            }
+          >
+            IRIS GST {isGstVerified ? 'Verified (Active)' : '(Unverified)'}
           </span>
         </div>
         <div className="flex items-center gap-1.5 font-medium">
-          <span className="w-1.5 h-1.5 rounded-full inline-block bg-emerald-500" />
-          <span className="text-emerald-700 dark:text-emerald-400 font-medium">
-            MCA RoC CIN Active (RoC-Mumbai)
+          <span
+            className={`w-1.5 h-1.5 rounded-full inline-block ${isMcaVerified ? 'bg-emerald-500' : 'bg-muted-foreground/40'}`}
+          />
+          <span
+            className={
+              isMcaVerified
+                ? 'text-emerald-700 dark:text-emerald-400 font-medium'
+                : 'text-muted-foreground'
+            }
+          >
+            MCA RoC CIN {isMcaVerified ? 'Active' : '(Unverified)'}
           </span>
         </div>
         <div className="flex items-center gap-1.5 font-medium">
-          <span className="w-1.5 h-1.5 rounded-full inline-block bg-emerald-500" />
-          <span className="text-emerald-700 dark:text-emerald-400 font-medium">
-            MSME Udyam Verified (Small)
+          <span
+            className={`w-1.5 h-1.5 rounded-full inline-block ${isUdyamVerified ? 'bg-emerald-500' : 'bg-muted-foreground/40'}`}
+          />
+          <span
+            className={
+              isUdyamVerified
+                ? 'text-emerald-700 dark:text-emerald-400 font-medium'
+                : 'text-muted-foreground'
+            }
+          >
+            MSME Udyam {isUdyamVerified ? 'Verified' : '(Unverified)'}
           </span>
         </div>
       </div>

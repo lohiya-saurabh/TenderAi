@@ -11,6 +11,8 @@ data/
 **/data/
 uploads/
 **/uploads/
+inspection_output/
+node*_output.*
 
 # Environment Variables & Keys
 .env

@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID as uuidv4 } from 'node:crypto';
 import { IAuditRepository } from '@/modules/audit/domain/repositories/IAuditRepository.js';
 import { AuditLog } from '@/modules/audit/domain/entities/AuditLog.js';
 import { ValidationException } from '@/common/domain/DomainException.js';

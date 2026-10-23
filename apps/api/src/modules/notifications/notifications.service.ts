@@ -4,12 +4,7 @@
  */
 import { Injectable, Inject } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
-import { eq, and, desc, sql } from 'drizzle-orm';
-import {
-  DRIZZLE_TOKEN,
-  type DrizzleDb,
-  createDrizzle,
-} from '@/common/database/database.module.js';
+import { type DrizzleDb } from '@/common/database/database.module.js';
 import * as schema from '@/common/database/schema.js';
 import { BadRequestError, NotFoundError } from '@/common/errors/errors.js';
 import { TenantContextHolder } from '@/common/security/TenantContext.js';
@@ -21,13 +16,20 @@ import type {
   NotificationPriority,
   NotificationChannel,
 } from '@/modules/notifications/notifications.types.js';
+import { NotificationsRepository } from '@/modules/notifications/notifications.repository.js';
 
 @Injectable()
 export class NotificationsService {
-  private readonly db: DrizzleDb;
+  private readonly repository: NotificationsRepository;
 
-  constructor(@Inject(DRIZZLE_TOKEN) db: DrizzleDb | PGlite) {
-    this.db = 'select' in db ? (db as DrizzleDb) : createDrizzle(db as PGlite);
+  constructor(
+    @Inject(NotificationsRepository)
+    repoOrDb: NotificationsRepository | DrizzleDb | PGlite,
+  ) {
+    this.repository =
+      repoOrDb instanceof NotificationsRepository
+        ? repoOrDb
+        : new NotificationsRepository(repoOrDb);
   }
 
   /**
@@ -40,40 +42,13 @@ export class NotificationsService {
     const orgId = this.requireOrg();
     const userId = TenantContextHolder.get()?.userId;
 
-    const limit = Math.min(params?.limit || 50, 100);
-
-    // Build query conditions
-    const conditions = [eq(schema.notifications.organizationId, orgId)];
-
-    if (params?.unreadOnly) {
-      conditions.push(eq(schema.notifications.isRead, false));
-    }
-
-    const records = await this.db
-      .select()
-      .from(schema.notifications)
-      .where(and(...conditions))
-      .orderBy(desc(schema.notifications.createdAt))
-      .limit(limit);
+    const records = await this.repository.listNotifications(orgId, params);
 
     // Filter to user-specific or broadcast notifications
     const userRecords = records.filter((r) => !r.recipientUserId || r.recipientUserId === userId);
 
     // Count total unread
-    const [unreadResult] = await this.db
-      .select({ count: sql<string>`count(*)` })
-      .from(schema.notifications)
-      .where(
-        and(
-          eq(schema.notifications.organizationId, orgId),
-          eq(schema.notifications.isRead, false),
-          userId
-            ? sql`(${schema.notifications.recipientUserId} IS NULL OR ${schema.notifications.recipientUserId} = ${userId})`
-            : sql`TRUE`,
-        ),
-      );
-
-    const unreadCount = parseInt(unreadResult?.count || '0', 10);
+    const unreadCount = await this.repository.countUnread(orgId, userId);
 
     return {
       notifications: userRecords.map(this.mapRecord),
@@ -87,22 +62,14 @@ export class NotificationsService {
   public async markAsRead(id: string): Promise<NotificationResponse> {
     const orgId = this.requireOrg();
 
-    const [existing] = await this.db
-      .select()
-      .from(schema.notifications)
-      .where(and(eq(schema.notifications.id, id), eq(schema.notifications.organizationId, orgId)))
-      .limit(1);
+    const existing = await this.repository.findById(id, orgId);
 
     if (!existing) {
       throw new NotFoundError(`Notification '${id}' not found.`);
     }
 
     const now = new Date();
-    const [updated] = await this.db
-      .update(schema.notifications)
-      .set({ isRead: true, readAt: now })
-      .where(eq(schema.notifications.id, id))
-      .returning();
+    const updated = await this.repository.markAsRead(id, now);
 
     return this.mapRecord(updated || existing);
   }
@@ -114,22 +81,7 @@ export class NotificationsService {
     const orgId = this.requireOrg();
     const userId = TenantContextHolder.get()?.userId;
 
-    const conditions = [
-      eq(schema.notifications.organizationId, orgId),
-      eq(schema.notifications.isRead, false),
-    ];
-
-    if (userId) {
-      conditions.push(
-        sql`(${schema.notifications.recipientUserId} IS NULL OR ${schema.notifications.recipientUserId} = ${userId})`,
-      );
-    }
-
-    const updated = await this.db
-      .update(schema.notifications)
-      .set({ isRead: true, readAt: new Date() })
-      .where(and(...conditions))
-      .returning();
+    const updated = await this.repository.markAllAsRead(orgId, userId, new Date());
 
     return {
       success: true,
@@ -154,11 +106,7 @@ export class NotificationsService {
     }
 
     // 1. Preference Gating via tenant_settings
-    const [settings] = await this.db
-      .select()
-      .from(schema.tenantSettings)
-      .where(eq(schema.tenantSettings.organizationId, orgId))
-      .limit(1);
+    const settings = await this.repository.findTenantSettings(orgId);
 
     const prefs = settings?.notificationPreferences ?? {
       notifyDeadlines: true,
@@ -194,23 +142,20 @@ export class NotificationsService {
 
     // 2. Persist notification into PostgreSQL
     const notificationId = `notif-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-    const [created] = await this.db
-      .insert(schema.notifications)
-      .values({
-        id: notificationId,
-        organizationId: orgId,
-        recipientUserId: dto.recipientUserId ?? callerUserId ?? null,
-        recipientEmail: dto.recipientEmail ?? null,
-        category: dto.category,
-        channel: dto.channel || 'IN_APP',
-        priority: dto.priority || 'MEDIUM',
-        title: dto.title.trim(),
-        message: dto.message.trim(),
-        metadata: dto.metadata ?? null,
-        isRead: false,
-        createdAt: new Date(),
-      })
-      .returning();
+    const created = await this.repository.createNotification({
+      id: notificationId,
+      organizationId: orgId,
+      recipientUserId: dto.recipientUserId ?? callerUserId ?? null,
+      recipientEmail: dto.recipientEmail ?? null,
+      category: dto.category,
+      channel: dto.channel || 'IN_APP',
+      priority: dto.priority || 'MEDIUM',
+      title: dto.title.trim(),
+      message: dto.message.trim(),
+      metadata: dto.metadata ?? null,
+      isRead: false,
+      createdAt: new Date(),
+    });
 
     if (!created) {
       throw new BadRequestError('Failed to create notification.');
@@ -233,20 +178,7 @@ export class NotificationsService {
     const orgId = this.requireOrg();
 
     // 1. Scan active bids
-    const activeBids = await this.db
-      .select({
-        id: schema.bids.id,
-        title: schema.bids.title,
-        tenderNumber: schema.bids.tenderNumber,
-        submissionDeadline: schema.bids.submissionDeadline,
-      })
-      .from(schema.bids)
-      .where(
-        and(
-          eq(schema.bids.organizationId, orgId),
-          sql`${schema.bids.submissionDeadline} IS NOT NULL`,
-        ),
-      );
+    const activeBids = await this.repository.listActiveBidsWithDeadline(orgId);
 
     let createdCount = 0;
     const now = new Date();

@@ -28,19 +28,12 @@ let fallbackRefreshToken: string | null = null;
 // Refresh token stored in localStorage (acceptable trade-off for SPA persistence)
 const REFRESH_TOKEN_KEY = 'tp_refresh_token';
 
-function getStorage(): Storage | null {
-  if (typeof window !== 'undefined' && window.localStorage) {
-    return window.localStorage;
-  }
-  if (
-    typeof globalThis !== 'undefined' &&
-    'localStorage' in globalThis &&
-    globalThis.localStorage
-  ) {
-    return globalThis.localStorage as Storage;
-  }
-  return null;
-}
+const getStorage = (): Storage | null =>
+  typeof window !== 'undefined'
+    ? window.localStorage
+    : typeof globalThis !== 'undefined' && 'localStorage' in globalThis
+      ? (globalThis.localStorage as Storage)
+      : null;
 
 // Flag to prevent concurrent refresh attempts
 let isRefreshing = false;
