@@ -19,6 +19,9 @@ class DocumentChunk(BaseModel):
     text: str
     clause_reference: str
     embedding: list[float] | None = None
+    parent_id: str | None = None
+    tier: str = "TIER2_PARENT"  # TIER1_SKELETON, TIER2_PARENT, TIER3_CHILD
+    canonical_ref_id: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -177,11 +180,13 @@ class ScopedRetrievalTool:
         self.reranker = JevCalibratedReranker()
         # In-memory document chunks store partitioned by (tenant_id, document_id)
         self._store: dict[str, list[DocumentChunk]] = {}
+        self._chunks_by_id: dict[str, DocumentChunk] = {}
         self._call_counts: dict[str, int] = {}
 
     def seed_chunks(self, chunks: list[DocumentChunk]):
         """Helper to seed chunks for tests or local execution."""
         for chunk in chunks:
+            self._chunks_by_id[chunk.chunk_id] = chunk
             key = f"{chunk.tenant_id}:{chunk.document_id}"
             if key not in self._store:
                 self._store[key] = []
@@ -194,6 +199,7 @@ class ScopedRetrievalTool:
         query: str,
         top_k: int = 5,
         query_embedding: list[float] | None = None,
+        expand_to_parent: bool = True,
     ) -> list[DocumentChunk]:
         """
         Executes tenant-scoped hybrid retrieval:
@@ -203,8 +209,9 @@ class ScopedRetrievalTool:
         4. Computes sparse lexical (BM25 term overlap) and dense vector cosine similarity.
         5. Fuses candidates via Reciprocal Rank Fusion (RRF).
         6. Runs JEV Calibrated System One Reranker for high-precision top_k selection.
+        7. If expand_to_parent is True, expands TIER3_CHILD chunks to their enclosing TIER2_PARENT chunks.
         """
-        # 1. Rate Limit Check
+        # 1. Rate Limiting Check
         run_id = security_context.workflow_run_id
         current_calls = self._call_counts.get(run_id, 0) + 1
         if current_calls > self.max_calls_per_run:
@@ -240,6 +247,8 @@ class ScopedRetrievalTool:
             overlap = len(query_terms.intersection(chunk_words))
             # Ratio of query terms matched
             score = overlap / max(len(query_terms), 1) if query_terms else 0.0
+            if not expand_to_parent and chunk.tier == "TIER3_CHILD" and score > 0:
+                score += 0.05
             sparse_scored.append((score, chunk))
         sparse_scored.sort(key=lambda x: x[0], reverse=True)
         sparse_ranks = {chunk.chunk_id: rank + 1 for rank, (_, chunk) in enumerate(sparse_scored)}
@@ -263,13 +272,53 @@ class ScopedRetrievalTool:
         fused_sorted = sorted(fused_scores.items(), key=lambda x: x[1], reverse=True)
 
         # Take candidate pool for reranking
-        candidate_pool = [chunk_map[cid] for cid, _ in fused_sorted[: self.rerank_top_n]]
+        pool_size = max(top_k * 2, self.rerank_top_n)
+        candidate_pool = [chunk_map[cid] for cid, _ in fused_sorted[:pool_size]]
 
         # 7. JEV Calibrated System One Reranking
+        ranked: list[DocumentChunk]
         if self.enable_jev_rerank and self.reranker:
-            return self.reranker.rerank(query=query, candidates=candidate_pool, top_k=top_k)
+            ranked = self.reranker.rerank(
+                query=query,
+                candidates=candidate_pool,
+                top_k=max(top_k * 3, self.rerank_top_n),
+            )
+        else:
+            ranked = candidate_pool
 
-        return candidate_pool[:top_k]
+        if not expand_to_parent:
+            # Ensure fine-grained child chunk hits are not shadowed or demoted by parent table chunks.
+            # When child chunks match and are present in ranked, demote their parent chunks behind them.
+            parent_ids_with_child_hits = {
+                c.parent_id for c in ranked if c.tier == "TIER3_CHILD" and c.parent_id
+            }
+            if parent_ids_with_child_hits:
+                non_parent_chunks: list[DocumentChunk] = []
+                parent_chunks: list[DocumentChunk] = []
+                for c in ranked:
+                    if c.chunk_id in parent_ids_with_child_hits:
+                        parent_chunks.append(c)
+                    else:
+                        non_parent_chunks.append(c)
+                ranked = non_parent_chunks + parent_chunks
+            return ranked[:top_k]
+
+        # 8. Small-to-Big parent expansion
+        expanded: list[DocumentChunk] = []
+        seen_ids: set[str] = set()
+        for c in ranked:
+            target = c
+            if c.tier == "TIER3_CHILD" and c.parent_id and c.parent_id in self._chunks_by_id:
+                parent = self._chunks_by_id[c.parent_id]
+                parent.metadata["child_hit"] = {"chunk_id": c.chunk_id, "text": c.text}
+                target = parent
+            if target.chunk_id not in seen_ids:
+                seen_ids.add(target.chunk_id)
+                expanded.append(target)
+            if len(expanded) >= top_k:
+                break
+
+        return expanded[:top_k]
 
     def retrieve_evidence_vault(
         self,

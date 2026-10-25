@@ -1,4 +1,5 @@
 import React from 'react';
+import { FileText } from 'lucide-react';
 import { FailIcon, InfoIcon } from '@/components/common/Icons.js';
 import type { BidDetail } from '@/api/bids.js';
 import type { ComplianceItem } from '@/api/compliance.js';
@@ -6,9 +7,75 @@ import {
   getComplianceRollup,
   getDeadlineBufferDays,
   formatCommercialRiskItem,
+  formatReasonItem,
+  formatMissingItem,
+  formatUncertainItem,
+  parseDisqualifierItem,
+  cleanStringAndUnwrapJson,
+  extractCleanText,
+  type NormalizedDisqualifier,
   type BidDecision,
 } from '@/components/bid/detail/bidDetailData.js';
 import { CompanyDocumentChecklist } from '@/components/bid/detail/CompanyDocumentChecklist.js';
+
+export type { NormalizedDisqualifier };
+
+export interface DisqualifierItemCardProps {
+  rawItem: unknown;
+  index?: number;
+}
+
+export const DisqualifierItemCard: React.FC<DisqualifierItemCardProps> = ({
+  rawItem,
+  index,
+}) => {
+  const item: NormalizedDisqualifier | null = parseDisqualifierItem(rawItem);
+  if (!item) return null;
+
+  const displayShortfall =
+    item.shortfallDetail && item.shortfallDetail !== item.reason
+      ? item.shortfallDetail.replace(/^shortfall\s*:\s*/i, '').trim()
+      : undefined;
+
+  return (
+    <div
+      key={index}
+      data-testid="disqualifier-item-card"
+      className="p-3 rounded-lg bg-destructive/5 dark:bg-destructive/10 border-l-4 border-l-destructive border border-destructive/25 flex flex-col gap-1.5 transition-colors"
+    >
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold text-destructive tracking-wide">
+            {item.title}
+          </span>
+          {item.factor && (
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-destructive/15 text-destructive font-semibold uppercase">
+              {item.factor}
+            </span>
+          )}
+        </div>
+        {item.clauseReference && (
+          <span className="inline-flex items-center gap-1 text-[10px] font-mono font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded border border-border/50">
+            <FileText size={11} className="text-muted-foreground" />
+            {item.clauseReference}
+          </span>
+        )}
+      </div>
+
+      <p
+        className="text-xs text-foreground/90 leading-relaxed font-medium"
+        dangerouslySetInnerHTML={{ __html: item.reason }}
+      />
+
+      {displayShortfall && (
+        <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-destructive/90 bg-destructive/10 dark:bg-destructive/15 px-2 py-1 rounded border border-destructive/20 font-mono">
+          <span className="font-bold">Shortfall:</span>
+          <span>{displayShortfall}</span>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export interface BidVerdictCardProps {
   bid: BidDetail;
@@ -77,8 +144,9 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
         : 'text-amber-500';
 
   // Summary statement
-  const summaryText = decision?.reasons?.[0]
-    ? decision.reasons[0]
+  const rawFirstReason = decision?.reasons?.[0];
+  const summaryText = rawFirstReason
+    ? formatReasonItem(rawFirstReason) || extractCleanText(rawFirstReason)
     : decision
       ? 'Deterministic eligibility qualification evaluation completed.'
       : 'Deterministic eligibility evaluation has not yet been executed for this tender. Run evaluation to verify company credentials against tender thresholds.';
@@ -87,13 +155,13 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
     // 1. Search positive reasons to pursue first
     for (const r of (decision?.reasonsToPursue || [])) {
       if (!r) continue;
-      const rObj = typeof r === 'object' && r !== null ? (r as Record<string, unknown>) : null;
-      const str = typeof r === 'string' ? r : String(rObj?.detail || rObj?.title || JSON.stringify(r));
+      const parsed = parseDisqualifierItem(r);
+      const str = parsed ? `${parsed.title} ${parsed.reason} ${parsed.shortfallDetail || ''}` : extractCleanText(r);
       const matches = keywords.some((kw) => new RegExp(`\\b${kw}\\b`, 'i').test(str));
       if (matches) {
         return {
-          title: String(rObj?.title || keywords[0]),
-          detail: String(rObj?.detail || rObj?.reason || rObj?.summary || rObj?.title || str),
+          title: parsed?.title || keywords[0] || 'Requirement',
+          detail: parsed?.reason || str,
           pass: true,
         };
       }
@@ -106,13 +174,13 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
     ];
     for (const r of negativeReasons) {
       if (!r) continue;
-      const rObj = typeof r === 'object' && r !== null ? (r as Record<string, unknown>) : null;
-      const str = typeof r === 'string' ? r : String(rObj?.detail || rObj?.title || rObj?.reason || JSON.stringify(r));
+      const parsed = parseDisqualifierItem(r);
+      const str = parsed ? `${parsed.title} ${parsed.reason} ${parsed.shortfallDetail || ''}` : extractCleanText(r);
       const matches = keywords.some((kw) => new RegExp(`\\b${kw}\\b`, 'i').test(str));
       if (matches) {
         return {
-          title: String(rObj?.title || keywords[0]),
-          detail: String(rObj?.detail || rObj?.reason || rObj?.summary || rObj?.title || str),
+          title: parsed?.title || keywords[0] || 'Requirement',
+          detail: parsed?.reason || str,
           pass: false,
         };
       }
@@ -232,24 +300,58 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
       {decision ? (
         <div className="space-y-4 pt-3 border-t border-border">
           {/* Reasons */}
-          {decision.reasons.length > 0 && (
-            <div className="space-y-1.5">
-              <div className="text-xs font-semibold text-foreground uppercase tracking-wider">
-                {decision.verdict === 'DO_NOT_PURSUE'
-                  ? 'Disqualifying Factors & Shortfalls'
-                  : decision.verdict === 'PURSUE'
-                    ? 'Reasons to Pursue'
-                    : 'Evaluation Factors & Review Triggers'}
+          {(() => {
+            const displayReasons: string[] = [...(decision.reasons || [])];
+            const existingJoined = displayReasons.join(' ');
+            for (const r of (decision.reasonsToPursue || [])) {
+              const formatted = formatReasonItem(r);
+              if (formatted && !existingJoined.includes(formatted)) {
+                displayReasons.push(formatted);
+              }
+            }
+            if (decision.verdict !== 'PURSUE') {
+              for (const r of (decision.reasonsNotToPursue || [])) {
+                const formatted = formatReasonItem(r);
+                if (formatted && !existingJoined.includes(formatted)) {
+                  displayReasons.push(formatted);
+                }
+              }
+            }
+            for (const g of (decision.missingInformation || [])) {
+              const formatted = formatMissingItem(g);
+              if (formatted && !existingJoined.includes(formatted)) {
+                displayReasons.push(formatted);
+              }
+            }
+            for (const u of (decision.uncertainAreas || [])) {
+              const formatted = formatUncertainItem(u);
+              if (formatted && !existingJoined.includes(formatted)) {
+                displayReasons.push(formatted);
+              }
+            }
+            if (displayReasons.length === 0) return null;
+            return (
+              <div className="space-y-1.5">
+                <div className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                  {decision.verdict === 'DO_NOT_PURSUE'
+                    ? 'Disqualifying Factors & Shortfalls'
+                    : decision.verdict === 'PURSUE'
+                      ? 'Reasons to Pursue'
+                      : 'Evaluation Factors & Review Triggers'}
+                </div>
+                <ul className="list-disc pl-5 space-y-1 text-xs text-foreground/90">
+                  {displayReasons.map((reason, index) => {
+                    const formatted = formatReasonItem(reason) || (typeof reason === 'string' ? reason : extractCleanText(reason));
+                    return (
+                      <li key={index} className="leading-relaxed">
+                        {formatted}
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
-              <ul className="list-disc pl-5 space-y-1 text-xs text-foreground/90">
-                {decision.reasons.map((reason, index) => (
-                  <li key={index} className="leading-relaxed">
-                    {reason}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Commercial & Contractual Risks */}
           {decision.commercialRisks &&
@@ -273,23 +375,30 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
             )}
 
           {/* Hard Disqualifiers callout */}
-          {decision.hardDisqualifiers && decision.hardDisqualifiers.length > 0 && (
-            <div className="p-3.5 rounded-md bg-destructive/10 border border-destructive/30">
-              <div className="flex items-start gap-2">
-                <FailIcon size={16} color="var(--color-danger)" className="shrink-0 mt-0.5" />
-                <div>
-                  <div className="text-xs font-semibold text-destructive uppercase tracking-wider">
-                    Hard Disqualifiers
-                  </div>
-                  <ul className="list-disc pl-5 mt-1 space-y-0.5 text-xs text-foreground">
-                    {decision.hardDisqualifiers.map((d, i) => (
-                      <li key={i}>{typeof d === 'string' ? d : JSON.stringify(d)}</li>
-                    ))}
-                  </ul>
+          {decision.hardDisqualifiers && decision.hardDisqualifiers.length > 0 && (() => {
+            const flatHardDisqualifiers = (Array.isArray(decision.hardDisqualifiers)
+              ? decision.hardDisqualifiers.flat(Infinity)
+              : [decision.hardDisqualifiers]).filter((d) => d !== null && d !== undefined && parseDisqualifierItem(d) !== null);
+            if (flatHardDisqualifiers.length === 0) return null;
+            return (
+              <div
+                data-testid="hard-disqualifiers-callout"
+                className="p-4 rounded-lg bg-destructive/10 border border-destructive/30 space-y-3"
+              >
+                <div className="flex items-center gap-2">
+                  <FailIcon size={16} color="var(--color-danger)" className="shrink-0" />
+                  <span className="text-xs font-bold text-destructive uppercase tracking-wider">
+                    Hard Disqualifiers ({flatHardDisqualifiers.length})
+                  </span>
+                </div>
+                <div className="flex flex-col gap-2.5">
+                  {flatHardDisqualifiers.map((d, i) => (
+                    <DisqualifierItemCard key={i} rawItem={d} index={i} />
+                  ))}
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Evidence Citations */}
           {decision.evidenceCitations && decision.evidenceCitations.length > 0 && (
@@ -304,38 +413,57 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
               </div>
               <div className="space-y-1.5">
                 {decision.evidenceCitations.map((c, i) => {
-                  if (typeof c === 'string') {
-                    return (
+                  const unwrapped = cleanStringAndUnwrapJson(c);
+                  let parsedObj: Record<string, unknown> | null = null;
+                  let rawText = '';
+
+                  if (typeof unwrapped === 'object' && unwrapped !== null && !Array.isArray(unwrapped)) {
+                    parsedObj = unwrapped as Record<string, unknown>;
+                  } else {
+                    rawText = extractCleanText(unwrapped);
+                  }
+
+                  if (!parsedObj) {
+                    return rawText ? (
                       <div
                         key={i}
                         className="text-xs text-muted-foreground p-2 rounded bg-muted/40 border border-border/50"
                       >
-                        {c}
+                        {rawText}
                       </div>
-                    );
+                    ) : null;
                   }
-                  const cit = c as Record<string, unknown>;
+
                   const title =
-                    (typeof cit.tender_requirement_title === 'string' && cit.tender_requirement_title) ||
-                    (typeof cit.title === 'string' && cit.title) ||
-                    'Requirement';
-                  const note =
-                    (typeof cit.notes === 'string' && cit.notes) ||
-                    (typeof cit.tender_verbatim_quote === 'string' && cit.tender_verbatim_quote) ||
-                    (typeof cit.detail === 'string' && cit.detail) ||
-                    '';
+                    extractCleanText(
+                      parsedObj.tender_requirement_title ||
+                        parsedObj.tenderRequirementTitle ||
+                        parsedObj.title ||
+                        parsedObj.requirement_title ||
+                        parsedObj.requirementTitle,
+                    ) || 'Requirement';
+                  const note = extractCleanText(
+                    parsedObj.notes ||
+                      parsedObj.tender_verbatim_quote ||
+                      parsedObj.tenderVerbatimQuote ||
+                      parsedObj.detail ||
+                      parsedObj.verbatimQuote ||
+                      parsedObj.reason,
+                  );
                   const docName =
-                    (typeof cit.document_name === 'string' && cit.document_name) ||
-                    (typeof cit.company_evidence_ref === 'string' && cit.company_evidence_ref) ||
-                    (typeof cit.documentName === 'string' && cit.documentName) ||
-                    undefined;
+                    extractCleanText(
+                      parsedObj.document_name ||
+                        parsedObj.documentName ||
+                        parsedObj.company_evidence_ref ||
+                        parsedObj.companyEvidenceRef ||
+                        parsedObj.fileName,
+                    ) || undefined;
                   const page =
-                    (typeof cit.page_number === 'number' || typeof cit.page_number === 'string'
-                      ? cit.page_number
-                      : null) ??
-                    (typeof cit.pageNumber === 'number' || typeof cit.pageNumber === 'string'
-                      ? cit.pageNumber
-                      : null);
+                    parsedObj.page_number ??
+                    parsedObj.pageNumber ??
+                    parsedObj.tender_page_number ??
+                    parsedObj.tenderPageNumber ??
+                    null;
 
                   return (
                     <div

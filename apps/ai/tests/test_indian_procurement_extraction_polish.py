@@ -311,14 +311,110 @@ def test_currency_and_percentage_measurements():
     assert _extract_clause_from_clause_text("Rs. 5.25 Cr", 1) is None
 
 
+def test_jv_prohibition_robust_suppression():
+    """Verifies that all variations of JV/Consortium prohibitions completely suppress positive JV candidates."""
+    prohibition_clauses = [
+        "b) No Bidder shall submit more than one Bid for the Project. JV/Consortium are not allowed to bid.",
+        "b) No Bidder shall submit more than one Bid for the Project. JV/Consortium are not allowed.",
+        "4.3 Bids from joint ventures are not allowed.",
+        "Joint ventures are strictly prohibited for this work.",
+        "Neither JV nor consortium is permitted to participate.",
+        "Bids by JV/Consortium are not permitted under any circumstances.",
+        "No joint venture or consortium bids shall be accepted.",
+        "Joint venture is not allowed.",
+    ]
+    for clause in prohibition_clauses:
+        prompt = f'<untrusted_document_data document_id="doc_jv" page="18">\n{clause}\n</untrusted_document_data>'
+        items = default_tender_extractor("", prompt)
+        jv_items = [
+            i for i in items if "joint venture" in i.title.lower() or i.category == "EXECUTION"
+        ]
+        assert len(jv_items) == 0, (
+            f"Failed to suppress JV candidate on prohibition: '{clause}'. Emitted: {jv_items}"
+        )
+
+
+def test_real_document_10_nhai_outer_ring_prohibitions_and_statutory():
+    """Verifies real document extraction on 10_NHAI_Outer_Ring_Exp_1850Cr_NIT.pdf:
+    1. Page 18: Outright JV prohibition suppresses positive JV candidates
+    2. Pages 21, 22, 51: GFR 144(xi) Land Border & Source-Code Residency captured
+    3. Pages 122, 128: HiSilicon Camera Chipset Ban captured
+    4. Pages 105, 118: Legal Metrology Stamping & Rs. 5 Lakh Penalty captured
+    """
+    import pypdfium2 as pdfium
+
+    pdf = pdfium.PdfDocument(
+        "data/procurement-evidence/01_Tender_Documents/10_NHAI_Outer_Ring_Exp_1850Cr_NIT.pdf"
+    )
+
+    # 1. Page 18: JV Suppression
+    p18 = pdf[17].get_textpage().get_text_range()
+    items_p18 = default_tender_extractor(
+        "", f'<untrusted_document_data document_id="d" page="18">{p18}</untrusted_document_data>'
+    )
+    jv_items = [i for i in items_p18 if "joint venture" in i.title.lower()]
+    assert len(jv_items) == 0, f"Emitted positive JV candidate on prohibited Page 18: {jv_items}"
+
+    # 2. Pages 21, 22, 51: GFR 144(xi)
+    for p in [21, 22, 51]:
+        p_text = pdf[p - 1].get_textpage().get_text_range()
+        items = default_tender_extractor(
+            "",
+            f'<untrusted_document_data document_id="d" page="{p}">{p_text}</untrusted_document_data>',
+        )
+        gfr_items = [
+            i
+            for i in items
+            if "gfr rule 144(xi)" in i.title.lower() or "land border" in i.title.lower()
+        ]
+        assert len(gfr_items) >= 1, f"Missing GFR 144(xi) candidate on Page {p}"
+        assert gfr_items[0].category == "STATUTORY"
+        assert (
+            "land border" in gfr_items[0].provenance.verbatim_quote.lower()
+            or "144 (xi)" in gfr_items[0].provenance.verbatim_quote.lower()
+        )
+
+    # 3. Pages 122, 128: HiSilicon Camera Chipset Ban
+    for p in [122, 128]:
+        p_text = pdf[p - 1].get_textpage().get_text_range()
+        items = default_tender_extractor(
+            "",
+            f'<untrusted_document_data document_id="d" page="{p}">{p_text}</untrusted_document_data>',
+        )
+        hisi_items = [i for i in items if "hisilicon" in i.title.lower()]
+        assert len(hisi_items) >= 1, f"Missing HiSilicon ban candidate on Page {p}"
+        assert hisi_items[0].category == "TECHNICAL"
+        assert "hisilicon" in hisi_items[0].provenance.verbatim_quote.lower()
+
+    # 4. Pages 105, 118: Legal Metrology Stamping & Rs. 5 Lakh Penalty
+    for p in [105, 118]:
+        p_text = pdf[p - 1].get_textpage().get_text_range()
+        items = default_tender_extractor(
+            "",
+            f'<untrusted_document_data document_id="d" page="{p}">{p_text}</untrusted_document_data>',
+        )
+        lm_items = [
+            i
+            for i in items
+            if "legal metrology" in i.title.lower() or "stamping" in i.title.lower()
+        ]
+        assert len(lm_items) >= 1, f"Missing Legal Metrology candidate on Page {p}"
+        assert lm_items[0].category == "STATUTORY"
+        if p == 118:
+            assert (
+                "5,00,000" in lm_items[0].provenance.verbatim_quote
+                or "5.00 Lakh" in lm_items[0].description
+            )
+
+
 @pytest.mark.asyncio
 async def test_real_document_nhai_nit_extraction():
-    """Integration test verifying extraction on real NHAI tender documents."""
+    """Integration test verifying extraction on real NHAI tender documents across B1-B30 benchmark obligations."""
     sec_ctx = SecurityContext(
         tenant_id="org_test",
         user_id="usr_1",
         workflow_run_id="run_nhai_eval",
-        allowed_document_ids=["doc_1", "doc_2"],
+        allowed_document_ids=["doc_1", "doc_2", "doc_10"],
         allowed_source_ids=["src_1"],
         purpose="COMPLIANCE_EXTRACTION",
     )
@@ -326,7 +422,7 @@ async def test_real_document_nhai_nit_extraction():
         llm_client=StructuredLLMClient(enable_live_client=False)
     )
 
-    # 1. Verify 02_NHAI_Greenfield_Exp_1450Cr_NIT.pdf
+    # 1. Verify 02_NHAI_Greenfield_Exp_1450Cr_NIT.pdf (Benchmark B1-B30)
     pages2 = await resolve_pdf_to_pages(
         "data/procurement-evidence/01_Tender_Documents/02_NHAI_Greenfield_Exp_1450Cr_NIT.pdf",
         "doc_2",
@@ -341,7 +437,67 @@ async def test_real_document_nhai_nit_extraction():
             pages=pages2,
         )
     )
-    assert len(res2.items) >= 10
+    assert len(res2.items) >= 25, f"Expected >=25 items, got {len(res2.items)}"
+
+    # a. Canara Bank coordinates (0385201800065, CNRB0001624, Sector 10 Panchkula)
+    fee_item = next((i for i in res2.items if i["title"] == "RFP Document Fee Payment"), None)
+    assert fee_item is not None, "Missing RFP Document Fee Payment item"
+    fee_quote = fee_item["provenance"]["verbatimQuote"]
+    assert "0385201800065" in fee_quote, f"Missing Canara Bank Account No in quote: {fee_quote}"
+    assert "CNRB0001624" in fee_quote, f"Missing IFSC code in quote: {fee_quote}"
+    assert "Canara Bank" in fee_item["description"]
+    assert "Sector 10 Panchkula" in fee_item["description"]
+
+    # b. Rs. 5.0 Cr turnover threshold
+    turnover_item = next(
+        (
+            i
+            for i in res2.items
+            if "Turnover" in i["title"]
+            and "Matrix" not in i["title"]
+            and i["category"] in ("FINANCIAL", "TECHNICAL")
+        ),
+        None,
+    )
+    assert turnover_item is not None, "Missing Annual Turnover item"
+    assert "5" in turnover_item["description"] and "Crore" in turnover_item["description"]
+    assert (
+        "5" in turnover_item["provenance"]["verbatimQuote"]
+        and "Crore" in turnover_item["provenance"]["verbatimQuote"]
+    )
+
+    # c. 4-Tier Capacity Matrix
+    matrix_item = next(
+        (i for i in res2.items if "Capacity" in i["title"] or "Matrix" in i["title"]), None
+    )
+    assert matrix_item is not None, "Missing Technical Capacity Matrix item"
+    assert "Tier" in matrix_item["description"] or "Upto 10 Cr" in matrix_item["description"]
+    assert "10 staff" in matrix_item["description"]
+    assert "60 staff" in matrix_item["description"]
+
+    # d. Assert specific critical benchmark obligations are present
+    titles2 = [i["title"] for i in res2.items]
+    assert any("Drone" in t for t in titles2), "Missing B2: Bi-Annual Drone survey"
+    assert any("Monthly Progress Report" in t or "MPR" in t for t in titles2), (
+        "Missing B3: Monthly Progress Report"
+    )
+    assert any("Quality Assurance" in t for t in titles2), "Missing B4: QA Testing"
+    assert any("QCBS" in t for t in titles2), "Missing B6: QCBS 80:20 evaluation formula"
+    assert any("Ceiling" in t and "Joint Venture" in t for t in titles2), (
+        "Missing B8: JV ceiling max 2 partners"
+    )
+    assert any("Associate" in t and "Exclusivity" in t for t in titles2), (
+        "Missing B9: Equipment Associate exclusivity"
+    )
+    assert any("Associate" in t and "Personnel" in t for t in titles2), (
+        "Missing B10: Associate Key Personnel ceiling"
+    )
+    assert any("DPR" in t for t in titles2), "Missing B12: Past DPR experience"
+    assert any("Escalation" in t or "Multipliers" in t for t in titles2), (
+        "Missing B20: Escalation multipliers"
+    )
+    assert any("English Language" in t for t in titles2), "Missing B25: English language submission"
+
     for item in res2.items:
         clause = item["provenance"]["clauseReference"]
         quote = item["provenance"]["verbatimQuote"]
@@ -384,3 +540,44 @@ async def test_real_document_nhai_nit_extraction():
         assert "Pages 9" not in clause and "Page 9" not in clause, f"TOC page leaked: {clause}"
         assert "joint venture" not in title.lower(), f"JV emitted when prohibited: {title}"
         assert "Requirement extracted" not in quote, f"Synthetic quote fallback found: {quote}"
+
+    # 3. Verify 10_NHAI_Outer_Ring_Exp_1850Cr_NIT.pdf (Adversarial Robustness)
+    pages10 = await resolve_pdf_to_pages(
+        "data/procurement-evidence/01_Tender_Documents/10_NHAI_Outer_Ring_Exp_1850Cr_NIT.pdf",
+        "doc_10",
+        "10_NHAI.pdf",
+    )
+    res10 = await pipeline.execute(
+        DocumentExtractionRequest(
+            security_context=sec_ctx,
+            bid_id="bid_10",
+            document_id="doc_10",
+            file_name="10_NHAI.pdf",
+            pages=pages10,
+        )
+    )
+    # a. JV outright prohibition on Page 18 emits 0 positive JV items
+    assert not any(
+        "Joint Venture" in it["title"] and it["provenance"]["pageNumber"] == 18
+        for it in res10.items
+    ), "Emitted positive Joint Venture item on Page 18 where JV is explicitly prohibited!"
+
+    # b. GFR 144(xi) land border & source code residency is extracted
+    gfr_item = next(
+        (it for it in res10.items if "144(xi)" in it["title"] or "Land Border" in it["title"]),
+        None,
+    )
+    assert gfr_item is not None, "Missing GFR 144(xi) land border requirement on 10_NHAI"
+    assert "land border" in gfr_item["provenance"]["verbatimQuote"].lower()
+
+    # c. HiSilicon camera chipset ban is extracted
+    hisilicon_item = next((it for it in res10.items if "HiSilicon" in it["title"]), None)
+    assert hisilicon_item is not None, "Missing HiSilicon camera chipset ban on 10_NHAI"
+    assert "hisilicon" in hisilicon_item["provenance"]["verbatimQuote"].lower()
+
+    # d. Legal Metrology stamping validity & penalty is extracted
+    metrology_item = next(
+        (it for it in res10.items if "Metrology" in it["title"] or "Stamping" in it["title"]), None
+    )
+    assert metrology_item is not None, "Missing Legal Metrology stamping penalty on 10_NHAI"
+    assert "5,00,000" in metrology_item["provenance"]["verbatimQuote"]

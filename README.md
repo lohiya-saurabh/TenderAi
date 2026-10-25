@@ -104,7 +104,7 @@ TenderPulse is architected around a **Two-Tier Distributed Service Boundary** wi
 |---|---|
 | **Frontend** | React 18, TypeScript, Vite, Tailwind CSS, Radix UI Primitives, Lucide Icons, TanStack Table |
 | **Backend API** | NestJS 10, Node.js 20+, TypeScript, Drizzle ORM, PGlite (Embedded) / PostgreSQL 15+ |
-| **AI & Orchestration** | Python 3.11, FastAPI, LangGraph, LangChain, Pydantic v2, PyMuPDF |
+| **AI & Orchestration** | Python 3.11+, FastAPI, LangGraph, Pydantic v2, Docling Parser Engine, 3-Tier Structural RAG |
 | **Storage & Cloud** | AWS S3 / Google Cloud Storage (Presigned URLs), AWS SQS / GCP Cloud Pub/Sub |
 | **Architecture Patterns** | Domain-Driven Design (DDD), Ports & Adapters (Hexagonal), Transactional Outbox, CQRS |
 | **Quality & Tooling** | Vitest, Pytest, Playwright (E2E), ESLint, Prettier, Docker & Docker Compose |
@@ -117,13 +117,13 @@ TenderPulse is architected around a **Two-Tier Distributed Service Boundary** wi
 .
 ├── apps/
 │   ├── api/             # NestJS enterprise backend (Auth, Bids, Documents, Compliance)
-│   ├── ai/              # FastAPI Python service (LangGraph state machines, PDF parsers)
+│   ├── ai/              # FastAPI Python service (LangGraph 12-node workflow, Docling, RAG)
 │   └── web/             # React 18 Single-Page Application (Procurement dashboard & tables)
 ├── packages/
 │   ├── shared-types/    # Domain DTOs, interfaces, and cross-boundary type definitions
 │   └── ui/              # Reusable React component library & design tokens
-├── docs/                # Comprehensive technical documentation & 22 Architectural Decision Records
-│   ├── adr/             # Architecture Decision Records (0001 - 0022)
+├── docs/                # Comprehensive technical documentation & 28 Architectural Decision Records
+│   ├── adr/             # Architecture Decision Records (0001 - 0028)
 │   ├── ARCHITECTURE.md  # Detailed system architecture and service boundaries
 │   ├── DATABASE.md      # Relational schema, Drizzle definitions, and indexing strategies
 │   └── SECURITY_MODEL.md# Multi-tenant isolation and security controls

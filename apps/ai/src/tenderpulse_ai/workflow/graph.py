@@ -16,6 +16,7 @@ from tenderpulse_ai.workflow.nodes import (
     make_postgres_store_node,
     make_rescue_pass_node,
     make_targeted_refine_node,
+    make_uncertainty_verification_node,
     make_validation_node,
 )
 from tenderpulse_ai.workflow.state import ComplianceWorkflowState
@@ -65,6 +66,7 @@ def build_compliance_workflow_graph(
     workflow.add_node("llm_extraction", make_llm_extraction_node(ctx))
     workflow.add_node("rescue_pass", make_rescue_pass_node(ctx))
     workflow.add_node("validation", make_validation_node(ctx))
+    workflow.add_node("uncertainty_verification", make_uncertainty_verification_node(ctx))
     workflow.add_node("confidence_routing", make_confidence_routing_node(ctx))
     workflow.add_node("targeted_refine", make_targeted_refine_node(ctx))
     workflow.add_node("escalate_human_review", make_escalate_human_review_node(ctx))
@@ -79,7 +81,8 @@ def build_compliance_workflow_graph(
     workflow.add_edge("context_assembly", "llm_extraction")
     workflow.add_edge("llm_extraction", "rescue_pass")
     workflow.add_edge("rescue_pass", "validation")
-    workflow.add_edge("validation", "confidence_routing")
+    workflow.add_edge("validation", "uncertainty_verification")
+    workflow.add_edge("uncertainty_verification", "confidence_routing")
 
     # 3. Add Conditional Routing Edge
     workflow.add_conditional_edges(

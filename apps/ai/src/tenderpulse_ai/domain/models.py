@@ -33,6 +33,7 @@ class ProvenanceProps(BaseModel):
     source_file_name: str = Field(default="NIT_Document.pdf")
     page_number: int = Field(default=1, ge=1)
     clause_reference: str = Field(default="Clause Reference")
+    source_block_id: str | None = Field(default=None)
     verbatim_quote: str = Field(
         default="",
         description="Verbatim quote from source text for grounding",
@@ -108,6 +109,7 @@ class VerifiedComplianceItem(BaseModel):
                 "sourceFileName": self.provenance.source_file_name,
                 "pageNumber": self.provenance.page_number,
                 "clauseReference": self.provenance.clause_reference,
+                "sourceBlockId": self.provenance.source_block_id,
                 "verbatimQuote": self.provenance.verbatim_quote,
                 "confidenceScore": self.provenance.confidence_score,
             },
@@ -137,6 +139,7 @@ class DoclingBlock(BaseModel):
     text: str = Field(..., min_length=1)
     page_number: int = Field(default=1, ge=1)
     bbox: list[float] | None = Field(default=None)
+    is_deleted: bool = Field(default=False)
 
 
 class DoclingTable(BaseModel):
@@ -145,6 +148,7 @@ class DoclingTable(BaseModel):
     headers: list[str] = Field(default_factory=list)
     rows: list[list[str]] = Field(default_factory=list)
     caption: str | None = Field(default=None)
+    row_key_map: dict[str, str] = Field(default_factory=dict)
 
     def to_markdown(self) -> str:
         """Serializes the table into a standard GitHub-flavored Markdown table string."""
@@ -233,6 +237,7 @@ class AssembledClauseContext(BaseModel):
     relevant_definitions: dict[str, str] = Field(default_factory=dict)
     referenced_clauses: list[str] = Field(default_factory=list)
     page_number: int = 1
+    hydrated_context: str | None = None
 
 
 class NodeValidationCheck(BaseModel):

@@ -67,11 +67,11 @@ flowchart TD
         DISPATCH_ACK["FastAPI Async Dispatcher\n(Spawns Background Task & ACKs < 20ms)"]
 
         subgraph Pipeline ["Production Extraction Pipeline"]
-            DOCLING["Docling Parser Engine\n(Layout AST & Multimodal Tables)"]
+            DOCLING["Docling Parser Engine\n(Layout AST, Spatial Tables & Furniture Stripping)"]
             AST_BUILDER["DocumentStructureBuilder\n(PART > SECTION > CLAUSE Tree)"]
             CANDIDATE["CandidateDetector\n(20+ Categories & Context Fusion)"]
-            GRAPH["LangGraph 11-Node State Machine\n(Tier 1 Primary + Tier 2 Rescue Pass)"]
-            VALIDATOR["DeterministicValidator\n(Pure Python Exact-Substring Grounding)"]
+            GRAPH["LangGraph 12-Node Pipeline\n(Rescue Pass & Uncertainty Verification)"]
+            VALIDATOR["DeterministicValidator\n(Verbatim Substring & AST Grounding)"]
             EGRESS_GUARD["Network Egress Guard\n(Deny-by-default outbound traffic)"]
             DOCLING --> AST_BUILDER --> CANDIDATE --> GRAPH --> VALIDATOR
         end
@@ -79,8 +79,8 @@ flowchart TD
         PUB["CompletionPublisher\n(HttpCallback / SQS / PubSub)"]
     end
 
-    subgraph ExternalAITier ["7. Foundation Model Providers"]
-        BEDROCK["AWS Bedrock / Anthropic Claude 3.5 Sonnet\n(VPC PrivateLink / ap-south-1 Mumbai / DPDP 2023)"]
+    subgraph ExternalAITier ["7. Foundation Model Providers & Gateway"]
+        GATEWAY["Multi-Model Resilient LLM Gateway\n(OpenRouter / Gemini / Groq / Cerebras / SambaNova / Bedrock)\nBounded Concurrency: Semaphore(2)"]
     end
 
     subgraph DatabaseTier ["8. Transactional Persistence & Caching"]
@@ -111,7 +111,7 @@ flowchart TD
     WORKER_EP --> DISPATCH_ACK
     DISPATCH_ACK -->|10. Async Background Task| Pipeline
     Pipeline -->|11. Fetch PDF via Presigned Get| STORAGE
-    Pipeline -->|12. Guarded Model Call via PrivateLink| BEDROCK
+    Pipeline -->|12. Guarded Model Call via Gateway| GATEWAY
     GRAPH -->|13. Produce Verified Items| PUB
 
     %% Event Choreography & Single-Writer Persistence
@@ -208,10 +208,11 @@ The document extraction and compliance generation workflow is engineered as an *
    - The background worker executes the `ProductionExtractionPipeline`:
      - **Hoisted Document Precomputation**: Parses the complete document AST once (`DoclingParserEngine`), builds `DocumentStructureTree` (`DocumentStructureBuilder`), and runs `CandidateDetector` and `ContextAssembler` at the document level. This eliminates redundant $O(N^2)$ PDF re-parsing during parallel page processing.
      - **High-Recall Candidate Scoring & Context Fusion (ADR 0028)**: Fuses physical `DoclingBlock` text with semantic `SectionNode` lineage paths across 20+ procurement categories. Normalized priority scoring ($0.0 - 1.0$) separates passages into Tier-1 `PRIMARY` candidates and Tier-2 `unselected` passages while stripping cross-page repeating boilerplate ($\ge 3$ pages).
-     - **LangGraph 11-Node Extraction Graph**:
-       - Extracts structured items from Tier-1 candidates.
+     - **LangGraph 12-Node Extraction Pipeline**:
+       - Extracts structured items from Tier-1 candidates (`llm_extraction`).
        - Runs Node 5B (`rescue_pass`) to sweep Tier-2 unselected passages in compact batches to catch un-keyworded or split clauses.
        - Executes pure Python exact-substring grounding against raw page text (`DeterministicValidator`).
+       - Runs Node 6B (`uncertainty_verification`) to detect intra-document clause contradictions (e.g. 3% vs 10% PBG) and apply the tender's Order of Precedence.
        - Refined confidence routing: loops to `targeted_refine` strictly when `len(unverified) > 0 and retry < 2`; routes directly to human review when verification is complete without wasting LLM calls.
 5. **Event Publication & Single-Writer Persistence**:
    - Upon pipeline completion, the worker publishes a `DocumentExtractionCompletedEvent` via `CompletionPublisher`:
@@ -250,20 +251,37 @@ Both AWS and GCP adapters provide feature parity: heartbeat visibility extension
 
 TenderPulse AI integrates with external foundation models through strict software boundaries:
 
-1. **Foundation Model Provider (AWS Bedrock)**:
-   - Utilizes Anthropic Claude 3.5 Sonnet hosted in `ap-south-1` (Mumbai) for enterprise compliance with Indian data sovereignty (DPDP Act 2023).
-   - Zero Data Retention: Model inputs and outputs are not retained or used for foundation model training.
-   - Accessed privately via AWS VPC PrivateLink endpoints with zero traversal over the public internet.
+1. **Multi-Model LLM Gateway & Cloud Foundation Models**:
+   - **Multi-Provider Rotation Pool**: Implemented in `apps/ai/src/tenderpulse_ai/infrastructure/llm/openai_compatible_client.py`, supporting OpenRouter, Google Gemini (`gemini-2.5-flash`), Groq (`llama-3.3-70b-versatile`), Cerebras (`llama3.1-70b`), and SambaNova (`Meta-Llama-3.3-70B-Instruct`).
+   - **Resilient Multi-Model Failover**: HTTP 404 marks model permanently unavailable (`float("inf")`), HTTP 429 sets a 60-second cooldown, HTTP 402 with in-flight limits backs off and retries, and HTTP 401/403 trips the circuit breaker.
+   - **Bounded Concurrency**: Enforces `asyncio.Semaphore(2)` on parallel page extraction to avoid provider credit cap exhaustion.
+   - **Deterministic Fallback on Zero Items**: When a live model returns 0 items, the pipeline automatically falls back to deterministic extraction rules to prevent silent data loss.
+   - **Enterprise Sovereign Cloud Adapters**: Direct adapter integration with AWS Bedrock (Claude 3.5 Sonnet / Llama 3.3 in `ap-south-1` Mumbai) and GCP Vertex AI with Zero Data Retention (ZDR).
 2. **Structured Output (Constrained Decoding)**:
-   - LLMs generate structured JSON matching strict Pydantic schemas (`CandidateComplianceItem`, `ExecutionRulesProps`, `ProvenanceProps`).
-   - Free-form natural language completions are rejected.
-3. **Docling Parser Engine**:
-   - Hybrid PDF processing combining PyMuPDF text extraction with Docling layout analysis.
-   - Preserves tables, bulleted lists, hierarchical clause structures, and page coordinates.
-4. **Network Egress Guard**:
-   - Python `NetworkEgressGuard` enforces a deny-by-default policy on all outbound connections.
-   - Models and workers are physically blocked from reaching arbitrary internet URLs, eliminating server-side request forgery (SSRF) and data exfiltration.
-5. **Secret Sanitizer & Prompt Injection Neutralizer**:
+   - LLMs generate structured JSON matching strict Pydantic schemas (`CandidateComplianceItem`, `ExecutionRulesProps`, `ProvenanceProps`). Free-form completions are rejected.
+3. **Docling Parser Engine & Upfront Preprocessing**:
+   - Layout analysis via `DoclingParserEngine` (`domain/docling_parser.py`) preserving complex tabular layouts and section hierarchies.
+   - **Running Furniture Stripping**: `RUNNING_FURNITURE_PATTERN` purges repetitive headers, footers, and page-edge watermarks before line coalescing.
+   - **Deleted-Clause Sanitizer**: `DELETED_CLAUSE_PATTERN` detects clauses ending in `- Deleted`, `- DELETED.`, or `Omitted`, setting `is_deleted = True` to prevent false-positive extractions.
+   - **Paragraph Coalescing & Spatial Tables**: Reconstructs broken lines and whitespace-aligned columns (`\s{2,}`) into structured Markdown tables.
+   - **Guarded Legal AST Pattern**: Detects operative clauses using `GUARDED_CLAUSE_PATTERN` requiring explicit divisional keywords while rejecting chainages (`Km. 87.000`) and dates (`22.01.2026`).
+4. **Two-Layer Memory: OKF Compiler + 3-Tier Structural RAG**:
+   - **Open Knowledge Format (OKF)**: Native OKF representations for company evidence and statutory playbooks. `okf_compiler.py` compiles compliance clauses into linked concept nodes with YAML frontmatter, metrics, and cross-references.
+   - **3-Tier Structural RAG**: Connects `TenderChunker` parent-child chunk expansion with hybrid dense (`pgvector`) + sparse (`tsvector`) search and Reciprocal Rank Fusion (RRF) for ad-hoc Chatbot Copilot queries.
+5. **Modular Submodule Architecture (`tenderpulse_ai/extraction/`)**:
+   - `contracts.py`: Normalized page and request/response DTOs.
+   - `parsing.py`: Docling interface, furniture stripping, and deleted clause filters.
+   - `metrics.py`: Temporal durations, percentages, and normalized INR amounts.
+   - `clause_references.py`: Guarded clause references, TOC filtering, and `CrossReferenceResolver`.
+   - `quote_resolver.py`: Sentence-bounded verbatim clause extraction (`extract_complete_clause_window`, max 650 chars).
+   - `deduplication.py`: Cross-page consolidation, quote overlap merging, and contradiction detection.
+   - `okf_compiler.py`: Concept node compilation.
+   - `rules/`: Domain rules across 7 categories (`financial`, `technical`, `legal`, `statutory`, `execution`, `operational`, `commercial`).
+   - `orchestrator.py`: `ProductionExtractionPipeline` orchestrating LangGraph execution.
+   - `pipeline.py`: Backward-compatible facade (<150 lines) re-exporting symbols for 100% backward compatibility.
+6. **Network Egress Guard**:
+   - Python `NetworkEgressGuard` enforces a deny-by-default policy on all outbound connections, preventing SSRF and data exfiltration.
+7. **Secret Sanitizer & Prompt Injection Neutralizer**:
    - Scrubbing regex filters strip AWS credentials, database URLs, JWTs, and Indian PII (PAN, GSTIN, Aadhaar) before text reaches prompts or logs.
    - Document text is isolated inside `<untrusted_document_content>` tags, neutralizing indirect prompt injection attacks.
 

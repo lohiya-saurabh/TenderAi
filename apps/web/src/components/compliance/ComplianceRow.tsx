@@ -61,7 +61,7 @@ export const ComplianceRow: React.FC<ComplianceRowProps> = ({
     >
       {/* Main 7-Column Row */}
       <div
-        className="grid grid-cols-[30%_11%_8%_18%_13%_10%_10%] gap-3 px-5 py-3.5 items-center cursor-pointer select-none"
+        className="grid grid-cols-[minmax(270px,3.2fr)_minmax(100px,1.1fr)_minmax(80px,0.9fr)_minmax(170px,1.8fr)_minmax(120px,1.2fr)_minmax(95px,1fr)_minmax(85px,0.9fr)] gap-3 px-5 py-3.5 items-center cursor-pointer select-none"
         onClick={() => onToggleExpand(item.id)}
       >
         {/* 1. Requirement */}
@@ -173,7 +173,7 @@ export const ComplianceRow: React.FC<ComplianceRowProps> = ({
 
       {/* Expanded Detail Panel — Answers the 4 Core Questions */}
       {isExpanded && (
-        <div className="px-5 py-5 border-t border-border/80 bg-background/60 flex flex-col gap-4">
+        <div className="px-5 py-5 border-t border-border/80 bg-background/60 flex flex-col gap-4 sticky left-0 max-w-full">
           {/* Dual-Sided Evidence Traceability Chain */}
           <EvidenceTraceabilityChain
             item={item}

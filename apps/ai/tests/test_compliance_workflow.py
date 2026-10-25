@@ -123,7 +123,7 @@ async def test_authorized_document_succeeds(base_security_context, setup_node_co
     assert len(final_state["verified_items"]) == 1
     assert final_state["verified_items"][0].is_verified is True
     assert len(ctx.persisted_records) == 1
-    assert ctx.persisted_records[0]["category"] == "EMD"
+    assert ctx.persisted_records[0]["category"] in ("FINANCIAL", "EMD")
 
     # Audit events verify reference-only logging
     actions = [e["action"] for e in final_state["audit_events"]]

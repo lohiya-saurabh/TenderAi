@@ -6,7 +6,6 @@ import sys
 from contextlib import asynccontextmanager
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import ClassVar
 
 from fastapi import Depends, FastAPI, Header, HTTPException, status
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
@@ -205,14 +204,6 @@ class QueueProcessingResponse(BaseModel):
 class StorageDocumentResolver:
     """Resolve queued documents from their storage reference when pages are absent."""
 
-    _known_documents: ClassVar[dict[str, str]] = {
-        "tenants/org_worker_1/bids/bid_fetch_1/doc_fetch_1/NIT.pdf": (
-            "The bidder must submit an Earnest Money Deposit (EMD) of INR 5,00,000 on a 100 Rupee stamp paper. "
-            "All bids must be signed by the authorized signatory and submitted before the tender closing time. "
-            "The tender document requires ID proof and compliance with all instructions to bidders."
-        ),
-    }
-
     @classmethod
     def resolve_pages(
         cls,
@@ -225,10 +216,6 @@ class StorageDocumentResolver:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Queue message must include a storage_reference when document pages are absent.",
             )
-
-        blob_text = cls._known_documents.get(storage_reference)
-        if blob_text is not None:
-            return [NormalizedPage(page_number=1, text=blob_text)]
 
         candidate_path = Path(storage_reference)
         if not candidate_path.is_file():

@@ -595,6 +595,55 @@ def tool_calling_node(state: ChatWorkflowState) -> dict[str, Any]:
 
     tool_calls: list[ToolCallDto] = []
     retrieved_evidence: list[dict[str, Any]] = []
+
+    # Check for compiled OKF tender concept graph before search
+    if bid_id:
+        from tenderpulse_ai.chat.okf_registry import get_tender_okf
+
+        okf_bundle = get_tender_okf(bid_id)
+        if okf_bundle and getattr(okf_bundle, "nodes", None):
+            q_lower = query.lower()
+            q_tokens = [w.lower() for w in re.findall(r"\w+", query) if len(w) > 2]
+            scored_nodes: list[tuple[float, dict[str, Any]]] = []
+            for node in okf_bundle.nodes.values():
+                node_dict = (
+                    node.model_dump()
+                    if hasattr(node, "model_dump")
+                    else (node if isinstance(node, dict) else vars(node))
+                )
+                searchable_text = (
+                    f"{node_dict.get('title', '')} {node_dict.get('category', '')} "
+                    f"{node_dict.get('description', '')} {node_dict.get('verbatim_quote', '')} "
+                    f"{node_dict.get('canonical_ref_id', '')}"
+                ).lower()
+
+                score = sum(1.0 for token in q_tokens if token in searchable_text)
+                if "pbg" in q_lower and (
+                    "performance" in searchable_text
+                    or "pbg" in searchable_text
+                    or "guarantee" in searchable_text
+                ):
+                    score += 5.0
+                if "emd" in q_lower and (
+                    "earnest" in searchable_text
+                    or "emd" in searchable_text
+                    or "deposit" in searchable_text
+                ):
+                    score += 5.0
+
+                if score > 0:
+                    scored_nodes.append((score, node_dict))
+
+            scored_nodes.sort(key=lambda x: x[0], reverse=True)
+            for score, nd in scored_nodes[:3]:
+                retrieved_evidence.append(
+                    {
+                        "type": "OKF_CONCEPT",
+                        "score": score,
+                        "data": nd,
+                    }
+                )
+
     for call, ev_list in results:
         tool_calls.append(call)
         retrieved_evidence.extend(ev_list)
@@ -685,6 +734,24 @@ def citation_generation_node(state: ChatWorkflowState) -> dict[str, Any]:
                         verbatim_quote=quote,
                         confidence_score=0.98,
                         bounding_box=data.get("boundingBox"),
+                    )
+                )
+        elif ev_type == "OKF_CONCEPT":
+            prov = data.get("provenance") or {}
+            quote = (data.get("verbatim_quote") or data.get("description") or "").strip()
+            if quote and quote not in seen_quotes:
+                seen_quotes.add(quote)
+                citations.append(
+                    CitationDto(
+                        citation_id=f"cit-okf-{counter}",
+                        source_type=CitationSourceType.TENDER_DOCUMENT,
+                        document_id=prov.get("sourceDocumentId", "doc-tender"),
+                        document_name=prov.get("sourceFileName", "Tender_Document.pdf"),
+                        page_number=int(prov.get("pageNumber", 1)),
+                        clause_reference=prov.get("clauseReference"),
+                        verbatim_quote=quote,
+                        confidence_score=float(prov.get("confidenceScore", 0.99)),
+                        bounding_box=prov.get("boundingBox"),
                     )
                 )
                 counter += 1
@@ -842,12 +909,23 @@ def _build_financial_summary(state: ChatWorkflowState) -> FinancialSummaryCardDt
 
 def _synthesize_deterministic_template(
     state: ChatWorkflowState,
-    citations: list[CitationDto],
-    uncertainties: list[dict[str, Any]],
-    intent: str,
-    query: str,
-    sec_ctx: SecurityContext | None,
+    citations: list[CitationDto] | None = None,
+    uncertainties: list[dict[str, Any]] | None = None,
+    intent: str | None = None,
+    query: str | None = None,
+    sec_ctx: SecurityContext | None = None,
 ) -> tuple[str, FinancialSummaryCardDto | None, list[str], list[CitationDto]]:
+    if citations is None:
+        citations = list(state.get("citations", []))
+    if uncertainties is None:
+        uncertainties = list(state.get("uncertainties", []))
+    if intent is None:
+        intent = state.get("routed_intent") or "GENERAL"
+    if query is None:
+        query = state.get("query", "")
+    if sec_ctx is None:
+        sec_ctx = state.get("security_context")
+
     raw_tokens = [w.lower() for w in re.findall(r"\w+", query) if len(w) > 2]
     substantive_kws = [
         k
@@ -874,6 +952,28 @@ def _synthesize_deterministic_template(
     financial_summary: FinancialSummaryCardDto | None = None
     suggested_followups: list[str] = []
     matching_gst_doc: dict[str, Any] | None = None
+
+    okf_evidence = [
+        e["data"] for e in state.get("retrieved_evidence", []) if e.get("type") == "OKF_CONCEPT"
+    ]
+    if okf_evidence and intent not in ("GREETING", "STATUTORY_CREDENTIALS"):
+        lines.append("### Verified Tender Knowledge Graph (OKF) & Grounded Response")
+        lines.append("Based on the compiled Open Knowledge Format (OKF) tender concept graph:")
+        for node in okf_evidence:
+            cat = node.get("category", "TENDER")
+            title = node.get("title", "Requirement")
+            desc = node.get("description", "")
+            quote = node.get("verbatim_quote", "")
+            lines.append(f"\n- **{cat}: {title}**")
+            if desc:
+                lines.append(f"  {desc}")
+            if quote:
+                lines.append(f'  > "{quote}"')
+        suggested_followups = [
+            "Are there any conflicting clauses or addenda for these requirements?",
+            "What company evidence is required to satisfy these criteria?",
+        ]
+        return "\n".join(lines), None, suggested_followups, citations
 
     # Greeting Synthesis
     if intent == "GREETING":
@@ -1201,9 +1301,24 @@ def _synthesize_deterministic_template(
             lines.append("Here is the status of key statutory and tender execution rules [^1]:")
             for idx, item in enumerate(comp_items[:4]):
                 flag = " ⚠️ Flagged" if item.get("flagged") else " ✅ Clear"
-                lines.append(
-                    f"- **{item.get('category', 'Statutory')}**: {item.get('requirement', item.get('title', 'Requirement'))} — *Status: {item.get('status', 'PENDING')}*{flag}"
-                )
+                category = item.get("category", "Statutory")
+                req_title = item.get("requirement", item.get("title", "Requirement"))
+                status = item.get("status", "PENDING")
+                lines.append(f"- **{category}**: {req_title} — *Status: {status}*{flag}")
+
+                exec_rules = item.get("executionRules") or item.get("execution_rules") or {}
+                rule_details: list[str] = []
+                if exec_rules.get("stampPaperRequired"):
+                    denom = exec_rules.get("stampPaperDenominationInr")
+                    denom_str = f" (INR {denom})" if denom else ""
+                    rule_details.append(f"Stamp Paper Required{denom_str}")
+                if exec_rules.get("notarizationRequired"):
+                    rule_details.append("Notarized Affidavit Required")
+                if exec_rules.get("signingAuthorityRank"):
+                    rule_details.append(f"Signatory: {exec_rules.get('signingAuthorityRank')}")
+
+                if rule_details:
+                    lines.append(f"  - **Execution Mandates:** {', '.join(rule_details)}")
 
             suggested_followups = [
                 "What are the liquidated damages penalties in this contract?",

@@ -145,7 +145,7 @@ export const SourceCitationDrawer: React.FC<SourceCitationDrawerProps> = ({
               {sectionName}
             </span>
 
-            {provenance.documentId && (
+            {provenance?.documentId && (
               <>
                 <span style={{ color: 'var(--color-surface-muted)' }}>Doc Reference ID:</span>
                 <span

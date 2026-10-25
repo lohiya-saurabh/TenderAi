@@ -54,3 +54,5 @@ class ComplianceWorkflowState(TypedDict, total=False):
     status: str
     human_review_required: bool
     audit_events: Annotated[list[dict[str, Any]], operator.add]
+    flagged_contradictions: Annotated[list[dict[str, Any]], operator.add]
+    uncertainty_items: Annotated[list[dict[str, Any]], operator.add]

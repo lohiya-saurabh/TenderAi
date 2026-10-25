@@ -1,6 +1,7 @@
 import re
 from typing import ClassVar
 
+from tenderpulse_ai.domain.docling_parser import is_clause_deleted
 from tenderpulse_ai.domain.models import (
     CandidatePassage,
     DoclingParsedDocument,
@@ -167,6 +168,54 @@ CANDIDATE_DETECTION_RULES: list[tuple[re.Pattern, str]] = [
         ),
         "SHORT_INSTRUCTION",
     ),
+    # 20. Specialized Technical Surveys & Instruments (P0 for NHAI/MORTH)
+    (
+        re.compile(
+            r"\b(drone(?:\s+survey)?|aerial\s+survey|infracon|mort&h\s+specifications|nsv|network\s+survey\s+vehicle|fwd|falling\s+weight|mbiu|retro\s+reflectometer|atcc|automatic\s+traffic\s+counter)\b",
+            re.IGNORECASE,
+        ),
+        "SPECIALIZED_SURVEYS",
+    ),
+    # 21. Commercial QCBS Formulas & Price Indexation (P0)
+    (
+        re.compile(
+            r"\b(qcbs|quality\s+and\s+cost\s+based\s+selection|80\s*:\s*20|80%\s*&\s*20%|enhancement\s+factors?|escalation\s+factors?|sbi\s+bc\s+selling\s+rate|foreign\s+currency)\b",
+            re.IGNORECASE,
+        ),
+        "COMMERCIAL_EVALUATION",
+    ),
+    # 22. Hardware & Supply Chain Security Bans (P0)
+    (
+        re.compile(
+            r"\b(hisilicon|chipset|rule\s+144\s*\(xi\)|rule\s+144\(xi\)|land\s+border\s+with\s+india|source\s+code\s+of\s+the\s+software)\b",
+            re.IGNORECASE,
+        ),
+        "SUPPLY_CHAIN_SECURITY",
+    ),
+    # 23. Statutory Metrology & Measurement Compliance (P0)
+    (
+        re.compile(
+            r"\b(legal\s+metrology|validity\s+of\s+stamping|stamping/sealing|tampered\s+stamping|wim\s+system)\b",
+            re.IGNORECASE,
+        ),
+        "STATUTORY_METROLOGY",
+    ),
+    # 24. Technical Capacity Matrix & Work Quotas (P0)
+    (
+        re.compile(
+            r"\b(technical\s+capacity\s+provisions|maximum\s+no\.\s+of\s+dpr|ceiling\s+for\s+ie/ae|form\s+t-11|annex-b-13|form-26\s*as|form-26as)\b",
+            re.IGNORECASE,
+        ),
+        "CAPACITY_MATRIX",
+    ),
+    # 25. Submission Language & Operational Systems (P1)
+    (
+        re.compile(
+            r"\b(english\s+language|data\s+lake\s+portal|pmis\s+portal|wayside\s+amenities|etc\s+and\s+fee\s+plaza|atms)\b",
+            re.IGNORECASE,
+        ),
+        "OPERATIONAL_PLATFORMS",
+    ),
 ]
 
 RULES = CANDIDATE_DETECTION_RULES
@@ -241,6 +290,12 @@ class CandidateDetector:
             "DISPUTE_RESOLUTION": 0.70,
             "SAFETY_OPERATIONS": 0.70,
             "ESCROW_WATERFALL": 0.70,
+            "SPECIALIZED_SURVEYS": 0.85,
+            "COMMERCIAL_EVALUATION": 0.85,
+            "SUPPLY_CHAIN_SECURITY": 0.95,
+            "STATUTORY_METROLOGY": 0.90,
+            "CAPACITY_MATRIX": 0.90,
+            "OPERATIONAL_PLATFORMS": 0.75,
         }
         score = max((base_weights.get(r, 0.60) for r in matched_rules), default=0.50)
 
@@ -311,7 +366,17 @@ class CandidateDetector:
                 ("Unassigned", "Document", "Document"),
             )
 
+            # Suppress deleted blocks and blocks belonging to deleted parent sections
+            if (
+                getattr(block, "is_deleted", False)
+                or is_clause_deleted(text)
+                or is_clause_deleted(sec_title)
+                or is_clause_deleted(sec_path)
+            ):
+                continue
+
             # Context fusion: evaluate rules against the block text and combined section context
+
             combined_context = f"{sec_title} - {text}" if sec_title != "Document" else text
 
             matched_rules: list[str] = []

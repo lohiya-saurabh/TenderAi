@@ -392,3 +392,174 @@ async def test_openai_compatible_client_generate_chat_completion_handles_failure
         messages=[{"role": "user", "content": "Test fail"}]
     )
     assert result == ""
+
+
+@pytest.mark.asyncio
+async def test_openai_compatible_client_rotates_on_404_and_sets_inf_cooldown():
+    from tenderpulse_ai.infrastructure.llm.openai_compatible_client import _MODEL_COOLDOWNS
+
+    calls = []
+
+    def handler(request: httpx.Request):
+        body = json.loads(request.content)
+        model = body["model"]
+        calls.append(model)
+        if model == "first/deprecated-model":
+            return httpx.Response(404, json={"error": "Model not found"})
+        return httpx.Response(
+            200,
+            json={
+                "choices": [
+                    {
+                        "message": {
+                            "content": json.dumps(
+                                {
+                                    "candidates": [
+                                        {
+                                            "category": "FINANCIAL",
+                                            "title": "EMD",
+                                            "description": "EMD",
+                                            "execution_rules": {
+                                                "stamp_paper_required": False,
+                                                "notarization_required": False,
+                                                "udin_required": False,
+                                            },
+                                            "provenance": {
+                                                "page_number": 1,
+                                                "clause_reference": "1",
+                                                "verbatim_quote": "EMD quote",
+                                                "confidence_score": 0.9,
+                                            },
+                                        }
+                                    ]
+                                }
+                            )
+                        }
+                    }
+                ]
+            },
+        )
+
+    transport = httpx.MockTransport(handler)
+    mock_client = httpx.AsyncClient(transport=transport)
+    client = OpenAICompatibleLlmClient(
+        api_key="test-key",
+        model="first/deprecated-model",
+        client=mock_client,
+    )
+
+    items = await client.extract_compliance("sys", "user", max_retries=0)
+    assert len(items) == 1
+    assert _MODEL_COOLDOWNS["first/deprecated-model"] == float("inf")
+    assert len(calls) >= 2
+
+
+@pytest.mark.asyncio
+async def test_openai_compatible_client_rotates_on_429_and_sets_60s_cooldown():
+    import time
+
+    from tenderpulse_ai.infrastructure.llm.openai_compatible_client import _MODEL_COOLDOWNS
+
+    calls = []
+
+    def handler(request: httpx.Request):
+        body = json.loads(request.content)
+        model = body["model"]
+        calls.append(model)
+        if model == "primary/rate-limited":
+            return httpx.Response(429, json={"error": "Rate limited"})
+        return httpx.Response(
+            200,
+            json={
+                "choices": [
+                    {
+                        "message": {
+                            "content": json.dumps(
+                                {
+                                    "candidates": [
+                                        {
+                                            "category": "FINANCIAL",
+                                            "title": "EMD",
+                                            "description": "EMD",
+                                            "execution_rules": {
+                                                "stamp_paper_required": False,
+                                                "notarization_required": False,
+                                                "udin_required": False,
+                                            },
+                                            "provenance": {
+                                                "page_number": 1,
+                                                "clause_reference": "1",
+                                                "verbatim_quote": "EMD quote",
+                                                "confidence_score": 0.9,
+                                            },
+                                        }
+                                    ]
+                                }
+                            )
+                        }
+                    }
+                ]
+            },
+        )
+
+    transport = httpx.MockTransport(handler)
+    mock_client = httpx.AsyncClient(transport=transport)
+    client = OpenAICompatibleLlmClient(
+        api_key="test-key",
+        model="primary/rate-limited",
+        client=mock_client,
+    )
+
+    items = await client.extract_compliance("sys", "user", max_retries=0)
+    assert len(items) == 1
+    cooldown = _MODEL_COOLDOWNS["primary/rate-limited"]
+    assert cooldown > time.time()
+    assert cooldown <= time.time() + 65.0
+
+
+@pytest.mark.asyncio
+async def test_structured_llm_client_trips_circuit_breaker_on_401():
+    def auth_fail_handler(request: httpx.Request):
+        return httpx.Response(401, json={"error": "Unauthorized"})
+
+    transport = httpx.MockTransport(auth_fail_handler)
+    mock_client = httpx.AsyncClient(transport=transport)
+    live_client = OpenAICompatibleLlmClient(
+        api_key="bad-key",
+        client=mock_client,
+    )
+
+    fallback_called = False
+
+    def fallback_extractor(sys: str, user: str):
+        nonlocal fallback_called
+        fallback_called = True
+        return []
+
+    structured_client = StructuredLLMClient(
+        extractor_fn=fallback_extractor,
+        live_client=live_client,
+    )
+
+    assert structured_client._live_circuit_broken is False
+    await structured_client.extract_compliance("sys", "user", max_retries=0)
+    assert structured_client._live_circuit_broken is True
+    assert fallback_called is True
+
+
+def test_structured_llm_client_instantiates_live_client_when_api_key_present(monkeypatch):
+    from tenderpulse_ai.config import settings
+
+    monkeypatch.setattr(settings, "llm_api_key", "test-sk-key")
+
+    def dummy_extractor(sys: str, user: str):
+        return []
+
+    # Even with extractor_fn provided, live_client must be instantiated
+    client = StructuredLLMClient(extractor_fn=dummy_extractor)
+    assert client.live_client is not None
+    assert client.extractor_fn is dummy_extractor
+
+    # But enable_live_client=False suppresses it
+    disabled_client = StructuredLLMClient(extractor_fn=dummy_extractor, enable_live_client=False)
+    assert disabled_client.live_client is None

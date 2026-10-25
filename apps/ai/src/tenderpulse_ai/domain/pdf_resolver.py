@@ -230,6 +230,34 @@ PROCUREMENT_KEYWORDS: tuple[str, ...] = (
     "dispute resolution",
     "arbitration",
     "conciliation",
+    "hisilicon",
+    "chipset",
+    "camera",
+    "anpr",
+    "cctv",
+    "surveillance",
+    "legal metrology",
+    "metrology",
+    "stamping",
+    "land border",
+    "144(xi)",
+    "144 (xi)",
+    "source code",
+    "cybersecurity",
+)
+
+HIGH_STAKES_PROCUREMENT_KEYWORDS: tuple[str, ...] = (
+    "hisilicon",
+    "land border",
+    "144(xi)",
+    "144 (xi)",
+    "source code",
+    "legal metrology",
+    "metrology",
+    "stamping",
+    "debarment",
+    "blacklisting",
+    "integrity pact",
 )
 
 
@@ -277,7 +305,7 @@ def is_pure_toc_page(text: str) -> bool:
 
 def filter_candidate_pages(
     pages: list[NormalizedPage],
-    max_candidate_pages: int = 45,
+    max_candidate_pages: int = 50,
 ) -> list[NormalizedPage]:
     """Filters large multi-page documents to high-signal candidate pages.
 
@@ -297,6 +325,8 @@ def filter_candidate_pages(
             continue
         text_lower = p.text.lower()
         score = sum(1 for kw in PROCUREMENT_KEYWORDS if kw in text_lower)
+        if any(kw in text_lower for kw in HIGH_STAKES_PROCUREMENT_KEYWORDS):
+            score += 15
         if score > 0:
             scored_pages.append((score, p))
 

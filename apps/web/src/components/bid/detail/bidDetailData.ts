@@ -95,88 +95,491 @@ export function mapVerdict(
   }
 }
 
+/**
+ * Defensively cleans and unwraps nested, markdown-fenced, or stringified JSON strings.
+ */
+export function cleanStringAndUnwrapJson(val: unknown): unknown {
+  if (val === null || val === undefined) return null;
+  if (typeof val !== 'string') return val;
+
+  let str = val.trim();
+  if (!str) return '';
+
+  for (let iter = 0; iter < 5; iter++) {
+    // Strip markdown code fences (```json ... ``` or ``` ... ```)
+    const fenceMatch = str.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+    if (fenceMatch) {
+      str = (fenceMatch[1] ?? '').trim();
+    } else if (str.startsWith('```') && str.endsWith('```')) {
+      str = str.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+    } else if (str.startsWith('```')) {
+      str = str.replace(/^```(?:json)?\s*/i, '').trim();
+    }
+    if (!str) return '';
+
+    // Strip outer quotes if stringified JSON string
+    if (
+      (str.startsWith('"') && str.endsWith('"') && str.length >= 2) ||
+      (str.startsWith("'") && str.endsWith("'") && str.length >= 2)
+    ) {
+      try {
+        const unquoted = JSON.parse(str);
+        if (typeof unquoted === 'string') {
+          str = unquoted.trim();
+          continue;
+        }
+        if (typeof unquoted === 'object' && unquoted !== null) {
+          return unquoted;
+        }
+      } catch {
+        str = str.slice(1, -1).trim();
+      }
+    }
+
+    // Try repairing unclosed / truncated JSON object (e.g. trailing comma or missing closing brace)
+    if (str.startsWith('{') && !str.endsWith('}')) {
+      try {
+        const withoutTrailingCommas = str.replace(/,\s*$/, '').trim() + '}';
+        const parsed = JSON.parse(withoutTrailingCommas.replace(/,\s*([}\]])/g, '$1'));
+        if (typeof parsed === 'object' && parsed !== null) {
+          return parsed;
+        }
+      } catch {
+        // Continue
+      }
+    }
+
+    // Try parsing as JSON object or array
+    if ((str.startsWith('{') && str.endsWith('}')) || (str.startsWith('[') && str.endsWith(']'))) {
+      try {
+        return JSON.parse(str);
+      } catch {
+        try {
+          const withoutTrailingCommas = str.replace(/,\s*([}\]])/g, '$1');
+          return JSON.parse(withoutTrailingCommas);
+        } catch {
+          // Continue
+        }
+      }
+    }
+
+    // Check for string with colon prefix and embedded JSON object: e.g. "Notice: { ... }"
+    const colonJsonMatch = str.match(/^([^:{}\n]+)\s*:\s*(\{[\s\S]*\}|\[[\s\S]*\])$/);
+    if (colonJsonMatch && colonJsonMatch[2]) {
+      try {
+        const cleanedJson = colonJsonMatch[2].replace(/,\s*([}\]])/g, '$1');
+        const parsed = JSON.parse(cleanedJson);
+        if (typeof parsed === 'object' && parsed !== null) {
+          return parsed;
+        }
+      } catch {
+        // Continue
+      }
+    }
+
+    // Robust, general XML/HTML markup extraction
+    if (str.startsWith('<') && str.endsWith('>')) {
+      const stripInnerTags = (s: string) => s.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      const tagMap: Record<string, string> = {};
+      const tagRegex = /<([a-zA-Z0-9_-]+)(?:\s+[^>]*)?>([\s\S]*?)<\/\1>/gi;
+      let match: RegExpExecArray | null;
+      while ((match = tagRegex.exec(str)) !== null) {
+        const tagName = match[1]?.toLowerCase();
+        const innerContent = match[2] ?? '';
+        if (!tagName) continue;
+        if (/<[a-zA-Z0-9_-]+/i.test(innerContent)) {
+          const innerRegex = /<([a-zA-Z0-9_-]+)(?:\s+[^>]*)?>([\s\S]*?)<\/\1>/gi;
+          let innerMatch: RegExpExecArray | null;
+          while ((innerMatch = innerRegex.exec(innerContent)) !== null) {
+            const innerTagName = innerMatch[1]?.toLowerCase();
+            const innerText = innerMatch[2] ?? '';
+            if (innerTagName) {
+              tagMap[innerTagName] = stripInnerTags(innerText);
+            }
+          }
+        } else {
+          tagMap[tagName] = stripInnerTags(innerContent);
+        }
+      }
+      const extractedTitle =
+        tagMap.title || tagMap.requirement_title || tagMap.requirementtitle || tagMap.name;
+      const extractedReason =
+        tagMap.reason || tagMap.detail || tagMap.description || tagMap.summary || tagMap.message;
+      if (extractedTitle || extractedReason) {
+        return {
+          title: extractedTitle || 'Disqualification Risk',
+          reason: extractedReason || 'Disqualification criteria not met.',
+          shortfallDetail: tagMap.shortfall || tagMap.shortfall_detail || undefined,
+          clauseReference: tagMap.clause || tagMap.clause_reference || undefined,
+        };
+      }
+      const cleanContent = stripInnerTags(str);
+      if (cleanContent) {
+        return cleanContent;
+      }
+    }
+
+    break;
+  }
+
+  return str;
+}
+
+/**
+ * Safely extracts human-readable text from any value (string, object, array).
+ * Guarantees zero raw JSON stringification (no `{"` or `":`) and zero `[object Object]`.
+ */
+export function extractCleanText(val: unknown): string {
+  if (val === null || val === undefined) return '';
+
+  const unwrapped = cleanStringAndUnwrapJson(val);
+  if (unwrapped === null || unwrapped === undefined) return '';
+
+  if (typeof unwrapped === 'string') {
+    let trimmed = unwrapped.trim();
+    if (!trimmed) return '';
+
+    // If still looks like an unparsed JSON object or code fence, clean it
+    if (trimmed.startsWith('```') || trimmed.endsWith('```')) {
+      trimmed = trimmed.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+      if (!trimmed) return '';
+    }
+    // Remove raw JSON artifacts like {"title": "..."} or broken JSON
+    if (trimmed.startsWith('{') || trimmed.includes('":')) {
+      if (trimmed.startsWith('{') && !trimmed.endsWith('}')) {
+        try {
+          const repaired = trimmed.replace(/,\s*$/, '').trim() + '}';
+          const parsed = JSON.parse(repaired.replace(/,\s*([}\]])/g, '$1'));
+          if (typeof parsed === 'object' && parsed !== null) {
+            return extractCleanText(parsed);
+          }
+        } catch {
+          // Continue
+        }
+      }
+      if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+        try {
+          const parsed = JSON.parse(trimmed.replace(/,\s*([}\]])/g, '$1'));
+          if (typeof parsed === 'object' && parsed !== null) {
+            return extractCleanText(parsed);
+          }
+        } catch {
+          trimmed = trimmed.replace(/^\{\s*|\s*\}$/g, '');
+        }
+      }
+      trimmed = trimmed.replace(/^[{\s"']+|[}\s"',]+$/g, '').trim();
+    }
+    return trimmed;
+  }
+
+  if (typeof unwrapped === 'number' || typeof unwrapped === 'boolean') {
+    return String(unwrapped);
+  }
+
+  if (typeof unwrapped === 'object') {
+    if (Array.isArray(unwrapped)) {
+      return unwrapped.map(extractCleanText).filter(Boolean).join(', ');
+    }
+    const rec = unwrapped as Record<string, unknown>;
+    // Check known direct text fields
+    const direct =
+      rec.detail ??
+      rec.reason ??
+      rec.summary ??
+      rec.description ??
+      rec.message ??
+      rec.value ??
+      rec.explanation ??
+      rec.text ??
+      rec.title;
+    if (direct !== undefined && direct !== null) {
+      if (typeof direct === 'string') return direct.trim();
+      if (typeof direct === 'object') return extractCleanText(direct);
+    }
+
+    // Check structured shortfall pairs (required vs found/actual)
+    if (rec.required || rec.found || rec.actual) {
+      const parts: string[] = [];
+      if (rec.required) parts.push(`Required: ${extractCleanText(rec.required)}`);
+      if (rec.found) parts.push(`Found: ${extractCleanText(rec.found)}`);
+      else if (rec.actual) parts.push(`Found: ${extractCleanText(rec.actual)}`);
+      return parts.join(' | ');
+    }
+
+    // Format remaining entries cleanly without raw JSON punctuation
+    const cleanPairs = Object.entries(rec)
+      .filter(([k, v]) => v !== null && v !== undefined && !k.startsWith('_'))
+      .map(([k, v]) => `${k.replace(/_/g, ' ')}: ${extractCleanText(v)}`)
+      .filter(Boolean);
+    return cleanPairs.join('; ');
+  }
+  return '';
+}
+
 export function formatReasonItem(r: unknown): string | null {
   if (!r) return null;
-  if (typeof r === 'string') return r;
-  if (typeof r === 'object') {
-    const obj = r as Record<string, unknown>;
-    const title = String(obj.title || obj.category || obj.name || '');
-    const detail = String(obj.detail || obj.reason || obj.summary || obj.description || '');
+  const unwrapped = cleanStringAndUnwrapJson(r);
+  if (unwrapped === null || unwrapped === undefined) return null;
+
+  if (typeof unwrapped === 'string') {
+    const trimmed = unwrapped.trim();
+    if (!trimmed) return null;
+    return extractCleanText(trimmed);
+  }
+  if (typeof unwrapped === 'object') {
+    const obj = unwrapped as Record<string, unknown>;
+    const title = extractCleanText(obj.title || obj.category || obj.name || '');
+    const detail = extractCleanText(obj.detail || obj.reason || obj.summary || obj.description || '');
     if (title && detail) return `${title}: ${detail}`;
     if (detail) return detail;
     if (title) return title;
-    try {
-      return JSON.stringify(obj);
-    } catch {
-      return null;
-    }
+    return extractCleanText(obj) || null;
   }
-  return String(r);
+  return String(unwrapped);
+}
+
+export interface NormalizedDisqualifier {
+  title: string;
+  reason: string;
+  shortfallDetail?: string;
+  clauseReference?: string;
+  factor?: string;
+}
+
+/**
+ * Defensively parses any disqualifier item (structured object, camelCase/snake_case,
+ * stringified JSON string, or plain string) into a clean, normalized structure.
+ * Guaranteed never to return raw JSON or [object Object].
+ */
+export function parseDisqualifierItem(d: unknown): NormalizedDisqualifier | null {
+  if (d === null || d === undefined) return null;
+
+  if (Array.isArray(d)) {
+    const flat = d.flat(Infinity).filter((x) => x !== null && x !== undefined && x !== '');
+    if (flat.length === 0) return null;
+    if (flat.length === 1) return parseDisqualifierItem(flat[0]);
+    const parsedItems = flat.map(parseDisqualifierItem).filter((p): p is NormalizedDisqualifier => p !== null);
+    if (parsedItems.length === 0) return null;
+    if (parsedItems.length === 1) return parsedItems[0] ?? null;
+    return {
+      title: 'Multiple Disqualifications',
+      reason: parsedItems.map((item) => `${item.title}: ${item.reason}`).join('; '),
+    };
+  }
+
+  const unwrapped = cleanStringAndUnwrapJson(d);
+  if (unwrapped === null || unwrapped === undefined) return null;
+
+  let obj: Record<string, unknown> | null = null;
+
+  if (typeof unwrapped === 'string') {
+    let trimmed = unwrapped.trim();
+    if (!trimmed) return null;
+
+    // Strip residual markdown backtick code fences
+    if (trimmed.startsWith('```') || trimmed.endsWith('```')) {
+      trimmed = trimmed.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+      if (!trimmed) return null;
+    }
+
+    // Defensive handling for broken or unclosed JSON strings
+    if (trimmed.startsWith('{')) {
+      try {
+        const candidate = trimmed.endsWith('}') ? trimmed : trimmed.replace(/,\s*$/, '').trim() + '}';
+        const parsed = JSON.parse(candidate.replace(/,\s*([}\]])/g, '$1'));
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          return parseDisqualifierItem(parsed);
+        }
+      } catch {
+        const titleMatch = trimmed.match(/["']?(?:requirement_title|requirementTitle|title|requirement|name)["']?\s*:\s*["']([^"'\n]+)["']?/i);
+        const reasonMatch = trimmed.match(/["']?(?:reason|detail|description|shortfall_detail|shortfallDetail|summary)["']?\s*:\s*["']([^"'\n]+)["']?/i);
+        const shortfallMatch = trimmed.match(/["']?(?:shortfall_detail|shortfallDetail|shortfall|deficit)["']?\s*:\s*["']([^"'\n]+)["']?/i);
+        const clauseMatch = trimmed.match(/["']?(?:clause_reference|clauseReference|clauseRef|clause)["']?\s*:\s*["']([^"'\n]+)["']?/i);
+
+        if (titleMatch || reasonMatch) {
+          const cleanTitle = titleMatch?.[1] ? extractCleanText(titleMatch[1]).replace(/^[{"'\s]+|[}"':\s]+$/g, '').trim() : undefined;
+          const cleanReason = reasonMatch?.[1] ? extractCleanText(reasonMatch[1]).replace(/^[{"'\s]+|[}"'\s,:]+$/g, '').trim() : undefined;
+          const cleanShortfall = shortfallMatch?.[1] ? extractCleanText(shortfallMatch[1]).replace(/^[{"'\s]+|[}"'\s,:]+$/g, '').trim() : undefined;
+          const cleanClause = clauseMatch?.[1] ? extractCleanText(clauseMatch[1]).replace(/^[{"'\s]+|[}"'\s,:]+$/g, '').trim() : undefined;
+
+          return {
+            title: cleanTitle || 'Disqualification Risk',
+            reason: cleanReason || 'Disqualification criteria not met.',
+            shortfallDetail: cleanShortfall || undefined,
+            clauseReference: cleanClause || undefined,
+          };
+        }
+        trimmed = trimmed.replace(/^[{\s"']+|[}\s"',]+$/g, '').trim();
+      }
+    }
+
+    // Check if string is formatted like "Title: Reason (Shortfall)"
+    let titlePart = 'Disqualification Risk';
+    let rest = trimmed;
+    const colonIndex = trimmed.indexOf(':');
+    if (colonIndex > 0 && colonIndex < 60) {
+      const candidateTitle = trimmed.slice(0, colonIndex).trim();
+      const isJsonKey = /^[{\s"']*(?:title|requirement_title|requirementTitle|requirement|reason|detail|description|summary|verdict|category|factor|name)[}"'\s]*$/i.test(candidateTitle);
+      const hasJsonBrace = candidateTitle.includes('{') || candidateTitle.includes('}');
+      if (!isJsonKey && !hasJsonBrace) {
+        titlePart = candidateTitle;
+        rest = trimmed.slice(colonIndex + 1).trim();
+      }
+    }
+
+    let shortfallDetail: string | undefined;
+    const shortfallMatch = rest.match(/\((?:shortfall\s*:?\s*)?([^)]+)\)$/i);
+    if (shortfallMatch && shortfallMatch[1]) {
+      shortfallDetail = shortfallMatch[1].trim();
+      rest = rest.replace(/\((?:shortfall\s*:?\s*)?[^)]+\)$/i, '').trim();
+    }
+
+    const cleanTitle = extractCleanText(titlePart).replace(/^[{"'\s]+|[}"':\s]+$/g, '').trim();
+    const cleanReason = extractCleanText(rest).replace(/^[{"'\s]+|[}"'\s,:]+$/g, '').trim();
+
+    return {
+      title: cleanTitle || 'Disqualification Risk',
+      reason: cleanReason || extractCleanText(trimmed) || 'Disqualification criteria not met.',
+      shortfallDetail: shortfallDetail ? extractCleanText(shortfallDetail) : undefined,
+    };
+  } else if (typeof unwrapped === 'object') {
+    if (Array.isArray(unwrapped)) {
+      const flat = unwrapped.flat(Infinity).filter((x) => x !== null && x !== undefined && x !== '');
+      if (flat.length === 0) return null;
+      if (flat.length === 1) return parseDisqualifierItem(flat[0]);
+      const parsedItems = flat.map(parseDisqualifierItem).filter((p): p is NormalizedDisqualifier => p !== null);
+      if (parsedItems.length === 0) return null;
+      if (parsedItems.length === 1) return parsedItems[0] ?? null;
+      return {
+        title: 'Multiple Disqualifications',
+        reason: parsedItems.map((item) => `${item.title}: ${item.reason}`).join('; '),
+      };
+    }
+    obj = unwrapped as Record<string, unknown>;
+  } else {
+    return {
+      title: 'Disqualification Risk',
+      reason: String(unwrapped),
+    };
+  }
+
+  if (!obj) return null;
+
+  const rawTitle =
+    obj.requirement_title ??
+    obj.requirementTitle ??
+    obj.title ??
+    (typeof obj.requirement === 'object' && obj.requirement !== null
+      ? (obj.requirement as Record<string, unknown>).title || (obj.requirement as Record<string, unknown>).name
+      : obj.requirement) ??
+    obj.name ??
+    obj.factor ??
+    obj.category ??
+    'Mandatory Disqualification';
+
+  const rawReason =
+    obj.reason ??
+    obj.detail ??
+    obj.description ??
+    obj.shortfall_detail ??
+    obj.shortfallDetail ??
+    obj.summary ??
+    (typeof obj.reason === 'object' && obj.reason !== null
+      ? (obj.reason as Record<string, unknown>).explanation || (obj.reason as Record<string, unknown>).detail || (obj.reason as Record<string, unknown>).text
+      : undefined) ??
+    'Requirement criteria not satisfied.';
+
+  const rawShortfall =
+    obj.shortfall_detail ??
+    obj.shortfallDetail ??
+    obj.shortfall ??
+    obj.deficit;
+
+  const rawClause =
+    obj.clause_reference ??
+    obj.clauseReference ??
+    obj.clauseRef ??
+    (typeof obj.clause === 'object' && obj.clause !== null
+      ? (obj.clause as Record<string, unknown>).reference || (obj.clause as Record<string, unknown>).clauseReference
+      : undefined) ??
+    obj.clause ??
+    obj.tenderClauseRef ??
+    obj.tender_clause_reference ??
+    obj.reference;
+
+  const rawFactor =
+    obj.factor ??
+    obj.category ??
+    obj.subCategory;
+
+  const title = extractCleanText(rawTitle) || 'Mandatory Disqualification';
+  const reason = extractCleanText(rawReason) || 'Requirement criteria not satisfied.';
+  const shortfallDetail = rawShortfall ? extractCleanText(rawShortfall) : undefined;
+  const clauseReference = rawClause ? extractCleanText(rawClause) : undefined;
+  const factor = rawFactor ? extractCleanText(rawFactor) : undefined;
+
+  return {
+    title,
+    reason,
+    shortfallDetail: shortfallDetail || undefined,
+    clauseReference: clauseReference || undefined,
+    factor: factor || undefined,
+  };
 }
 
 export function formatDisqualifierItem(d: unknown): string | null {
-  if (!d) return null;
-  if (typeof d === 'string') return d;
-  if (typeof d === 'object') {
-    const obj = d as Record<string, unknown>;
-    const title = String(obj.title || obj.requirement_title || obj.requirementTitle || '');
-    const reason = String(
-      obj.reason || obj.shortfall_detail || obj.shortfallDetail || obj.detail || '',
-    );
-    const shortfall = String(
-      obj.shortfallDetail ||
-        obj.shortfall_detail ||
-        obj.clauseReference ||
-        obj.clause_reference ||
-        '',
-    );
-    if (title && reason) {
-      return `${title}: ${reason}${shortfall && shortfall !== reason ? ` (${shortfall})` : ''}`;
-    }
-    if (reason) return shortfall && shortfall !== reason ? `${reason} (${shortfall})` : reason;
-    if (title) return title;
-    try {
-      return JSON.stringify(obj);
-    } catch {
-      return null;
-    }
+  const item = parseDisqualifierItem(d);
+  if (!item) return null;
+  let text = `${item.title}: ${item.reason}`;
+  if (item.shortfallDetail && item.shortfallDetail !== item.reason) {
+    text += ` (${item.shortfallDetail})`;
   }
-  return String(d);
+  return text;
 }
 
 export function formatMissingItem(g: unknown): string | null {
   if (!g) return null;
-  if (typeof g === 'string') return g;
-  if (typeof g === 'object') {
-    const obj = g as Record<string, unknown>;
-    const title = String(obj.title || obj.requirement_title || obj.requirementTitle || '');
-    const missing = String(
+  const unwrapped = cleanStringAndUnwrapJson(g);
+  if (unwrapped === null || unwrapped === undefined) return null;
+
+  if (typeof unwrapped === 'string') {
+    const trimmed = unwrapped.trim();
+    if (!trimmed) return null;
+    return extractCleanText(trimmed);
+  }
+  if (typeof unwrapped === 'object') {
+    const obj = unwrapped as Record<string, unknown>;
+    const title = extractCleanText(obj.title || obj.requirement_title || obj.requirementTitle || '');
+    const missing = extractCleanText(
       obj.missingFactor || obj.missing_factor || obj.detail || obj.reason || '',
     );
-    const action = String(obj.suggestedAction || obj.suggested_action || obj.mitigation || '');
+    const action = extractCleanText(obj.suggestedAction || obj.suggested_action || obj.mitigation || '');
     if (title && missing) {
       return `${title}: ${missing}${action ? ` — ${action}` : ''}`;
     }
     if (missing) return action ? `${missing} — ${action}` : missing;
     if (title) return title;
-    try {
-      return JSON.stringify(obj);
-    } catch {
-      return null;
-    }
+    return extractCleanText(obj) || null;
   }
-  return String(g);
+  return String(unwrapped);
 }
 
 export function formatUncertainItem(u: unknown): string | null {
   if (!u) return null;
-  if (typeof u === 'string') return u;
-  if (typeof u === 'object') {
-    const obj = u as Record<string, unknown>;
-    const title = String(
+  const unwrapped = cleanStringAndUnwrapJson(u);
+  if (unwrapped === null || unwrapped === undefined) return null;
+
+  if (typeof unwrapped === 'string') {
+    const trimmed = unwrapped.trim();
+    if (!trimmed) return null;
+    return extractCleanText(trimmed);
+  }
+  if (typeof unwrapped === 'object') {
+    const obj = unwrapped as Record<string, unknown>;
+    const title = extractCleanText(
       obj.title || obj.clauseReference || obj.clause_reference || obj.ambiguityType || '',
     );
-    const detail = String(
+    const detail = extractCleanText(
       obj.detail ||
         obj.quote ||
         obj.recommendedClarification ||
@@ -187,40 +590,39 @@ export function formatUncertainItem(u: unknown): string | null {
     if (title && detail) return `${title}: ${detail}`;
     if (detail) return detail;
     if (title) return title;
-    try {
-      return JSON.stringify(obj);
-    } catch {
-      return null;
-    }
+    return extractCleanText(obj) || null;
   }
-  return String(u);
+  return String(unwrapped);
 }
 
 export function formatCommercialRiskItem(r: unknown): string | null {
   if (!r) return null;
-  if (typeof r === 'string') return r;
-  if (typeof r === 'object') {
-    const obj = r as Record<string, unknown>;
-    const title = String(
+  const unwrapped = cleanStringAndUnwrapJson(r);
+  if (unwrapped === null || unwrapped === undefined) return null;
+
+  if (typeof unwrapped === 'string') {
+    const trimmed = unwrapped.trim();
+    if (!trimmed) return null;
+    return extractCleanText(trimmed);
+  }
+  if (typeof unwrapped === 'object') {
+    const obj = unwrapped as Record<string, unknown>;
+    const title = extractCleanText(
       obj.title ||
         (obj.category ? String(obj.category).replace(/_/g, ' ') : '') ||
         (obj.level ? `${obj.level} Risk` : obj.severity ? `${obj.severity} Risk` : '') ||
         '',
     );
-    const detail = String(obj.detail || obj.summary || obj.description || '');
-    const advice = String(obj.mitigationAdvice || obj.mitigation_advice || obj.mitigation || '');
+    const detail = extractCleanText(obj.detail || obj.summary || obj.description || '');
+    const advice = extractCleanText(obj.mitigationAdvice || obj.mitigation_advice || obj.mitigation || '');
     if (title && detail && advice) return `${title}: ${detail} [${advice}]`;
     if (title && detail) return `${title}: ${detail}`;
     if (detail && advice) return `${detail} [${advice}]`;
     if (detail) return detail;
     if (title) return title;
-    try {
-      return JSON.stringify(obj);
-    } catch {
-      return null;
-    }
+    return extractCleanText(obj) || null;
   }
-  return String(r);
+  return String(unwrapped);
 }
 
 /**

@@ -20,16 +20,17 @@ TenderAi/
 │   │   │   ├── infrastructure/  # Storage, Queue, Persistence Adapters
 │   │   │   └── modules/         # Bounded Context Modules (bids, documents, compliance, auth...)
 │   │   └── Dockerfile
-│   ├── ai/                      # FastAPI Worker & Intelligence Engine (Python 3.12+)
+│   ├── ai/                      # FastAPI Worker & Intelligence Engine (Python 3.14+)
 │   │   ├── src/tenderpulse_ai/
 │   │   │   ├── main.py          # FastAPI application & worker endpoints
 │   │   │   ├── agent/           # Requirement analysis agent & schemas
 │   │   │   ├── decision/        # Deterministic bid/no-bid eligibility engine
-│   │   │   ├── domain/          # Docling parser, structure builder, validator
-│   │   │   ├── workflow/        # LangGraph 8-node state machine & nodes
+│   │   │   ├── domain/          # Docling parser, chunker, structure builder, validator
+│   │   │   ├── extraction/      # Modular extraction submodules (10 modules & rules)
+│   │   │   ├── workflow/        # LangGraph 12-node extraction pipeline & nodes
 │   │   │   ├── tools/           # Scoped retrieval, page text, network guard
 │   │   │   ├── security/        # SecurityContext, secret sanitizer
-│   │   │   └── infrastructure/  # Queue completion publishers, LLM client
+│   │   │   └── infrastructure/  # Queue completion publishers, multi-model LLM client
 │   │   └── pyproject.toml
 │   └── web/                     # React 18 Single Page Application (TypeScript + Vite)
 └── packages/
@@ -160,10 +161,14 @@ classDiagram
 
 ### 3.3 `ComplianceModule`
 
-- **Responsibilities**: Interactive compliance checklist review, contractor gap analysis, and human overrides.
+- **Responsibilities**: Interactive compliance checklist review, contractor gap analysis, and human overrides following Clean Architecture and the Repository/Query pattern.
 - **Key Classes**:
   - `ComplianceController`: Exposes `GET /api/v1/bids/:id/compliance-items` and `PATCH /api/v1/bids/:id/compliance-items/:itemId`.
-  - `ComplianceService`: Executes atomic updates with Optimistic Concurrency Control (`WHERE id = :id AND version = :expectedVersion`), increments `version`, and logs user review actions to `audit_logs`.
+  - `ComplianceService`: Business logic coordinator enforcing invariants and audit trails.
+  - `ComplianceRepository` (`compliance.repository.ts`): Encapsulates all mutating database operations with optimistic concurrency control (`WHERE id = :id AND version = :expectedVersion`).
+  - `ComplianceQueries` (`compliance.queries.ts`): Read-only DAO optimizing complex relational queries and projections.
+  - `compliance-item.mapper.ts`: Normalizes raw candidate strings, sanitizes page references, and formats wire DTOs.
+  - `AiDecisionClient` (`apps/api/src/modules/bids/application/AiDecisionClient.ts`): Dedicated HTTP client connecting the NestJS application layer to the AI worker's deterministic evaluation endpoints.
 
 ### 3.4 `AuthModule` & Security Infrastructure
 
@@ -175,6 +180,13 @@ classDiagram
 - **Interceptors**:
   - `TenantContextInterceptor`: Reads `request.user.organizationId` and binds it to Node.js `AsyncLocalStorage` (`TenantContextHolder`), making tenant context ambiently available to all services and repositories.
   - `HttpLoggingInterceptor`: Captures request latencies and emits canonical JSON logs with trace correlation IDs.
+
+### 3.5 Web Frontend Architecture (`apps/web`)
+
+The frontend is built with React 18, Vite, and Tailwind CSS, providing clean executive dossiers, structured disqualifiers, and responsive compliance matrices:
+- **Zero Raw JSON Rendering**: Hard Disqualifiers and eligibility verdicts are parsed and unwrapped via `bidDetailData.ts` (`cleanStringAndUnwrapJson`, `parseDisqualifierItem`) and rendered as structured typographic cards (`BidVerdictCard.tsx` / `DisqualifierItemCard`) displaying Title, Reason, and Shortfall Detail callouts with zero raw serialized JSON strings.
+- **Responsive Table Layout & Horizontal Scrolling**: `ComplianceTable.tsx` wraps wide compliance matrices in an `overflow-x-auto` container with `min-w-[1050px]` and column constraints, allowing smooth horizontal scrolling without breaking page padding or responsive layout.
+- **Concealed Row Descriptions & Drawer Reveals**: `ComplianceRow.tsx` displays clean metadata badges on main rows, revealing full plain-language descriptions upon expansion in the detail panel and inside `SourceCitationDrawer.tsx`.
 
 ---
 
@@ -247,11 +259,25 @@ The AI engine uses the Strategy pattern to emit completion events back to the Ne
 - `GcpPubSubCompletionPublisher`: Publishes completion JSON to a Google Cloud Pub/Sub topic.
 - `MockCompletionPublisher`: Records emitted events in memory for test verification.
 
+### 4.3 Modular Extraction Submodules (`apps/ai/src/tenderpulse_ai/extraction/`)
+
+To prevent monolithic pipeline bloat, extraction responsibilities are partitioned across 10 clean submodules:
+1. `contracts.py`: Normalized page and extraction request/response DTOs (`NormalizedPage`, `DocumentExtractionRequest`, `DocumentExtractionResponse`).
+2. `parsing.py`: Docling parser wrapper, running furniture filtering, and deleted clause detection.
+3. `metrics.py`: Numeric regex extraction (`extract_monetary_amounts`, `extract_percentages`, `extract_temporal_durations`).
+4. `clause_references.py`: `GUARDED_CLAUSE_PATTERN`, `is_toc_or_definition`, and `CrossReferenceResolver` for long-range cross-reference hydration.
+5. `quote_resolver.py`: Sentence-bounded verbatim clause extraction (`extract_complete_clause_window`, max 650 chars) and operative obligation scoring.
+6. `deduplication.py`: Cross-page item consolidation, quote overlap merging, and intra-document contradiction detection.
+7. `okf_compiler.py`: Compiles extracted compliance items into structured Open Knowledge Format concept nodes.
+8. `rules/`: Domain rule extractors across 7 specialized modules (`financial.py`, `technical.py`, `legal.py`, `statutory.py`, `execution.py`, `operational.py`, `commercial.py`).
+9. `orchestrator.py`: `ProductionExtractionPipeline` orchestrating document precomputation, LangGraph execution, and fallback strategies.
+10. `pipeline.py`: Lightweight facade (<150 lines) re-exporting symbols for 100% backward compatibility.
+
 ---
 
-## 5. LangGraph 8-Node State Machine Architecture
+## 5. LangGraph 12-Node State Machine Architecture
 
-The core of the document extraction intelligence is an 8-node cyclic computation graph built using **LangGraph** (`apps/ai/src/tenderpulse_ai/workflow/`):
+The core of the document extraction intelligence is a 12-node cyclic computation graph built using **LangGraph** (`apps/ai/src/tenderpulse_ai/workflow/`):
 
 ```mermaid
 flowchart TD
@@ -260,8 +286,10 @@ flowchart TD
     N2 --> N3[Node 3: candidate_detection]
     N3 --> N4[Node 4: context_assembly]
     N4 --> N5[Node 5: llm_extraction]
-    N5 --> N6[Node 6: validation]
-    N6 --> N7[Node 7: confidence_routing]
+    N5 --> N5B[Node 5B: rescue_pass]
+    N5B --> N6[Node 6: validation]
+    N6 --> N6B[Node 6B: uncertainty_verification]
+    N6B --> N7[Node 7: confidence_routing]
 
     %% Conditional Routing Edge
     N7 -->|Confidence >= 0.80 & 0 unverified| N8[Node 8: postgres_store]
@@ -317,41 +345,51 @@ class ComplianceWorkflowState(TypedDict, total=False):
     audit_events: Annotated[list[dict[str, Any]], operator.add]
 ```
 
-### 5.2 Deep-Dive into the 8 Nodes
+### 5.2 Deep-Dive into the Pipeline Nodes
 
 1. **Node 1: `docling_parse`**:
    - Authorizes document access via `PageTextTool` against `SecurityContext`.
-   - Runs `DoclingParserEngine` to extract text blocks, tables, and page layout.
+   - Runs `DoclingParserEngine` (`domain/docling_parser.py`) to extract text blocks, tables, and page layout.
+   - Applies `RUNNING_FURNITURE_PATTERN` to strip repeating headers, footers, and page watermarks.
+   - Applies `DELETED_CLAUSE_PATTERN` to detect deleted/omitted clauses and suppress false-positive extraction.
 2. **Node 2: `build_structure`**:
    - Constructs an Abstract Syntax Tree (AST) of the tender document (`DocumentStructureTree`).
-   - Identifies hierarchical clause numbering (e.g., Section 4 -> Clause 4.2 -> Sub-Clause 4.2(a)).
+   - Identifies hierarchical clause numbering (`PART > SECTION > CLAUSE`) using `GUARDED_CLAUSE_PATTERN` to reject road chainages and tender dates.
 3. **Node 3: `candidate_detection`**:
-   - Runs `CandidateDetector` using procurement keyword cues (EMD, turnover, solvency, stamp paper, experience, blacklist).
-   - Filters out non-actionable administrative narrative.
+   - Runs `CandidateDetector` using procurement keyword cues across 20+ procurement categories.
+   - Evaluates passages using Context Fusion (combining Section Title + Block text) and normalized priority scoring ($0.0 - 1.0$), partitioning passages into `PRIMARY` candidates and `unselected` blocks.
 4. **Node 4: `context_assembly`**:
-   - Assembles contextual windows around candidate clauses, pulling in parent section headers and cross-referenced clauses.
+   - Assembles contextual windows around candidate clauses, pulling in parent section headers and cross-referenced clauses within a bounded 24,000-character budget.
 5. **Node 5: `llm_extraction`**:
-   - Invokes `StructuredLLMClient` with grammar-constrained schemas or applies deterministic rule extraction.
+   - Invokes `StructuredLLMClient` with grammar-constrained schemas across the multi-model rotation pool with bounded concurrency (`asyncio.Semaphore(2)`).
    - Extracts structured execution rules (stamp paper denomination, notary, UDIN) and exact verbatim quotes.
-6. **Node 6: `validation`**:
+   - If live LLM returns 0 items, falls back to deterministic rule extractors (`extraction/rules/`).
+6. **Node 5B: `rescue_pass`**:
+   - Sweeps Tier-2 `unselected` passages in compact batches to catch un-keyworded or split clauses, tagging them with `extraction_tier="RESCUE"`.
+7. **Node 6: `validation`**:
    - Executes `DeterministicValidator` across five verification checks:
      - **Citation Support**: Verbatim quote must exist in the source clause text.
+     - **Sentence-Bounded Window**: Verbatim citations expand to complete sentence and table boundaries via `extract_complete_clause_window(max_chars=650)`.
      - **Clause Existence**: Referenced clause numbers must exist in the document AST.
-     - **Number Preservation**: Monetary values and numbers in the quote must match the text.
-     - **SHALL/MUST Polarity**: Prohibitions ("shall not") must not be inverted into affirmative obligations.
-     - **Exception Retention**: Conditional clauses ("unless", "provided that") must be preserved.
-7. **Node 7: `confidence_routing`**:
-   - Calculates a normalized score (0.00 to 1.00) and assigns a confidence tier:
-     - $\ge 0.95$: `AUTO_ACCEPT`
-     - $0.80 - 0.94$: `REVIEWER_VERIFICATION`
-     - $< 0.80$: `MANDATORY_HUMAN_REVIEW`
+     - **Number Preservation**: Monetary values and percentages in the quote must match the text.
+     - **SHALL/MUST Polarity & Exception Retention**: Conditional clauses ("unless", "provided that") and prohibitions must be preserved.
+8. **Node 6B: `uncertainty_verification`**:
+   - Detects intra-document contradictions across sections (e.g. 3% vs 10% PBG; Rs. 7.18L EMD vs Bid Securing Declaration; GST inclusive vs exclusive).
+   - Emits `CLAUSE_CONTRADICTION` uncertainty items citing both conflicting clauses and applying the tender's Order of Precedence.
+9. **Node 7: `confidence_routing`**:
+   - Calculates a normalized score (0.00 to 1.00) and assigns a confidence tier (`AUTO_ACCEPT`, `REVIEWER_VERIFICATION`, `MANDATORY_HUMAN_REVIEW`).
    - Conditional router `route_verification_outcome` directs flow:
-     - Clean & score $\ge 0.80 \to$ Node 8 (`postgres_store`)
-     - Unverified & `retry_count < 2` $\to$ `targeted_refine` $\to$ loops back to Node 5
-     - Unverified & `retry_count >= 2` $\to$ `escalate_human_review` $\to$ `human_review`
-8. **Node 8: `postgres_store`**:
-   - Formats verified items into API wire DTOs (`ExtractedComplianceItemDto`).
-   - Emits structured log telemetry and prepares the output payload for the completion publisher.
+     - Zero unverified & score $\ge 0.80 \to$ Node 8 (`postgres_store`).
+     - Unverified & `retry_count < 2` $\to$ `targeted_refine` $\to$ loops back to Node 5.
+     - Unverified & `retry_count >= 2` (or score $< 0.80$) $\to$ `escalate_human_review` $\to$ `human_review`.
+10. **Node 8: `targeted_refine`**:
+    - Cyclically feeds exact failure reasons and missing quote segments back to Node 5 for bounded re-extraction.
+11. **Node 9: `escalate_human_review`**:
+    - Formats review payloads with provenance citations and ambiguity summaries for human triage.
+12. **Node 10: `human_review`**:
+    - Calls LangGraph's native `interrupt()`, snapshotting state and pausing workflow until resumed via `POST /api/v1/compliance/review`.
+13. **Node 11: `postgres_store`**:
+    - Prepares verified items and emits `DocumentExtractionCompletedEvent` via `CompletionPublisher` for single-writer atomic PostgreSQL persistence by NestJS `DocumentCompletionService`.
 
 ---
 
@@ -413,7 +451,7 @@ sequenceDiagram
     participant Runtime as DocumentProcessingRuntime (NestJS)
     participant FastAPI as /api/v1/worker/process-message
     participant Pipeline as ProductionExtractionPipeline (Python)
-    participant LangGraph as LangGraph 8-Node Graph
+    participant LangGraph as LangGraph 12-Node Pipeline
     participant Webhook as /api/v1/internal/extraction-completed
     participant Completion as DocumentCompletionService (NestJS)
     participant DB as PostgreSQL

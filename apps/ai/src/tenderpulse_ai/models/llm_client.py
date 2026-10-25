@@ -1,7 +1,7 @@
 import inspect
 import logging
 from collections.abc import Callable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from tenderpulse_ai.domain.models import CandidateComplianceItem
 from tenderpulse_ai.security.sanitizer import SecretSanitizer
@@ -46,23 +46,33 @@ class StructuredLLMClient:
 
         from tenderpulse_ai.config import settings
 
-        if live_client is not None:
+        # A custom extractor_fn (not default_tender_extractor) passed without explicit enable_live_client=True
+        # indicates a test mock or simulated evaluator extractor; disable live client to avoid external network calls.
+        from tenderpulse_ai.pipeline import default_tender_extractor
+
+        is_custom_extractor = (
+            extractor_fn is not None
+            and extractor_fn is not default_tender_extractor
+            and getattr(extractor_fn, "__name__", "") != "default_tender_extractor"
+        )
+
+        if enable_live_client is False or (enable_live_client is None and is_custom_extractor):
+            self.live_client = None
+        elif live_client is not None:
             self.live_client = live_client
-        elif enable_live_client is False:
-            self.live_client = None
-        elif extractor_fn is not None and enable_live_client is not True:
-            self.live_client = None
-        elif settings.llm_api_key:
+        elif (
+            settings.llm_api_key
+            or settings.gemini_api_key
+            or settings.groq_api_key
+            or settings.cerebras_api_key
+            or settings.sambanova_api_key
+            or settings.openrouter_api_key
+        ):
             from tenderpulse_ai.infrastructure.llm.openai_compatible_client import (
                 OpenAICompatibleLlmClient,
             )
 
-            self.live_client = OpenAICompatibleLlmClient(
-                api_key=settings.llm_api_key,
-                base_url=settings.llm_base_url,
-                model=settings.llm_model,
-                timeout=settings.llm_timeout_seconds,
-            )
+            self.live_client = OpenAICompatibleLlmClient.create_from_settings(settings)
         else:
             self.live_client = None
 
@@ -71,6 +81,7 @@ class StructuredLLMClient:
         system_prompt: str,
         user_prompt: str,
         max_retries: int = 2,
+        block_map: dict[str, Any] | None = None,
     ) -> list[CandidateComplianceItem]:
         # 1. Secret Hygiene: Pre-invocation scrubber
         sanitized_prompt, secret_found = SecretSanitizer.scrub(user_prompt)
@@ -96,15 +107,20 @@ class StructuredLLMClient:
                     system_prompt=system_prompt,
                     user_prompt=sanitized_prompt,
                     max_retries=max_retries,
+                    block_map=block_map,
                 )
-                return items
+                if items:
+                    return items
+                logger.warning(
+                    "[StructuredLLMClient] Live LLM gateway returned 0 items. Triggering deterministic fallback."
+                )
             except Exception as err:
                 status_code = getattr(getattr(err, "response", None), "status_code", None)
-                if status_code in (401, 402, 403, 404):
+                if status_code in (401, 403):
                     self._live_circuit_broken = True
                     logger.warning(
-                        "[StructuredLLMClient] Gateway returned permanent client/billing error %d (%s). "
-                        "Circuit breaker tripped: disabling live LLM calls for this runtime session and using offline deterministic extraction.",
+                        "[StructuredLLMClient] Gateway returned authentication/permission failure %d (%s). "
+                        "Circuit breaker tripped: disabling live LLM calls for this session and using offline deterministic fallback.",
                         status_code,
                         err,
                     )

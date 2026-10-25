@@ -312,7 +312,7 @@ export const ComplianceTable: React.FC<ComplianceTableProps> = ({
   }
 
   return (
-    <div className="flex flex-col w-full">
+    <div className="flex flex-col w-full min-w-0 max-w-full">
       {/* 1 & 2. Unified Header Controls Toolbar */}
       <div className="p-4 sm:p-5 border-b border-border bg-card flex flex-col gap-3.5">
         {/* Primary Row: Status Filter Tabs & Search */}
@@ -424,10 +424,10 @@ export const ComplianceTable: React.FC<ComplianceTableProps> = ({
       </div>
 
       {/* 3 & 4. Table Header and Rows */}
-      <div className="w-full overflow-x-auto scrollbar-thin">
+      <div className="w-full overflow-x-auto overscroll-x-contain touch-pan-x scrollbar-thin">
         <div className="min-w-[1050px]">
           {/* Column Header Band */}
-          <div className="grid grid-cols-[30%_11%_8%_18%_13%_10%_10%] gap-3 px-5 py-3 bg-muted/40 border-b border-border text-[11px] font-mono font-bold uppercase tracking-wider text-muted-foreground sticky top-0 z-10">
+          <div className="grid grid-cols-[minmax(270px,3.2fr)_minmax(100px,1.1fr)_minmax(80px,0.9fr)_minmax(170px,1.8fr)_minmax(120px,1.2fr)_minmax(95px,1fr)_minmax(85px,0.9fr)] gap-3 px-5 py-3 bg-muted/40 border-b border-border text-[11px] font-mono font-bold uppercase tracking-wider text-muted-foreground sticky top-0 z-10">
             {COLUMNS.map((col) => (
               <ColumnSorter
                 key={col.key}

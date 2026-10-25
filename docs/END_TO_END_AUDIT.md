@@ -58,7 +58,7 @@ flowchart TD
     subgraph AIWorker ["AI Tier (FastAPI / LangGraph)"]
         FastAPI_Worker["/api/v1/worker/process-message\n(Async Dispatch <20ms)"]
         Docling["Docling Parser +\nPDF Resolution"]
-        ExtractionGraph["Compliance LangGraph\n(8-Node Cyclic Graph)"]
+        ExtractionGraph["Compliance LangGraph\n(12-Node Extraction Pipeline)"]
         DecisionGraph["Bid Decision LangGraph\n(Deterministic Gatekeeper)"]
         Publisher["HttpCallbackCompletionPublisher\n(HMAC Webhook Callback)"]
     end
@@ -136,7 +136,7 @@ flowchart TD
 5. **AI Extraction & Single-Writer Persistence**:
    - FastAPI spawns background extraction task `_execute_and_publish_extraction`.
    - Docling parser reads PDF via presigned download URL.
-   - 8-node LangGraph extraction workflow executes with cyclic refinement and validation.
+   - 12-node LangGraph extraction workflow executes with cyclic refinement, rescue pass, uncertainty verification, and deterministic grounding.
    - Emits `DocumentExtractionCompletedEvent` via `HttpCallbackCompletionPublisher` to `POST /api/v1/internal/extraction-completed` authenticated via `X-Internal-Service-Key`.
    - NestJS `DocumentCompletionService` acquires `FOR UPDATE` transaction locks on `bids` and `tender_documents`, deduplicates items, fuses execution rules, inserts into `compliance_items`, transitions document to `COMPLETED`, and updates bid to `REVIEW_READY`.
 6. **Real-Time Client Notification**:

@@ -801,8 +801,8 @@ Section-aware, not blind fixed-size:
 
 | Concern                                         | Deterministic (tier 1–2)                     | LLM (tier 3, fallback only) |
 | :---------------------------------------------- | :------------------------------------------- | :-------------------------- |
-| Text extraction                                 | pdf-parse / pdfjs                            | —                           |
-| OCR                                             | Tesseract / Textract                         | —                           |
+| Text extraction                                 | Docling Parser Engine / PDFium               | —                           |
+| OCR / Table layout                              | Docling layout engine / Tesseract OCR        | —                           |
 | Section segmentation                            | TOC + heading + numbering detection          | —                           |
 | NIT metadata (dates, amounts, EMD)              | regex on short text                          | —                           |
 | Thresholds (₹, %, years, counts)                | numeric regex → structured criteria          | —                           |

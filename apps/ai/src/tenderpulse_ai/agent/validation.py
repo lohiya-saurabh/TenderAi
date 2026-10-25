@@ -12,9 +12,9 @@ CANONICAL_CATEGORIES = {
     "LEGAL",
     "STATUTORY",
     "COMMERCIAL",
+    "OPERATIONAL",
     "COMMERCIAL_RISK",
     "ANNEXURE_DECLARATION",
-    "OPERATIONAL",
     # Evaluation suite & domain categories
     "EMD",
     "PBG",
@@ -130,16 +130,34 @@ def is_dangling_fragment(quote: str, description: str = "") -> bool:
     clean = quote.strip()
     if len(clean) < 25:
         return True
-    # 1. Starts with a lowercase letter (unless it's a roman numeral like "(i)" or "i.")
-    if re.match(r"^[a-z]", clean) and not re.match(r"^(?:i{1,3}|iv|v|vi{0,3}|ix|x)[.)]\s", clean):
+    # 1. Starts with a lowercase letter (unless it's an enumerated list item like "a.", "b.", "(a)", or roman numerals "(i)", "i.", or tabular modal with metric)
+    if (
+        re.match(r"^[a-z]", clean)
+        and not re.match(r"^(?:[a-z]|[ivx]+)[.)]\s|^\([a-z0-9ivx]+\)\s", clean, re.IGNORECASE)
+        and not (
+            clean.lower().startswith("should be")
+            and re.search(r"\b(?:rs\.?|inr|crore|lakh)\b", clean, re.IGNORECASE)
+        )
+    ):
         return True
     # 2. Starts with a mid-sentence conjunction or dangling predicate
+    if re.match(r"^(?:and|or|nor|equal\s+to|less\s+than)\b", clean, re.IGNORECASE):
+        return True
     if re.match(
-        r"^(?:and|or|nor|should\s+be|shall\s+be|must\s+be|will\s+be|equal\s+to|more\s+than|less\s+than)\b",
+        r"^(?:should\s+be|shall\s+be|must\s+be|will\s+be|more\s+than)\b",
         clean,
         re.IGNORECASE,
     ):
-        return True
+        desc_clean = description.strip().lower()
+        if not desc_clean or re.match(
+            r"^(?:should|shall|must|will|equal|and|or|nor|more\s+than|less\s+than)\b", desc_clean
+        ):
+            return True
+        has_metric = bool(
+            re.search(r"\b(?:rs\.?|inr|crore|crores|lakh|lakhs|\d+%)\b", clean, re.IGNORECASE)
+        )
+        if not (has_metric and len(description) >= 20):
+            return True
     # 3. Contextless table footnote where description still leaves "Sr. No." unresolved
     if re.match(r"^Notes?\s*[:\-–]?\s*\(?\d*\)?", clean, re.IGNORECASE):
         if re.search(r"\b(?:Sr|Sl|S)\.?\s*No\.?\s*\d+", clean, re.IGNORECASE) and re.search(

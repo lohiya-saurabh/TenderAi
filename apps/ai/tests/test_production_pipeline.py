@@ -218,9 +218,15 @@ def test_api_worker_process_message_authorized():
     assert len(data["items"]) >= 1
 
 
-def test_api_worker_process_message_fetches_document_from_storage_reference():
+def test_api_worker_process_message_fetches_document_from_storage_reference(tmp_path):
     client = TestClient(app)
     headers = {"X-Internal-Service-Key": "tenderpulse-internal-secret-2026"}
+
+    doc_file = tmp_path / "NIT_Fetch_Package.txt"
+    doc_file.write_text(
+        "Clause 1.1: The Bidder shall submit an Earnest Money Deposit (EMD) of Rs. 10,00,000 on a 100 Rupee stamp paper.",
+        encoding="utf-8",
+    )
 
     payload = {
         "job_id": "job-worker-fetch-002",
@@ -230,8 +236,8 @@ def test_api_worker_process_message_fetches_document_from_storage_reference():
         "document_id": "doc_fetch_1",
         "workflow_run_id": "run_worker_fetch_002",
         "correlation_id": "corr_worker_fetch_002",
-        "storage_reference": "tenants/org_worker_1/bids/bid_fetch_1/doc_fetch_1/NIT.pdf",
-        "file_name": "NIT_Fetch_Package.pdf",
+        "storage_reference": str(doc_file),
+        "file_name": "NIT_Fetch_Package.txt",
         "document_type": "NIT",
         "pages": [],
     }

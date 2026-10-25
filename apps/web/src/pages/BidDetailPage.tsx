@@ -389,7 +389,7 @@ export const BidDetailPage: React.FC = () => {
       : 'text-vermilion';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full min-w-0 max-w-full">
       {/* Top Toolbar */}
       <div className="flex justify-between items-center flex-wrap gap-3 pb-2 border-b border-border/60">
         <Link
@@ -636,7 +636,7 @@ export const BidDetailPage: React.FC = () => {
         {/* ===================================================================== */}
         {/* 6. EXTRACTED COMPLIANCE MATRIX (Full-Width Clean & Categorized) */}
         {/* ===================================================================== */}
-        <div id="compliance-matrix" className="space-y-3">
+        <div id="compliance-matrix" className="space-y-3 w-full min-w-0 max-w-full">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-base font-bold tracking-tight text-foreground">
@@ -661,7 +661,7 @@ export const BidDetailPage: React.FC = () => {
           ) : complianceError ? (
             <ErrorBanner message={complianceError.message} onRetry={refetchCompliance} />
           ) : (
-            <div className="border border-border rounded-xl overflow-hidden bg-card shadow-xs">
+            <div className="border border-border rounded-xl overflow-hidden bg-card shadow-xs w-full min-w-0 max-w-full">
               <ComplianceTable
                 items={items}
                 onReviewItem={handleReviewItem}

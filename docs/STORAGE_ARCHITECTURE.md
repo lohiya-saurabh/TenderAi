@@ -137,7 +137,7 @@ tenants/${organization_id}/bids/${bid_id}/${document_id}/${sanitized_file_name}
 - **The Defense**:
   - **Zero-Trust AI Principle (AGENTS.md)**: Extracted document text is **DATA**, not trusted instructions.
   - LLM prompts wrap document text in `<untrusted_tender_document>` tags with strict system instructions prohibiting prompt instruction overrides.
-  - Parsing runs in an isolated Python worker environment with sandboxed PyMuPDF and strict CPU/memory limits.
+  - Parsing runs in an isolated Python worker environment with sandboxed Docling Parser Engine and strict CPU/memory limits.
 
 ### 5.6 Leaked Presigned URLs
 

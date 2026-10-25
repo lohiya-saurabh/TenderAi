@@ -203,7 +203,7 @@ resource "aws_ecs_task_definition" "ai_worker" {
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = "1024" # 1 vCPU
-  memory                   = "2048" # 2 GB RAM (PyMuPDF & OCR buffers)
+  memory                   = "2048" # 2 GB RAM (Docling Parser & OCR buffers)
   execution_role_arn       = var.ecs_execution_role_arn
   task_role_arn            = var.ai_worker_task_role_arn
 

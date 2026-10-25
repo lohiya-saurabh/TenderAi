@@ -469,7 +469,8 @@ flowchart TD
     N4 --> N5[5. llm_extraction: Tier 1 Primary]
     N5 --> N5B[5B. rescue_pass: Tier 2 Sweep]
     N5B --> N6[6. validation: Deterministic Grounding]
-    N6 --> N7{7. confidence_routing}
+    N6 --> N6B[6B. uncertainty_verification: Contradiction Detection]
+    N6B --> N7{7. confidence_routing}
 
     N7 -- "unverified > 0 & retry < 2" --> N8[8. targeted_refine]
     N8 --> N5
@@ -485,18 +486,19 @@ flowchart TD
 
 #### Node Contracts:
 
-1. **`docling_parse`**: Fetches physical page text and generates Docling layout blocks. Supports **Hoisted Document Precomputation**: in multi-page documents, pre-computed document AST structures short-circuit in 0ms, eliminating $O(N^2)$ redundant re-parsing.
-2. **`build_structure`**: Builds `DocumentStructureTree` mapping sections, tables, and clause hierarchies (`PART > SECTION > CLAUSE`).
+1. **`docling_parse`**: Fetches physical page text and generates Docling layout blocks. Supports **Hoisted Document Precomputation**: in multi-page documents, pre-computed document AST structures short-circuit in 0ms, eliminating $O(N^2)$ redundant re-parsing. Runs running furniture stripping (`RUNNING_FURNITURE_PATTERN`) and deleted clause sanitizing (`DELETED_CLAUSE_PATTERN`).
+2. **`build_structure`**: Builds `DocumentStructureTree` mapping sections, tables, and clause hierarchies (`PART > SECTION > CLAUSE`) using `GUARDED_CLAUSE_PATTERN` to prevent chainages and dates from creating invalid headings.
 3. **`candidate_detection`**: Runs high-recall rule detection across 20+ procurement categories with **Context Fusion** and normalized priority scoring ($0.0 - 1.0$), partitioning passages into `(candidates, unselected)`.
 4. **`context_assembly`**: Constructs isolated prompt budgets ($\le 24,000$ chars) with preceding/following clause context and definitions wrapped in `<untrusted_document_data>` XML envelopes.
-5. **`llm_extraction`**: Structured-output LLM generates `CandidateComplianceItem` list from Tier-1 `PRIMARY` candidates.
-6. **`rescue_pass` (Node 5B)**: Dedicated safety-net node sweeping Tier-2 `unselected` passages. Evaluates unselected blocks in compact batches to catch un-keyworded or split clauses, tagging them with `extraction_tier="RESCUE"` before passing all items to validation.
-7. **`validation`**: Pure Python exact-substring grounding check asserting that every extracted `verbatim_quote` exists character-for-character in source text.
-8. **`confidence_routing`**: Evaluates unverified count and confidence score. Crucially, routing to `targeted_refine` is strictly conditional on `len(unverified) > 0 and retry_count < 2`. If 100% of items are verified but confidence is low ($< 0.80$), it routes directly to `escalate_human_review` without wasting LLM calls on futile retries.
-9. **`targeted_refine`**: Cyclically feeds specific grounding failure reasons back to Node 5 (bounded to max 1 retry).
-10. **`escalate_human_review`**: Formats review payload for human triage with clear provenance links.
-11. **`human_review`**: Calls LangGraph's native `interrupt()`, snapshotting state to PostgreSQL and halting execution until human resume via `POST /api/v1/compliance/review`.
-12. **`postgres_store`**: Deterministically persists verified records to PostgreSQL via `BulkIngestComplianceUseCase`.
+5. **`llm_extraction`**: Structured-output LLM generates `CandidateComplianceItem` list from Tier-1 `PRIMARY` candidates using grammar constraints and bounded concurrency (`asyncio.Semaphore(2)`).
+6. **`rescue_pass` (Node 5B)**: Dedicated safety-net node sweeping Tier-2 `unselected` passages in compact batches to catch un-keyworded or split clauses, tagging them with `extraction_tier="RESCUE"`.
+7. **`validation`**: Pure Python exact-substring grounding check (`DeterministicValidator`) asserting that every extracted `verbatim_quote` exists character-for-character in source text and meets sentence-bounded constraints (`extract_complete_clause_window`, max 650 chars).
+8. **`uncertainty_verification` (Node 6B)**: Detects intra-document clause contradictions (e.g., 3% vs. 10% PBG; Rs. 7.18L EMD vs. Bid Securing Declaration; GST inclusive vs. exclusive) and emits `CLAUSE_CONTRADICTION` uncertainty items citing both clauses and applying the tender's Order of Precedence.
+9. **`confidence_routing`**: Evaluates unverified count and confidence score. Routing to `targeted_refine` is strictly conditional on `len(unverified) > 0 and retry_count < 2`. If 100% of items are verified but confidence is low ($< 0.80$), it routes directly to `escalate_human_review` without wasting LLM calls on futile retries.
+10. **`targeted_refine`**: Cyclically feeds specific grounding failure reasons back to Node 5 (bounded to max 1 retry).
+11. **`escalate_human_review`**: Formats review payload for human triage with clear provenance links and ambiguity summaries.
+12. **`human_review`**: Calls LangGraph's native `interrupt()`, snapshotting state to PostgreSQL and halting execution until human resume via `POST /api/v1/compliance/review`.
+13. **`postgres_store`**: Deterministically prepares verified items for single-writer persistence by NestJS `DocumentCompletionService` via `DocumentExtractionCompletedEvent`.
 
 ---
 
@@ -647,7 +649,7 @@ Automated evaluation is implemented in [`apps/ai/src/tenderpulse_ai/evaluation/`
 
 - **WHY**: Indian public procurement compliance requires cyclical error feedback (grounding verification retries), multi-day human approval gates, and resilient mid-stream state recovery upon worker restarts.
 - **WHAT**: Adoption of LangGraph `StateGraph` with typed states, channel reducers (`operator.add`), native `interrupt()`, and persistent PostgreSQL checkpointers.
-- **HOW**: Implemented in `apps/ai/src/tenderpulse_ai/workflow/graph.py` (11-node cyclic extraction graph) and `apps/ai/src/tenderpulse_ai/decision/workflow/graph.py` (6-node decision graph).
+- **HOW**: Implemented in `apps/ai/src/tenderpulse_ai/workflow/graph.py` (12-node cyclic extraction graph) and `apps/ai/src/tenderpulse_ai/decision/workflow/graph.py` (6-node decision graph).
 - **WHY NOT Alternatives**:
   - _LangChain LCEL_: Pure linear DAG; cannot loop backward with error feedback without resetting execution state.
   - _Autonomous ReAct Loops_: Unbounded tool loops (`Thought -> Action -> Observation`) exhibit unpredictable runtimes, spiraling API bills, and infinite loop risks.
