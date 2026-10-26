@@ -86,7 +86,7 @@ export const BidDetailPage: React.FC = () => {
   const [isChatOpen, setIsChatOpen] = useState<boolean>(false);
 
   // Fetch Bid details
-  const fetchBid = useCallback(() => getBid(bidId), [bidId]);
+  const fetchBid = useCallback((signal: AbortSignal) => getBid(bidId, { signal }), [bidId]);
   const {
     data: bid,
     isLoading: bidLoading,
@@ -95,7 +95,10 @@ export const BidDetailPage: React.FC = () => {
   } = useApi<BidDetail>(fetchBid, [bidId]);
 
   // Fetch Compliance items
-  const fetchCompliance = useCallback(() => listComplianceItems(bidId), [bidId]);
+  const fetchCompliance = useCallback(
+    (signal: AbortSignal) => listComplianceItems(bidId, { signal }),
+    [bidId],
+  );
   const {
     data: complianceItems,
     error: complianceError,

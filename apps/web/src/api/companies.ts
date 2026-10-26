@@ -5,7 +5,7 @@
  * (companies) scoped within the authenticated tenant boundary.
  */
 
-import { apiGet, apiPost, type ApiResult } from '@/api/client.js';
+import { apiGet, apiPatch, apiPost, type ApiResult } from '@/api/client.js';
 import type {
   CompanyProfilePayload,
   CompanyProfileVersion,
@@ -31,6 +31,7 @@ export interface CompanyItem {
   mcaVerificationData?: Record<string, unknown> | null;
   digilockerLinkedAt?: string | null;
   digilockerMetadata?: Record<string, unknown> | null;
+  onboardingPreferences?: OnboardingPreferences | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -122,11 +123,20 @@ export function getCompany(id: string): Promise<ApiResult<CompanyItem>> {
 /**
  * Fetch capability profile and version history for a specific company.
  */
-export function getCompanyProfile(companyId?: string): Promise<ApiResult<CompanyProfileView>> {
-  const url = companyId
-    ? `/api/v1/companies/${encodeURIComponent(companyId)}/profile`
-    : '/api/v1/company-profile';
-  return apiGet<CompanyProfileView>(url);
+export function getCompanyProfile(companyId: string): Promise<ApiResult<CompanyProfileView>> {
+  return apiGet<CompanyProfileView>(`/api/v1/companies/${encodeURIComponent(companyId)}/profile`);
+}
+
+/**
+ * Fetch a specific pinned profile version for a company.
+ */
+export function getCompanyProfileVersion(
+  companyId: string,
+  versionId: string,
+): Promise<ApiResult<CompanyProfileVersion>> {
+  return apiGet<CompanyProfileVersion>(
+    `/api/v1/companies/${encodeURIComponent(companyId)}/profile/versions/${encodeURIComponent(versionId)}`,
+  );
 }
 
 /**
@@ -143,6 +153,28 @@ export function createCompanyProfile(
 }
 
 export const createCompanyProfileVersion = createCompanyProfile;
+
+export type TurnoverBand = 'under_10_cr' | '10_to_50_cr' | '50_to_250_cr' | 'above_250_cr';
+
+/** Self-declared onboarding answers; never part of the evidence-backed profile. */
+export interface OnboardingPreferences {
+  sectors: string[];
+  turnoverBand: TurnoverBand;
+  completedAt: string;
+}
+
+/**
+ * Save the onboarding wizard's sector and turnover answers on a company.
+ */
+export function updateOnboardingPreferences(
+  companyId: string,
+  input: { sectors: string[]; turnoverBand: TurnoverBand },
+): Promise<ApiResult<CompanyItem>> {
+  return apiPatch<CompanyItem>(
+    `/api/v1/companies/${encodeURIComponent(companyId)}/onboarding-preferences`,
+    input,
+  );
+}
 
 /**
  * Get expiring certificates for a specific company.
@@ -307,4 +339,3 @@ export function getCompanyEvidenceDownloadUrl(
     `/api/v1/companies/${encodeURIComponent(companyId)}/evidence/${encodeURIComponent(evidenceId)}/download-url`,
   );
 }
-

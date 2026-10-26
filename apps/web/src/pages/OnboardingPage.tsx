@@ -5,13 +5,7 @@ import { useCompany } from '@/context/useCompany.js';
 import { Button } from '@/components/ui/button.js';
 import { Label } from '@/components/ui/label.js';
 import { Badge } from '@/components/ui/badge.js';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card.js';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card.js';
 import {
   Building2,
   CheckCircle2,
@@ -21,7 +15,7 @@ import {
   ShieldCheck,
   Loader2,
 } from 'lucide-react';
-import { verifyGstin, createCompanyProfileVersion } from '@/api/companies.js';
+import { verifyGstin, updateOnboardingPreferences, type TurnoverBand } from '@/api/companies.js';
 
 const SECTORS = [
   'Civil Infrastructure & Highways',
@@ -41,8 +35,9 @@ export const OnboardingPage: React.FC = () => {
   const [selectedSectors, setSelectedSectors] = useState<string[]>([
     'Civil Infrastructure & Highways',
   ]);
-  const [turnoverRange, setTurnoverRange] = useState<string>('50_to_250_cr');
+  const [turnoverRange, setTurnoverRange] = useState<TurnoverBand>('50_to_250_cr');
   const [isFinishing, setIsFinishing] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // IRIS IRP GSTIN Verification during onboarding
   const [gstinInput, setGstinInput] = useState('27AABCU9603R1ZM');
@@ -69,32 +64,35 @@ export const OnboardingPage: React.FC = () => {
   };
 
   const toggleSector = (sec: string) => {
-    if (selectedSectors.includes(sec)) {
-      setSelectedSectors(selectedSectors.filter((s) => s !== sec));
-    } else {
-      setSelectedSectors([...selectedSectors, sec]);
-    }
+    setSelectedSectors((prev) =>
+      prev.includes(sec) ? prev.filter((s) => s !== sec) : [...prev, sec],
+    );
   };
 
+  const goToDashboard = () => navigate('/bids', { replace: true });
+
+  // Sectors and turnover band are self-declared, so they are stored as
+  // onboarding preferences on the company, never as a capability profile
+  // version: the evaluator only reads evidence-backed profile data.
   const handleComplete = async () => {
-    setIsFinishing(true);
-    if (companies.length > 0 && companies[0]) {
-      const compId = companies[0].id;
-      try {
-        await createCompanyProfileVersion(compId, {
-          name: 'Onboarding Capability Baseline',
-          payload: {
-            company_name: companies[0].legalName || 'Enterprise Contractor',
-            operating_regions: selectedSectors,
-          },
-        });
-      } catch (err) {
-        console.warn('[OnboardingPage] Failed to persist initial capabilities profile:', err);
-      }
+    const company = companies[0];
+    if (!company) {
+      goToDashboard();
+      return;
     }
-    setTimeout(() => {
-      navigate('/bids', { replace: true });
-    }, 400);
+    setIsFinishing(true);
+    setSaveError(null);
+    const res = await updateOnboardingPreferences(company.id, {
+      sectors: selectedSectors,
+      turnoverBand: turnoverRange,
+    });
+    if (!res.ok) {
+      setIsFinishing(false);
+      setSaveError(res.error.message);
+      return;
+    }
+    await reloadCompanies();
+    goToDashboard();
   };
 
   return (
@@ -294,8 +292,8 @@ export const OnboardingPage: React.FC = () => {
                   Step 2: Core Sectors &amp; Financial Turnover
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Helps our deterministic engine evaluate financial qualification formulas
-                  accurately.
+                  Used to tailor your workspace. Eligibility checks only use evidence-backed figures
+                  from your Company Dossier.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-5">
@@ -332,7 +330,7 @@ export const OnboardingPage: React.FC = () => {
                   <select
                     id="turnoverSelect"
                     value={turnoverRange}
-                    onChange={(e) => setTurnoverRange(e.target.value)}
+                    onChange={(e) => setTurnoverRange(e.target.value as TurnoverBand)}
                     className="w-full h-9 px-3 rounded-md border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                   >
                     <option value="under_10_cr">Under ₹10 Crores (MSME Micro / Small)</option>
@@ -401,6 +399,19 @@ export const OnboardingPage: React.FC = () => {
                     </p>
                   </div>
                 </div>
+
+                {saveError && (
+                  <div className="p-3 rounded-lg border border-red-500/30 bg-red-500/5 text-[11px] text-red-500 space-y-1">
+                    <p>We couldn't save your sector and turnover preferences: {saveError}</p>
+                    <button
+                      type="button"
+                      onClick={goToDashboard}
+                      className="underline font-semibold"
+                    >
+                      Continue without saving
+                    </button>
+                  </div>
+                )}
 
                 <div className="pt-2 flex justify-between items-center">
                   <Button variant="ghost" size="sm" onClick={() => setStep(2)} className="text-xs">

@@ -12,12 +12,9 @@ import {
   CheckCircle2,
   Layers,
 } from 'lucide-react';
-import {
-  getCompanyProfile,
-  getExpiringCertificates,
-  type CompanyProfileView,
-  type ExpiringCertificatesResponse,
-} from '@/api/companyProfile.js';
+import { getCompanyProfile, getCompanyExpiringCertificates } from '@/api/companies.js';
+import type { CompanyProfileView, ExpiringCertificatesResponse } from '@/api/companyProfile.js';
+import { useCompany } from '@/context/useCompany.js';
 import { Badge } from '@/components/ui/badge.js';
 
 /**
@@ -25,17 +22,26 @@ import { Badge } from '@/components/ui/badge.js';
  * evaluated deterministically against incoming tender requirements.
  *
  * Grounded in live backend endpoints:
- *   - GET /api/v1/company-profile
- *   - GET /api/v1/company-profile/expiring-certificates
+ *   - GET /api/v1/companies/:companyId/profile
+ *   - GET /api/v1/companies/:companyId/expiring-certificates
  */
 export const CompanyReadinessCard: React.FC = () => {
+  const { selectedCompany, isLoading: companiesLoading } = useCompany();
+  const companyId = selectedCompany?.id;
   const [profile, setProfile] = useState<CompanyProfileView | null>(null);
   const [expiring, setExpiring] = useState<ExpiringCertificatesResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    if (!companyId) {
+      setProfile(null);
+      setExpiring(null);
+      setLoading(false);
+      return;
+    }
     let isMounted = true;
-    Promise.all([getCompanyProfile(), getExpiringCertificates(90)])
+    setLoading(true);
+    Promise.all([getCompanyProfile(companyId), getCompanyExpiringCertificates(companyId, 90)])
       .then(([profRes, expRes]) => {
         if (!isMounted) return;
         if (profRes.ok && profRes.data) {
@@ -52,7 +58,7 @@ export const CompanyReadinessCard: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [companyId]);
 
   const activePayload = profile?.active?.payload;
   const activeVersion = profile?.active;
@@ -115,7 +121,7 @@ export const CompanyReadinessCard: React.FC = () => {
       </CardHeader>
 
       <CardContent className="pt-4 flex flex-col gap-4">
-        {loading ? (
+        {loading || companiesLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="h-20 rounded-lg bg-muted/40 animate-pulse" />

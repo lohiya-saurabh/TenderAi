@@ -23,6 +23,34 @@ export interface CreateCompanyDto {
   constitution?: string;
 }
 
+export const TURNOVER_BANDS = [
+  'under_10_cr',
+  '10_to_50_cr',
+  '50_to_250_cr',
+  'above_250_cr',
+] as const;
+
+export type TurnoverBand = (typeof TURNOVER_BANDS)[number];
+
+/**
+ * Self-declared answers captured by the onboarding wizard. These are
+ * hints for UI personalisation only: they are not evidence and are
+ * never written into the capability profile the evaluator reads.
+ */
+export interface OnboardingPreferences {
+  sectors: string[];
+  turnoverBand: TurnoverBand;
+  completedAt: string;
+}
+
+export interface UpdateOnboardingPreferencesDto {
+  sectors?: unknown;
+  turnoverBand?: unknown;
+}
+
+const MAX_ONBOARDING_SECTORS = 20;
+const MAX_SECTOR_LENGTH = 120;
+
 export interface CompanyView {
   id: string;
   organizationId: string;
@@ -41,6 +69,7 @@ export interface CompanyView {
   udyamVerificationData?: Record<string, unknown> | null;
   digilockerLinkedAt?: string | null;
   digilockerMetadata?: Record<string, unknown> | null;
+  onboardingPreferences?: OnboardingPreferences | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -151,6 +180,59 @@ export class CompaniesService {
   }
 
   /**
+   * Fetch a specific pinned profile version for a company (Anti-IDOR).
+   */
+  public async getCompanyProfileVersion(companyId: string, versionId: string) {
+    await this.getCompanyById(companyId);
+    return this.companyProfileService.getVersionById(versionId, companyId);
+  }
+
+  /**
+   * Store the onboarding wizard's self-declared answers on the company (Anti-IDOR).
+   */
+  public async updateOnboardingPreferences(
+    companyId: string,
+    dto: UpdateOnboardingPreferencesDto,
+  ): Promise<CompanyView> {
+    const orgId = this.requireOrg();
+    await this.getCompanyById(companyId);
+
+    const { sectors, turnoverBand } = dto ?? {};
+    if (
+      !Array.isArray(sectors) ||
+      sectors.length > MAX_ONBOARDING_SECTORS ||
+      sectors.some((s) => typeof s !== 'string' || !s.trim() || s.trim().length > MAX_SECTOR_LENGTH)
+    ) {
+      throw new BadRequestError(
+        `"sectors" must be an array of at most ${MAX_ONBOARDING_SECTORS} non-empty strings (max ${MAX_SECTOR_LENGTH} chars each).`,
+      );
+    }
+    if (
+      typeof turnoverBand !== 'string' ||
+      !TURNOVER_BANDS.includes(turnoverBand as TurnoverBand)
+    ) {
+      throw new BadRequestError(`"turnoverBand" must be one of: ${TURNOVER_BANDS.join(', ')}.`);
+    }
+
+    const now = new Date();
+    const preferences: OnboardingPreferences = {
+      sectors: [...new Set((sectors as string[]).map((s) => s.trim()))],
+      turnoverBand: turnoverBand as TurnoverBand,
+      completedAt: now.toISOString(),
+    };
+
+    const updated = await this.repository.updateCompany(companyId, orgId, {
+      onboardingPreferences: preferences,
+      updatedAt: now,
+    });
+
+    if (!updated) {
+      throw new NotFoundError(`Company '${companyId}' not found in your organization.`);
+    }
+    return this.mapCompany(updated);
+  }
+
+  /**
    * Get expiring certificates for a specific company (Anti-IDOR).
    */
   public async getCompanyExpiringCertificates(companyId: string, withinDays = 90) {
@@ -194,6 +276,7 @@ export class CompaniesService {
           : String(r.digilockerLinkedAt)
         : null,
       digilockerMetadata: (r.digilockerMetadata as Record<string, unknown>) ?? null,
+      onboardingPreferences: (r.onboardingPreferences as OnboardingPreferences | null) ?? null,
       createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
       updatedAt: r.updatedAt instanceof Date ? r.updatedAt.toISOString() : String(r.updatedAt),
     };

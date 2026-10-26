@@ -80,6 +80,7 @@ export async function initDatabaseDdl(db: PGlite): Promise<void> {
     ALTER TABLE companies ADD COLUMN IF NOT EXISTS mca_verification_data JSONB;
     ALTER TABLE companies ADD COLUMN IF NOT EXISTS digilocker_linked_at TIMESTAMPTZ;
     ALTER TABLE companies ADD COLUMN IF NOT EXISTS digilocker_metadata JSONB;
+    ALTER TABLE companies ADD COLUMN IF NOT EXISTS onboarding_preferences JSONB;
 
     CREATE INDEX IF NOT EXISTS idx_companies_org ON companies(organization_id);
 

@@ -16,6 +16,8 @@ export interface ApiError {
   status: number;
   message: string;
   details?: unknown;
+  /** True when the caller cancelled the request via its AbortSignal. */
+  aborted?: boolean;
 }
 
 /** Result type for API calls */
@@ -169,9 +171,12 @@ const inFlightGetRequests = new Map<string, Promise<ApiResult<unknown>>>();
  * Core fetch wrapper with JWT injection, 401 retry, and in-flight GET coalescing.
  */
 export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<ApiResult<T>> {
-  const isGet = (!options.method || options.method.toUpperCase() === 'GET') && !options.body;
+  // Cancellable requests skip in-flight GET dedup: sharing one fetch would let
+  // a single caller's abort cancel the request for every other caller.
+  const isDedupableGet =
+    (!options.method || options.method.toUpperCase() === 'GET') && !options.body && !options.signal;
 
-  if (isGet && inFlightGetRequests.has(path)) {
+  if (isDedupableGet && inFlightGetRequests.has(path)) {
     return inFlightGetRequests.get(path) as Promise<ApiResult<T>>;
   }
 
@@ -240,6 +245,9 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
       const data = (await response.json()) as T;
       return { ok: true, data };
     } catch (err) {
+      if (options.signal?.aborted) {
+        return { ok: false, error: { status: 0, message: 'Request aborted', aborted: true } };
+      }
       return {
         ok: false,
         error: {
@@ -250,21 +258,25 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
       };
     }
   })().finally(() => {
-    if (isGet) {
+    if (isDedupableGet) {
       inFlightGetRequests.delete(path);
     }
   });
 
-  if (isGet) {
+  if (isDedupableGet) {
     inFlightGetRequests.set(path, execution as Promise<ApiResult<unknown>>);
   }
 
   return execution;
 }
 
+export interface RequestOptions {
+  signal?: AbortSignal;
+}
+
 /** Convenience: GET request */
-export function apiGet<T>(path: string): Promise<ApiResult<T>> {
-  return apiFetch<T>(path, { method: 'GET' });
+export function apiGet<T>(path: string, options: RequestOptions = {}): Promise<ApiResult<T>> {
+  return apiFetch<T>(path, { method: 'GET', signal: options.signal });
 }
 
 /** Convenience: POST request */

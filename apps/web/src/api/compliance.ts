@@ -5,7 +5,7 @@
  * Updated to support the enhanced Requirement/Compliance Matrix.
  */
 
-import { apiGet, apiPatch, type ApiResult } from '@/api/client.js';
+import { apiGet, apiPatch, type ApiResult, type RequestOptions } from '@/api/client.js';
 
 /** Execution/statutory rules specific to Indian tender compliance */
 export interface ExecutionRules {
@@ -128,16 +128,20 @@ export interface UpdateComplianceItemResponse {
 }
 
 /** List all compliance items for a bid */
-export function listComplianceItems(bidId: string): Promise<ApiResult<ComplianceItem[]>> {
-  return apiGet<ComplianceItem[]>(`/api/v1/bids/${bidId}/compliance-items`);
+export function listComplianceItems(
+  bidId: string,
+  options?: RequestOptions,
+): Promise<ApiResult<ComplianceItem[]>> {
+  return apiGet<ComplianceItem[]>(`/api/v1/bids/${bidId}/compliance-items`, options);
 }
 
 /** Get a single compliance item by ID */
 export function getComplianceItem(
   bidId: string,
   itemId: string,
+  options?: RequestOptions,
 ): Promise<ApiResult<ComplianceItem>> {
-  return apiGet<ComplianceItem>(`/api/v1/bids/${bidId}/compliance-items/${itemId}`);
+  return apiGet<ComplianceItem>(`/api/v1/bids/${bidId}/compliance-items/${itemId}`, options);
 }
 
 /** Review (Approve/Flag/Waive/Edit) a compliance item with optimistic concurrency check */

@@ -22,7 +22,7 @@ const ENDPOINTS_STATUS: EndpointStatus[] = [
   },
   {
     method: 'GET',
-    path: '/api/v1/company-profile',
+    path: '/api/v1/companies/:companyId/profile',
     purpose:
       'Company Capability Profile aggregate — registrations, certifications, audited financials, past work orders.',
     status: 'LIVE',
@@ -31,7 +31,7 @@ const ENDPOINTS_STATUS: EndpointStatus[] = [
   },
   {
     method: 'GET',
-    path: '/api/v1/company-profile/expiring-certificates',
+    path: '/api/v1/companies/:companyId/expiring-certificates',
     purpose: 'Certificate and OEM authorization expiry watch (renewals within 30/60/90 days).',
     status: 'LIVE',
     notes: 'Real-time countdown and expiry status monitoring against tender submission windows.',

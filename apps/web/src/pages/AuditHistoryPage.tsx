@@ -10,7 +10,7 @@ import { ArrowLeft, ShieldCheck, History } from 'lucide-react';
 export const AuditHistoryPage: React.FC = () => {
   const { id = '' } = useParams<{ id: string }>();
 
-  const fetchEvents = useCallback(() => listAuditEvents(id), [id]);
+  const fetchEvents = useCallback((signal: AbortSignal) => listAuditEvents(id, { signal }), [id]);
   const { data: events, isLoading, error, refetch } = useApi<AuditEvent[]>(fetchEvents, [id]);
 
   return (

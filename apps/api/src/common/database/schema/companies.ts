@@ -42,6 +42,9 @@ export const companies = pgTable('companies', {
   mcaVerificationData: jsonb('mca_verification_data'),
   digilockerLinkedAt: tstz('digilocker_linked_at'),
   digilockerMetadata: jsonb('digilocker_metadata'),
+  // Self-declared onboarding answers. Kept apart from the evidence-backed
+  // capability profile so they never feed the deterministic evaluator.
+  onboardingPreferences: jsonb('onboarding_preferences'),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });

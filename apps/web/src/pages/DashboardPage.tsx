@@ -18,8 +18,12 @@ import { TenderListSection } from '@/components/dashboard/TenderListSection.js';
 import { MissingApiCallout } from '@/components/dashboard/MissingApiCallout.js';
 import { computePipelineStages } from '@/components/dashboard/dashboardData.js';
 
+// Module-level so the reference is stable, and so useApi's AbortSignal
+// argument is never passed through as listBids' optional query.
+const fetchBids = () => listBids();
+
 export const DashboardPage: React.FC = () => {
-  const { data: bids, isLoading, error, refetch } = useApi<BidSummary[]>(listBids);
+  const { data: bids, isLoading, error, refetch } = useApi<BidSummary[]>(fetchBids);
   const { hasPermission } = useAuth();
 
   const { itemsByBid, isLoading: complianceLoading } = useBidComplianceItems(bids);

@@ -4,7 +4,7 @@
  * Immutable audit trail event logs.
  */
 
-import { apiGet, type ApiResult } from '@/api/client.js';
+import { apiGet, type ApiResult, type RequestOptions } from '@/api/client.js';
 
 export interface AuditEvent {
   id: string;
@@ -19,6 +19,9 @@ export interface AuditEvent {
 }
 
 /** List audit trail events for a bid */
-export function listAuditEvents(bidId: string): Promise<ApiResult<AuditEvent[]>> {
-  return apiGet<AuditEvent[]>(`/api/v1/bids/${bidId}/audit-events`);
+export function listAuditEvents(
+  bidId: string,
+  options?: RequestOptions,
+): Promise<ApiResult<AuditEvent[]>> {
+  return apiGet<AuditEvent[]>(`/api/v1/bids/${bidId}/audit-events`, options);
 }

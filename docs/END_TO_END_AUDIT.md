@@ -349,6 +349,12 @@ gantt
    - Consolidate company profile endpoints under `/api/v1/companies/:id/profile`.
    - Add `AbortController` cancellation to `useApi.ts`.
 
+   **Status (2026-10-27): done.**
+   - *Onboarding*: sectors and turnover band are saved to a new `companies.onboarding_preferences` column via `PATCH /api/v1/companies/:id/onboarding-preferences`. They are deliberately **not** written as a capability profile version: these answers are self-declared, while the profile is the evidence-backed input to the deterministic evaluator (which reads `operating_regions` as geographic states). Save failures now show in the wizard.
+   - *Cloud files*: `listCloudFiles(companyId, provider, folderId)` was already company-scoped; no change needed.
+   - *Profile routes*: the web client only calls `/api/v1/companies/:companyId/profile`, `.../profile/versions/:versionId` (new) and `.../expiring-certificates`. The legacy `/api/v1/company-profile` controller remains for compatibility but is marked `@deprecated`, sends an RFC 9745 `Deprecation` header and logs each call; remove it once logs show no callers.
+   - *useApi*: fetchers receive an `AbortSignal`. A new request or unmount aborts the previous one, and the request-id guard still drops late responses. `apiGet` accepts `{ signal }`; cancellable GETs skip in-flight dedup so one caller's abort cannot cancel another's request.
+
 4. **P3 — AI Pipeline Hardening**:
    - Enforce XML prompt boundary delimiters against prompt injection.
    - Upgrade `ScopedRetrievalTool` to dense vector embeddings.
