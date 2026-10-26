@@ -21,6 +21,7 @@ class ComplianceWorkflowState(TypedDict, total=False):
     page_number: int
     raw_page_text: str
     pages: list[dict[str, Any]]
+    continuation_text: str  # first page after the window (for quotes stitched across a page break)
     storage_reference: str | None
     pdf_path: str | None
 
@@ -40,6 +41,7 @@ class ComplianceWorkflowState(TypedDict, total=False):
     # Node 5: LLM Extractions & Retrieval
     retrieved_chunks: list[dict[str, Any]]
     extracted_candidates: list[CandidateComplianceItem]
+    extraction_error: str | None  # set when the LLM produced no valid answer for the window
 
     # Node 6 & 7: Validation & Confidence Routing
     validation_reports: list[dict[str, Any]]
@@ -49,6 +51,7 @@ class ComplianceWorkflowState(TypedDict, total=False):
     # Node 8: Verified Items & Storage
     verified_items: Annotated[list[VerifiedComplianceItem], operator.add]
     unverified_items: list[CandidateComplianceItem]
+    intentional_rejections: int  # unverified items dropped on purpose (deleted clause, redundant)
     retry_count: int
     error_feedback: str | None
     status: str

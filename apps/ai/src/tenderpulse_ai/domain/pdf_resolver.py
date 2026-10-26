@@ -132,13 +132,18 @@ async def resolve_pdf_to_pages(
                 "pypdfium2 is required for PDF text extraction but is not installed. Please install pypdfium2."
             )
 
-        # 4. Extract pages using pypdfium2 (C++ PDFium engine)
-        logger.info("Extracting pages from PDF %s using PDFium engine...", resolved_path.name)
-        pdf = pypdfium2.PdfDocument(str(resolved_path))
+        # 4. Layout-aware page text: PDFium text, ruled tables row by row, OCR for scans
+        import asyncio
+
+        from tenderpulse_ai.config import settings
+        from tenderpulse_ai.domain.pdf_layout import extract_layout_pages
+
+        logger.info("Extracting layout-aware pages from PDF %s...", resolved_path.name)
+        page_texts = await asyncio.to_thread(
+            extract_layout_pages, resolved_path, settings.ocr_languages
+        )
         pages: list[NormalizedPage] = []
-        for idx, page in enumerate(pdf):
-            text_page = page.get_textpage()
-            page_text = text_page.get_text_range()
+        for idx, page_text in enumerate(page_texts):
             if page_text and page_text.strip():
                 pages.append(
                     NormalizedPage(
@@ -150,7 +155,7 @@ async def resolve_pdf_to_pages(
         logger.info(
             "Successfully extracted %d non-empty pages from %s", len(pages), resolved_path.name
         )
-        return filter_candidate_pages(pages)
+        return pages
 
     finally:
         # Clean up temporary download file if created
@@ -159,106 +164,6 @@ async def resolve_pdf_to_pages(
                 temp_path.unlink()
             except OSError as e:
                 logger.warning("Failed to clean up temporary PDF %s: %e", temp_path, e)
-
-
-PROCUREMENT_KEYWORDS: tuple[str, ...] = (
-    "earnest money",
-    "emd",
-    "bid security",
-    "tender security",
-    "performance security",
-    "performance bank guarantee",
-    "pbg",
-    "bank guarantee",
-    "power of attorney",
-    "consortium",
-    "joint venture",
-    "jv agreement",
-    "board resolution",
-    "authorized signatory",
-    "annual turnover",
-    "net worth",
-    "financial capacity",
-    "solvency",
-    "working capital",
-    "similar work",
-    "past experience",
-    "technical capacity",
-    "technical experience",
-    "personnel",
-    "key expert",
-    "project manager",
-    "equipment",
-    "machinery",
-    "validity of bids",
-    "bid validity",
-    "period of validity",
-    "liquidated damages",
-    "delay damages",
-    "defect liability",
-    "litigation",
-    "debarment",
-    "blacklisting",
-    "integrity pact",
-    "conflict of interest",
-    "stamp",
-    "notary",
-    "udin",
-    "local content",
-    "make in india",
-    "gst",
-    "gstin",
-    "taxes and duties",
-    "conditions precedent",
-    "project milestone",
-    "completion schedule",
-    "commercial operation date",
-    "cod",
-    "applicable permits",
-    "maintenance criteria",
-    "maintenance manual",
-    "rectification",
-    "pothole",
-    "rescue post",
-    "mobile crane",
-    "ambulance",
-    "medical aid",
-    "escrow account",
-    "priority of payments",
-    "co-insured",
-    "all-risk",
-    "dispute resolution",
-    "arbitration",
-    "conciliation",
-    "hisilicon",
-    "chipset",
-    "camera",
-    "anpr",
-    "cctv",
-    "surveillance",
-    "legal metrology",
-    "metrology",
-    "stamping",
-    "land border",
-    "144(xi)",
-    "144 (xi)",
-    "source code",
-    "cybersecurity",
-)
-
-HIGH_STAKES_PROCUREMENT_KEYWORDS: tuple[str, ...] = (
-    "hisilicon",
-    "land border",
-    "144(xi)",
-    "144 (xi)",
-    "source code",
-    "legal metrology",
-    "metrology",
-    "stamping",
-    "debarment",
-    "blacklisting",
-    "integrity pact",
-)
 
 
 def is_pure_toc_page(text: str) -> bool:
@@ -283,8 +188,21 @@ def is_pure_toc_page(text: str) -> bool:
             "list of clauses",
         )
     )
+
+    def is_index_table_row(line: str) -> bool:
+        """Ruled TOC rendered as a table row: "1 | Scope of Bid | 19 | Sealing of Bids"."""
+        cells = [c.strip() for c in line.split("|") if c.strip()]
+        return (
+            len(cells) >= 2
+            and any(re.fullmatch(r"(?:Clause|Section|\d{1,3}(?:\.\d+)*)", c) for c in cells)
+            and all(len(c) <= 90 for c in cells)
+        )
+
     toc_lines = 0
     for line in lines:
+        if "|" in line and is_index_table_row(line):
+            toc_lines += 1
+            continue
         if (
             re.search(r"\.{3,}|\u2026|\s+\d+$", line)
             or re.search(r"^(section|clause|chapter|part)\s+[\dIVXLCDM]+", line, re.IGNORECASE)
@@ -301,47 +219,3 @@ def is_pure_toc_page(text: str) -> bool:
     if is_toc_title and toc_ratio > 0.2 and not has_operative:
         return True
     return toc_ratio > 0.5 and not has_operative
-
-
-def filter_candidate_pages(
-    pages: list[NormalizedPage],
-    max_candidate_pages: int = 50,
-) -> list[NormalizedPage]:
-    """Filters large multi-page documents to high-signal candidate pages.
-
-    Preserves first pages (NIT metadata), discards pure TOC pages, and ranks
-    substantive pages by Indian Public Procurement / contract covenant keywords.
-    """
-    if len(pages) <= 30:
-        non_toc = [p for p in pages if not is_pure_toc_page(p.text)]
-        return non_toc if non_toc else pages
-
-    initial_pages = [p for p in pages[:10] if not is_pure_toc_page(p.text)]
-    remaining_pages = pages[10:]
-
-    scored_pages: list[tuple[int, NormalizedPage]] = []
-    for p in remaining_pages:
-        if is_pure_toc_page(p.text):
-            continue
-        text_lower = p.text.lower()
-        score = sum(1 for kw in PROCUREMENT_KEYWORDS if kw in text_lower)
-        if any(kw in text_lower for kw in HIGH_STAKES_PROCUREMENT_KEYWORDS):
-            score += 15
-        if score > 0:
-            scored_pages.append((score, p))
-
-    scored_pages.sort(key=lambda x: x[0], reverse=True)
-    limit = max(10, max_candidate_pages - len(initial_pages))
-    top_scored = [p for _, p in scored_pages[:limit]]
-
-    page_map = {p.page_number: p for p in initial_pages}
-    for p in top_scored:
-        page_map[p.page_number] = p
-
-    filtered = sorted(page_map.values(), key=lambda p: p.page_number)
-    logger.info(
-        "Filtered %d raw pages to %d candidate pages for compliance extraction",
-        len(pages),
-        len(filtered),
-    )
-    return filtered

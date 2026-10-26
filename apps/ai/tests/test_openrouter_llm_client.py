@@ -1,4 +1,5 @@
 import json
+import time
 
 import httpx
 import pytest
@@ -14,7 +15,7 @@ from tenderpulse_ai.domain.validator import DeterministicValidator
 from tenderpulse_ai.infrastructure.llm.openai_compatible_client import (
     OpenAICompatibleLlmClient,
 )
-from tenderpulse_ai.models.llm_client import StructuredLLMClient
+from tenderpulse_ai.models.llm_client import LLMExtractionError, StructuredLLMClient
 
 
 @pytest.mark.asyncio
@@ -203,43 +204,16 @@ async def test_openai_compatible_client_retries_transient_error():
 
 
 @pytest.mark.asyncio
-async def test_structured_llm_client_falls_back_to_deterministic_extractor_on_live_error():
+async def test_structured_llm_client_raises_on_live_error_without_fallback():
     def failing_handler(request: httpx.Request):
         return httpx.Response(500, text="Internal Gateway Error")
 
     transport = httpx.MockTransport(failing_handler)
     async with httpx.AsyncClient(transport=transport) as mock_http:
-        failing_live_client = OpenAICompatibleLlmClient(api_key="test-key", client=mock_http)
-
-        # Fallback deterministic extractor function
-        def fallback_extractor(sys: str, user: str):
-            return [
-                CandidateComplianceItem(
-                    category="FINANCIAL",
-                    title="Fallback EMD",
-                    description="Extracted via fallback deterministic rules",
-                    execution_rules=ExecutionRulesProps(
-                        stamp_paper_required=True, stamp_paper_denomination_inr=100
-                    ),
-                    provenance=ProvenanceProps(
-                        source_document_id="doc-test",
-                        source_file_name="test.pdf",
-                        page_number=1,
-                        clause_reference="Sec 1",
-                        verbatim_quote="Fallback quote",
-                        confidence_score=0.9,
-                    ),
-                )
-            ]
-
-        structured_client = StructuredLLMClient(
-            extractor_fn=fallback_extractor,
-            live_client=failing_live_client,
-        )
-
-        items = await structured_client.extract_compliance("sys", "user", max_retries=0)
-        assert len(items) == 1
-        assert items[0].title == "Fallback EMD"
+        live = OpenAICompatibleLlmClient(api_key="test-key", client=mock_http)
+        structured_client = StructuredLLMClient(live_client=live)
+        with pytest.raises(LLMExtractionError, match="500"):
+            await structured_client.extract_compliance("sys", "user", max_retries=0)
 
 
 @pytest.mark.asyncio
@@ -458,7 +432,11 @@ async def test_openai_compatible_client_rotates_on_404_and_sets_inf_cooldown():
 async def test_openai_compatible_client_rotates_on_429_and_sets_60s_cooldown():
     import time
 
-    from tenderpulse_ai.infrastructure.llm.openai_compatible_client import _MODEL_COOLDOWNS
+    from tenderpulse_ai.infrastructure.llm.openai_compatible_client import (
+        _MODEL_COOLDOWNS,
+        _PROVIDER_BLOCKED_UNTIL,
+        is_provider_blocked,
+    )
 
     calls = []
 
@@ -510,56 +488,142 @@ async def test_openai_compatible_client_rotates_on_429_and_sets_60s_cooldown():
         client=mock_client,
     )
 
-    items = await client.extract_compliance("sys", "user", max_retries=0)
-    assert len(items) == 1
+    # A 429 locks out the whole provider (free-tier limits are per key): the same-provider
+    # fallback models are skipped instead of producing a sequential 429 storm, and with no
+    # provider left the call fails explicitly.
+    with pytest.raises(LLMExtractionError):
+        await client.extract_compliance("sys", "user", max_retries=0)
+    assert calls == ["primary/rate-limited"]
+    assert is_provider_blocked("https://openrouter.ai/api/v1")
     cooldown = _MODEL_COOLDOWNS["primary/rate-limited"]
     assert cooldown > time.time()
     assert cooldown <= time.time() + 65.0
+    _PROVIDER_BLOCKED_UNTIL.clear()
 
 
 @pytest.mark.asyncio
-async def test_structured_llm_client_trips_circuit_breaker_on_401():
+async def test_structured_llm_client_surfaces_401_as_extraction_error():
     def auth_fail_handler(request: httpx.Request):
         return httpx.Response(401, json={"error": "Unauthorized"})
 
     transport = httpx.MockTransport(auth_fail_handler)
     mock_client = httpx.AsyncClient(transport=transport)
-    live_client = OpenAICompatibleLlmClient(
-        api_key="bad-key",
-        client=mock_client,
-    )
-
-    fallback_called = False
-
-    def fallback_extractor(sys: str, user: str):
-        nonlocal fallback_called
-        fallback_called = True
-        return []
-
-    structured_client = StructuredLLMClient(
-        extractor_fn=fallback_extractor,
-        live_client=live_client,
-    )
-
-    assert structured_client._live_circuit_broken is False
-    await structured_client.extract_compliance("sys", "user", max_retries=0)
-    assert structured_client._live_circuit_broken is True
-    assert fallback_called is True
+    live_client = OpenAICompatibleLlmClient(api_key="bad-key", client=mock_client)
+    structured_client = StructuredLLMClient(live_client=live_client)
+    with pytest.raises(LLMExtractionError, match="401"):
+        await structured_client.extract_compliance("sys", "user", max_retries=0)
 
 
-def test_structured_llm_client_instantiates_live_client_when_api_key_present(monkeypatch):
+def test_structured_llm_client_instantiates_live_client_from_settings(monkeypatch):
     from tenderpulse_ai.config import settings
 
     monkeypatch.setattr(settings, "llm_api_key", "test-sk-key")
+    assert StructuredLLMClient().live_client.endpoints
 
-    def dummy_extractor(sys: str, user: str):
-        return []
 
-    # Even with extractor_fn provided, live_client must be instantiated
-    client = StructuredLLMClient(extractor_fn=dummy_extractor)
-    assert client.live_client is not None
-    assert client.extractor_fn is dummy_extractor
+@pytest.mark.asyncio
+async def test_unconfigured_client_fails_fast_without_any_request():
+    calls = []
+    transport = httpx.MockTransport(lambda r: calls.append(r) or httpx.Response(200))
+    async with httpx.AsyncClient(transport=transport) as mock_http:
+        live = OpenAICompatibleLlmClient(api_key=None, client=mock_http)
+        with pytest.raises(LLMExtractionError, match="No LLM endpoint"):
+            await StructuredLLMClient(live_client=live).extract_compliance("sys", "user")
+    assert calls == []
 
-    # But enable_live_client=False suppresses it
-    disabled_client = StructuredLLMClient(extractor_fn=dummy_extractor, enable_live_client=False)
-    assert disabled_client.live_client is None
+
+@pytest.mark.asyncio
+async def test_provider_lockout_still_rotates_to_a_different_provider():
+    from tenderpulse_ai.infrastructure.llm.openai_compatible_client import LlmEndpoint
+
+    calls = []
+
+    def handler(request: httpx.Request):
+        calls.append(str(request.url))
+        if "provider-a" in str(request.url):
+            return httpx.Response(429, json={"error": "Rate limited"})
+        body = {"candidates": []}
+        return httpx.Response(200, json={"choices": [{"message": {"content": json.dumps(body)}}]})
+
+    endpoints = [
+        LlmEndpoint(provider="a", base_url="https://provider-a.test/v1", api_key="k", model="m1"),
+        LlmEndpoint(provider="a", base_url="https://provider-a.test/v1", api_key="k", model="m2"),
+        LlmEndpoint(provider="b", base_url="https://provider-b.test/v1", api_key="k", model="m3"),
+    ]
+    client = OpenAICompatibleLlmClient(
+        endpoints=endpoints, client=httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    )
+    await client.extract_compliance("sys", "user", max_retries=0)
+    # m2 shares provider A's rate limit: skipped; provider B is tried.
+    assert [c.split("/v1")[0] for c in calls] == [
+        "https://provider-a.test",
+        "https://provider-b.test",
+    ]
+    # A second call skips provider A entirely (0 network calls to it).
+    calls.clear()
+    await client.extract_compliance("sys", "user", max_retries=0)
+    assert all("provider-a" not in c for c in calls)
+
+
+@pytest.mark.asyncio
+async def test_extraction_disables_reasoning_and_cools_down_length_truncated_models():
+    from tenderpulse_ai.infrastructure.llm.openai_compatible_client import (
+        _MODEL_COOLDOWNS,
+        LlmEndpoint,
+    )
+
+    sent = []
+
+    def handler(request: httpx.Request):
+        body = json.loads(request.content)
+        sent.append(body)
+        if body["model"] == "reasoner":
+            # Reasoning consumed the whole budget: empty content, finish_reason="length"
+            return httpx.Response(
+                200,
+                json={
+                    "choices": [{"message": {"content": ""}, "finish_reason": "length"}],
+                    "usage": {
+                        "completion_tokens": 4096,
+                        "completion_tokens_details": {"reasoning_tokens": 4096},
+                    },
+                },
+            )
+        content = {
+            "candidates": [
+                {
+                    "category": "FINANCIAL",
+                    "title": "EMD",
+                    "description": "EMD",
+                    "execution_rules": {},
+                    "provenance": {"page_number": 1, "verbatim_quote": "EMD quote"},
+                }
+            ]
+        }
+        return httpx.Response(
+            200, json={"choices": [{"message": {"content": json.dumps(content)}}]}
+        )
+
+    base = "https://openrouter.ai/api/v1"
+    client = OpenAICompatibleLlmClient(
+        endpoints=[
+            LlmEndpoint(provider="openrouter", base_url=base, api_key="k", model="reasoner"),
+            LlmEndpoint(provider="openrouter", base_url=base, api_key="k", model="instruct"),
+        ],
+        client=httpx.AsyncClient(transport=httpx.MockTransport(handler)),
+        max_tokens=4096,
+    )
+    items = await client.extract_compliance("sys", "user", max_retries=0)
+    assert len(items) == 1
+    assert all(b["reasoning"] == {"effort": "none", "exclude": True} for b in sent)
+    assert all(b["max_tokens"] == 4096 for b in sent)
+    assert _MODEL_COOLDOWNS["reasoner"] > time.time() + 500  # skipped by later windows
+    _MODEL_COOLDOWNS.clear()
+
+
+def test_create_from_settings_uses_llm_max_tokens(monkeypatch):
+    from tenderpulse_ai.config import settings
+
+    monkeypatch.setattr(settings, "llm_max_tokens", 3000)
+    monkeypatch.setattr(settings, "openrouter_api_key", "sk-test")
+    assert OpenAICompatibleLlmClient.create_from_settings(settings).max_tokens == 3000

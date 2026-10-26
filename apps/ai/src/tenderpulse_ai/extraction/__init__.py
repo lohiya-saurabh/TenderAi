@@ -11,14 +11,12 @@ from tenderpulse_ai.extraction.okf_compiler import (
     compile_tender_to_okf,
 )
 from tenderpulse_ai.extraction.orchestrator import ProductionExtractionPipeline
-from tenderpulse_ai.extraction.rules import default_tender_extractor
 
 __all__ = [
     "NormalizedPage",
     "DocumentExtractionRequest",
     "DocumentExtractionResponse",
     "ProductionExtractionPipeline",
-    "default_tender_extractor",
     "compile_tender_to_okf",
     "OKFConceptNode",
     "OKFBundle",

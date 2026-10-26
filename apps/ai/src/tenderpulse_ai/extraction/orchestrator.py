@@ -6,6 +6,7 @@ from typing import Any
 
 from tenderpulse_ai.chat.okf_registry import register_tender_okf
 from tenderpulse_ai.domain.models import VerifiedComplianceItem
+from tenderpulse_ai.extraction.clause_references import attribute_positional_clause_refs
 from tenderpulse_ai.extraction.contracts import (
     DocumentExtractionRequest,
     DocumentExtractionResponse,
@@ -16,8 +17,7 @@ from tenderpulse_ai.extraction.deduplication import (
     detect_clause_contradictions,
 )
 from tenderpulse_ai.extraction.okf_compiler import compile_tender_to_okf
-from tenderpulse_ai.extraction.rules import default_tender_extractor
-from tenderpulse_ai.models.llm_client import StructuredLLMClient
+from tenderpulse_ai.models.llm_client import LLMExtractionError, StructuredLLMClient
 from tenderpulse_ai.tools.page_text import PageTextTool
 from tenderpulse_ai.tools.retrieval import DocumentChunk, ScopedRetrievalTool
 from tenderpulse_ai.workflow.nodes import WorkflowNodeContext
@@ -34,7 +34,7 @@ class ProductionExtractionPipeline:
     """
 
     def __init__(self, llm_client: StructuredLLMClient | None = None):
-        self.llm_client = llm_client or StructuredLLMClient(extractor_fn=default_tender_extractor)
+        self.llm_client = llm_client or StructuredLLMClient()
 
     async def execute(self, request: DocumentExtractionRequest) -> DocumentExtractionResponse:
         sec_ctx = request.security_context
@@ -102,9 +102,7 @@ class ProductionExtractionPipeline:
         ]
 
         detector = CandidateDetector()
-        detected_candidates, unselected_passages = detector.detect_candidates_with_unselected(
-            docling_doc, doc_tree
-        )
+        detected_candidates = detector.detect_candidates(docling_doc, doc_tree)
 
         assembler = ContextAssembler()
         assembled_contexts = assembler.assemble_contexts(
@@ -116,22 +114,20 @@ class ProductionExtractionPipeline:
         for c in detected_candidates:
             candidates_by_page.setdefault(c.page_number, []).append(c.model_dump())
 
-        unselected_by_page: dict[int, list[dict[str, Any]]] = {}
-        for u in unselected_passages:
-            unselected_by_page.setdefault(u.page_number, []).append(u.model_dump())
-
         contexts_by_page: dict[int, list[dict[str, Any]]] = {}
         for a in assembled_contexts:
             contexts_by_page.setdefault(a.page_number, []).append(a.model_dump())
 
+        page_text_by_number = {p.page_number: p.text for p in request.pages}
         shared_docling_dict = docling_doc.model_dump()
         shared_structure_dict = doc_tree.model_dump()
 
-        candidate_pages = list(request.pages)
-        if len(candidate_pages) > 40:
-            from tenderpulse_ai.domain.pdf_resolver import filter_candidate_pages
+        # Every page goes to the LLM except pure table-of-contents / index pages.
+        from tenderpulse_ai.domain.pdf_resolver import is_pure_toc_page
 
-            candidate_pages = filter_candidate_pages(candidate_pages)
+        candidate_pages = [p for p in request.pages if not is_pure_toc_page(p.text)] or list(
+            request.pages
+        )
 
         # Step 3: Batch 2–3 Pages per Prompt Window instead of 1 physical page at a time
         from tenderpulse_ai.config import settings
@@ -194,10 +190,6 @@ class ProductionExtractionPipeline:
                 for p in window:
                     window_candidates.extend(candidates_by_page.get(p.page_number, []))
 
-                window_unselected = []
-                for p in window:
-                    window_unselected.extend(unselected_by_page.get(p.page_number, []))
-
                 window_contexts = []
                 for p in window:
                     window_contexts.extend(contexts_by_page.get(p.page_number, []))
@@ -205,6 +197,8 @@ class ProductionExtractionPipeline:
                 combined_page_text = "\n\n".join(
                     f"--- PAGE {p.page_number} ---\n{p.text}" for p in window
                 )
+                # Text stitched across the window's trailing page break must stay groundable.
+                next_page = page_text_by_number.get(window[-1].page_number + 1, "")
 
                 initial_state: ComplianceWorkflowState = {
                     "security_context": sec_ctx.model_dump(),
@@ -214,10 +208,10 @@ class ProductionExtractionPipeline:
                     "page_number": window[0].page_number,
                     "raw_page_text": combined_page_text,
                     "pages": [{"page_number": p.page_number, "text": p.text} for p in window],
+                    "continuation_text": next_page,
                     "docling_document": shared_docling_dict,
                     "document_structure": shared_structure_dict,
                     "detected_candidates": window_candidates,
-                    "unselected_passages": window_unselected,
                     "assembled_contexts": window_contexts,
                     "retrieved_chunks": [],
                     "extracted_candidates": [],
@@ -241,13 +235,33 @@ class ProductionExtractionPipeline:
                 return final_state
 
         page_results = await asyncio.gather(*(_process_window(w) for w in page_windows))
-        for final_state in page_results:
+        failed_pages: list[int] = []
+        extraction_errors: list[str] = []
+        for window, final_state in zip(page_windows, page_results):
             if final_state.get("human_review_required", False):
                 human_review_required = True
+            if final_state.get("extraction_error"):
+                failed_pages.extend(p.page_number for p in window)
+                extraction_errors.append(final_state["extraction_error"])
             all_verified_items.extend(final_state.get("verified_items", []))
             all_audit_events.extend(final_state.get("audit_events", []))
 
-        # Cross-page item consolidation
+        # LLM-only: when no window got a valid model answer there is nothing to return.
+        # Raising lets the queue worker retry the job and finally publish status=FAILED.
+        if page_windows and len(extraction_errors) == len(page_windows):
+            raise LLMExtractionError(
+                f"LLM extraction failed for all {len(page_windows)} page windows of "
+                f"'{request.document_id}': {extraction_errors[-1]}"
+            )
+        if failed_pages:
+            logger.warning(
+                "LLM extraction failed on pages %s of doc %s; returning partial result for review.",
+                failed_pages,
+                request.document_id,
+            )
+
+        # Positional AST clause attribution (line-start markers only), then consolidation
+        attribute_positional_clause_refs(all_verified_items, docling_doc, doc_tree)
         formatted_items = consolidate_verified_items(all_verified_items, request)
 
         # Intra-document clause contradiction detection
@@ -306,8 +320,9 @@ class ProductionExtractionPipeline:
             chunks=wire_chunks,
             human_review_required=human_review_required,
             audit_events=all_audit_events,
-            okf_bundle=okf_bundle.model_dump() if hasattr(okf_bundle, "model_dump") else okf_bundle,
+            okf_bundle=okf_bundle.model_dump(),
             uncertainty_items=contradictions,
+            failed_pages=sorted(set(failed_pages)),
         )
 
 

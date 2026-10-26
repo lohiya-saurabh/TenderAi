@@ -3,8 +3,9 @@ import json
 import logging
 import re
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, TypeVar
 
 import httpx
 
@@ -16,6 +17,12 @@ from tenderpulse_ai.domain.models import (
 )
 
 logger = logging.getLogger("tenderpulse_ai.infrastructure.llm")
+
+T = TypeVar("T")
+
+
+class LLMExtractionError(RuntimeError):
+    """No model produced a valid structured answer (unreachable, blocked, invalid output)."""
 
 
 @dataclass
@@ -74,6 +81,19 @@ PROVIDER_SPECS: dict[str, dict[str, Any]] = {
 
 # In-memory cooldown registry to prevent hammer-retrying rate-limited endpoints (endpoint_key -> unban_timestamp)
 _MODEL_COOLDOWNS: dict[str, float] = {}
+
+# Provider-level (base URL) circuit breaker. Free-tier rate limits are per API key/account,
+# not per model: once one model on a provider returns 429, every model on that provider is
+# locked out for the cooldown and all callers skip it in 0ms (no sequential 429 storm).
+_PROVIDER_BLOCKED_UNTIL: dict[str, float] = {}
+
+
+def is_provider_blocked(base_url: str) -> bool:
+    return time.time() < _PROVIDER_BLOCKED_UNTIL.get(base_url.rstrip("/"), 0.0)
+
+
+def block_provider(base_url: str, duration: float = 60.0) -> None:
+    _PROVIDER_BLOCKED_UNTIL[base_url.rstrip("/")] = time.time() + duration
 
 
 def _recover_truncated_json(content: str) -> list[dict[str, Any]]:
@@ -198,11 +218,13 @@ class OpenAICompatibleLlmClient:
         cls,
         settings: Any,
         timeout: float | None = None,
-        max_tokens: int = 1200,
+        max_tokens: int | None = None,
         client: httpx.AsyncClient | None = None,
     ) -> "OpenAICompatibleLlmClient":
         provider = getattr(settings, "llm_provider", "rotation").lower().strip()
         t = timeout if timeout is not None else getattr(settings, "llm_timeout_seconds", 45.0)
+        if max_tokens is None:
+            max_tokens = getattr(settings, "llm_max_tokens", 4096)
         endpoints: list[LlmEndpoint] = []
 
         def _add_provider_endpoints(p_name: str, key: str, custom_model: str | None = None):
@@ -323,19 +345,27 @@ class OpenAICompatibleLlmClient:
         for k in expired:
             _MODEL_COOLDOWNS.pop(k, None)
 
-        endpoints = self.endpoints or [
-            LlmEndpoint(
-                provider="custom",
-                base_url=self.base_url,
-                api_key=self.api_key,
-                model=self.model,
-            )
-        ]
+        # No key, no endpoint: an unconfigured client must fail fast (LLMExtractionError),
+        # not send an unauthenticated request.
+        endpoints = self.endpoints or (
+            [
+                LlmEndpoint(
+                    provider="custom",
+                    base_url=self.base_url,
+                    api_key=self.api_key,
+                    model=self.model,
+                )
+            ]
+            if self.api_key
+            else []
+        )
 
         active: list[LlmEndpoint] = []
         cooling: list[LlmEndpoint] = []
 
         for ep in endpoints:
+            if is_provider_blocked(ep.base_url):
+                continue
             expiry = _MODEL_COOLDOWNS.get(ep.model) or _MODEL_COOLDOWNS.get(
                 f"{ep.base_url}::{ep.model}"
             )
@@ -393,6 +423,8 @@ class OpenAICompatibleLlmClient:
                 headers.update(ep.extra_headers)
 
             payload["model"] = ep.model
+            if is_provider_blocked(ep.base_url):
+                continue
 
             for attempt in range(max_retries + 1):
                 try:
@@ -409,8 +441,9 @@ class OpenAICompatibleLlmClient:
                     if response.status_code == 429:
                         _MODEL_COOLDOWNS[ep.model] = time.time() + 60.0
                         _MODEL_COOLDOWNS[k] = time.time() + 60.0
+                        block_provider(ep.base_url)
                         logger.warning(
-                            "[OpenAICompatibleClient] Endpoint '%s' (%s) rate-limited (429). Setting 60s cooldown and rotating to next provider...",
+                            "[OpenAICompatibleClient] Endpoint '%s' (%s) rate-limited (429). Locking out the whole provider for 60s and rotating to the next provider...",
                             ep.model,
                             ep.provider,
                         )
@@ -501,10 +534,26 @@ class OpenAICompatibleLlmClient:
         max_retries: int = 1,
         block_map: dict[str, Any] | None = None,
     ) -> list[CandidateComplianceItem]:
-        """
-        Extracts structured compliance items, rotating dynamically through the multi-provider pool
-        upon rate limits (429) or upstream unavailability.
-        Supports token-saving block resolution via block_map.
+        """Structured compliance candidates (block_map resolves source_block_id provenance)."""
+        return await self.complete_structured(
+            system_prompt,
+            user_prompt,
+            parse=lambda data: self._parse_response(data, block_map=block_map),
+            max_retries=max_retries,
+        )
+
+    async def complete_structured(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        parse: Callable[[dict[str, Any]], T],
+        max_retries: int = 1,
+    ) -> T:
+        """JSON-mode completion with multi-provider rotation on 429 / unavailability.
+
+        ``parse`` turns the raw chat-completion response into the result; when it raises
+        (empty or invalid output) the next model is tried. Honours LLM_REPLAY_MODE.
+        Raises LLMExtractionError when no model produced a parseable answer.
         """
         payload: dict[str, Any] = {
             "model": self.model,
@@ -517,8 +566,14 @@ class OpenAICompatibleLlmClient:
             "temperature": 0.0,
         }
 
+        from tenderpulse_ai.infrastructure.llm import replay
+
+        if replay.mode() == "replay":
+            return parse(replay.load(payload["messages"]))
+
         endpoints_to_try = self._get_candidate_endpoints()
         last_error: Exception | None = None
+        request_started = time.perf_counter()
 
         for ep in endpoints_to_try:
             k = f"{ep.base_url}::{ep.model}"
@@ -531,6 +586,23 @@ class OpenAICompatibleLlmClient:
                 headers.update(ep.extra_headers)
 
             payload["model"] = ep.model
+            # Structured JSON extraction needs no chain-of-thought: free OpenRouter models are
+            # often reasoning models whose hidden reasoning otherwise consumes max_tokens and
+            # returns empty content (finish_reason="length").
+            if "openrouter.ai" in ep.base_url:
+                payload["reasoning"] = {"effort": "none", "exclude": True}
+            else:
+                payload.pop("reasoning", None)
+            if is_provider_blocked(ep.base_url):
+                continue
+            # Rotation budget: never chain slow models past the client timeout; the caller
+            # falls back to deterministic extraction instead.
+            if last_error is not None and time.perf_counter() - request_started > self.timeout:
+                logger.warning(
+                    "[OpenAICompatibleClient] Rotation budget of %.0fs exhausted; skipping remaining endpoints.",
+                    self.timeout,
+                )
+                break
 
             for attempt in range(max_retries + 1):
                 start_time = time.perf_counter()
@@ -565,8 +637,9 @@ class OpenAICompatibleLlmClient:
                     if response.status_code == 429:
                         _MODEL_COOLDOWNS[ep.model] = time.time() + 60.0
                         _MODEL_COOLDOWNS[k] = time.time() + 60.0
+                        block_provider(ep.base_url)
                         logger.warning(
-                            "[OpenAICompatibleClient] Endpoint '%s' (%s) rate-limited (429). Setting 60s cooldown and rotating to next provider...",
+                            "[OpenAICompatibleClient] Endpoint '%s' (%s) rate-limited (429). Locking out the whole provider for 60s and rotating to the next provider...",
                             ep.model,
                             ep.provider,
                             extra={
@@ -673,12 +746,32 @@ class OpenAICompatibleLlmClient:
                             },
                         },
                     )
-                    candidates = self._parse_response(data, block_map=block_map)
-                    if candidates:
-                        _MODEL_COOLDOWNS.pop(ep.model, None)
-                        _MODEL_COOLDOWNS.pop(k, None)
-                        return candidates
-                    break
+                    choice = (data.get("choices") or [{}])[0]
+                    content = str((choice.get("message") or {}).get("content") or "").strip()
+                    if not content and choice.get("finish_reason") == "length":
+                        reasoning_tokens = (usage.get("completion_tokens_details") or {}).get(
+                            "reasoning_tokens"
+                        )
+                        _MODEL_COOLDOWNS[ep.model] = time.time() + 600.0
+                        _MODEL_COOLDOWNS[k] = time.time() + 600.0
+                        last_error = RuntimeError(
+                            f"Model '{ep.model}' exhausted max_tokens={self.max_tokens} "
+                            f"(reasoning_tokens={reasoning_tokens}) with empty output"
+                        )
+                        logger.warning(
+                            "[OpenAICompatibleClient] %s. Cooling the model down for 10 minutes and rotating...",
+                            last_error,
+                            extra={"event": "llm.request.truncated", "model": ep.model},
+                        )
+                        break
+                    # A valid answer may legitimately hold no obligations ([]); only an
+                    # unparseable one rotates to the next model (raised by _parse_response).
+                    result = parse(data)
+                    _MODEL_COOLDOWNS.pop(ep.model, None)
+                    _MODEL_COOLDOWNS.pop(k, None)
+                    if replay.mode() == "record":
+                        replay.save(payload["messages"], data)
+                    return result
 
                 except (httpx.RequestError, httpx.HTTPStatusError) as exc:
                     duration_ms = round((time.perf_counter() - start_time) * 1000, 1)
@@ -732,8 +825,12 @@ class OpenAICompatibleLlmClient:
                     break
 
         if last_error:
-            raise last_error
-        return []
+            raise LLMExtractionError(f"All LLM endpoints failed; last error: {last_error}") from (
+                last_error
+            )
+        raise LLMExtractionError(
+            "No LLM endpoint available (none configured, or all providers blocked/cooling down)."
+        )
 
     def _parse_response(
         self,
@@ -755,30 +852,33 @@ class OpenAICompatibleLlmClient:
         cleaned_content = re.sub(r"^```(?:json)?\s*", "", content.strip(), flags=re.IGNORECASE)
         cleaned_content = re.sub(r"\s*```$", "", cleaned_content.strip())
 
-        raw_items: list[dict[str, Any]] = []
+        raw_items: list[dict[str, Any]] | None = None
         try:
             parsed = json.loads(cleaned_content)
             if isinstance(parsed, list):
                 raw_items = parsed
             elif isinstance(parsed, dict):
-                if "candidates" in parsed and isinstance(parsed["candidates"], list):
-                    raw_items = parsed["candidates"]
-                elif "items" in parsed and isinstance(parsed["items"], list):
-                    raw_items = parsed["items"]
-                elif "requirements" in parsed and isinstance(parsed["requirements"], list):
-                    raw_items = parsed["requirements"]
+                for key in ("candidates", "items", "requirements"):
+                    if isinstance(parsed.get(key), list):
+                        raw_items = parsed[key]
+                        break
         except json.JSONDecodeError as err:
             logger.warning(
                 "[OpenAICompatibleClient] Primary JSON decode failed (%s). Attempting truncated JSON recovery. Snippet: %s",
                 err,
                 cleaned_content[:200],
             )
-            raw_items = _recover_truncated_json(cleaned_content)
+            raw_items = _recover_truncated_json(cleaned_content) or None
             if raw_items:
                 logger.info(
                     "[OpenAICompatibleClient] Successfully recovered %d candidate items from truncated output stream.",
                     len(raw_items),
                 )
+        if raw_items is None:
+            raise RuntimeError(
+                "[OpenAICompatibleClient] Response is not a JSON candidates array: "
+                f"{cleaned_content[:200]!r}"
+            )
 
         candidates: list[CandidateComplianceItem] = []
         for raw in raw_items:
@@ -809,12 +909,13 @@ class OpenAICompatibleLlmClient:
         if not title:
             return None
         raw_cat = str(
-            raw.get("category") or raw.get("obligation_category") or raw.get("type") or "STATUTORY"
+            raw.get("category") or raw.get("obligation_category") or raw.get("type") or ""
         )
         try:
             category = normalize_category(raw_cat)
         except Exception:
-            category = "STATUTORY"
+            logger.debug("[OpenAICompatibleClient] Dropping item with unknown category %r", raw_cat)
+            return None
 
         description = clean_whitespace(
             raw.get("description")
@@ -912,26 +1013,6 @@ class OpenAICompatibleLlmClient:
             or ""
         )
         clean_quote = clean_whitespace(str(quote))
-
-        # Token-Saving Feature: If LLM outputted source_block_id without full verbatim quote,
-        # resolve the verbatim quote directly from the source block in block_map!
-        if matched_block and (
-            not clean_quote or clean_quote.strip() == "..." or len(clean_quote) < 10
-        ):
-            block_text = matched_block.get("text", "")
-            snippet = raw_prov.get("quote_snippet") or raw.get("quote_snippet")
-            if snippet and "..." in str(snippet):
-                parts = [p.strip() for p in str(snippet).split("...") if p.strip()]
-                if len(parts) >= 2:
-                    start_p = parts[0].lower()
-                    end_p = parts[-1].lower()
-                    bt_lower = block_text.lower()
-                    s_idx = bt_lower.find(start_p)
-                    e_idx = bt_lower.rfind(end_p)
-                    if s_idx != -1 and e_idx != -1 and e_idx > s_idx:
-                        clean_quote = clean_whitespace(block_text[s_idx : e_idx + len(end_p)])
-            if not clean_quote:
-                clean_quote = clean_whitespace(block_text)
 
         if not clean_quote:
             return None

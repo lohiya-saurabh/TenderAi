@@ -29,9 +29,11 @@ class ContextAssembler:
     DEF_PATTERN = re.compile(
         r'"([^"]+)"\s+(means|shall\s+mean|refers\s+to|is\s+defined\s+as)\b', re.IGNORECASE
     )
+    # Keyword + separator + a real identifier (number, Roman numeral or single capital):
+    # "partners" is not "Part ners", "Section of the" is not a reference.
     REF_PATTERN = re.compile(
-        r"\b(Clause|Sub-Clause|Section|Article|Part|Schedule|Annexure|Appendix)\s*[-–—]?\s*([A-Za-z\d]+(?:\.[A-Za-z\d]+)*)\b",
-        re.IGNORECASE,
+        r"\b((?i:Sub-Clause|Clause|Section|Article|Part|Schedule|Annexure|Appendix))"
+        r"(?:\s+|\s*[-–—]\s*)((?:\d+[A-Za-z]?|[IVXLC]+[A-Z]?|[A-Z])(?:\.\d+[A-Za-z]?)*)\b"
     )
 
     def assemble_contexts(

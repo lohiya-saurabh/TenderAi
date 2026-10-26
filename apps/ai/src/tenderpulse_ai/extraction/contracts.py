@@ -36,3 +36,7 @@ class DocumentExtractionResponse(BaseModel):
     uncertainty_items: list[dict[str, Any]] = Field(
         default_factory=list, description="Contradiction and uncertainty items"
     )
+    failed_pages: list[int] = Field(
+        default_factory=list,
+        description="Pages whose LLM extraction failed (no valid model answer); review them manually",
+    )

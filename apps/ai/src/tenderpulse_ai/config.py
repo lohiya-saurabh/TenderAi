@@ -40,8 +40,16 @@ class Settings(BaseSettings):
     llm_base_url: str = "https://openrouter.ai/api/v1"
     llm_model: str = "openrouter/free"
     llm_timeout_seconds: float = 45.0
+    # Output budget for structured extraction (JSON for up to ~25 chunks).
+    llm_max_tokens: int = 4096
     llm_max_retries: int = 2
     batch_page_window_size: int = 3
+    # Extraction is LLM-only. "record" saves raw responses, "replay" serves them offline
+    # (tests, benchmarks); see infrastructure/llm/replay.py.
+    llm_replay_mode: str = "off"
+    llm_replay_dir: str | None = None
+    # Tesseract language packs for scanned (image-only) pages, e.g. "eng+hin" for bilingual NITs.
+    ocr_languages: str = "eng"
 
     # Provider-Specific API Keys (Option C: Multi-Provider Free Rotation)
     gemini_api_key: str | None = None

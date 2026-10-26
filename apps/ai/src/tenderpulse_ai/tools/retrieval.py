@@ -72,7 +72,7 @@ class JevCalibratedReranker:
     }
 
     IDENTIFIER_REGEX: re.Pattern = re.compile(
-        r"(?:gem/\d{4}/[a-z]/\d+|nhai/[a-z0-9/-]+|clause\s+\d+(?:\.\d+)*|section\s+\d+|inr\s*[\d,]+|rs\.?\s*[\d,]+)",
+        r"(?:[a-z]{2,10}(?:/[a-z0-9.-]+){2,}|clause\s+\d+(?:\.\d+)*|section\s+\d+|inr\s*[\d,]+|rs\.?\s*[\d,]+)",  # reference codes (GEM/2024/B/1, ORG/DIV/12/..)
         re.IGNORECASE,
     )
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from fakes import fake_llm_client
 
 from tenderpulse_ai.domain.candidate_detector import CandidateDetector
 from tenderpulse_ai.domain.docling_parser import DoclingParserEngine, is_clause_deleted
@@ -15,9 +16,6 @@ from tenderpulse_ai.domain.models import (
 )
 from tenderpulse_ai.domain.structure_builder import DocumentStructureBuilder
 from tenderpulse_ai.domain.tender_chunker import TenderChunker
-from tenderpulse_ai.extraction.rules import default_tender_extractor
-from tenderpulse_ai.extraction.rules.base import get_clause_and_quote
-from tenderpulse_ai.models.llm_client import StructuredLLMClient
 from tenderpulse_ai.security.context import SecurityContext
 from tenderpulse_ai.tools.page_text import PageTextTool
 from tenderpulse_ai.tools.retrieval import ScopedRetrievalTool
@@ -215,26 +213,6 @@ def test_tender_chunker_suppresses_deleted_clauses():
     assert not any("Clause 46 Advance Payment" in c.content for c in chunks)
 
 
-def test_rules_suppress_deleted_clauses():
-    deleted_text = "Clause 46.1 Advance Payment of 10% mobilization advance - DELETED."
-
-    # 1. get_clause_and_quote returns None for deleted clause
-    res = get_clause_and_quote(
-        r"advance payment",
-        "advance payment",
-        ["advance payment", "mobilization advance"],
-        deleted_text,
-        deleted_text.lower(),
-        1,
-        "Clause 46.1",
-    )
-    assert res is None
-
-    # 2. default_tender_extractor returns empty candidates list for deleted text
-    candidates = default_tender_extractor("", deleted_text)
-    assert candidates == []
-
-
 @pytest.mark.asyncio
 async def test_workflow_validation_node_rejects_deleted_clauses():
     sec_ctx = SecurityContext(
@@ -247,7 +225,7 @@ async def test_workflow_validation_node_rejects_deleted_clauses():
     node_ctx = WorkflowNodeContext(
         retrieval_tool=ScopedRetrievalTool(),
         page_text_tool=PageTextTool(),
-        llm_client=StructuredLLMClient(enable_live_client=False),
+        llm_client=fake_llm_client(lambda s, u: []),
     )
     val_node = make_validation_node(node_ctx)
 

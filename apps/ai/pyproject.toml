@@ -17,6 +17,7 @@ dependencies = [
     "google-cloud-pubsub>=2.19.0",
     "pdfreader>=0.1.15",
     "pypdf>=6.21.2",
+    "pdfplumber>=0.11.0",
 ]
 
 [project.optional-dependencies]
@@ -45,6 +46,12 @@ ignore = ["E501", "E402", "E731"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["src"]
+markers = [
+    "unit: fast tests without real PDFs or network (auto-applied)",
+    "realdoc: tests that parse the real tender PDFs in data/procurement-evidence (auto-applied)",
+    "live: tests that call a real LLM provider (need keys and network; opt in with -m live)",
+]
+addopts = "-m 'not live'"
 
 [tool.pyright]
 include = ["src", "tests"]

@@ -6,6 +6,169 @@ from tenderpulse_ai.domain.models import (
     SectionNode,
 )
 
+LINE_START_MAIN_CLAUSE_RE = re.compile(
+    r"^\s*(?:"
+    r"(?P<kw>(?i:Sub-Clause|Clause|Article|Section|Schedule|Chapter|Rule|Paragraph|Para|Item|PQ))"
+    r"\s*[-–—.:]?\s*(?P<knum>\d{1,3}(?:\.\d{1,3})*[A-Z]?|[IVXLC]{1,7})\b"
+    r"(?:\s*(?P<ksub>\([A-Za-z\d]{1,4}\)))?"
+    r"|(?!\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\b)(?!\d+\.\d{3}\b)"
+    r"(?P<num>\d{1,3}(?:\.\d{1,3}){0,3})[.)]\s+(?:(?P<inline_sub>\([A-Za-z\d]{1,4}\))\s*)?(?=[A-Z(“\"'])"
+    r")"
+)
+
+LINE_START_SUB_CLAUSE_RE = re.compile(
+    r"^\s*(?:"
+    r"(?P<section_letter>[A-Z])\.\s+(?=[A-Z])"  # "A. Eligibility ...", "C. Technical ..."
+    r"|(?i:Note)\s*:?\s*(?P<note>\(\d{1,2}\))"  # "Note: (1) ..."
+    r"|(?P<paren>\([A-Za-z\d]{1,4}\))\s*(?=[A-Z(“\"'])"  # "(B) In addition", "(v) The ...", "(3) In case"
+    r"|(?P<tok>[ivxlc]{1,6}|[a-z])[.)]\s+(?=[A-Z])"  # "xv. Providing", "a. The selected"
+    r")"
+)
+
+_ROMAN_TOKEN_RE = re.compile(r"^[ivxlc]{1,6}$")
+# Unnumbered all-caps division heading: starts a new part whose numbering is independent.
+_DIVISION_HEADING_RE = re.compile(r"^[A-Z][A-Z&'’,\- ]{5,60}$")
+
+
+class ClauseTracker:
+    """Document-agnostic positional clause tracker.
+
+    Fed blocks in reading order, it keeps a parent stack (division > main clause >
+    section letter > sub-item) using ONLY line-start structural markers, so mid-sentence
+    mentions ("as per Annexure-III", "circular no. 18.75/2021") can never become a
+    clause's identity. Bare numbers that run backwards ("1." inside Clause 13's
+    eligibility table) are treated as sub-items of the active clause, not a reset.
+    """
+
+    def __init__(self) -> None:
+        self.division: str | None = None
+        self.main: str | None = None
+        self.main_label: str = "Clause"
+        self.letter: str | None = None
+        self.sub: str | None = None
+        self.sub_style: str | None = None
+        self.parent_sub: str | None = None
+        self.parent_style: str | None = None
+        self.last_text = ""
+        self.started_main = False
+
+    def reset_division(self, label: str | None) -> None:
+        self.division = label
+        self.main = self.letter = self.sub = self.sub_style = None
+        self.parent_sub = self.parent_style = None
+
+    def _accept_numbered_main(self, num: str) -> bool:
+        if self.main is None:
+            return True
+        try:
+            cur_top = int(self.main.split(".")[0])
+            new_top = int(num.split(".")[0])
+        except ValueError:
+            return True
+        if "." in num:  # "54.1" is a full clause identifier, never a table-row index
+            return num != self.main
+        return cur_top <= new_top <= cur_top + 10 and num != self.main
+
+    _SEQUENCE_STARTS = {"a", "i", "1", "A", "I"}
+
+    def _style_of(self, token: str, wrapper: str) -> str:
+        """'(ii)' -> 'paren-roman', '(a)' -> 'paren-alpha', 'xv.' -> 'dot-roman', '1.' -> 'dot-num'."""
+        if token.isdigit():
+            kind = "num"
+        elif token.isupper() and len(token) == 1 and token not in "IVX":
+            kind = "upper"
+        else:
+            prev_alpha = (
+                self.sub is not None
+                and self.sub_style is not None
+                and self.sub_style.endswith("alpha")
+                and len(token) == 1
+                and len(self.sub) == 1
+                and ord(token.lower()) == ord(self.sub.lower()) + 1
+            )
+            kind = "roman" if _ROMAN_TOKEN_RE.match(token.lower()) and not prev_alpha else "alpha"
+        return f"{wrapper}-{kind}"
+
+    def _set_sub(self, token: str, wrapper: str) -> None:
+        """Siblings replace the active sub-item; a list opened by an introducing item
+        ("The following ...", "...:") nests under it: Clause 13.C(ii)(a)."""
+        style = self._style_of(token, wrapper)
+        introduces = bool(re.search(r"(?::\s*$|\bfollowing\b)", self.last_text, re.I))
+        if (
+            self.sub is not None
+            and self.parent_sub is None
+            and style != self.sub_style
+            and token in self._SEQUENCE_STARTS
+            and introduces
+        ):
+            self.parent_sub, self.parent_style = self.sub, self.sub_style
+        elif style == self.parent_style or style != self.sub_style:
+            self.parent_sub = self.parent_style = None
+        self.sub, self.sub_style = token, style
+
+    def feed(self, text: str) -> str | None:
+        """Consumes one block's text and returns the clause path that block belongs to."""
+        self.started_main = False
+        line = (text or "").lstrip()
+        if _DIVISION_HEADING_RE.match(line):  # "SCOPE OF WORK", "GENERAL CONDITIONS OF CONTRACT"
+            self.reset_division(None)
+        main_m = LINE_START_MAIN_CLAUSE_RE.match(line)
+        if main_m and main_m.group("kw"):
+            kw = main_m.group("kw").title()
+            knum = main_m.group("knum")
+            if kw in ("Section", "Chapter") and "." not in knum:
+                self.reset_division(f"{kw} {knum}")  # "Section IV", "Chapter 3" restart numbering
+            else:
+                self.main_label = {"Sub-Clause": "Clause", "Para": "Paragraph"}.get(kw, kw)
+                self.main = knum
+                self.letter = self.sub = self.sub_style = None
+                self.parent_sub = self.parent_style = None
+                self.started_main = True
+                if main_m.group("ksub"):
+                    self._set_sub(main_m.group("ksub")[1:-1], "paren")
+        elif main_m and main_m.group("num"):
+            # Dates (22.01.2026) and chainages (87.000) are excluded by the regex lookaheads.
+            num = main_m.group("num")
+            if self._accept_numbered_main(num):
+                self.main_label, self.main = "Clause", num
+                self.letter = self.sub = self.sub_style = None
+                self.parent_sub = self.parent_style = None
+                self.started_main = True
+                if main_m.group("inline_sub"):
+                    self._set_sub(main_m.group("inline_sub")[1:-1], "paren")
+            else:
+                self._set_sub(num, "dot")
+        else:
+            sub_m = LINE_START_SUB_CLAUSE_RE.match(line)
+            if sub_m and self.main is not None:
+                if sub_m.group("section_letter"):
+                    self.letter, self.sub, self.sub_style = (
+                        sub_m.group("section_letter"),
+                        None,
+                        None,
+                    )
+                    self.parent_sub = self.parent_style = None
+                elif sub_m.group("note"):
+                    self._set_sub(sub_m.group("note")[1:-1], "paren")
+                elif sub_m.group("paren"):
+                    self._set_sub(sub_m.group("paren")[1:-1], "paren")
+                elif sub_m.group("tok"):
+                    self._set_sub(sub_m.group("tok"), "dot")
+        self.last_text = line[-160:]
+        return self.path()
+
+    def path(self) -> str | None:
+        if self.main is None:
+            return self.division
+        ref = f"{self.main_label} {self.main}"
+        if self.letter:
+            ref += f".{self.letter}"
+        if self.parent_sub:
+            ref += f"({self.parent_sub})"
+        if self.sub:
+            ref += f"({self.sub})"
+        return ref
+
 
 class DocumentStructureBuilder:
     """Node 2 - Build document structure (non-LLM AST Generator).
@@ -21,7 +184,7 @@ class DocumentStructureBuilder:
 
     # Regex patterns for arbitrary document hierarchy & section titles
     PART_PATTERN = re.compile(
-        r"^(PART\s+[I|V|X\d]+|SCHEDULE\s*[-–—]?\s*[A-Za-z\dIVX]+|ANNEXURE\s*[-–—]?\s*[A-Za-z\d]+|APPENDIX\s*[-–—]?\s*[A-Za-z\d]+)",
+        r"^(PART\s*[-–—]?\s*[IVXLC\d]+\b|SCHEDULE\s*[-–—]?\s*[A-Za-z\dIVX]+|ANNEXURE\s*[-–—]?\s*[A-Za-z\d]+|APPENDIX\s*[-–—]?\s*[A-Za-z\d]+)",
         re.IGNORECASE,
     )
     SECTION_PATTERN = re.compile(r"^(SECTION\s+[\dA-Za-z]+|ARTICLE\s+[\dA-Za-z]+)", re.IGNORECASE)
@@ -93,15 +256,26 @@ class DocumentStructureBuilder:
         current_clause: SectionNode | None = None
 
         node_counter = 1
+        tracker = ClauseTracker()
 
         for block in doc.blocks:
             text = block.text.strip()
 
             part_match = self.PART_PATTERN.search(text)
             section_match = self.SECTION_PATTERN.search(text)
+            if part_match:
+                tracker.reset_division(part_match.group(1).upper())
+            block_path = tracker.feed(text)
+            if block_path:
+                tree.block_paths[block.block_id] = block_path
+
             clause_match = None
             if not self._is_invalid_clause_candidate(text):
                 clause_match = self.GUARDED_CLAUSE_PATTERN.search(text)
+                # A bare number that runs backwards ("1." inside Clause 13's table) is a
+                # sub-item of the active clause, not a new clause node.
+                if clause_match and not clause_match.group(1) and not tracker.started_main:
+                    clause_match = None
 
             if part_match:
                 node_id = f"sec_node_{node_counter}"
@@ -133,8 +307,12 @@ class DocumentStructureBuilder:
                 tree.nodes.append(current_section)
                 current_clause = None
 
-            elif clause_match:
-                clause_number = clause_match.group(1) or clause_match.group(2) or "Clause"
+            elif clause_match or tracker.started_main:
+                clause_number = (
+                    ((clause_match.group(1) or clause_match.group(2)) if clause_match else None)
+                    or tracker.main
+                    or "Clause"
+                )
                 node_id = f"sec_node_{node_counter}"
                 node_counter += 1
                 parent_id = (

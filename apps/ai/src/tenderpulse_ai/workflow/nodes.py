@@ -29,7 +29,7 @@ from tenderpulse_ai.domain.models import (
 )
 from tenderpulse_ai.domain.structure_builder import DocumentStructureBuilder
 from tenderpulse_ai.domain.validator import DeterministicValidator
-from tenderpulse_ai.models.llm_client import StructuredLLMClient
+from tenderpulse_ai.models.llm_client import LLMExtractionError, StructuredLLMClient
 from tenderpulse_ai.review.models import (
     CrossTenantReviewException,
     HumanReviewActionPayload,
@@ -376,20 +376,26 @@ def make_llm_extraction_node(ctx: WorkflowNodeContext):
             },
         )
 
-        # 1. Retrieve chunks & verify tenant document authorization
+        # 1. Every clause chunk of the window goes to the model (tenant-scoped retrieval).
+        # Only page-exact text is quotable: skeleton chunks are generated outlines, table
+        # chunks are parser renderings of rows that already appear verbatim in the clause
+        # chunks, and TIER3 children repeat their parent's sentences.
         pages_in_window = state.get("pages", [])
-        num_pages = max(1, len(pages_in_window))
-        retrieve_k = min(25, max(8, 8 * num_pages))
-
         chunks = ctx.retrieval_tool.retrieve(
             security_context=sec_context,
             target_document_id=doc_id,
-            query=(
-                "eligibility qualification EMD tender fee cost turnover net worth experience "
-                "covenants milestones maintenance damages penalty escrow insurance permits "
-                "INFRACON portal submission deadline opening conflict integrity affidavit joint venture personnel"
+            query="compliance obligations",
+            top_k=10_000,
+        )
+        chunks = sorted(
+            (
+                c
+                for c in chunks
+                if getattr(c, "tier", None) in (None, "TIER2_PARENT")
+                and not (c.metadata or {}).get("table_id")
+                and not (c.metadata or {}).get("is_table")
             ),
-            top_k=retrieve_k,
+            key=lambda c: (c.page_number, c.chunk_id),
         )
 
         raw_text = state.get("raw_page_text", "")
@@ -456,13 +462,13 @@ def make_llm_extraction_node(ctx: WorkflowNodeContext):
             "- BIDDER ELIGIBILITY & QUALIFICATION: EMD / Bid Security, Performance Bank Guarantee (PBG), Annual Turnover, Net Worth, "
             "Past Similar Work completion, Power of Attorney, Integrity Pact, Non-Blacklisting, Make in India (PPP-MII), GSTIN.\n"
             "- CONTRACT EXECUTION COVENANTS: Conditions Precedent, Appointed Date, Scheduled COD / Completion timeline, "
-            "Milestones, Liquidated Damages formula & caps, Escrow Waterfall, Project Insurance, Dispute Resolution (SAROD/Arbitration), "
+            "Milestones, Liquidated Damages formula & caps, Escrow Waterfall, Project Insurance, Dispute Resolution / Arbitration, "
             "Maintenance SLAs (defect rectification), Statutory Clearances.\n\n"
             "2. NEGATIVE EXCLUSION DIRECTIVES (CRITICAL - DO NOT EXTRACT):\n"
             "- DO NOT extract from Table of Contents, index pages, or dot-leader lines.\n"
-            "- DO NOT extract bare definitions (e.g. 'Article 48: Bid Security means...') without operative obligations ('shall furnish').\n"
-            "- DO NOT extract requirements meant for third parties (e.g. Schedule T auditor turnover or Independent Engineer staff); only extract obligations binding the Bidder/Concessionaire.\n"
-            "- DO NOT extract negative expenditure exclusions (e.g. 'shall not include plant advances').\n"
+            "- DO NOT extract bare definitions ('X means ...') without an operative obligation ('shall furnish').\n"
+            "- DO NOT extract requirements meant for third parties (e.g. the Authority's own auditors, engineers or consultants); only extract obligations binding the Bidder/Contractor.\n"
+            "- DO NOT extract definitional exclusions that bind no one (e.g. what an amount 'shall not include').\n"
             "- DO NOT extract sentence fragments, dangling clauses, or isolated table notes. Quotes must be complete grammatical clauses.\n\n"
             "3. SELF-CONTAINED PLAIN-LANGUAGE OBLIGATIONS:\n"
             "- Every compliance item must be self-contained and self-explanatory in plain language.\n"
@@ -470,14 +476,13 @@ def make_llm_extraction_node(ctx: WorkflowNodeContext):
             "4. INDIAN STATUTORY EXECUTION RULES:\n"
             "Inspect text for execution formalities: stamp paper required (boolean) and denomination in INR, notarization required, "
             "CA 18-digit UDIN requirement, and bank guarantee SFMS MT760 confirmation.\n\n"
-            "5. TOKEN-SAVING PROVENANCE INVARIANT:\n"
-            "Every text block is tagged with a short ID like [B1], [B2] and a page number.\n"
-            "In each candidate's provenance, return:\n"
-            "  - 'source_block_id': The block ID where the requirement was found (e.g. 'B1', 'B2').\n"
-            "  - 'page_number': Integer page number indicated in the block header.\n"
-            "  - 'clause_reference': Clause reference indicated in the block header.\n"
-            "  - DO NOT re-copy long 80-word verbatim quotes into 'verbatim_quote'.\n"
-            "    Simply provide 'source_block_id'. Python will automatically copy the full continuous verbatim quote from the source block!\n\n"
+            "5. VERBATIM PROVENANCE INVARIANT:\n"
+            "Every text block is tagged with an ID like [B1], [B2] and a page number. For each candidate return:\n"
+            "  - 'source_block_id': the block ID holding the requirement (e.g. 'B1').\n"
+            "  - 'verbatim_quote': the complete sentence(s) stating the obligation, copied EXACTLY character for character "
+            "from that block (no paraphrase, no ellipsis, no added punctuation). Quotes are checked against the page text; "
+            "a quote that is not an exact substring is rejected.\n"
+            "  - 'page_number' and 'clause_reference' as shown in the block header.\n\n"
             "6. OUTPUT FORMAT:\n"
             "Respond strictly in JSON object format containing a 'candidates' array matching this structure:\n"
             "{\n"
@@ -495,6 +500,7 @@ def make_llm_extraction_node(ctx: WorkflowNodeContext):
             "      },\n"
             '      "provenance": {\n'
             '        "source_block_id": "B1",\n'
+            '        "verbatim_quote": "exact sentence copied from the block",\n'
             '        "page_number": integer,\n'
             '        "clause_reference": string,\n'
             '        "confidence_score": number between 0.0 and 1.0\n'
@@ -549,7 +555,37 @@ def make_llm_extraction_node(ctx: WorkflowNodeContext):
             return {
                 "retrieved_chunks": [c.model_dump() for c in chunks],
                 "extracted_candidates": candidates,
+                "extraction_error": None,
                 "status": WorkflowStatus.EXTRACTED.value,
+                "audit_events": [audit],
+            }
+        except LLMExtractionError as exc:
+            # LLM-only extraction: no fallback. The window fails explicitly and goes to review.
+            logger.error(
+                "LangGraph node llm_extraction failed for doc_id=%s, page=%s: %s",
+                doc_id,
+                page_no,
+                exc,
+                extra={
+                    "event": "langgraph.node.failed",
+                    "node": "llm_extraction",
+                    "document_id": doc_id,
+                    "error_code": "ERR_LLM_EXTRACTION_FAILED",
+                },
+            )
+            audit = create_audit_event(
+                context=sec_context,
+                action="MODEL_EXTRACTION_FAILED",
+                entity_type="BidProject",
+                entity_id=state["bid_id"],
+                details={"error": str(exc)[:500], "retry_count": state.get("retry_count", 0)},
+            )
+            return {
+                "retrieved_chunks": [c.model_dump() for c in chunks],
+                "extracted_candidates": [],
+                "extraction_error": str(exc),
+                "status": WorkflowStatus.FAILED.value,
+                "human_review_required": True,
                 "audit_events": [audit],
             }
         except Exception as exc:
@@ -569,142 +605,6 @@ def make_llm_extraction_node(ctx: WorkflowNodeContext):
             raise
 
     return llm_extraction_node
-
-
-# ==============================================================================
-# Node 5B: Rescue Pass (Tier-2 High-Recall Sweep for Unselected Passages)
-# ==============================================================================
-def make_rescue_pass_node(ctx: WorkflowNodeContext):
-    async def rescue_pass_node(state: ComplianceWorkflowState) -> dict[str, Any]:
-        node_var.set("rescue_pass")
-        start_time = time.perf_counter()
-        sec_context = SecurityContext(**state["security_context"])
-        doc_id = state["document_id"]
-        page_no = state.get("page_number", 1)
-
-        unselected_raw = state.get("unselected_passages", [])
-        page_unselected = [
-            u
-            for u in unselected_raw
-            if isinstance(u, dict)
-            and u.get("page_number") == page_no
-            and len(u.get("text", "").strip()) >= 15
-        ]
-
-        if not page_unselected:
-            return {
-                "audit_events": [],
-            }
-
-        logger.info(
-            "LangGraph node rescue_pass started for doc_id=%s, page=%s (unselected_chunks=%d)",
-            doc_id,
-            page_no,
-            len(page_unselected),
-            extra={
-                "event": "langgraph.node.started",
-                "node": "rescue_pass",
-                "document_id": doc_id,
-                "metadata": {"unselected_chunks_count": len(page_unselected)},
-            },
-        )
-
-        # Batch unselected chunks into wrapped untrusted text with block IDs for token savings
-        rescue_block_map: dict[str, dict[str, Any]] = {}
-        rescue_text_items: list[str] = []
-
-        for idx, u in enumerate(page_unselected[:10], 1):
-            b_id = f"B{idx}"
-            u_text = u.get("text", "") if isinstance(u, dict) else getattr(u, "text", "")
-            u_page = (
-                u.get("page_number", page_no)
-                if isinstance(u, dict)
-                else getattr(u, "page_number", page_no)
-            )
-            rescue_block_map[b_id] = {
-                "block_id": b_id,
-                "document_id": doc_id,
-                "page_number": u_page,
-                "clause_reference": f"Page {u_page}",
-                "text": u_text,
-                "file_name": state.get("file_name", "uploaded_document.pdf"),
-            }
-            rescue_text_items.append(
-                SecretSanitizer.wrap_untrusted_data(
-                    document_id=doc_id,
-                    page_number=u_page,
-                    content=f"[{b_id}] [Page {u_page}]:\n{u_text}",
-                )
-            )
-
-        combined_unselected_text = "\n\n".join(rescue_text_items)
-
-        system_prompt = (
-            "You are an expert Indian Public Procurement and Legal Compliance Rescue Engine.\n"
-            "Analyze these unselected document passages for any restrictive conditions, disqualifications, debarment criteria, "
-            "technical standards, mandatory submissions, or legal covenants that may have lacked standard keywords.\n"
-            "Extract ONLY genuine binding obligations or disqualifications. DO NOT extract sentence fragments, dangling clauses, or isolated table notes. "
-            "Quotes must be complete grammatical clauses. Every compliance item must be self-contained and self-explanatory in plain language. If none exist, return an empty array.\n\n"
-            "TOKEN-SAVING INSTRUCTION: In 'provenance', specify 'source_block_id' (e.g. 'B1', 'B2') and 'page_number'. Do not copy verbatim text.\n"
-            "Respond strictly in JSON format matching standard candidates array:\n"
-            '{"candidates": [{"category": "...", "title": "...", "description": "...", "provenance": {"source_block_id": "B1", "page_number": 1}}]}'
-        )
-
-        user_prompt = f"Rescue sweep for unselected page passages:\n\n{combined_unselected_text}"
-
-        try:
-            rescue_candidates = await ctx.llm_client.extract_compliance(
-                system_prompt, user_prompt, block_map=rescue_block_map
-            )
-            duration_ms = round((time.perf_counter() - start_time) * 1000, 1)
-
-            # Avoid duplicates if candidate was already extracted in primary pass
-            existing_candidates = list(state.get("extracted_candidates", []))
-            existing_quotes = {
-                c.provenance.verbatim_quote.strip().lower() for c in existing_candidates
-            }
-
-            new_candidates = [
-                c
-                for c in rescue_candidates
-                if c.provenance.verbatim_quote.strip().lower() not in existing_quotes
-            ]
-            merged_candidates = existing_candidates + new_candidates
-
-            logger.info(
-                "LangGraph node rescue_pass completed in %.1fms (rescued=%d, total_candidates=%d)",
-                duration_ms,
-                len(new_candidates),
-                len(merged_candidates),
-                extra={
-                    "event": "langgraph.node.completed",
-                    "node": "rescue_pass",
-                    "document_id": doc_id,
-                    "duration_ms": duration_ms,
-                    "metadata": {
-                        "rescued_count": len(new_candidates),
-                        "total_candidates": len(merged_candidates),
-                    },
-                },
-            )
-
-            audit = create_audit_event(
-                context=sec_context,
-                action="RESCUE_PASS_COMPLETED",
-                entity_type="BidProject",
-                entity_id=state["bid_id"],
-                details={"rescued_count": len(new_candidates)},
-            )
-
-            return {
-                "extracted_candidates": merged_candidates,
-                "audit_events": [audit],
-            }
-        except Exception as exc:
-            logger.info("Rescue pass completed with 0 items: %s", exc)
-            return {"audit_events": []}
-
-    return rescue_pass_node
 
 
 # ==============================================================================
@@ -734,6 +634,22 @@ def make_validation_node(ctx: WorkflowNodeContext):
                     " ".join(re.sub(r"-\s*\n\s*", "", p_raw).lower().split()),
                 )
 
+        # Page texts joined without separators: grounds quotes stitched across page breaks.
+        joined_raw = " ".join(
+            [p.get("text", "") for p in pages_list] + [state.get("continuation_text") or ""]
+        )
+        joined_window = " ".join(joined_raw.lower().split())
+        joined_window_dehyphen = " ".join(re.sub(r"-\s*\n\s*", "", joined_raw).lower().split())
+        # Parsed blocks of the window: the same document text with running headers removed,
+        # hyphenation rejoined and page-break continuations stitched (a stitched sentence may
+        # continue on a page that the candidate-page filter left out of the window).
+        window_page_nums = {p.get("page_number") for p in pages_list} or {page_no}
+        window_blocks = " ".join(
+            " ".join(str(b.get("text", "")).lower().split())
+            for b in (state.get("docling_document") or {}).get("blocks", [])
+            if b.get("page_number") in window_page_nums
+        )
+
         tree = DocumentStructureTree(
             **state.get("document_structure", {"document_id": state["document_id"], "nodes": []})
         )
@@ -746,6 +662,7 @@ def make_validation_node(ctx: WorkflowNodeContext):
 
         verified: list[VerifiedComplianceItem] = []
         unverified: list[CandidateComplianceItem] = []
+        intentional: set[int] = set()  # deliberate drops (by id) that must not trigger review
         failure_reasons = []
         reports = []
         scores = []
@@ -792,6 +709,7 @@ def make_validation_node(ctx: WorkflowNodeContext):
                     f"Candidate '{candidate.title}' originates from deleted/omitted clause '{candidate.provenance.clause_reference}'"
                 )
                 unverified.append(candidate)
+                intentional.add(id(candidate))  # deleted clause: correct drop
                 continue
 
             clause_num = (candidate.provenance.clause_reference or "").split(" ")[-1]
@@ -810,6 +728,7 @@ def make_validation_node(ctx: WorkflowNodeContext):
                     f"Candidate '{candidate.title}' belongs to deleted section '{del_title}'"
                 )
                 unverified.append(candidate)
+                intentional.add(id(candidate))  # deleted clause: correct drop
                 continue
 
             # 3. Grounding check (order of operations with hyphenated line breaks & whitespace)
@@ -830,6 +749,13 @@ def make_validation_node(ctx: WorkflowNodeContext):
                     or clean_quote in normalized_dehyphenated_page
                 ) and len(clean_quote) > 0
 
+            if not quote_exists and clean_quote:
+                quote_exists = (
+                    clean_quote in joined_window
+                    or clean_quote_dehyphenated in joined_window_dehyphen
+                    or clean_quote in window_blocks
+                )
+
             # 4. Dangling fragment check
             is_fragment = is_dangling_fragment(
                 candidate.provenance.verbatim_quote, candidate.description
@@ -847,18 +773,6 @@ def make_validation_node(ctx: WorkflowNodeContext):
                 failure_reasons.append(
                     f"Unrecognized category '{candidate.category}' for item '{candidate.title}'"
                 )
-
-            # 6. Clause reference enrichment: If clause reference is generic (`Page X`) or missing, extract clause reference from quote
-            if not candidate.provenance.clause_reference or re.match(
-                r"^Page\s+\d+$", candidate.provenance.clause_reference.strip(), re.IGNORECASE
-            ):
-                from tenderpulse_ai.pipeline import _extract_clause_reference
-
-                extracted_ref = _extract_clause_reference(
-                    candidate.provenance.verbatim_quote, page_no
-                )
-                if not extracted_ref.startswith("Clause on Page"):
-                    candidate.provenance.clause_reference = extracted_ref
 
             rules = candidate.execution_rules
             rules_valid = True
@@ -891,12 +805,15 @@ def make_validation_node(ctx: WorkflowNodeContext):
                     candidate_id=f"cand_{idx + 1}",
                     section_path="Document",
                     clause_reference=candidate.provenance.clause_reference,
-                    current_clause=page_raw_map.get(cand_p)
-                    or raw_text
-                    or candidate.provenance.verbatim_quote,
+                    current_clause=candidate.provenance.verbatim_quote,
                     page_number=cand_p,
                 )
             )
+            # Judge the clause that actually holds the (grounded) quote, not a neighbouring one.
+            if quote_exists and clean_quote not in " ".join(ctx_obj.current_clause.lower().split()):
+                ctx_obj = ctx_obj.model_copy(
+                    update={"current_clause": candidate.provenance.verbatim_quote}
+                )
             report, _ = validator.validate_item(candidate, ctx_obj, tree)
             reports.append(report.model_dump())
             scores.append(report.confidence_score)
@@ -919,6 +836,13 @@ def make_validation_node(ctx: WorkflowNodeContext):
                     failure_reasons.append(
                         f"Quote '{candidate.provenance.verbatim_quote[:60]}...' not found on page {page_no}"
                     )
+
+        # A rejected candidate whose quote is already covered by a verified item lost nothing.
+        verified_quotes = [" ".join(v.provenance.verbatim_quote.lower().split()) for v in verified]
+        for cand in unverified:
+            q = " ".join(cand.provenance.verbatim_quote.lower().split())
+            if q and any(q in vq for vq in verified_quotes):
+                intentional.add(id(cand))
 
         existing_verified = state.get("verified_items", [])
         existing_keys = {(v.category, v.title) for v in existing_verified}
@@ -955,7 +879,7 @@ def make_validation_node(ctx: WorkflowNodeContext):
             details={
                 "verified_count": len(verified),
                 "unverified_count": len(unverified),
-                "reasons": failure_reasons[:3],
+                "reasons": failure_reasons[:50],
             },
         )
 
@@ -963,6 +887,7 @@ def make_validation_node(ctx: WorkflowNodeContext):
             "validation_reports": reports,
             "verified_items": new_verified,
             "unverified_items": unverified,
+            "intentional_rejections": len(intentional),
             "confidence_score": avg_score,
             "error_feedback": feedback,
             "status": WorkflowStatus.VERIFIED.value if not unverified else "VERIFICATION_FAILED",
@@ -1137,11 +1062,12 @@ def make_confidence_routing_node(ctx: WorkflowNodeContext):
         doc_id = state.get("document_id")
         sec_context = SecurityContext(**state["security_context"])
         score = state.get("confidence_score", 1.0)
-        unverified = state.get("unverified_items", [])
+        # Deliberate rejections (deleted clauses, redundant candidates) are not failures.
+        failed = len(state.get("unverified_items", [])) - state.get("intentional_rejections", 0)
 
-        if len(unverified) == 0 and score >= 0.95:
+        if failed <= 0 and score >= 0.95:
             tier = ConfidenceTier.AUTO_ACCEPT.value
-        elif len(unverified) == 0 and score >= 0.80:
+        elif failed <= 0 and score >= 0.80:
             tier = ConfidenceTier.REVIEWER_VERIFICATION.value
         else:
             tier = ConfidenceTier.MANDATORY_HUMAN_REVIEW.value

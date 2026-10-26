@@ -11,12 +11,6 @@ from tenderpulse_ai.extraction.deduplication import (
     consolidate_verified_items,
     detect_clause_contradictions,
 )
-from tenderpulse_ai.extraction.quote_resolver import (
-    _has_table_lead_in,
-    _is_table_row,
-    extract_complete_clause_window,
-)
-from tenderpulse_ai.extraction.rules.financial import extract_financial_rules
 from tenderpulse_ai.security.context import SecurityContext
 
 
@@ -373,54 +367,3 @@ def test_dynamic_order_of_precedence_rulings():
     ruling_gst = res_gst[0]["order_of_precedence_ruling"]
     assert "Financial Proposal Notes Clause 4.1" in ruling_gst
     assert "General Conditions Clause 12.1" in ruling_gst
-
-
-def test_table_lead_in_quote_preservation_and_canara_bank_coordinates():
-    # 1. Helper function checks
-    assert _has_table_lead_in("Sl. No. Particulars Details") is True
-    assert _has_table_lead_in("Payment as per details below:") is True
-    assert _has_table_lead_in("Account No. 0385201800065") is True
-    assert _has_table_lead_in("IFSC CNRB0001624") is True
-    assert _has_table_lead_in("Bank Name: Canara Bank, Branch: Sector 10 Panchkula") is True
-    assert _has_table_lead_in("Standard prose paragraph on bid validity period.") is False
-
-    assert _is_table_row("1. Name of Beneficiary") is True
-    assert _is_table_row("2. Account Number") is True
-    assert _is_table_row("3. IFSC Code") is True
-    assert _is_table_row("Branch: Sector 10 Panchkula") is True
-    assert _is_table_row("The contractor shall execute works") is False
-
-    # 2. Table quote window expansion preserving Canara Bank coordinates
-    table_text = (
-        "Clause 6. Payment of Non-refundable RFP Document Fee.\n"
-        "The bidder shall pay the non-refundable fee of Rs. 5,000/- through NEFT/RTGS as per bank details below:\n\n"
-        "Sl. No. Particulars Details\n"
-        "1. Name of Beneficiary National Highways Authority of India\n"
-        "2. Bank Name Canara Bank\n"
-        "3. Account No. 0385201800065\n"
-        "4. IFSC Code CNRB0001624\n"
-        "5. Branch Sector 10 Panchkula\n\n"
-        "Receipt of payment must be uploaded along with Technical Bid submission on the portal."
-    )
-
-    quote = extract_complete_clause_window("non-refundable fee", table_text, max_chars=650)
-    assert quote != ""
-    # Verifies table was not prematurely truncated on table header or row 1
-    assert "0385201800065" in quote
-    assert "CNRB0001624" in quote
-    assert "Canara Bank" in quote
-    assert "Sector 10 Panchkula" in quote
-
-    # 3. Financial rule extraction parses complete bank coordinates
-    candidates = extract_financial_rules(
-        "doc_nhai_101", 3, table_text, table_text.lower(), "Clause 6"
-    )
-    fee_candidates = [c for c in candidates if c.title == "RFP Document Fee Payment"]
-    assert len(fee_candidates) == 1
-    cand = fee_candidates[0]
-    assert "5,000" in cand.description
-    assert "A/c: 0385201800065" in cand.description
-    assert "IFSC: CNRB0001624" in cand.description
-    assert "Bank: Canara Bank" in cand.description
-    assert "Branch: Sector 10 Panchkula" in cand.description
-    assert cand.provenance.page_number == 3

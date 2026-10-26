@@ -1,4 +1,5 @@
 import pytest
+from fakes import fake_llm_client
 
 from tenderpulse_ai.domain.models import (
     CandidateComplianceItem,
@@ -6,7 +7,7 @@ from tenderpulse_ai.domain.models import (
     ProvenanceProps,
     WorkflowStatus,
 )
-from tenderpulse_ai.models.llm_client import StructuredLLMClient
+from tenderpulse_ai.models.llm_client import LLMExtractionError
 from tenderpulse_ai.security.context import SecurityContext
 from tenderpulse_ai.security.exceptions import (
     UnauthorizedDocumentAccessException,
@@ -93,7 +94,7 @@ async def test_authorized_document_succeeds(base_security_context, setup_node_co
             )
         ]
 
-    llm_client = StructuredLLMClient(extractor_fn=mock_extractor)
+    llm_client = fake_llm_client(mock_extractor)
     ctx = WorkflowNodeContext(retrieval_tool, page_text_tool, llm_client)
     graph = build_compliance_workflow_graph(ctx)
 
@@ -139,7 +140,7 @@ async def test_authorized_document_succeeds(base_security_context, setup_node_co
 @pytest.mark.asyncio
 async def test_unauthorized_document_fails(base_security_context, setup_node_context):
     retrieval_tool, page_text_tool = setup_node_context
-    llm_client = StructuredLLMClient()
+    llm_client = fake_llm_client(lambda s, u: [])
     ctx = WorkflowNodeContext(retrieval_tool, page_text_tool, llm_client)
     graph = build_compliance_workflow_graph(ctx)
 
@@ -273,7 +274,7 @@ async def test_malicious_pdf_instructions_are_untrusted_data(base_security_conte
             )
         ]
 
-    llm_client = StructuredLLMClient(extractor_fn=tricked_extractor)
+    llm_client = fake_llm_client(tricked_extractor)
     ctx = WorkflowNodeContext(retrieval_tool, page_text_tool, llm_client)
     graph = build_compliance_workflow_graph(ctx)
 
@@ -342,7 +343,7 @@ async def test_secrets_are_not_exposed():
         "Postgres: postgresql://admin:supersecret123@db.prod.internal:5432/tenderdb"
     )
 
-    client = StructuredLLMClient()
+    client = fake_llm_client(lambda s, u: [])
     await client.extract_compliance("system prompt", prompt_with_leaked_credentials)
 
     assert client.secrets_detected is True
@@ -386,20 +387,33 @@ async def test_model_failure_recovers_safely():
             )
         ]
 
-    llm_client = StructuredLLMClient(
-        extractor_fn=recovering_extractor,
-        fail_count_before_success=1,  # Fails on first invocation
-    )
+    fail_next = True
 
-    # On first attempt, it raises RuntimeError
-    with pytest.raises(RuntimeError) as exc_info:
+    def flaky(sys, prompt):
+        nonlocal fail_next
+        if fail_next:
+            fail_next = False
+            raise RuntimeError("HTTP 503 upstream unavailable")
+        return recovering_extractor(sys, prompt)
+
+    llm_client = fake_llm_client(flaky)
+
+    # A provider failure surfaces as an explicit LLMExtractionError (no fallback output)
+    with pytest.raises(LLMExtractionError, match="503"):
         await llm_client.extract_compliance("sys", "prompt")
-    assert "Transient model provider failure" in str(exc_info.value)
 
-    # On retry, it succeeds cleanly
+    # The next call succeeds cleanly; client state is not corrupted
     items = await llm_client.extract_compliance("sys", "prompt")
     assert len(items) == 1
     assert items[0].category == "PBG"
+
+
+def test_llm_failure_escalates_without_refine():
+    state = {"unverified_items": [], "confidence_score": 1.0, "retry_count": 0}
+    assert route_verification_outcome({**state, "extraction_error": "all providers 429"}) == (
+        "escalate_human_review"
+    )
+    assert route_verification_outcome(state) == "postgres_store"
 
 
 def test_route_verification_outcome_logic():
@@ -426,3 +440,14 @@ def test_route_verification_outcome_logic():
         "retry_count": 0,
     }
     assert route_verification_outcome(state_low_conf_no_unverified) == "escalate_human_review"
+
+
+def test_intentional_rejections_do_not_force_human_review():
+    state = {
+        "unverified_items": [object()],
+        "intentional_rejections": 1,  # e.g. candidate from a DELETED clause
+        "confidence_score": 0.9,
+        "retry_count": 0,
+    }
+    assert route_verification_outcome(state) == "postgres_store"
+    assert route_verification_outcome({**state, "intentional_rejections": 0}) == "targeted_refine"

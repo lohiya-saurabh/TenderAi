@@ -23,10 +23,8 @@ RUNNING_FURNITURE_PATTERN = re.compile(
     r"Page\s+\d+(?:\s+of\s+\d+)?|"
     r"\d+\s+of\s+\d+|"
     r"-\s*\d+\s*-|"
-    r"IHMCL\b.*|"
-    r"Indian\s+Highways\s+Management\s+Company\s+Limited\b.*|"
-    r"National\s+Highways\s+Authority\s+of\s+India\b.*|"
-    r"NHAI\b.*|"
+    # Document reference codes repeated as running headers: "ABC / NIT / 2026 / 01"
+    r"[A-Z0-9&.\-]+(?:\s*/\s*[A-Z0-9&.\-]+){2,}|"
     r"RFP\s+FOR\s+SELECTION\b.*|"
     r"BID\s+DOCUMENT\b.*|"
     r"(?:NIT|RFP)\s*(?:No\.?|Reference)?\s*[:\-–]?\s*[A-Za-z0-9/_-]+"
@@ -61,6 +59,84 @@ TABLE_HEADER_START_PATTERN = re.compile(
     r"Turnover|Experience|Financial\s+Year|Key\s+Expert|Form|Schedule)\b",
     re.IGNORECASE,
 )
+
+
+LIST_MARKER_PATTERN = re.compile(
+    r"^\s*(?:"
+    r"\([A-Za-z\d]{1,4}\)\s+"  # (a) (iv) (12) (B)
+    r"|(?:[ivxlc]{2,6}|[IVXLC]{2,6}|[a-z])[.)]\s+(?=[A-Z(“\"'])"  # xv. Providing / a) The
+    r"|[A-Za-z\d]\.\s+"  # a. / B. / 5.
+    r"|(?i:Note)\s*:?\s*\(\d{1,2}\)"  # Note: (1)
+    r"|[*•-]\s+"
+    r")"
+)
+
+# A line that opens a new structural unit: never a mid-sentence continuation.
+STRUCTURAL_START_PATTERN = re.compile(
+    r"^\s*(?:(?:PART|SECTION|ARTICLE|CLAUSE|SCHEDULE|ANNEXURE|APPENDIX)\b|\d{1,3}(?:\.\d{1,3})*[.)]\s|[A-Z]\.\s)",
+    re.IGNORECASE,
+)
+
+
+def _furniture_key(line: str) -> str:
+    return re.sub(r"\d+", "#", " ".join(line.lower().split()))[:120]
+
+
+def detect_repeated_furniture(page_texts: list[str]) -> set[str]:
+    """Document-agnostic running header/footer detection: an edge line (top/bottom 3) whose
+    digit-normalized form recurs on >= 30% of pages (min 3) is furniture, whatever the issuer."""
+    if len(page_texts) < 3:
+        return set()
+    counts: dict[str, int] = {}
+    for text in page_texts:
+        lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+        for key in {_furniture_key(ln) for ln in lines[:3] + lines[-3:]}:
+            counts[key] = counts.get(key, 0) + 1
+    threshold = max(3, int(0.3 * len(page_texts)))
+    return {k for k, c in counts.items() if c >= threshold}
+
+
+def stitch_cross_page_continuations(blocks: list[DoclingBlock]) -> list[DoclingBlock]:
+    """Merges a paragraph sliced by a physical page break (Page N -> Page N+1).
+
+    The first paragraph of page N+1 is a continuation when it starts lowercase, or when
+    page N's last paragraph has no terminal punctuation and page N+1 does not open a new
+    structural unit (numbered clause, sub-clause, PART/SECTION...).
+    """
+    stitched: list[DoclingBlock] = []
+    for curr in blocks:
+        prev = stitched[-1] if stitched else None
+        if (
+            prev is not None
+            and curr.page_number == prev.page_number + 1
+            and prev.type == "paragraph"
+            and curr.type == "paragraph"
+            and not prev.is_deleted
+            and not curr.is_deleted
+        ):
+            prev_text, curr_text = prev.text.rstrip(), curr.text.lstrip()
+            opens_unit = bool(
+                STRUCTURAL_START_PATTERN.match(curr_text) or LIST_MARKER_PATTERN.match(curr_text)
+            )
+            starts_lower = curr_text[:1].islower()
+            prev_incomplete = not prev_text.endswith((".", ";", ":", "?", "!", ")", "|"))
+            if not opens_unit and (starts_lower or prev_incomplete):
+                prev.text = f"{prev_text} {curr_text}"
+                prev.spans_next_page = True
+                continue
+        stitched.append(curr)
+    return stitched
+
+
+def _row_as_key_values(headers: list[str], cells: list[str]) -> str:
+    """Universal key-value row: 'Header 2: cell 2 | Header 3: cell 3' (headers when aligned)."""
+    pairs = []
+    for idx, cell in enumerate(cells[1:], start=1):
+        if not cell:
+            continue
+        header = headers[idx] if len(headers) == len(cells) and idx < len(headers) else ""
+        pairs.append(f"{header}: {cell}" if header else cell)
+    return " | ".join(pairs)
 
 
 def is_clause_deleted(heading_or_text: str) -> bool:
@@ -295,6 +371,12 @@ class DoclingParserEngine:
         if not pages and raw_text:
             pages = [{"page_number": 1, "text": raw_text}]
 
+        page_text_list = [
+            (p.get("text", "") if isinstance(p, dict) else getattr(p, "text", "")) for p in pages
+        ]
+        repeated_furniture = detect_repeated_furniture(page_text_list)
+        active_table: DoclingTable | None = None
+
         block_counter = 1
         for page in pages:
             if isinstance(page, dict):
@@ -313,7 +395,12 @@ class DoclingParserEngine:
             lines: list[str] = []
             for idx, line in enumerate(raw_lines):
                 is_boundary = idx < 3 or idx >= (total_raw_lines - 3)
-                if (is_boundary and RUNNING_FURNITURE_PATTERN.match(line)) or re.match(
+                if is_boundary and (
+                    RUNNING_FURNITURE_PATTERN.match(line)
+                    or _furniture_key(line) in repeated_furniture
+                ):
+                    continue
+                if re.match(
                     r"^(?:Page\s+\d+(?:\s+of\s+\d+)?|-\s*\d+\s*-|\d+\s+of\s+\d+)$",
                     line,
                     re.IGNORECASE,
@@ -365,9 +452,12 @@ class DoclingParserEngine:
                 current_para_y_top = None
                 in_table_coalesce = False
 
-            active_table: DoclingTable | None = None
+            # A table may continue from the previous page only if that page ended inside it.
+            if not (parsed_blocks and parsed_blocks[-1].type == "table_row"):
+                active_table = None
 
-            for line in lines:
+            for li, line in enumerate(lines):
+                next_line = lines[li + 1] if li + 1 < len(lines) else ""
                 is_table_separator = bool(re.match(r"^\|?\s*[-:]+[-| :]+\s*\|?$", line))
                 if is_table_separator:
                     continue
@@ -384,7 +474,12 @@ class DoclingParserEngine:
                                 is_spatial_table = True
                             else:
                                 active_table = None
-                        elif TABLE_HEADER_START_PATTERN.search(spatial_cols[0]):
+                        elif TABLE_HEADER_START_PATTERN.search(spatial_cols[0]) or (
+                            # >= 2 consecutive lines with the same multi-space column layout
+                            len([c for c in re.split(r"\s{2,}", next_line) if c.strip()])
+                            == len(spatial_cols)
+                            and "|" not in next_line
+                        ):
                             is_spatial_table = True
 
                 is_table_row = is_pipe_table or is_spatial_table
@@ -416,11 +511,26 @@ class DoclingParserEngine:
                 ):
                     is_heading = bool(
                         re.match(
-                            r"^(PART\s+[I|V|X]+|SECTION\s+\d+|ARTICLE\s+\d+|CLAUSE\s+\d+|[1-9]\d*(?:\.\d+)*[.)]\s+[A-Za-z])",
+                            r"^(PART\s+[I|V|X]+|SECTION\s+\d+|ARTICLE\s+\d+|CLAUSE\s+\d+|[1-9]\d*(?:\.\d+)*[.)]\s+[A-Za-z(])",
                             line,
                             re.IGNORECASE,
                         )
                     )
+                    # A numbered line whose sentence wraps onto a lowercase next line opens a
+                    # paragraph ("3. The proposal shall ... would be" / "the same language.").
+                    wraps_into_next = next_line[:1].islower() or (
+                        line[:1].isdigit()
+                        and len(line) > 60
+                        and not line.endswith((".", ":", ";"))
+                        and bool(next_line)
+                        and not STRUCTURAL_START_PATTERN.match(next_line)
+                        and not LIST_MARKER_PATTERN.match(next_line)
+                    )
+                    if is_heading and wraps_into_next:
+                        flush_para()
+                        current_para_y_top = float((block_counter % 40) * 20)
+                        current_para_lines.append(line)
+                        continue
 
                 if is_lead_in or (
                     current_para_lines
@@ -434,15 +544,34 @@ class DoclingParserEngine:
                 if is_table_row:
                     flush_para()
                     if is_pipe_table:
-                        cells = [c.strip() for c in re.split(r"[|\t]", line) if c.strip()]
+                        # Keep empty interior cells so columns stay aligned with headers.
+                        cells = [c.strip() for c in re.split(r"[|\t]", line)]
+                        while (
+                            cells
+                            and not cells[0]
+                            and len(cells) > 1
+                            and line.lstrip().startswith("|")
+                        ):
+                            cells.pop(0)
+                        while cells and not cells[-1]:
+                            cells.pop()
                     else:
                         cells = spatial_cols
 
                     if len(cells) >= 2:
-                        if active_table is not None and active_table.page_number == page_no:
+                        continues_prev_page = (
+                            active_table is not None
+                            and active_table.page_number == page_no - 1
+                            and len(cells) == len(active_table.headers)
+                        )
+                        if active_table is not None and (
+                            active_table.page_number == page_no or continues_prev_page
+                        ):
                             active_table.rows.append(cells)
                             if cells:
-                                active_table.row_key_map[cells[0]] = " | ".join(cells[1:])
+                                active_table.row_key_map[cells[0]] = _row_as_key_values(
+                                    active_table.headers, cells
+                                )
                         else:
                             active_table = DoclingTable(
                                 table_id=f"tbl_{page_no}_{len(parsed_tables) + 1}",
@@ -520,14 +649,14 @@ class DoclingParserEngine:
                     continue
 
                 # Paragraph line: check if it starts a new item or coalesces with existing
-                is_list_bullet = bool(
-                    re.match(r"^\s*(?:\([a-z\d]+\)|[a-z\d]\.|\*|-)\s+", line, re.IGNORECASE)
-                )
+                is_list_bullet = bool(LIST_MARKER_PATTERN.match(line))
                 prev_ends_with_colon = bool(
                     current_para_lines and current_para_lines[-1].endswith(":")
                 )
 
-                if not in_table_coalesce and (is_list_bullet or prev_ends_with_colon):
+                # Table rows in a lead-in were absorbed above; any other enumerated line opens
+                # a new sub-clause block, even after a lead-in word such as "... above Table."
+                if is_list_bullet or (prev_ends_with_colon and not in_table_coalesce):
                     flush_para()
 
                 if not current_para_lines:
@@ -536,6 +665,8 @@ class DoclingParserEngine:
 
             flush_para()
             parsed_blocks.extend(page_blocks)
+
+        parsed_blocks = stitch_cross_page_continuations(parsed_blocks)
 
         duration_ms = round((time.perf_counter() - start_time) * 1000, 1)
         logger.info(

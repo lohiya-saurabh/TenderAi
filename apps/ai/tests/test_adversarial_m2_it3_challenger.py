@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from fakes import fake_llm_client
 
 from tenderpulse_ai.domain.candidate_detector import CandidateDetector
 from tenderpulse_ai.domain.docling_parser import DoclingParserEngine, is_clause_deleted
@@ -16,9 +17,6 @@ from tenderpulse_ai.domain.models import (
 )
 from tenderpulse_ai.domain.structure_builder import DocumentStructureBuilder
 from tenderpulse_ai.domain.tender_chunker import TenderChunker
-from tenderpulse_ai.extraction.rules import default_tender_extractor
-from tenderpulse_ai.extraction.rules.base import get_clause_and_quote
-from tenderpulse_ai.models.llm_client import StructuredLLMClient
 from tenderpulse_ai.security.context import SecurityContext
 from tenderpulse_ai.tools.page_text import PageTextTool
 from tenderpulse_ai.tools.retrieval import ScopedRetrievalTool
@@ -100,25 +98,6 @@ def test_hostile_deleted_variants_docling_parser(variant: str):
         assert ab.is_deleted is False, f"Falsely marked active block as deleted: {ab.text}"
 
 
-@pytest.mark.parametrize("variant", HOSTILE_DELETION_VARIANTS)
-def test_hostile_deleted_variants_rule_suppression(variant: str):
-    """Verify get_clause_and_quote suppresses all hostile deletion variants."""
-    text = f"{variant}\nThe Authority shall pay 10% mobilization advance against bank guarantee."
-    res = get_clause_and_quote(
-        r"mobilization advance",
-        "mobilization advance",
-        ["mobilization advance"],
-        text,
-        text.lower(),
-        1,
-        variant.strip(),
-    )
-    assert res is None, f"Rule failed to suppress hostile deletion variant: {repr(variant)}"
-
-    items = default_tender_extractor("", text)
-    assert items == [], f"default_tender_extractor leaked items for variant: {repr(variant)}"
-
-
 @pytest.mark.asyncio
 @pytest.mark.parametrize("variant", HOSTILE_DELETION_VARIANTS)
 async def test_hostile_deleted_variants_validation_node(variant: str):
@@ -132,7 +111,7 @@ async def test_hostile_deleted_variants_validation_node(variant: str):
     node_ctx = WorkflowNodeContext(
         retrieval_tool=ScopedRetrievalTool(),
         page_text_tool=PageTextTool(),
-        llm_client=StructuredLLMClient(enable_live_client=False),
+        llm_client=fake_llm_client(lambda s, u: []),
     )
     val_node = make_validation_node(node_ctx)
 

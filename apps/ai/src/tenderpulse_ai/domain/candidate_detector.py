@@ -123,98 +123,66 @@ CANDIDATE_DETECTION_RULES: list[tuple[re.Pattern, str]] = [
     # 14. Dispute Resolution
     (
         re.compile(
-            r"\b(dispute\s+resolution|arbitration|SAROD|conciliation|amicable\s+settlement)\b",
+            r"\b(dispute\s+resolution|arbitration|conciliation|amicable\s+settlement)\b",
             re.IGNORECASE,
         ),
         "DISPUTE_RESOLUTION",
     ),
-    # 15. Operational Safety
+    # 15. Statutory & Environmental Permits
     (
         re.compile(
-            r"\b(mobile\s+crane|ambulance|medical\s+aid|rescue\s+post|traffic\s+census|weigh-in-motion)\b",
-            re.IGNORECASE,
-        ),
-        "SAFETY_OPERATIONS",
-    ),
-    # 16. Statutory & Environmental Permits
-    (
-        re.compile(
-            r"\b(applicable\s+permits|schedule-e|schedule\s+e|clearance|environmental\s+clearance|forest\s+clearance)\b",
+            r"\b(applicable\s+permits|statutory\s+approvals?|clearances?|licen[cs]es?)\b",
             re.IGNORECASE,
         ),
         "STATUTORY_PERMITS",
     ),
-    # 17. Maintenance SLAs
+    # 16. Maintenance & Service Levels
     (
         re.compile(
-            r"\b(maintenance\s+requirements?|level\s+of\s+service|time\s+limit\s+for\s+rectification|schedule-k|schedule\s+k|roughness\s+index|pothole)\b",
+            r"\b(maintenance\s+requirements?|level\s+of\s+service|service\s+levels?|rectification|defects?)\b",
             re.IGNORECASE,
         ),
         "MAINTENANCE_SLA",
     ),
-    # 18. Construction Milestones
+    # 17. Milestones & Completion
     (
         re.compile(
-            r"\b(project\s+milestone|completion\s+schedule|schedule-g|schedule\s+g|milestone\s+\d+)\b",
+            r"\b(milestones?|completion\s+schedule|time\s+for\s+completion)\b",
             re.IGNORECASE,
         ),
         "CONSTRUCTION_MILESTONES",
     ),
-    # 19. Short Compact Instructions (P0)
+    # 18. Short Compact Instructions
     (
         re.compile(
-            r"\b(must\s+sign|shall\s+apply|submit\s+emd|furnish\s+pbg|mandatory|compulsory|stipulated)\b",
+            r"\b(mandatory|compulsory|stipulated)\b",
             re.IGNORECASE,
         ),
         "SHORT_INSTRUCTION",
     ),
-    # 20. Specialized Technical Surveys & Instruments (P0 for NHAI/MORTH)
+    # 19. Evaluation Method & Price Adjustment
     (
         re.compile(
-            r"\b(drone(?:\s+survey)?|aerial\s+survey|infracon|mort&h\s+specifications|nsv|network\s+survey\s+vehicle|fwd|falling\s+weight|mbiu|retro\s+reflectometer|atcc|automatic\s+traffic\s+counter)\b",
-            re.IGNORECASE,
-        ),
-        "SPECIALIZED_SURVEYS",
-    ),
-    # 21. Commercial QCBS Formulas & Price Indexation (P0)
-    (
-        re.compile(
-            r"\b(qcbs|quality\s+and\s+cost\s+based\s+selection|80\s*:\s*20|80%\s*&\s*20%|enhancement\s+factors?|escalation\s+factors?|sbi\s+bc\s+selling\s+rate|foreign\s+currency)\b",
+            r"\b(qcbs|quality\s+and\s+cost\s+based\s+selection|technical\s+score|financial\s+score|weightage|price\s+(?:variation|adjustment)|escalation|exchange\s+rate|foreign\s+currency)\b",
             re.IGNORECASE,
         ),
         "COMMERCIAL_EVALUATION",
     ),
-    # 22. Hardware & Supply Chain Security Bans (P0)
+    # 20. Origin & Supply-Chain Restrictions
     (
         re.compile(
-            r"\b(hisilicon|chipset|rule\s+144\s*\(xi\)|rule\s+144\(xi\)|land\s+border\s+with\s+india|source\s+code\s+of\s+the\s+software)\b",
+            r"\b(land\s+border|restricted\s+countr(?:y|ies)|country\s+of\s+origin|supply\s+chain|cyber\s*security|source\s+code)\b",
             re.IGNORECASE,
         ),
         "SUPPLY_CHAIN_SECURITY",
     ),
-    # 23. Statutory Metrology & Measurement Compliance (P0)
+    # 21. Measurement & Calibration
     (
         re.compile(
-            r"\b(legal\s+metrology|validity\s+of\s+stamping|stamping/sealing|tampered\s+stamping|wim\s+system)\b",
+            r"\b(metrology|calibrat(?:ion|ed)|stamping|verification\s+certificate)\b",
             re.IGNORECASE,
         ),
         "STATUTORY_METROLOGY",
-    ),
-    # 24. Technical Capacity Matrix & Work Quotas (P0)
-    (
-        re.compile(
-            r"\b(technical\s+capacity\s+provisions|maximum\s+no\.\s+of\s+dpr|ceiling\s+for\s+ie/ae|form\s+t-11|annex-b-13|form-26\s*as|form-26as)\b",
-            re.IGNORECASE,
-        ),
-        "CAPACITY_MATRIX",
-    ),
-    # 25. Submission Language & Operational Systems (P1)
-    (
-        re.compile(
-            r"\b(english\s+language|data\s+lake\s+portal|pmis\s+portal|wayside\s+amenities|etc\s+and\s+fee\s+plaza|atms)\b",
-            re.IGNORECASE,
-        ),
-        "OPERATIONAL_PLATFORMS",
     ),
 ]
 
@@ -288,14 +256,10 @@ class CandidateDetector:
             "CONTRACT_LIFECYCLE": 0.70,
             "STATUTORY_PERMITS": 0.70,
             "DISPUTE_RESOLUTION": 0.70,
-            "SAFETY_OPERATIONS": 0.70,
             "ESCROW_WATERFALL": 0.70,
-            "SPECIALIZED_SURVEYS": 0.85,
             "COMMERCIAL_EVALUATION": 0.85,
             "SUPPLY_CHAIN_SECURITY": 0.95,
             "STATUTORY_METROLOGY": 0.90,
-            "CAPACITY_MATRIX": 0.90,
-            "OPERATIONAL_PLATFORMS": 0.75,
         }
         score = max((base_weights.get(r, 0.60) for r in matched_rules), default=0.50)
 

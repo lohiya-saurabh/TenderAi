@@ -7,15 +7,10 @@ from contextlib import asynccontextmanager
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, Header, HTTPException, status
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
+from fastapi.responses import JSONResponse
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
-from tenderpulse_ai.agent import (
-    AgentInput,
-    AgentOutput,
-    TenderRequirementAgent,
-    default_requirement_model,
-)
 from tenderpulse_ai.chat import (
     ChatCopilotAgent,
     ChatQueryRequest,
@@ -32,6 +27,7 @@ from tenderpulse_ai.domain.evidence_extractor import (
     CompanyEvidenceExtractionResponse,
     CompanyEvidenceExtractor,
 )
+from tenderpulse_ai.infrastructure.llm import LLMExtractionError
 from tenderpulse_ai.infrastructure.queue import (
     DocumentExtractionCompletedEvent,
     DocumentQueueConsumerWorker,
@@ -50,8 +46,6 @@ from tenderpulse_ai.pipeline import (
     ProductionExtractionPipeline,
 )
 from tenderpulse_ai.security.context import SecurityContext
-from tenderpulse_ai.tools.page_text import PageTextTool
-from tenderpulse_ai.tools.retrieval import ScopedRetrievalTool
 
 # Initialize dual-sink logging: Rotated File (full structured JSON) + Console (clean one-liner)
 root_logger = logging.getLogger()
@@ -264,6 +258,15 @@ def verify_internal_key(
         )
 
 
+@app.exception_handler(LLMExtractionError)
+async def llm_extraction_failed(_request: Request, exc: LLMExtractionError) -> JSONResponse:
+    """LLM-only extraction: no model answer means no result (never a synthetic fallback)."""
+    return JSONResponse(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        content={"error": "LLM_EXTRACTION_FAILED", "detail": str(exc)},
+    )
+
+
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
     return HealthResponse(
@@ -459,21 +462,6 @@ async def process_queue_message(request: QueueProcessingRequest):
         storage_reference=request.storage_reference,
         items=result.items,
     )
-
-
-@app.post(
-    "/api/v1/agent/analyze-requirements",
-    response_model=AgentOutput,
-    dependencies=[Depends(verify_internal_key)],
-)
-async def analyze_requirements(request: AgentInput):
-    """Tender Requirement Intelligence Agent: bounded, read-only, tenant-scoped."""
-    agent = TenderRequirementAgent(
-        retrieval_tool=ScopedRetrievalTool(),
-        page_text_tool=PageTextTool(),
-        model_fn=default_requirement_model,
-    )
-    return await agent.analyze(request)
 
 
 @app.post(

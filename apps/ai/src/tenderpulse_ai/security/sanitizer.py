@@ -1,6 +1,60 @@
 import re
 from typing import ClassVar
 
+_AADHAAR_CANDIDATE = re.compile(r"\b[2-9][0-9]{3}\s?[0-9]{4}\s?[0-9]{4}\b")
+_AADHAAR_LABEL = re.compile(r"(?i)\b(?:aadhaa?r|uid(?:ai)?)\b[^\n]{0,25}$")
+_AWS_ACCOUNT_CONTEXT = re.compile(r"(?i)(?:amazonaws\.com/|arn:aws[\w-]*:[^\s]*:)$")
+
+# Verhoeff tables (UIDAI check digit)
+_VERHOEFF_D = [
+    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+    [1, 2, 3, 4, 0, 6, 7, 8, 9, 5],
+    [2, 3, 4, 0, 1, 7, 8, 9, 5, 6],
+    [3, 4, 0, 1, 2, 8, 9, 5, 6, 7],
+    [4, 0, 1, 2, 3, 9, 5, 6, 7, 8],
+    [5, 9, 8, 7, 6, 0, 4, 3, 2, 1],
+    [6, 5, 9, 8, 7, 1, 0, 4, 3, 2],
+    [7, 6, 5, 9, 8, 2, 1, 0, 4, 3],
+    [8, 7, 6, 5, 9, 3, 2, 1, 0, 4],
+    [9, 8, 7, 6, 5, 4, 3, 2, 1, 0],
+]
+_VERHOEFF_P = [
+    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+    [1, 5, 7, 6, 2, 8, 3, 0, 9, 4],
+    [5, 8, 0, 3, 7, 9, 6, 1, 4, 2],
+    [8, 9, 1, 6, 0, 4, 3, 5, 2, 7],
+    [9, 4, 5, 3, 1, 2, 6, 8, 7, 0],
+    [4, 2, 8, 6, 5, 7, 3, 9, 0, 1],
+    [2, 7, 9, 3, 8, 0, 6, 4, 1, 5],
+    [7, 0, 4, 6, 9, 1, 3, 2, 5, 8],
+]
+
+
+def _verhoeff_valid(digits: str) -> bool:
+    check = 0
+    for i, d in enumerate(reversed(digits)):
+        check = _VERHOEFF_D[check][_VERHOEFF_P[i % 8][int(d)]]
+    return check == 0
+
+
+def _redact_aadhaar(text: str) -> tuple[str, bool]:
+    """12-digit numbers are Aadhaar only when the UIDAI Verhoeff checksum passes or the
+    text labels them as Aadhaar/UID. AWS account IDs in SQS/S3 URLs and ARNs (not secret)
+    and other tender identifiers (~90% of random 12-digit numbers) are left intact."""
+    found = False
+
+    def repl(m: re.Match) -> str:
+        nonlocal found
+        before = text[max(0, m.start() - 40) : m.start()]
+        if _AWS_ACCOUNT_CONTEXT.search(before):
+            return m.group(0)
+        if _AADHAAR_LABEL.search(before) or _verhoeff_valid(re.sub(r"\s", "", m.group(0))):
+            found = True
+            return "[REDACTED_AADHAAR]"
+        return m.group(0)
+
+    return _AADHAAR_CANDIDATE.sub(repl, text), found
+
 
 class SecretSanitizer:
     """
@@ -62,8 +116,7 @@ class SecretSanitizer:
         ),
         # Indian PAN (10 characters)
         (re.compile(r"\b[A-Z]{5}[0-9]{4}[A-Z]{1}\b"), "[REDACTED_PAN]"),
-        # Indian Aadhaar (12 digits)
-        (re.compile(r"\b[2-9][0-9]{3}\s?[0-9]{4}\s?[0-9]{4}\b"), "[REDACTED_AADHAAR]"),
+        # Indian Aadhaar: see _AADHAAR_CANDIDATE (checksum/label aware, applied in scrub)
     ]
 
     CONTENT_PATTERNS_TO_TRUNCATE: ClassVar[list[tuple[re.Pattern, int]]] = [
@@ -90,6 +143,8 @@ class SecretSanitizer:
             if pattern.search(scrubbed):
                 found_any = True
                 scrubbed = pattern.sub(replacement, scrubbed)
+        scrubbed, aadhaar_found = _redact_aadhaar(scrubbed)
+        found_any = found_any or aadhaar_found
 
         for pattern, max_len in cls.CONTENT_PATTERNS_TO_TRUNCATE:
 

@@ -244,3 +244,14 @@ class TestDualSinkLoggingAndTruncation:
             assert (tmp_path / "test_ai.log.1").exists()
         finally:
             test_logger.removeHandler(handler)
+
+
+def test_aadhaar_redaction_is_checksum_and_context_aware():
+    from tenderpulse_ai.security.sanitizer import SecretSanitizer
+
+    queue = "https://sqs.ap-south-1.amazonaws.com/234567890124/tenderai-compq"
+    assert SecretSanitizer.scrub(f"Published to {queue}")[0].endswith(queue)
+    # Unlabelled 12-digit tender identifier failing the UIDAI checksum stays intact
+    assert "Ref 987654321098" in SecretSanitizer.scrub("Ref 987654321098")[0]
+    # Checksum-valid Aadhaar is redacted even without a label
+    assert "[REDACTED_AADHAAR]" in SecretSanitizer.scrub("ID 2345 6789 0124")[0]

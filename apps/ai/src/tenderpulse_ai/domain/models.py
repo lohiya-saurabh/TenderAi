@@ -140,6 +140,9 @@ class DoclingBlock(BaseModel):
     page_number: int = Field(default=1, ge=1)
     bbox: list[float] | None = Field(default=None)
     is_deleted: bool = Field(default=False)
+    spans_next_page: bool = Field(
+        default=False, description="Text was stitched across a physical page break"
+    )
 
 
 class DoclingTable(BaseModel):
@@ -211,6 +214,10 @@ class SectionNode(BaseModel):
 class DocumentStructureTree(BaseModel):
     document_id: str
     nodes: list[SectionNode] = Field(default_factory=list)
+    block_paths: dict[str, str] = Field(
+        default_factory=dict,
+        description="block_id -> positional clause path (e.g. 'Clause 5(xix)', 'Clause 13.C(3)')",
+    )
 
 
 class CandidatePassage(BaseModel):

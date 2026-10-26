@@ -38,6 +38,90 @@ def _titles_are_related(t1: str, t2: str) -> bool:
     )
 
 
+_FINGERPRINT_STOPWORDS = {
+    "the",
+    "and",
+    "for",
+    "with",
+    "shall",
+    "should",
+    "must",
+    "will",
+    "from",
+    "that",
+    "this",
+    "have",
+    "been",
+    "such",
+    "any",
+    "all",
+    "are",
+    "was",
+    "were",
+    "which",
+    "their",
+    "its",
+}
+
+
+def _content_fingerprint(text: str) -> set[str]:
+    """Normalized content fingerprint: content words (>=3 chars) plus extracted numbers."""
+    tokens = re.findall(r"[a-z]{3,}|\d+(?:[.,]\d+)*", (text or "").lower())
+    return {t.replace(",", "") for t in tokens if t not in _FINGERPRINT_STOPWORDS}
+
+
+def quote_overlap_ratio(q1: str, q2: str) -> float:
+    """|intersection| / min(|q1|, |q2|) over content fingerprints (1.0 = one contains the other)."""
+    f1, f2 = _content_fingerprint(q1), _content_fingerprint(q2)
+    if not f1 or not f2:
+        return 0.0
+    return len(f1 & f2) / min(len(f1), len(f2))
+
+
+def _focus_sentence(item: dict[str, Any]) -> str | None:
+    """The sentence of an item's quote that its own title is about (None if no title word
+    appears in any sentence: the title cannot be located in the quote)."""
+    quote = item["provenance"].get("verbatimQuote") or ""
+    sentences = [s for s in re.split(r"(?<=[.;])\s+(?=[A-Z(])", quote) if s.strip()] or [quote]
+    title_words = set(re.findall(r"[a-z]{4,}", item.get("title", "").lower()))
+    scored = [(len(title_words & set(re.findall(r"[a-z]{4,}", s.lower()))), s) for s in sentences]
+    best_score, best = max(scored, key=lambda pair: pair[0])
+    return best if best_score > 0 else None
+
+
+def _is_same_obligation(existing: dict[str, Any], payload: dict[str, Any]) -> bool:
+    """Same/adjacent page, >=65% quote fingerprint overlap, and either related titles or
+    titles pointing at the same sentence with related descriptions. One paragraph holding
+    two different obligations (e.g. conflict-of-interest and QCBS weightage) stays two."""
+    if abs(existing["provenance"]["pageNumber"] - payload["provenance"]["pageNumber"]) > 1:
+        return False
+    q1 = existing["provenance"].get("verbatimQuote") or ""
+    q2 = payload["provenance"].get("verbatimQuote") or ""
+    if quote_overlap_ratio(q1, q2) < 0.65:
+        return False
+    if _titles_are_related(existing["title"], payload["title"]):
+        return True
+    f1, f2 = _focus_sentence(existing), _focus_sentence(payload)
+    return bool(
+        f1
+        and f2
+        and quote_overlap_ratio(f1, f2) >= 0.9
+        and _titles_are_related(existing.get("description", ""), payload.get("description", ""))
+    )
+
+
+# Most specific category wins when one obligation was emitted under two categories.
+CATEGORY_SPECIFICITY = [
+    "FINANCIAL",
+    "STATUTORY",
+    "LEGAL",
+    "EXECUTION",
+    "COMMERCIAL",
+    "OPERATIONAL",
+    "TECHNICAL",
+]
+
+
 def _extract_numeric_percentages(text: str) -> set[float]:
     raw_matches = re.findall(r"\b(\d+(?:\.\d+)?)\s*%", text)
     result = set()
@@ -129,11 +213,16 @@ def consolidate_verified_items(
 
         matched_existing: dict[str, Any] | None = None
         for existing in consolidated_items:
-            if existing["category"] != payload_cat:
-                continue
-
             # Do not merge items declaring contradictory terms (e.g. 3% vs 10% PBG, EMD vs BSD)
             if _are_items_contradictory(existing, payload):
+                continue
+
+            # 0. Cross-category fingerprint match: the same obligation emitted under two
+            # categories (e.g. turnover as FINANCIAL and TECHNICAL) on the same/adjacent page.
+            if existing["category"] != payload_cat and _is_same_obligation(existing, payload):
+                matched_existing = existing
+                break
+            if existing["category"] != payload_cat:
                 continue
 
             # 1. Exact title match within category
@@ -223,7 +312,17 @@ def consolidate_verified_items(
                         and len(cur_quote_raw) > len(ex_quote)
                     )
                 )
+            if existing["category"] != payload_cat:
+                # Cross-category duplicate: the more specific category's item wins.
+                rank = {c: i for i, c in enumerate(CATEGORY_SPECIFICITY)}
+                prefer_new_quote = rank.get(payload_cat, 99) < rank.get(existing["category"], 99)
+
             if prefer_new_quote:
+                # Title, category, description, quote and reference are adopted together from
+                # the winning item, so a merge never pairs one rule's title with another
+                # rule's description (e.g. a JV capacity title over a generic JV-MOU text).
+                existing["title"] = payload["title"]
+                existing["category"] = payload_cat
                 existing["description"] = payload["description"]
                 existing["provenance"]["confidenceScore"] = max(
                     existing["provenance"]["confidenceScore"],
@@ -239,12 +338,6 @@ def consolidate_verified_items(
                 existing["provenance"]["clauseReference"] = clause_ref
                 existing["provenance"]["sectionOrClause"] = clause_ref
                 existing["provenance"]["pageNumber"] = payload["provenance"]["pageNumber"]
-
-            # Retain the more informative title (prefer longer descriptive title)
-            if len(payload["title"]) > len(existing["title"]) and (
-                prefer_new_quote or _titles_are_related(payload["title"], existing["title"])
-            ):
-                existing["title"] = payload["title"]
 
     formatted_items = consolidated_items
     for item in formatted_items:
@@ -263,6 +356,8 @@ def consolidate_verified_items(
         item["provenance"]["sourceDocumentId"] = request.document_id
         item["provenance"]["sourceFileName"] = request.file_name
 
+    # Document reading order (stable within a page), independent of retrieval ranking.
+    formatted_items.sort(key=lambda it: it["provenance"]["pageNumber"])
     return formatted_items
 
 
@@ -428,6 +523,7 @@ def detect_clause_contradictions(items: list[dict[str, Any]]) -> list[dict[str, 
 
 
 __all__ = [
+    "quote_overlap_ratio",
     "_titles_are_related",
     "consolidate_verified_items",
     "detect_clause_contradictions",

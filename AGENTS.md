@@ -33,13 +33,11 @@ Do **not** recursively inspect every individual file across the repository to ob
 - **NestJS (`apps/api`)**: Delegate database queries out of service classes into dedicated repository classes (`*.repository.ts`) or query DAOs (`*.queries.ts`). Never write inline SQL queries inside controller or service handlers. Use dedicated mapper services (`compliance-item.mapper.ts`) and HTTP evaluation clients (`AiDecisionClient.ts`).
 - **FastAPI AI Worker (`apps/ai`)**: Keep modules single-responsibility under `tenderpulse_ai/extraction/`:
   - DTOs in `extraction/contracts.py`
-  - Parsing, running furniture, and deleted clause filters in `extraction/parsing.py`
   - Metrics & numeric parsing in `extraction/metrics.py`
-  - Guarded clause detection & cross-reference resolution in `extraction/clause_references.py`
-  - Sentence-bounded verbatim quotes in `extraction/quote_resolver.py`
+  - Positional clause attribution (structure-tree path of the block holding a quote) in `extraction/clause_references.py`
   - Deduplication & contradiction detection in `extraction/deduplication.py`
   - Open Knowledge Format compilation in `extraction/okf_compiler.py`
-  - Domain extraction rules in `extraction/rules/`
+  - **Extraction is LLM-only**: no rule, regex or synthetic item producer exists, for tenders (`workflow/nodes.py` llm_extraction) or company evidence (`domain/evidence_extractor.py`). Code may validate and normalize model output (grounding, category mapping, whitespace) but never invents titles, descriptions, quotes, categories or figures. No code may contain tender-specific phrases, figures, issuer/agency/product names
   - Pipeline orchestration in `extraction/orchestrator.py`
   - Maintain `pipeline.py` as a backward-compatible facade (<150 lines).
 
@@ -49,8 +47,12 @@ Do **not** recursively inspect every individual file across the repository to ob
 
 ### Invariant 5: LLM Gateway Resiliency & Bounded Concurrency
 - Enforce bounded concurrency (`asyncio.Semaphore(2)`) on parallel page inference to stay within in-flight credit caps.
-- Implement multi-model failover: HTTP 404 marks model permanently unavailable (`float("inf")`), HTTP 429 sets 60s cooldown, HTTP 402 with in-flight limits backs off and retries, and HTTP 401/403 trips circuit breaker.
-- When live LLM returns 0 items, always fall back to deterministic parsing to prevent silent data loss.
+- Implement multi-model failover: HTTP 404 marks model permanently unavailable (`float("inf")`), HTTP 429 locks out the whole provider (base URL) for 60s (`block_provider` — free-tier limits are per key, so same-provider models are skipped in 0ms), HTTP 402 with in-flight limits backs off and retries, and HTTP 401/403 trips circuit breaker.
+- **No fallback**: when no model gives a valid answer (unreachable, all providers 429/blocked, invalid JSON, no key) the call raises `LLMExtractionError`. A failed page window is marked `extraction_error`, escalated to review and listed in `DocumentExtractionResponse.failed_pages`; if every window fails the pipeline raises (the queue worker retries, then publishes `status=FAILED`; `/api/v1/extract` returns HTTP 503 `LLM_EXTRACTION_FAILED`). Evidence extraction returns `status=FAILED` with the reason. A valid empty answer (`[]`) is a legitimate result and is not retried.
+- Every non-index page reaches the model (no keyword page filter), as every clause chunk of the window (no top-k). The model must copy each `verbatim_quote` exactly; quotes are never filled in from block text. Extraction calls disable reasoning (OpenRouter `reasoning: {effort: "none"}`) and use `LLM_MAX_TOKENS` (4096); a model returning empty content with `finish_reason=length` is cooled down for 10 min; rotation stops at `LLM_TIMEOUT_SECONDS`.
+- Routing (`route_verification_outcome`): `extraction_error` escalates directly; only *unintentional* rejections count as failures (`intentional_rejections` = deleted clauses + candidates whose quote is covered by a verified item) and trigger up to 2 `targeted_refine` retries with the validation feedback. Validator number check covers the quote and the description. A model clause reference is kept when it agrees with the line-start structure path; otherwise the path wins.
+- **Record / replay**: `LLM_REPLAY_MODE=record` saves raw responses to `apps/ai/tests/fixtures/llm_cassettes/<sha256(messages)>.json`; `replay` serves them offline (a missing recording is an explicit error). Tests inject `tests/fakes.py` (`FakeLLM`, `fake_llm_client`, `use_fake_llm`) and never reach a network.
+- Aadhaar redaction requires a valid Verhoeff checksum or an Aadhaar/UID label, and never fires inside AWS account contexts (`amazonaws.com/`, `arn:aws`).
 
 ---
 
@@ -68,9 +70,11 @@ Whenever you make architectural or structural changes:
 Before concluding any implementation turn, execute the relevant verification gates:
 
 ```bash
-# 1. Python AI Worker (Formatting, Linting & Unit Tests)
-ruff check apps/ai/src
-pytest apps/ai/tests/ -k "not test_openrouter"
+# 1. Python AI Worker (Formatting, Linting & Tests) — run from apps/ai
+ruff check src tests && ruff format --check src tests
+pytest -m unit        # ~30 s, no PDFs, no network
+pytest                # unit + realdoc (real tender PDFs); `live` tests are opt-in: pytest -m live
+uv run python -m tenderpulse_ai.evaluation.benchmark --docs 02,04 --compare last   # extraction benchmark
 
 # 2. Monorepo Package Builds
 npm run build -w @tenderpulse/shared-types

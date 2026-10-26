@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from fakes import fake_llm_client
 
 from tenderpulse_ai.domain.candidate_detector import CandidateDetector
 from tenderpulse_ai.domain.docling_parser import DoclingParserEngine, is_clause_deleted
@@ -16,9 +17,6 @@ from tenderpulse_ai.domain.models import (
 )
 from tenderpulse_ai.domain.structure_builder import DocumentStructureBuilder
 from tenderpulse_ai.domain.tender_chunker import TenderChunker
-from tenderpulse_ai.extraction.rules import default_tender_extractor
-from tenderpulse_ai.extraction.rules.base import get_clause_and_quote
-from tenderpulse_ai.models.llm_client import StructuredLLMClient
 from tenderpulse_ai.security.context import SecurityContext
 from tenderpulse_ai.security.exceptions import (
     ToolRateLimitExceededException,
@@ -187,36 +185,6 @@ The bidder shall furnish Earnest Money Deposit (EMD) of Rs. 7.18 Crores via Bank
     )
 
 
-@pytest.mark.parametrize("phrase", MANDATORY_DELETION_PHRASES)
-def test_adversarial_rules_suppress_deleted_clauses(phrase: str):
-    """Adversarial test: Verify extraction rules return None / empty candidates for varied deletion phrases.
-
-    Tests multi-line text where clause heading ends with deletion phrase followed by body.
-    """
-    text = (
-        f"Clause 46.1 Mobilization Advance {phrase}\n"
-        f"The Authority shall pay 10% mobilization advance against bank guarantee."
-    )
-
-    # 1. get_clause_and_quote returns None
-    res = get_clause_and_quote(
-        r"mobilization advance",
-        "mobilization advance",
-        ["mobilization advance"],
-        text,
-        text.lower(),
-        1,
-        f"Clause 46.1 {phrase}",
-    )
-    assert res is None, (
-        f"Rule get_clause_and_quote failed to suppress deleted clause with '{phrase}'"
-    )
-
-    # 2. default_tender_extractor returns empty list
-    items = default_tender_extractor("", text)
-    assert items == [], f"default_tender_extractor leaked items for deleted clause with '{phrase}'"
-
-
 @pytest.mark.asyncio
 @pytest.mark.parametrize("phrase", MANDATORY_DELETION_PHRASES)
 async def test_adversarial_validation_node_rejects_deleted_candidates(phrase: str):
@@ -233,7 +201,7 @@ async def test_adversarial_validation_node_rejects_deleted_candidates(phrase: st
     node_ctx = WorkflowNodeContext(
         retrieval_tool=ScopedRetrievalTool(),
         page_text_tool=PageTextTool(),
-        llm_client=StructuredLLMClient(enable_live_client=False),
+        llm_client=fake_llm_client(lambda s, u: []),
     )
     val_node = make_validation_node(node_ctx)
 

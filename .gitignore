@@ -65,3 +65,7 @@ playwright-screenshots/
 .agents/
 
 
+
+# AI extraction benchmark snapshots and parsed-page cache
+apps/ai/.bench/
+apps/ai/.cache/

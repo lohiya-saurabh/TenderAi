@@ -23,10 +23,6 @@ from tenderpulse_ai.extraction.deduplication import (
     consolidate_verified_items,
     detect_clause_contradictions,
 )
-from tenderpulse_ai.extraction.quote_resolver import (
-    extract_complete_clause_window,
-)
-from tenderpulse_ai.extraction.rules.financial import extract_financial_rules
 from tenderpulse_ai.security.context import SecurityContext
 
 
@@ -315,124 +311,6 @@ def test_adversarial_gst_treatment_intervening_words():
 # ==============================================================================
 # MISSION 2: TABLE QUOTE SEVERING & CANARA BANK COORDINATES
 # ==============================================================================
-
-
-def test_adversarial_table_quote_never_severs_on_headers_or_numbered_rows():
-    """Empirically tests that table quote expansion never severs prematurely on
-
-    table lead-in headers, column titles, numbered rows, or embedded periods.
-    Guarantees complete Canara Bank coordinates are retained intact.
-    """
-    table_text = (
-        "Clause 7. Payment of Document Fee and Tender Cost.\n"
-        "The bidder must remit the non-refundable document fee of Rs. 10,000/- as per bank details below:\n\n"
-        "Payment Schedule\n"
-        "Sl. No. Particulars Details\n"
-        "1. Name of Beneficiary National Highways Authority of India\n"
-        "2. Bank Name Canara Bank\n"
-        "3. Account No. 0385201800065\n"
-        "4. IFSC Code CNRB0001624\n"
-        "5. Branch Sector 10 Panchkula\n\n"
-        "Bidders must submit proof of payment with the bid."
-    )
-
-    quote = extract_complete_clause_window("non-refundable document fee", table_text, max_chars=650)
-    assert quote != ""
-
-    # All Canara Bank coordinates MUST be intact
-    assert "0385201800065" in quote, "Account number was severed!"
-    assert "CNRB0001624" in quote, "IFSC code was severed!"
-    assert "Canara Bank" in quote, "Bank name was severed!"
-    assert "Sector 10 Panchkula" in quote, "Branch was severed!"
-
-
-def test_adversarial_table_quote_with_double_newlines_between_rows():
-    """Tests multi-paragraph tables where empty lines (\\n\\n) separate each row."""
-    table_text_spaced = (
-        "Clause 8. Tender Fee Deposit.\n"
-        "Payment of fee shall be made via RTGS as per following details:\n\n"
-        "Sl. No. Particulars Details\n\n"
-        "1. Name of Beneficiary NHAI\n\n"
-        "2. Bank Name Canara Bank\n\n"
-        "3. Account Number 0385201800065\n\n"
-        "4. IFSC Code CNRB0001624\n\n"
-        "5. Branch Name Sector 10 Panchkula\n\n"
-        "Receipt is mandatory for technical evaluation."
-    )
-
-    quote = extract_complete_clause_window("Tender Fee Deposit", table_text_spaced, max_chars=650)
-    assert quote != ""
-    assert "0385201800065" in quote
-    assert "CNRB0001624" in quote
-    assert "Canara Bank" in quote
-    assert "Sector 10 Panchkula" in quote
-
-
-def test_adversarial_table_quote_with_table_numbered_title():
-    """Tests tables where the table lead-in title starts with 'Table 1.' or 'Table 2:'."""
-    table_with_table_header = (
-        "Clause 11. Payment Mode.\n"
-        "The non-refundable tender fee must be submitted as per Table 1 below:\n\n"
-        "Table 1. Account Details for RTGS/NEFT\n"
-        "1. Beneficiary National Highways Authority of India\n"
-        "2. Bank Name Canara Bank\n"
-        "3. Account Number 0385201800065\n"
-        "4. IFSC Code CNRB0001624\n"
-        "5. Branch Sector 10 Panchkula\n\n"
-        "Proof of payment must be furnished."
-    )
-
-    quote = extract_complete_clause_window("tender fee", table_with_table_header, max_chars=650)
-    assert quote != ""
-    assert "0385201800065" in quote
-    assert "CNRB0001624" in quote
-    assert "Canara Bank" in quote
-    assert "Sector 10 Panchkula" in quote
-
-
-def test_adversarial_table_quote_with_bank_name_at_start_of_row():
-    """Tests table where row 1 starts with '1. Mode of Payment' and row 2 with '2. Canara Bank'."""
-    table_text = (
-        "Clause 6. Tender Processing Fee.\n"
-        "Please deposit non-refundable fee as per details below:\n\n"
-        "Sl. No. Particulars Details\n"
-        "1. Mode of Payment: NEFT/RTGS\n"
-        "2. Canara Bank, Sector 10 Panchkula\n"
-        "3. Account Number: 0385201800065\n"
-        "4. IFSC: CNRB0001624\n\n"
-        "Proof of payment must be attached."
-    )
-    quote = extract_complete_clause_window("non-refundable fee", table_text, max_chars=650)
-    assert quote != ""
-    assert "0385201800065" in quote
-    assert "CNRB0001624" in quote
-
-
-def test_adversarial_financial_rule_extraction_canara_bank():
-    """Tests that financial rule extraction parses complete bank coordinates
-
-    from arbitrary payment tables without loss.
-    """
-    text = (
-        "Clause 4. RFP Document Cost.\n"
-        "Bidder shall deposit Rs. 5,000 non-refundable fee as per bank details below:\n"
-        "Sl. No. Particulars Details\n"
-        "1. Name of Beneficiary National Highways Authority of India\n"
-        "2. Bank Name Canara Bank\n"
-        "3. Account No. 0385201800065\n"
-        "4. IFSC Code CNRB0001624\n"
-        "5. Branch Sector 10 Panchkula\n"
-    )
-
-    candidates = extract_financial_rules("doc_adv_01", 5, text, text.lower(), "Clause 4")
-    fee_cands = [c for c in candidates if "Document Fee" in c.title or "RFP" in c.title]
-    assert len(fee_cands) >= 1
-    cand = fee_cands[0]
-    assert "5,000" in cand.description
-    assert "0385201800065" in cand.description
-    assert "CNRB0001624" in cand.description
-    assert "Canara Bank" in cand.description
-    assert "Sector 10 Panchkula" in cand.description
 
 
 # ==============================================================================

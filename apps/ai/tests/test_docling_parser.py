@@ -160,7 +160,9 @@ def test_docling_parser_spatial_whitespace_table():
     assert len(doc.tables) == 1
     tbl = doc.tables[0]
     assert "Annual Turnover" in tbl.rows[0][1]
-    assert tbl.row_key_map.get("1") == "Annual Turnover | Rs. 50 Crores"
+    assert tbl.row_key_map.get("1") == (
+        "Qualification Criteria: Annual Turnover | Threshold Requirement: Rs. 50 Crores"
+    )
 
 
 def test_docling_parser_paragraph_coalescing():

@@ -27,6 +27,17 @@ from tenderpulse_ai.tools.retrieval import DocumentChunk, ScopedRetrievalTool
 from tenderpulse_ai.workflow.nodes import WorkflowNodeContext
 
 
+class _ScriptedModel:
+    """Scripted stand-in for the live gateway: the evaluation suite measures the workflow's
+    security and grounding gates against fixed model answers (offline, deterministic)."""
+
+    def __init__(self, fn):
+        self.fn = fn
+
+    async def extract_compliance(self, system_prompt, user_prompt, max_retries=1, block_map=None):
+        return self.fn(system_prompt, user_prompt)
+
+
 class ComplianceWorkflowEvaluator:
     """
     Evaluator executing test cases through the LangGraph workflow engine
@@ -147,8 +158,9 @@ class ComplianceWorkflowEvaluator:
         )
 
         # 3. Setup LLM Client with simulated model extractor
-        extractor_fn = self._create_simulated_model_extractor(case)
-        llm_client = StructuredLLMClient(extractor_fn=extractor_fn)
+        llm_client = StructuredLLMClient(
+            live_client=_ScriptedModel(self._create_simulated_model_extractor(case))
+        )
 
         # 4. Handle expected immediate security exceptions (e.g. Anti-IDOR whitelist breach)
         if case.expected_security_exception == "UnauthorizedDocumentAccessException":
