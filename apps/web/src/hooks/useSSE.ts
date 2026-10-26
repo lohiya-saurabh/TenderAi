@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { getAccessToken, resolveUrl } from '@/api/client.js';
+import { SseHttpError, streamSse } from '@/api/sse.js';
 
 export interface SSEProgressEvent {
   step: string;
@@ -17,26 +17,28 @@ interface UseSSEReturn {
   close: () => void;
 }
 
+const INITIAL_RETRY_MS = 1000;
+const MAX_RETRY_MS = 15000;
+
 /**
  * Hook for subscribing to Server-Sent Events (SSE) for document extraction progress.
- * Prevents native EventSource auto-reconnect loops once terminal states (COMPLETED or 100%)
- * are reached or when close() is explicitly called.
+ * Streams over fetch with the Bearer header (the token never goes in the URL),
+ * reconnects with capped backoff like EventSource did, and stops for good once a
+ * terminal state (COMPLETED or 100%) arrives, close() is called, or auth fails.
  */
 export function useSSE(url: string | null): UseSSEReturn {
   const [lastEvent, setLastEvent] = useState<SSEProgressEvent | null>(null);
   const [events, setEvents] = useState<SSEProgressEvent[]>([]);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const eventSourceRef = useRef<EventSource | null>(null);
+  const controllerRef = useRef<AbortController | null>(null);
   const isTerminatedRef = useRef<boolean>(false);
 
   const close = useCallback(() => {
     isTerminatedRef.current = true;
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
-      setIsConnected(false);
-    }
+    controllerRef.current?.abort();
+    controllerRef.current = null;
+    setIsConnected(false);
   }, []);
 
   useEffect(() => {
@@ -46,31 +48,21 @@ export function useSSE(url: string | null): UseSSEReturn {
     }
 
     isTerminatedRef.current = false;
+    const controller = new AbortController();
+    controllerRef.current = controller;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
+    let retryDelay = INITIAL_RETRY_MS;
 
-    // Append token if available for authenticated SSE endpoint
-    const resolvedUrl = resolveUrl(url);
-    const token = getAccessToken();
-    const sseUrl = token ? `${resolvedUrl}${resolvedUrl.includes('?') ? '&' : '?'}token=${token}` : resolvedUrl;
-
-    const es = new EventSource(sseUrl, { withCredentials: true });
-    eventSourceRef.current = es;
-
-    es.onopen = () => {
-      setIsConnected(true);
-      setError(null);
-    };
-
-    es.onmessage = (event) => {
+    const handleMessage = (raw: string) => {
       try {
-        const data = JSON.parse(event.data) as SSEProgressEvent;
+        const data = JSON.parse(raw) as SSEProgressEvent;
         setLastEvent(data);
         setEvents((prev) => [...prev, data]);
 
-        // If completion or 100% progress is reached, immediately close to prevent native auto-reconnect
+        // Terminal state: stop here so the stream is not reopened.
         if (data.step === 'COMPLETED' || data.progress >= 100) {
           isTerminatedRef.current = true;
-          es.close();
-          eventSourceRef.current = null;
+          controller.abort();
           setIsConnected(false);
         }
       } catch (err) {
@@ -78,22 +70,47 @@ export function useSSE(url: string | null): UseSSEReturn {
       }
     };
 
-    es.onerror = () => {
-      // If the stream was terminated normally upon completion or closed explicitly, do not treat as an error
-      if (isTerminatedRef.current) {
-        es.close();
-        eventSourceRef.current = null;
+    const connect = async () => {
+      try {
+        await streamSse(
+          url,
+          {
+            onOpen: () => {
+              retryDelay = INITIAL_RETRY_MS;
+              setIsConnected(true);
+              setError(null);
+            },
+            onMessage: handleMessage,
+          },
+          controller.signal,
+        );
+      } catch (err) {
+        if (isTerminatedRef.current || controller.signal.aborted) return;
+        if (err instanceof SseHttpError && (err.status === 401 || err.status === 403)) {
+          isTerminatedRef.current = true;
+          setIsConnected(false);
+          setError('Not authorised to view progress. Please sign in again.');
+          return;
+        }
+      }
+      if (isTerminatedRef.current || controller.signal.aborted) {
         setIsConnected(false);
         return;
       }
-      setError('Connection lost. Reconnecting...');
+      // Stream ended or dropped before a terminal event: reconnect with backoff.
       setIsConnected(false);
+      setError('Connection lost. Reconnecting...');
+      retryTimer = setTimeout(connect, retryDelay);
+      retryDelay = Math.min(retryDelay * 2, MAX_RETRY_MS);
     };
+
+    void connect();
 
     return () => {
       isTerminatedRef.current = true;
-      es.close();
-      eventSourceRef.current = null;
+      clearTimeout(retryTimer);
+      controller.abort();
+      if (controllerRef.current === controller) controllerRef.current = null;
       setIsConnected(false);
     };
   }, [url]);

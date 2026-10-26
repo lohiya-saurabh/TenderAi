@@ -337,6 +337,11 @@ gantt
    - Guard `mock-upload` behind `NODE_ENV !== 'production'`.
    - Migrate SSE from URL token query params to session-authenticated headers.
 
+   **Status (2026-10-27): partly done.**
+   - *SSE (1.3)*: done. The web client streams `text/event-stream` over `fetch` with the normal `Authorization: Bearer` header (`apps/web/src/api/sse.ts`), refreshing once on 401 and reconnecting with capped backoff. `JwtAuthGuard` no longer accepts `?token=`, so a JWT in a URL is rejected instead of logged.
+   - *Logout (1.2) and mock upload (1.4)*: already in place: `POST /api/v1/auth/logout` revokes the refresh token, and `mock-upload` refuses requests in production.
+   - *Refresh token (1.1)*: not done; blocked on deployment. The API already sets `httpOnly` `tp_refresh_token` / `tp_access_token` cookies, but it also returns the refresh token in the JSON body and the SPA keeps it in `localStorage`. Production serves the SPA from S3/CloudFront and calls the ALB over plain HTTP on a different site, so `SameSite=Strict`/`Secure` cookies are never sent there. Going cookie-only needs the API served under the SPA's own origin (e.g. a CloudFront `/api/*` behaviour to the ALB), then removing the token from the response body and `localStorage`.
+
 2. **P1 — Data Integrity & Distributed Reliability**:
    - Provide standard `pg.Pool` connection factory in `database.provider.ts` when `DATABASE_URL` is set.
    - Configure Drizzle Kit for repeatable production migrations.
