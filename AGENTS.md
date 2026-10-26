@@ -70,14 +70,24 @@ Whenever you make architectural or structural changes:
 
 ---
 
-## 4. Verification & Testing Protocol
+## 4. Local Environment (macOS dev machine)
+
+- **Python**: the only environment is `apps/ai/.venv`, built by `cd apps/ai && uv sync --extra dev` from `uv.lock`. Use `apps/ai/.venv/bin/{pytest,ruff,python}` or `uv run`. The root `.venv` is not used by any tooling.
+- **Ruff**: only the `uv.lock` version (0.16.10) in `apps/ai/.venv`. Homebrew's `ruff` is a different version and formats differently; never use it.
+- **Prettier**: config is `.prettierrc` + `.prettierignore` (single quotes, width 100). The `.claude/settings.json` hook (`scripts/format-on-edit.sh`) formats each edited file; never run a repo-wide `prettier --write`.
+- **npm**: no proxy is configured or needed.
+- **Dev servers** (`npm run dev`): AI 8000, API 3000, web 5173. Stop one by port (`lsof -ti :3000 | xargs kill`), never `pkill -f <pattern>`: the pattern matches the calling shell's own command line and kills it.
+- **Test output**: API tests print logs only for failing tests (`silent: 'passed-only'`), so read the summary lines (`Test Files`, `Tests`) and failures only.
+- **Phases**: each phase has a one-page spec in `docs/phaseN.md` (scope, acceptance tests, decisions) and ends with a commit, so a new or compacted session restarts from the spec and `git log`, not from the research report.
+
+## 5. Verification & Testing Protocol
 
 Before concluding any implementation turn, execute the relevant verification gates:
 
 ```bash
 # 1. Python AI Worker (Formatting, Linting & Tests) — run from apps/ai
-ruff check src tests && ruff format --check src tests
-pytest -m unit        # ~30 s, no PDFs, no network
+uv run ruff check src tests && uv run ruff format --check src tests
+uv run pytest -m unit        # ~30 s, no PDFs, no network
 pytest                # unit + realdoc (real tender PDFs); `live` tests are opt-in: pytest -m live
 uv run python -m tenderpulse_ai.evaluation.benchmark --docs 02,04 --compare last   # extraction benchmark
 

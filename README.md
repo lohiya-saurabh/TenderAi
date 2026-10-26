@@ -153,12 +153,8 @@ cd TenderAi
 # Install Node monorepo dependencies
 npm install
 
-# Setup Python AI service virtual environment
-cd apps/ai
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-cd ../..
+# Setup Python AI service virtual environment (apps/ai/.venv, pinned by uv.lock)
+(cd apps/ai && uv sync --extra dev)
 ```
 
 ### 2. Environment Configuration

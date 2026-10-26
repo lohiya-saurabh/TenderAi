@@ -713,7 +713,8 @@ When reviewing the repository against earlier architectural drafts, three notabl
 2. **Denormalized Organization Key vs. Standalone Organizations Table**:
    - The active database schema does not feature a separate `organizations` table. Multi-tenancy is established via `organization_id TEXT NOT NULL` present across every business table. Tenant metadata is stored in `users.organization_name`, `tenant_settings`, and `subscriptions`.
 3. **Embedded PGlite Engine in Local Runtime**:
-   - In local development and automated testing, the NestJS backend boots an embedded `@electric-sql/pglite` database stored under `apps/api/data/postgres`.
+   - In local development, the NestJS backend boots an embedded `@electric-sql/pglite` database stored under `apps/api/data/postgres`.
+   - API tests set `PGLITE_DATA_DIR=memory://` (`apps/api/vitest.config.ts`), so every test file gets its own in-memory database and the files run in parallel without touching the dev database.
    - In production environments on AWS (`AWS.md`) or GCP (`GCP.md`), the system connects to a managed PostgreSQL 16 cluster (Amazon RDS / Cloud SQL) via standard connection strings.
 4. **Target Pivot Entities vs. Implemented Models**:
    - Earlier conceptual RFCs (`docs/DOMAIN.md` Part B) proposed splitting `bids` into separate `tenders` and `bid_cases` tables, and adding `capability_entries`, `evidence_documents`, and `review_tasks` tables.

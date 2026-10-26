@@ -17,7 +17,14 @@ export async function getDatabase(dataDir?: string): Promise<PGlite> {
     return dbInstance;
   }
 
-  const dbPath = dataDir || path.resolve(process.cwd(), 'data/postgres');
+  // PGLITE_DATA_DIR=memory:// gives each process its own throwaway database (used by tests).
+  const dbPath =
+    dataDir || process.env.PGLITE_DATA_DIR || path.resolve(process.cwd(), 'data/postgres');
+  if (dbPath.startsWith('memory://')) {
+    dbInstance = new PGlite(dbPath);
+    await dbInstance.waitReady;
+    return dbInstance;
+  }
   if (!fs.existsSync(dbPath)) {
     fs.mkdirSync(dbPath, { recursive: true });
   }

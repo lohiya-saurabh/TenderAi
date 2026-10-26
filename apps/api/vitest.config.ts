@@ -13,7 +13,8 @@ export default defineConfig({
     include: ['src/**/*.spec.ts', 'src/**/*.test.ts'],
     hookTimeout: 30000,
     testTimeout: 30000,
-    fileParallelism: false,
+    // Console output only for failing tests.
+    silent: 'passed-only',
     env: {
       NODE_ENV: 'test',
       JWT_SECRET: process.env.JWT_SECRET || 'test-jwt-secret-for-tenderpulse-e2e-specs-001',
@@ -21,6 +22,7 @@ export default defineConfig({
       ALLOW_MOCK_SERVICES: 'true',
       QUEUE_PROVIDER: 'mock',
       STORAGE_PROVIDER: 'mock',
+      PGLITE_DATA_DIR: 'memory://',
     },
   },
 });
