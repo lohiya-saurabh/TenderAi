@@ -1,6 +1,7 @@
 import math
 import re
-from typing import Any
+from collections import Counter
+from typing import Any, Protocol
 
 from pydantic import BaseModel, Field
 
@@ -23,6 +24,103 @@ class DocumentChunk(BaseModel):
     tier: str = "TIER2_PARENT"  # TIER1_SKELETON, TIER2_PARENT, TIER3_CHILD
     canonical_ref_id: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class QueryEmbedder(Protocol):
+    """Port for a dense embedding model. Chunk embeddings must come from the same model."""
+
+    def embed_query(self, text: str) -> list[float]: ...
+
+
+# Equivalent procurement terms. Tenders mix acronyms and spelled-out forms
+# ("EMD" vs "Earnest Money Deposit"), which pure keyword overlap misses.
+PROCUREMENT_SYNONYM_GROUPS: tuple[tuple[str, ...], ...] = (
+    ("emd", "earnest money deposit", "earnest money", "bid security"),
+    ("pbg", "performance bank guarantee", "performance security", "performance guarantee"),
+    ("turnover", "revenue", "annual sales"),
+    ("net worth", "networth"),
+    ("ld", "liquidated damages"),
+    ("dlp", "defect liability period", "defects liability period"),
+    ("gstin", "gst registration", "goods and services tax"),
+    ("udin", "unique document identification number"),
+    ("msme", "udyam", "micro small and medium enterprises"),
+    ("mii", "make in india"),
+    ("poa", "power of attorney"),
+    ("boq", "bill of quantities"),
+    ("nit", "notice inviting tender"),
+    ("cod", "commercial operation date", "scheduled completion date"),
+    ("jv", "joint venture", "consortium"),
+    ("oem", "original equipment manufacturer", "manufacturer authorization"),
+    ("blacklisting", "debarment", "debarred", "blacklisted"),
+    ("similar work", "past experience", "work experience", "completed works"),
+)
+
+# Expanded synonym terms count for less than terms the caller actually asked for.
+SYNONYM_TERM_WEIGHT = 0.6
+
+_TOKEN_RE = re.compile(r"\w+")
+
+
+def tokenize(text: str) -> list[str]:
+    return _TOKEN_RE.findall(text.lower())
+
+
+def _contains_phrase(tokens: list[str], phrase: str) -> bool:
+    words = phrase.split()
+    n = len(words)
+    return any(tokens[i : i + n] == words for i in range(len(tokens) - n + 1))
+
+
+def _matching_groups(tokens: list[str]) -> list[tuple[str, ...]]:
+    return [
+        group
+        for group in PROCUREMENT_SYNONYM_GROUPS
+        if any(_contains_phrase(tokens, phrase) for phrase in group)
+    ]
+
+
+def expand_query_terms(query: str) -> dict[str, float]:
+    """
+    Query term -> weight. Original terms weigh 1.0; terms pulled in from a matching
+    synonym group weigh SYNONYM_TERM_WEIGHT, so "EMD" also finds "earnest money deposit".
+    """
+    tokens = tokenize(query)
+    weights: dict[str, float] = {t: 1.0 for t in tokens}
+    for group in _matching_groups(tokens):
+        for phrase in group:
+            for term in phrase.split():
+                weights.setdefault(term, SYNONYM_TERM_WEIGHT)
+    return weights
+
+
+class Bm25Index:
+    """Okapi BM25 over a small, already tenant-scoped chunk set."""
+
+    def __init__(self, chunks: list["DocumentChunk"], k1: float = 1.5, b: float = 0.75):
+        self.k1 = k1
+        self.b = b
+        self._term_freqs = {c.chunk_id: Counter(tokenize(c.text)) for c in chunks}
+        self._lengths = {cid: sum(tf.values()) for cid, tf in self._term_freqs.items()}
+        self._avg_length = (sum(self._lengths.values()) / len(chunks)) if chunks else 0.0
+        doc_freq: Counter[str] = Counter()
+        for tf in self._term_freqs.values():
+            doc_freq.update(tf.keys())
+        n = len(chunks)
+        self._idf = {
+            term: math.log(1.0 + (n - df + 0.5) / (df + 0.5)) for term, df in doc_freq.items()
+        }
+
+    def score(self, chunk_id: str, query_weights: dict[str, float]) -> float:
+        tf = self._term_freqs.get(chunk_id)
+        if not tf or self._avg_length == 0:
+            return 0.0
+        norm = self.k1 * (1 - self.b + self.b * self._lengths[chunk_id] / self._avg_length)
+        total = 0.0
+        for term, weight in query_weights.items():
+            freq = tf.get(term, 0)
+            if freq:
+                total += weight * self._idf.get(term, 0.0) * freq * (self.k1 + 1) / (freq + norm)
+        return total
 
 
 class JevRerankScore(BaseModel):
@@ -77,12 +175,18 @@ class JevCalibratedReranker:
     )
 
     def score_chunk(self, query: str, chunk: DocumentChunk) -> JevRerankScore:
-        query_terms = [t for t in re.findall(r"\w+", query.lower()) if len(t) > 2]
-        chunk_text_lower = chunk.text.lower()
-        chunk_words = set(re.findall(r"\w+", chunk_text_lower))
+        query_terms = [t for t in tokenize(query) if len(t) > 2]
+        chunk_tokens = tokenize(chunk.text)
+        chunk_words = set(chunk_tokens)
 
-        # 1. Term Coverage Ratio
-        matched_terms = [t for t in query_terms if t in chunk_words]
+        # 1. Term Coverage Ratio (a term also counts as covered when the chunk
+        # uses an equivalent procurement term, e.g. "EMD" vs "earnest money deposit")
+        chunk_groups = _matching_groups(chunk_tokens)
+        matched_terms = [
+            t
+            for t in query_terms
+            if t in chunk_words or any(t in " ".join(g).split() for g in chunk_groups)
+        ]
         term_coverage = len(matched_terms) / max(len(query_terms), 1)
 
         # 2. Statutory Procurement Term Presence
@@ -166,6 +270,10 @@ class ScopedRetrievalTool:
     """
     Deterministic scoped retrieval tool with Hybrid Dense+Sparse RAG and JEV Reranking.
     Enforces hard tenant isolation and document whitelist checking before any data access.
+
+    Sparse ranking is Okapi BM25 with procurement synonym expansion. Dense ranking runs
+    only when real vectors exist: the caller passes query_embedding, or an embedder is
+    configured and the chunks carry embeddings from the same model.
     """
 
     def __init__(
@@ -173,10 +281,12 @@ class ScopedRetrievalTool:
         max_calls_per_run: int = 15,
         enable_jev_rerank: bool = True,
         rerank_top_n: int = 20,
+        embedder: QueryEmbedder | None = None,
     ):
         self.max_calls_per_run = max_calls_per_run
         self.enable_jev_rerank = enable_jev_rerank
         self.rerank_top_n = rerank_top_n
+        self.embedder = embedder
         self.reranker = JevCalibratedReranker()
         # In-memory document chunks store partitioned by (tenant_id, document_id)
         self._store: dict[str, list[DocumentChunk]] = {}
@@ -206,85 +316,34 @@ class ScopedRetrievalTool:
         1. Enforces rate limits per workflow run.
         2. Validates target_document_id against security_context.allowed_document_ids (anti-IDOR).
         3. Isolates chunks by security_context.tenant_id.
-        4. Computes sparse lexical (BM25 term overlap) and dense vector cosine similarity.
+        4. Ranks by BM25 (with synonym expansion) and, when vectors exist, dense cosine similarity.
         5. Fuses candidates via Reciprocal Rank Fusion (RRF).
         6. Runs JEV Calibrated System One Reranker for high-precision top_k selection.
         7. If expand_to_parent is True, expands TIER3_CHILD chunks to their enclosing TIER2_PARENT chunks.
         """
-        # 1. Rate Limiting Check
-        run_id = security_context.workflow_run_id
-        current_calls = self._call_counts.get(run_id, 0) + 1
-        if current_calls > self.max_calls_per_run:
-            raise ToolRateLimitExceededException(
-                f"Rate limit exceeded: Max {self.max_calls_per_run} retrieval calls allowed per run."
-            )
-        self._call_counts[run_id] = current_calls
+        self._check_rate_limit(security_context)
 
-        # 2. Strict Whitelist Check (Anti-IDOR)
+        # Strict Whitelist Check (Anti-IDOR)
         if target_document_id not in security_context.allowed_document_ids:
             raise UnauthorizedDocumentAccessException(
                 f"Document '{target_document_id}' is not in allowed document scope: {security_context.allowed_document_ids}"
             )
 
-        # 3. Deterministic Scoped Query
+        # Deterministic Scoped Query
         key = f"{security_context.tenant_id}:{target_document_id}"
-        tenant_chunks = self._store.get(key, [])
-
         scoped_chunks = [
             c
-            for c in tenant_chunks
+            for c in self._store.get(key, [])
             if c.tenant_id == security_context.tenant_id and c.document_id == target_document_id
         ]
-
-        if not scoped_chunks:
-            return []
-
-        # 4. Sparse Lexical Ranking (BM25 Approximation)
-        query_terms = set(re.findall(r"\w+", query.lower()))
-        sparse_scored: list[tuple[float, DocumentChunk]] = []
-        for chunk in scoped_chunks:
-            chunk_words = set(re.findall(r"\w+", chunk.text.lower()))
-            overlap = len(query_terms.intersection(chunk_words))
-            # Ratio of query terms matched
-            score = overlap / max(len(query_terms), 1) if query_terms else 0.0
-            if not expand_to_parent and chunk.tier == "TIER3_CHILD" and score > 0:
-                score += 0.05
-            sparse_scored.append((score, chunk))
-        sparse_scored.sort(key=lambda x: x[0], reverse=True)
-        sparse_ranks = {chunk.chunk_id: rank + 1 for rank, (_, chunk) in enumerate(sparse_scored)}
-
-        # 5. Dense Vector Ranking (if embeddings available, or fallback to term frequency)
-        dense_scored: list[tuple[float, DocumentChunk]] = []
-        for chunk in scoped_chunks:
-            if query_embedding is not None and chunk.embedding is not None:
-                sim = compute_cosine_similarity(query_embedding, chunk.embedding)
-            else:
-                # Dense proxy: character n-gram overlap
-                sim = sparse_ranks.get(chunk.chunk_id, len(scoped_chunks))
-                sim = 1.0 / (sim + 1.0)
-            dense_scored.append((sim, chunk))
-        dense_scored.sort(key=lambda x: x[0], reverse=True)
-        dense_ranks = {chunk.chunk_id: rank + 1 for rank, (_, chunk) in enumerate(dense_scored)}
-
-        # 6. Reciprocal Rank Fusion (RRF)
-        fused_scores = reciprocal_rank_fusion(dense_ranks, sparse_ranks, k=60)
-        chunk_map = {c.chunk_id: c for c in scoped_chunks}
-        fused_sorted = sorted(fused_scores.items(), key=lambda x: x[1], reverse=True)
-
-        # Take candidate pool for reranking
-        pool_size = max(top_k * 2, self.rerank_top_n)
-        candidate_pool = [chunk_map[cid] for cid, _ in fused_sorted[:pool_size]]
-
-        # 7. JEV Calibrated System One Reranking
-        ranked: list[DocumentChunk]
-        if self.enable_jev_rerank and self.reranker:
-            ranked = self.reranker.rerank(
-                query=query,
-                candidates=candidate_pool,
-                top_k=max(top_k * 3, self.rerank_top_n),
-            )
-        else:
-            ranked = candidate_pool
+        ranked = self._hybrid_rank(
+            query,
+            scoped_chunks,
+            top_k=max(top_k * 3, self.rerank_top_n),
+            query_embedding=query_embedding,
+            pool_size=max(top_k * 2, self.rerank_top_n),
+            prefer_children=not expand_to_parent,
+        )
 
         if not expand_to_parent:
             # Ensure fine-grained child chunk hits are not shadowed or demoted by parent table chunks.
@@ -303,7 +362,7 @@ class ScopedRetrievalTool:
                 ranked = non_parent_chunks + parent_chunks
             return ranked[:top_k]
 
-        # 8. Small-to-Big parent expansion
+        # Small-to-Big parent expansion
         expanded: list[DocumentChunk] = []
         seen_ids: set[str] = set()
         for c in ranked:
@@ -332,16 +391,10 @@ class ScopedRetrievalTool:
         Executes tenant-scoped hybrid retrieval across all evidence vault chunks:
         1. Rate limit check.
         2. Strict tenant isolation (all chunks must belong to security_context.tenant_id).
-        3. Sparse lexical (BM25 term overlap) + dense vector ranking + Reciprocal Rank Fusion.
+        3. BM25 + optional dense ranking + Reciprocal Rank Fusion.
         4. JEV Calibrated Cross-Encoder Reranking.
         """
-        run_id = security_context.workflow_run_id
-        current_calls = self._call_counts.get(run_id, 0) + 1
-        if current_calls > self.max_calls_per_run:
-            raise ToolRateLimitExceededException(
-                f"Rate limit exceeded: Max {self.max_calls_per_run} retrieval calls allowed per run."
-            )
-        self._call_counts[run_id] = current_calls
+        self._check_rate_limit(security_context)
 
         scoped_chunks: list[DocumentChunk] = []
         for key, chunks in self._store.items():
@@ -384,33 +437,87 @@ class ScopedRetrievalTool:
             if cat_filtered:
                 scoped_chunks = cat_filtered
 
-        query_terms = set(re.findall(r"\w+", query.lower()))
-        sparse_scored: list[tuple[float, DocumentChunk]] = []
-        for chunk in scoped_chunks:
-            chunk_words = set(re.findall(r"\w+", chunk.text.lower()))
-            overlap = len(query_terms.intersection(chunk_words))
-            score = overlap / max(len(query_terms), 1) if query_terms else 0.0
-            sparse_scored.append((score, chunk))
-        sparse_scored.sort(key=lambda x: x[0], reverse=True)
-        sparse_ranks = {chunk.chunk_id: rank + 1 for rank, (_, chunk) in enumerate(sparse_scored)}
+        return self._hybrid_rank(query, scoped_chunks, top_k, query_embedding)
 
-        dense_scored: list[tuple[float, DocumentChunk]] = []
-        for chunk in scoped_chunks:
-            if query_embedding is not None and chunk.embedding is not None:
-                sim = compute_cosine_similarity(query_embedding, chunk.embedding)
-            else:
-                sim = sparse_ranks.get(chunk.chunk_id, len(scoped_chunks))
-                sim = 1.0 / (sim + 1.0)
-            dense_scored.append((sim, chunk))
-        dense_scored.sort(key=lambda x: x[0], reverse=True)
-        dense_ranks = {chunk.chunk_id: rank + 1 for rank, (_, chunk) in enumerate(dense_scored)}
+    def _check_rate_limit(self, security_context: SecurityContext) -> None:
+        run_id = security_context.workflow_run_id
+        current_calls = self._call_counts.get(run_id, 0) + 1
+        if current_calls > self.max_calls_per_run:
+            raise ToolRateLimitExceededException(
+                f"Rate limit exceeded: Max {self.max_calls_per_run} retrieval calls allowed per run."
+            )
+        self._call_counts[run_id] = current_calls
 
+    def _hybrid_rank(
+        self,
+        query: str,
+        scoped_chunks: list[DocumentChunk],
+        top_k: int,
+        query_embedding: list[float] | None,
+        pool_size: int | None = None,
+        prefer_children: bool = False,
+    ) -> list[DocumentChunk]:
+        if not scoped_chunks:
+            return []
+
+        # Sparse: BM25 over the scoped set with synonym-expanded query terms.
+        bm25 = Bm25Index(scoped_chunks)
+        query_weights = expand_query_terms(query)
+        # When parents are not expanded, matching child chunks get a slight (5%) edge so
+        # fine-grained hits are not shadowed by the larger parent text they sit in.
+        child_factor = 1.05 if prefer_children else 1.0
+        sparse_scored = sorted(
+            (
+                (
+                    bm25.score(c.chunk_id, query_weights)
+                    * (child_factor if c.tier == "TIER3_CHILD" else 1.0),
+                    c,
+                )
+                for c in scoped_chunks
+            ),
+            key=lambda x: x[0],
+            reverse=True,
+        )
+        sparse_ranks = {c.chunk_id: rank + 1 for rank, (_, c) in enumerate(sparse_scored)}
+
+        # Dense: only with real vectors. No proxy, so RRF never double-counts BM25.
+        embedded = [c for c in scoped_chunks if c.embedding is not None]
+        if query_embedding is None and self.embedder is not None and embedded:
+            query_embedding = self.embedder.embed_query(query)
+        dense_ranks: dict[str, int] = {}
+        if query_embedding is not None and embedded:
+            dense_scored = sorted(
+                (
+                    (compute_cosine_similarity(query_embedding, c.embedding or []), c)
+                    for c in embedded
+                ),
+                key=lambda x: x[0],
+                reverse=True,
+            )
+            dense_ranks = {c.chunk_id: rank + 1 for rank, (_, c) in enumerate(dense_scored)}
+
+        # Reciprocal Rank Fusion (RRF)
         fused_scores = reciprocal_rank_fusion(dense_ranks, sparse_ranks, k=60)
         chunk_map = {c.chunk_id: c for c in scoped_chunks}
-        fused_sorted = sorted(fused_scores.items(), key=lambda x: x[1], reverse=True)
+        # Ties are broken by dense rank, then BM25 rank, then id, so the order never
+        # depends on set iteration order and repeated runs return the same chunks.
+        unranked = len(scoped_chunks) + 1
+        fused_sorted = sorted(
+            fused_scores.items(),
+            key=lambda x: (
+                -x[1],
+                dense_ranks.get(x[0], unranked),
+                sparse_ranks.get(x[0], unranked),
+                x[0],
+            ),
+        )
 
-        candidate_pool = [chunk_map[cid] for cid, _ in fused_sorted[: self.rerank_top_n]]
+        # Take candidate pool for reranking
+        candidate_pool = [
+            chunk_map[cid] for cid, _ in fused_sorted[: pool_size or self.rerank_top_n]
+        ]
 
+        # JEV Calibrated System One Reranking
         if self.enable_jev_rerank and self.reranker:
             return self.reranker.rerank(query=query, candidates=candidate_pool, top_k=top_k)
 

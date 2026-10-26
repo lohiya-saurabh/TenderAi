@@ -23,6 +23,7 @@ from tenderpulse_ai.chat.tools import (
     is_out_of_domain,
 )
 from tenderpulse_ai.security.context import SecurityContext
+from tenderpulse_ai.security.sanitizer import UNTRUSTED_DATA_DIRECTIVE, SecretSanitizer
 
 logger = logging.getLogger("tenderpulse_ai.chat.workflow")
 
@@ -1537,8 +1538,7 @@ async def response_synthesis_node(state: ChatWorkflowState) -> dict[str, Any]:
             "You are TenderPulse AI Copilot, a conversational and intelligent procurement assistant for infrastructure bids. "
             "Respond conversationally, warmly, and professionally using clear Markdown formatting with bullet points. "
             "Ground all facts strictly in the provided retrieved evidence and citations without hallucinating.\n\n"
-            "Available Citations to Ground Your Answer:\n"
-            f"{citations_context_str}\n\n"
+            "The citations and retrieved evidence arrive in a separate message, numbered [^1], [^2], ...\n\n"
             "Instructions:\n"
             "- When referencing documents, credentials, or clauses from the retrieved evidence, cite them using markdown footnotes like [^1], [^2], corresponding precisely to the citation numbers above.\n"
             "- When referencing documents or certificates from the retrieved evidence, cite their exact file names (e.g. Tata_Projects_GST_Registration.pdf, Audited_Balance_Sheet_and_CA_Certificate_FY25.pdf).\n"
@@ -1546,7 +1546,7 @@ async def response_synthesis_node(state: ChatWorkflowState) -> dict[str, Any]:
             "- If requested information (e.g. tender clauses, turnover, or credentials) is NOT present in the retrieved evidence, answer conversationally like an experienced bidding consultant: "
             "explain clearly that the specific clause or record was not identified in the uploaded tender documents, summarize standard Indian procurement practice for this item (e.g. CPWD / NHAI norms), "
             "and advise practical next steps such as submitting a formal pre-bid query or inspecting GCC / corrigenda.\n"
-            "Be genuinely helpful, conversational, and direct."
+            "Be genuinely helpful, conversational, and direct.\n\n" + UNTRUSTED_DATA_DIRECTIVE
         )
 
         evidence_items = state.get("retrieved_evidence", [])
@@ -1556,15 +1556,21 @@ async def response_synthesis_node(state: ChatWorkflowState) -> dict[str, Any]:
             else "None (No specific clauses or credentials found in current documents for this query)."
         )
 
+        # Citations and evidence quote uploaded documents, so they never go in the system
+        # message: they travel as bounded untrusted context beside the question.
+        grounding = (
+            "Available citations to ground your answer:\n"
+            + SecretSanitizer.wrap_untrusted_context("citations", citations_context_str)
+            + "\n\nRetrieved evidence:\n"
+            + SecretSanitizer.wrap_untrusted_context("retrieved_evidence", evidence_summary)
+        )
         messages = [
-            {
-                "role": "system",
-                "content": f"{system_prompt}\n\nRetrieved Evidence:\n{evidence_summary}",
-            },
+            {"role": "system", "content": system_prompt},
             *[
                 {"role": m.get("role", "user"), "content": str(m.get("content", ""))}
                 for m in state.get("history", [])[-4:]
             ],
+            {"role": "user", "content": grounding},
             {"role": "user", "content": query},
         ]
 
