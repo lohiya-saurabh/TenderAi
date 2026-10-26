@@ -25,10 +25,7 @@ export interface DisqualifierItemCardProps {
   index?: number;
 }
 
-export const DisqualifierItemCard: React.FC<DisqualifierItemCardProps> = ({
-  rawItem,
-  index,
-}) => {
+export const DisqualifierItemCard: React.FC<DisqualifierItemCardProps> = ({ rawItem, index }) => {
   const item: NormalizedDisqualifier | null = parseDisqualifierItem(rawItem);
   if (!item) return null;
 
@@ -41,13 +38,11 @@ export const DisqualifierItemCard: React.FC<DisqualifierItemCardProps> = ({
     <div
       key={index}
       data-testid="disqualifier-item-card"
-      className="p-3 rounded-lg bg-destructive/5 dark:bg-destructive/10 border-l-4 border-l-destructive border border-destructive/25 flex flex-col gap-1.5 transition-colors"
+      className="p-3 rounded-lg bg-destructive/5 dark:bg-destructive/10 border border-destructive/25 flex flex-col gap-1.5 transition-colors"
     >
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-destructive tracking-wide">
-            {item.title}
-          </span>
+          <span className="text-xs font-bold text-destructive tracking-wide">{item.title}</span>
           {item.factor && (
             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-destructive/15 text-destructive font-semibold uppercase">
               {item.factor}
@@ -126,22 +121,23 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
   const deadlineBufferDays = getDeadlineBufferDays(bid, Date.now());
 
   // Derive score number
-  const scoreNum = decision?.readinessScore !== undefined && decision?.readinessScore !== null
-    ? Math.round(
-        Number(decision.readinessScore) > 1
-          ? Number(decision.readinessScore)
-          : Number(decision.readinessScore) * 100,
-      )
-    : null;
+  const scoreNum =
+    decision?.readinessScore !== undefined && decision?.readinessScore !== null
+      ? Math.round(
+          Number(decision.readinessScore) > 1
+            ? Number(decision.readinessScore)
+            : Number(decision.readinessScore) * 100,
+        )
+      : null;
 
   const verdict = decision?.verdict || 'REVIEW_REQUIRED';
 
   const verdictTextColor =
     verdict === 'PURSUE'
-      ? 'text-emerald-600 dark:text-emerald-400'
+      ? 'text-[#1C3DA8] dark:text-blue-300'
       : verdict === 'DO_NOT_PURSUE'
-        ? 'text-vermilion'
-        : 'text-amber-500';
+        ? 'text-[#9F1C1C] dark:text-red-300'
+        : 'text-[#8A4200] dark:text-orange-300';
 
   // Summary statement
   const rawFirstReason = decision?.reasons?.[0];
@@ -151,12 +147,16 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
       ? 'Deterministic eligibility qualification evaluation completed.'
       : 'Deterministic eligibility evaluation has not yet been executed for this tender. Run evaluation to verify company credentials against tender thresholds.';
 
-  const findReasonText = (...keywords: string[]): { title: string; detail: string; pass: boolean } | null => {
+  const findReasonText = (
+    ...keywords: string[]
+  ): { title: string; detail: string; pass: boolean } | null => {
     // 1. Search positive reasons to pursue first
-    for (const r of (decision?.reasonsToPursue || [])) {
+    for (const r of decision?.reasonsToPursue || []) {
       if (!r) continue;
       const parsed = parseDisqualifierItem(r);
-      const str = parsed ? `${parsed.title} ${parsed.reason} ${parsed.shortfallDetail || ''}` : extractCleanText(r);
+      const str = parsed
+        ? `${parsed.title} ${parsed.reason} ${parsed.shortfallDetail || ''}`
+        : extractCleanText(r);
       const matches = keywords.some((kw) => new RegExp(`\\b${kw}\\b`, 'i').test(str));
       if (matches) {
         return {
@@ -175,7 +175,9 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
     for (const r of negativeReasons) {
       if (!r) continue;
       const parsed = parseDisqualifierItem(r);
-      const str = parsed ? `${parsed.title} ${parsed.reason} ${parsed.shortfallDetail || ''}` : extractCleanText(r);
+      const str = parsed
+        ? `${parsed.title} ${parsed.reason} ${parsed.shortfallDetail || ''}`
+        : extractCleanText(r);
       const matches = keywords.some((kw) => new RegExp(`\\b${kw}\\b`, 'i').test(str));
       if (matches) {
         return {
@@ -189,7 +191,14 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
   };
 
   const turnoverGate = findReasonText('turnover');
-  const techGate = findReasonText('contract', 'experience', 'railway', 'bridge', 'highway', 'technical');
+  const techGate = findReasonText(
+    'contract',
+    'experience',
+    'railway',
+    'bridge',
+    'highway',
+    'technical',
+  );
   const solvencyGate = findReasonText('solvency', 'credit');
   const emdAmount = bid.estimatedValueRupees
     ? `₹${((Number(bid.estimatedValueRupees) * 0.01) / 10000000).toFixed(2)} Cr (1% Bank Guarantee)`
@@ -203,18 +212,18 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
   return (
     <section className="border border-border rounded-lg p-6 bg-card shadow-xs space-y-6 transition-colors">
       <div>
-        <div className="mono text-xs font-semibold uppercase tracking-wider mb-2 text-muted-foreground flex items-center justify-between">
+        <div className="text-xs font-semibold uppercase tracking-wider mb-2 text-muted-foreground flex items-center justify-between">
           <span>1. DETERMINISTIC ELIGIBILITY VERDICT</span>
-          <span className="mono text-[11px] font-bold text-muted-foreground">
+          <span className="text-[11px] font-bold text-muted-foreground">
             {decision ? formatDecisionStateText(decision.state) : 'EVALUATION PENDING'}
           </span>
         </div>
 
         <div className="flex items-baseline gap-3">
-          <span className={`text-4xl mono font-bold tracking-tight ${verdictTextColor}`}>
+          <span className={`text-4xl font-bold tracking-tight tabular-nums ${verdictTextColor}`}>
             {scoreNum !== null ? scoreNum : '—'}
           </span>
-          <span className="text-xs mono font-semibold text-muted-foreground">
+          <span className="text-xs font-semibold text-muted-foreground">
             {scoreNum !== null ? '/ 100 Readiness Score' : 'Readiness Score Pending'}
           </span>
         </div>
@@ -229,11 +238,11 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
         <div className="flex justify-between items-center py-0.5">
           <span className="text-muted-foreground">3-Year Average Turnover Threshold</span>
           <div className="text-right">
-            <span className="text-foreground mono font-semibold">
+            <span className="text-foreground font-semibold">
               {turnoverGate ? turnoverGate.detail : 'Evaluation pending'}
             </span>
             {turnoverGate && (
-              <span className="text-emerald-600 dark:text-emerald-400 mono font-bold ml-1.5">
+              <span className="text-[#1C3DA8] dark:text-blue-300 font-bold ml-1.5">
                 {turnoverGate.pass ? '✓ PASS' : '✗ SHORTFALL'}
               </span>
             )}
@@ -243,18 +252,23 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
         <div className="flex justify-between items-center py-0.5">
           <span className="text-muted-foreground">Earnest Money Deposit (EMD)</span>
           <div className="text-right">
-            <span className="text-foreground mono font-semibold">{emdAmount}</span>
+            <span className="text-foreground font-semibold">{emdAmount}</span>
             {bid.estimatedValueRupees && (
-              <span className="text-emerald-600 dark:text-emerald-400 mono font-bold ml-1.5">✓ PASS</span>
+              <span className="text-[#1C3DA8] dark:text-blue-300 font-bold ml-1.5">✓ PASS</span>
             )}
           </div>
         </div>
 
         <div className="flex justify-between items-center py-0.5">
           <span className="text-muted-foreground">Liquidated Damages / Contract Risk</span>
-          <span className={ldRisk ? 'text-amber-500 mono font-bold' : 'text-foreground mono'}>
+          <span
+            className={
+              ldRisk ? 'text-[#8A4200] dark:text-orange-300 font-bold' : 'text-foreground '
+            }
+          >
             {ldRisk
-              ? typeof ldRisk === 'object' && 'penaltySummary' in (ldRisk as Record<string, unknown>)
+              ? typeof ldRisk === 'object' &&
+                'penaltySummary' in (ldRisk as Record<string, unknown>)
                 ? String((ldRisk as Record<string, unknown>).penaltySummary)
                 : 'Exposure Flagged ⚠'
               : 'Not assessed'}
@@ -264,11 +278,11 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
         <div className="flex justify-between items-center py-0.5">
           <span className="text-muted-foreground">Technical Qualification Criteria</span>
           <div className="text-right">
-            <span className="text-foreground mono font-semibold">
+            <span className="text-foreground font-semibold">
               {techGate ? techGate.detail : 'Technical capacity check'}
             </span>
             {techGate && (
-              <span className="text-emerald-600 dark:text-emerald-400 mono font-bold ml-1.5">
+              <span className="text-[#1C3DA8] dark:text-blue-300 font-bold ml-1.5">
                 {techGate.pass ? '✓ PASS' : '✗ SHORTFALL'}
               </span>
             )}
@@ -279,8 +293,8 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
           <div className="flex justify-between items-center py-0.5">
             <span className="text-muted-foreground">Bank Solvency &amp; Credit Facilities</span>
             <div className="text-right">
-              <span className="text-foreground mono font-semibold">{solvencyGate.detail}</span>
-              <span className="text-emerald-600 dark:text-emerald-400 mono font-bold ml-1.5">✓ PASS</span>
+              <span className="text-foreground font-semibold">{solvencyGate.detail}</span>
+              <span className="text-[#1C3DA8] dark:text-blue-300 font-bold ml-1.5">✓ PASS</span>
             </div>
           </div>
         )}
@@ -303,27 +317,27 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
           {(() => {
             const displayReasons: string[] = [...(decision.reasons || [])];
             const existingJoined = displayReasons.join(' ');
-            for (const r of (decision.reasonsToPursue || [])) {
+            for (const r of decision.reasonsToPursue || []) {
               const formatted = formatReasonItem(r);
               if (formatted && !existingJoined.includes(formatted)) {
                 displayReasons.push(formatted);
               }
             }
             if (decision.verdict !== 'PURSUE') {
-              for (const r of (decision.reasonsNotToPursue || [])) {
+              for (const r of decision.reasonsNotToPursue || []) {
                 const formatted = formatReasonItem(r);
                 if (formatted && !existingJoined.includes(formatted)) {
                   displayReasons.push(formatted);
                 }
               }
             }
-            for (const g of (decision.missingInformation || [])) {
+            for (const g of decision.missingInformation || []) {
               const formatted = formatMissingItem(g);
               if (formatted && !existingJoined.includes(formatted)) {
                 displayReasons.push(formatted);
               }
             }
-            for (const u of (decision.uncertainAreas || [])) {
+            for (const u of decision.uncertainAreas || []) {
               const formatted = formatUncertainItem(u);
               if (formatted && !existingJoined.includes(formatted)) {
                 displayReasons.push(formatted);
@@ -341,7 +355,9 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
                 </div>
                 <ul className="list-disc pl-5 space-y-1 text-xs text-foreground/90">
                   {displayReasons.map((reason, index) => {
-                    const formatted = formatReasonItem(reason) || (typeof reason === 'string' ? reason : extractCleanText(reason));
+                    const formatted =
+                      formatReasonItem(reason) ||
+                      (typeof reason === 'string' ? reason : extractCleanText(reason));
                     return (
                       <li key={index} className="leading-relaxed">
                         {formatted}
@@ -375,30 +391,34 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
             )}
 
           {/* Hard Disqualifiers callout */}
-          {decision.hardDisqualifiers && decision.hardDisqualifiers.length > 0 && (() => {
-            const flatHardDisqualifiers = (Array.isArray(decision.hardDisqualifiers)
-              ? decision.hardDisqualifiers.flat(Infinity)
-              : [decision.hardDisqualifiers]).filter((d) => d !== null && d !== undefined && parseDisqualifierItem(d) !== null);
-            if (flatHardDisqualifiers.length === 0) return null;
-            return (
-              <div
-                data-testid="hard-disqualifiers-callout"
-                className="p-4 rounded-lg bg-destructive/10 border border-destructive/30 space-y-3"
-              >
-                <div className="flex items-center gap-2">
-                  <FailIcon size={16} color="var(--color-danger)" className="shrink-0" />
-                  <span className="text-xs font-bold text-destructive uppercase tracking-wider">
-                    Hard Disqualifiers ({flatHardDisqualifiers.length})
-                  </span>
+          {decision.hardDisqualifiers &&
+            decision.hardDisqualifiers.length > 0 &&
+            (() => {
+              const flatHardDisqualifiers = (
+                Array.isArray(decision.hardDisqualifiers)
+                  ? decision.hardDisqualifiers.flat(Infinity)
+                  : [decision.hardDisqualifiers]
+              ).filter((d) => d !== null && d !== undefined && parseDisqualifierItem(d) !== null);
+              if (flatHardDisqualifiers.length === 0) return null;
+              return (
+                <div
+                  data-testid="hard-disqualifiers-callout"
+                  className="p-4 rounded-lg bg-destructive/10 border border-destructive/30 space-y-3"
+                >
+                  <div className="flex items-center gap-2">
+                    <FailIcon size={16} color="var(--color-danger)" className="shrink-0" />
+                    <span className="text-xs font-bold text-destructive uppercase tracking-wider">
+                      Hard Disqualifiers ({flatHardDisqualifiers.length})
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-2.5">
+                    {flatHardDisqualifiers.map((d, i) => (
+                      <DisqualifierItemCard key={i} rawItem={d} index={i} />
+                    ))}
+                  </div>
                 </div>
-                <div className="flex flex-col gap-2.5">
-                  {flatHardDisqualifiers.map((d, i) => (
-                    <DisqualifierItemCard key={i} rawItem={d} index={i} />
-                  ))}
-                </div>
-              </div>
-            );
-          })()}
+              );
+            })()}
 
           {/* Evidence Citations */}
           {decision.evidenceCitations && decision.evidenceCitations.length > 0 && (
@@ -407,7 +427,7 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
                 <span className="text-xs font-semibold text-foreground uppercase tracking-wider">
                   Verified Evidence Provenance ({decision.evidenceCitations.length})
                 </span>
-                <span className="mono text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                <span className="text-[10px] text-[#1C3DA8] dark:text-blue-300 font-medium">
                   Dual-Grounded in Vault
                 </span>
               </div>
@@ -417,7 +437,11 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
                   let parsedObj: Record<string, unknown> | null = null;
                   let rawText = '';
 
-                  if (typeof unwrapped === 'object' && unwrapped !== null && !Array.isArray(unwrapped)) {
+                  if (
+                    typeof unwrapped === 'object' &&
+                    unwrapped !== null &&
+                    !Array.isArray(unwrapped)
+                  ) {
                     parsedObj = unwrapped as Record<string, unknown>;
                   } else {
                     rawText = extractCleanText(unwrapped);
@@ -491,7 +515,7 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
             </div>
           )}
 
-          <div className="text-[11px] mono text-muted-foreground">
+          <div className="text-[11px] text-muted-foreground">
             Evaluated {decision.evaluatedFactors ?? 0} eligibility factors on{' '}
             {new Date(decision.evaluatedAt).toLocaleDateString('en-IN', {
               day: '2-digit',

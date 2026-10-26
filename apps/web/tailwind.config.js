@@ -20,17 +20,17 @@ export default {
         primary: {
           DEFAULT: 'hsl(var(--primary))',
           foreground: 'hsl(var(--primary-foreground))',
-          50: '#fff7ed',
-          100: '#ffedd5',
-          200: '#fed7aa',
-          300: '#fdba74',
-          400: '#fb923c',
-          500: '#f97316',
-          600: '#ea580c',
-          700: '#c2410c',
-          800: '#9a3412',
-          900: '#7c2d12',
-          950: '#431407',
+          50: '#f2f5ff',
+          100: '#e6eeff',
+          200: '#ccdaff',
+          300: '#93a9ef',
+          400: '#5b78dc',
+          500: '#2549c9',
+          600: '#1a3698',
+          700: '#152c7d',
+          800: '#112361',
+          900: '#0c1946',
+          950: '#070f2b',
         },
         secondary: {
           DEFAULT: 'hsl(var(--secondary))',
@@ -57,11 +57,11 @@ export default {
           foreground: 'hsl(var(--card-foreground))',
         },
         vermilion: {
-          DEFAULT: '#f0441c',
-          hover: '#d83812',
-          subtle: 'rgba(240, 68, 28, 0.08)',
-          border: 'rgba(240, 68, 28, 0.25)',
-          glow: 'rgba(240, 68, 28, 0.15)',
+          DEFAULT: 'var(--vermilion)',
+          hover: 'var(--vermilion-hover)',
+          subtle: 'var(--vermilion-subtle)',
+          border: 'var(--vermilion-border)',
+          glow: 'var(--vermilion-subtle)',
         },
         success: {
           DEFAULT: 'hsl(var(--success))',
@@ -80,6 +80,7 @@ export default {
       fontFamily: {
         sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
         mono: ['JetBrains Mono', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+        serif: ['"Source Serif 4"', 'Georgia', 'serif'],
       },
       keyframes: {
         'accordion-down': {

@@ -6,8 +6,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { Conflict, ConflictResolution } from '@tenderpulse/shared-types';
-import { ArrowLeft } from 'lucide-react';
 import { listConflicts, resolveConflict } from '@/api/clauses.js';
+import { getBid } from '@/api/bids.js';
+import { useSetBidBreadcrumbTitle } from '@/components/layout/BreadcrumbTitle.js';
 import { Button } from '@/components/ui/button.js';
 import { Chip } from '@/components/clauses/ClauseChips.js';
 import { usePermission } from '@/hooks/usePermission.js';
@@ -36,6 +37,18 @@ export const ConflictsPage: React.FC = () => {
   const canReview = usePermission(PERMISSIONS.COMPLIANCE_REVIEW);
   const [conflicts, setConflicts] = useState<Conflict[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [bidTitle, setBidTitle] = useState<string | null>(null);
+  useSetBidBreadcrumbTitle(bidId, bidTitle);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getBid(bidId).then((res) => {
+      if (!cancelled && res.ok) setBidTitle(res.data.title);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [bidId]);
 
   const load = useCallback(async () => {
     const res = await listConflicts(bidId);
@@ -50,15 +63,9 @@ export const ConflictsPage: React.FC = () => {
   const unresolved = conflicts?.filter((c) => c.resolution === 'UNRESOLVED').length ?? 0;
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-4">
-      <Link
-        to={`/bids/${bidId}/clauses`}
-        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="h-3.5 w-3.5" /> Clause workspace
-      </Link>
+    <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-xl font-semibold">
+        <h1 className="m-0 text-[22px] font-bold">
           Conflicts · {conflicts?.length ?? 0} · {unresolved} unresolved
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -151,7 +158,7 @@ const ConflictCard: React.FC<{
                 {v.clauseRef ?? 'No clause no.'} · p.{v.page}
               </Link>
             </div>
-            <blockquote className="rounded-md border border-border bg-muted/40 px-3 py-2 font-serif text-sm">
+            <blockquote className="m-0 rounded-lg border border-[var(--quote-border)] bg-[var(--quote-bg)] px-[11px] py-[9px] font-serif text-[13.5px] leading-[1.5] text-[#22262E] dark:text-white/85">
               {v.quote}
             </blockquote>
             {canReview && open && (

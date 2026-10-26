@@ -45,7 +45,7 @@ export const IngestedDocumentsSection: React.FC<IngestedDocumentsSectionProps> =
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="mono text-xs font-semibold text-muted-foreground">
+          <span className="text-xs font-semibold text-muted-foreground">
             {documents.length} Document{documents.length === 1 ? '' : 's'} Processed
           </span>
 
@@ -110,7 +110,7 @@ export const IngestedDocumentsSection: React.FC<IngestedDocumentsSectionProps> =
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded border border-border bg-muted/40 text-foreground flex items-center justify-center font-bold text-xs mono shrink-0">
+                    <div className="w-9 h-9 rounded border border-border bg-muted/40 text-foreground flex items-center justify-center font-bold text-xs shrink-0">
                       PDF
                     </div>
                     <div className="min-w-0">
@@ -135,11 +135,11 @@ export const IngestedDocumentsSection: React.FC<IngestedDocumentsSectionProps> =
                   </div>
 
                   <span
-                    className={`mono text-[11px] font-bold px-2 py-0.5 rounded border shrink-0 ${
+                    className={`text-[11px] font-semibold px-2 py-0.5 rounded border shrink-0 ${
                       isCompleted
-                        ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+                        ? 'bg-primary/10 text-[#1C3DA8] dark:text-blue-300 border-transparent'
                         : isProcessing
-                          ? 'bg-amber-500/10 text-amber-500 border-amber-500/30 animate-pulse'
+                          ? 'bg-[#FFF1E0] text-[#8A4200] dark:bg-orange-500/10 dark:text-orange-300 border-[#F3C48B] animate-pulse'
                           : 'bg-muted text-muted-foreground border-border'
                     }`}
                   >
@@ -147,10 +147,8 @@ export const IngestedDocumentsSection: React.FC<IngestedDocumentsSectionProps> =
                   </span>
                 </div>
 
-                <div className="pt-3 border-t border-border flex items-center justify-between text-[11px] mono">
-                  <span className="text-muted-foreground">
-                    {formatFileSize(doc.fileSizeBytes)}
-                  </span>
+                <div className="pt-3 border-t border-border flex items-center justify-between text-[11px] ">
+                  <span className="text-muted-foreground">{formatFileSize(doc.fileSizeBytes)}</span>
 
                   <div className="flex items-center gap-2">
                     <button

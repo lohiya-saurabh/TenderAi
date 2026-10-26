@@ -15,6 +15,7 @@ import { CreateBidPage } from '@/pages/CreateBidPage.js';
 import { BidDetailPage } from '@/pages/BidDetailPage.js';
 import { ClauseWorkspacePage } from '@/pages/ClauseWorkspacePage.js';
 import { ConflictsPage } from '@/pages/ConflictsPage.js';
+import { ChecklistPage } from '@/pages/ChecklistPage.js';
 import { LegacyClauseRedirect } from '@/pages/LegacyClauseRedirect.js';
 import { CompanyProfilePage } from '@/pages/CompanyProfilePage.js';
 import { ProfilePage } from '@/pages/ProfilePage.js';
@@ -124,6 +125,15 @@ export const App: React.FC = () => {
                   element={
                     <ProtectedRoute requiredPermission={PERMISSIONS.BIDS_READ}>
                       <ConflictsPage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/bids/:id/checklist"
+                  element={
+                    <ProtectedRoute requiredPermission={PERMISSIONS.BIDS_READ}>
+                      <ChecklistPage />
                     </ProtectedRoute>
                   }
                 />

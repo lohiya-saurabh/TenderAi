@@ -203,7 +203,7 @@ export const ClausePanel: React.FC<ClausePanelProps> = ({
             </p>
           )}
           <blockquote
-            className={`rounded-md border px-3 py-2 font-serif text-sm leading-relaxed ${sourceOpened ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-500/10' : 'border-border bg-muted/40'}`}
+            className={`m-0 rounded-lg border px-[11px] py-[9px] font-serif text-[13.5px] leading-[1.5] text-[#22262E] dark:text-white/85 ${sourceOpened ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-500/10' : 'border-[var(--quote-border)] bg-[var(--quote-bg)]'}`}
             data-testid="panel-quote"
           >
             {c.quote}

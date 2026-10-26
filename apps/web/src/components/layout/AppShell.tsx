@@ -1,47 +1,28 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { Sidebar } from '@/components/layout/Sidebar.js';
 import { Header } from '@/components/layout/Header.js';
+import { Breadcrumbs } from '@/components/layout/Breadcrumbs.js';
+import { BreadcrumbTitleProvider } from '@/components/layout/BreadcrumbTitle.js';
 
 export const AppShell: React.FC = () => {
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   // The clause workspace uses the full width (list, source and panel side by side).
   const fullWidth = /^\/bids\/[^/]+\/clauses/.test(useLocation().pathname);
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
-      {/* Desktop Sidebar */}
-      <div className="hidden md:flex flex-col shrink-0 sticky top-0 h-screen z-30">
-        <Sidebar isCollapsed={isSidebarCollapsed} />
-      </div>
-
-      {/* Mobile Drawer Sidebar */}
-      {isMobileSidebarOpen && (
-        <Sidebar
-          isMobileOpen={isMobileSidebarOpen}
-          onCloseMobile={() => setIsMobileSidebarOpen(false)}
-        />
-      )}
-
-      {/* Main App Workspace */}
-      <div className="flex flex-1 flex-col min-w-0 min-h-screen">
-        <Header
-          onToggleMobileSidebar={() => setIsMobileSidebarOpen(true)}
-          isSidebarCollapsed={isSidebarCollapsed}
-          onToggleSidebarCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-        />
-
+    <BreadcrumbTitleProvider>
+      <div className="flex min-h-screen flex-col bg-background text-foreground">
+        <Header />
         <main
           className={
             fullWidth
               ? 'flex-1 w-full px-4 py-3'
-              : 'flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8'
+              : 'flex-1 w-full max-w-[1360px] mx-auto px-4 sm:px-6 py-6 flex flex-col gap-5'
           }
         >
+          {!fullWidth && <Breadcrumbs />}
           <Outlet />
         </main>
       </div>
-    </div>
+    </BreadcrumbTitleProvider>
   );
 };

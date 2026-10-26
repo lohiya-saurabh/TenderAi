@@ -1,7 +1,10 @@
 import React from 'react';
 import type { ComplianceItem } from '@/api/compliance.js';
 import { formatCurrency } from '@/utils/formatCurrency.js';
-import { getObligationsSummary, type ObligationsSummary } from '@/components/bid/detail/bidDetailData.js';
+import {
+  getObligationsSummary,
+  type ObligationsSummary,
+} from '@/components/bid/detail/bidDetailData.js';
 
 export interface ObligationsCardProps {
   items: ComplianceItem[];
@@ -128,11 +131,11 @@ function ObligationGrid({ summary }: { summary: ObligationsSummary }) {
               {obligation.label}
             </span>
             {obligation.active ? (
-              <span className="mono text-[10px] font-bold text-orange-600 dark:text-orange-400 bg-orange-500/10 px-1.5 py-0.5 rounded shrink-0">
+              <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400 bg-orange-500/10 px-1.5 py-0.5 rounded shrink-0">
                 REQUIRED
               </span>
             ) : (
-              <span className="mono text-[10px] text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded shrink-0">
+              <span className="text-[10px] text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded shrink-0">
                 OPTIONAL
               </span>
             )}

@@ -5,33 +5,33 @@
 @layer base {
   :root {
     /* 1. Canvas & Text: Pure Crisp White & Ink-Black */
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
+    --background: 220 20% 97%;
+    --foreground: 220 17% 10%;
 
     /* 2. Surfaces & Cards */
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --card-muted: 240 4.8% 95.9%;
-    --card-hover: 240 4.8% 98%;
+    --card-foreground: 220 17% 10%;
+    --card-muted: 216 16% 95%;
+    --card-hover: 220 20% 98%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
+    --popover-foreground: 220 17% 10%;
 
-    /* 3. Primary Actions: High-Contrast Ink-Black (Never garish neon orange) */
-    --primary: 240 10% 3.9%;
+    /* 3. Primary Actions: Design blue #2549C9 */
+    --primary: 227 69% 47%;
     --primary-foreground: 0 0% 98%;
 
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 10% 3.9%;
+    --secondary: 216 16% 95%;
+    --secondary-foreground: 220 17% 10%;
 
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
+    --muted: 216 16% 95%;
+    --muted-foreground: 219 11% 40%;
 
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 10% 3.9%;
+    --accent: 220 100% 95%;
+    --accent-foreground: 226 71% 38%;
 
     /* 4. Surgical Orange-Red for Flags, Warnings, and Destructive Actions */
-    --destructive: 14 90% 45%;
+    --destructive: 0 70% 37%;
     --destructive-foreground: 0 0% 98%;
 
     /* Pass / Quantitative Green (Emerald) */
@@ -39,43 +39,43 @@
     --success-foreground: 0 0% 98%;
 
     /* Warning / Flags: Deep Terracotta Orange */
-    --warning: 24 95% 48%;
+    --warning: 33 76% 50%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 240 5.9% 90%;
-    --border-strong: 240 5.9% 80%;
-    --input: 240 5.9% 90%;
-    --ring: 240 10% 3.9%;
+    --border: 218 17% 91%;
+    --border-strong: 215 18% 82%;
+    --input: 215 18% 82%;
+    --ring: 227 69% 47%;
 
-    --radius: 0.5rem;
+    --radius: 0.625rem;
 
     /* Swiss Vermilion Signature Brand & Primary Action Tokens */
-    --vermilion: #f0441c;
-    --vermilion-hover: #d83812;
-    --vermilion-subtle: rgba(240, 68, 28, 0.08);
-    --vermilion-border: rgba(240, 68, 28, 0.25);
+    --vermilion: #2549c9;
+    --vermilion-hover: #1a3698;
+    --vermilion-subtle: #e6eeff;
+    --vermilion-border: #b9c8f5;
 
     /* Semantic Surface Tokens */
-    --color-surface-bg: #ffffff;
+    --color-surface-bg: #f6f7f9;
     --color-surface-card: #ffffff;
-    --color-surface-card-hover: #fafafa;
-    --color-surface-card-subtle: #f4f4f5;
+    --color-surface-card-hover: #fafbfc;
+    --color-surface-card-subtle: #f1f3f6;
     --color-surface-elevated: #ffffff;
-    --color-surface-border: #e4e4e7;
-    --color-surface-border-light: #f4f4f5;
-    --color-surface-border-subtle: #fafafa;
-    --color-surface-text: #09090b;
-    --color-surface-muted: #71717a;
-    --color-surface-subtle: #a1a1aa;
+    --color-surface-border: #e3e6eb;
+    --color-surface-border-light: #eef0f3;
+    --color-surface-border-subtle: #f6f7f9;
+    --color-surface-text: #16191f;
+    --color-surface-muted: #5b6372;
+    --color-surface-subtle: #8a93a3;
     --color-surface-input: #ffffff;
 
-    --text-heading: #09090b;
-    --text-body: #27272a;
-    --text-muted: #71717a;
+    --text-heading: #16191f;
+    --text-body: #2b313c;
+    --text-muted: #5b6372;
 
-    --btn-primary-bg: #f0441c;
+    --btn-primary-bg: #2549c9;
     --btn-primary-text: #ffffff;
-    --btn-primary-hover: #d83812;
+    --btn-primary-hover: #1a3698;
 
     /* Emerald Green for Positive Health, Passed Criteria & High Confidence Data */
     --status-emerald-bg: #ecfdf5;
@@ -83,73 +83,73 @@
     --status-emerald-border: #a7f3d0;
     --emerald-dot: #10b981;
 
-    --status-pass-bg: #ecfdf5;
-    --status-pass-text: #047857;
-    --status-pass-border: #a7f3d0;
-    --status-pass-icon: #047857;
+    --status-pass-bg: #e6eeff;
+    --status-pass-text: #1c3da8;
+    --status-pass-border: #b9c8f5;
+    --status-pass-icon: #1c3da8;
 
     /* Surgical Orange-Red Tiers for Flags & High-Risk Liability */
-    --status-amber-bg: #fff7ed;
-    --status-amber-text: #c2410c;
-    --status-amber-border: #fed7aa;
+    --status-amber-bg: #fff7d6;
+    --status-amber-text: #6e4b00;
+    --status-amber-border: #ebd27a;
 
-    --status-flag-bg: rgba(240, 68, 28, 0.08);
-    --status-flag-text: #f0441c;
-    --status-flag-border: rgba(240, 68, 28, 0.25);
+    --status-flag-bg: #fdecec;
+    --status-flag-text: #9f1c1c;
+    --status-flag-border: #f4baba;
 
-    --status-fail-bg: rgba(240, 68, 28, 0.08);
-    --status-fail-text: #f0441c;
-    --status-fail-border: rgba(240, 68, 28, 0.25);
-    --status-fail-icon: #f0441c;
+    --status-fail-bg: #fdecec;
+    --status-fail-text: #9f1c1c;
+    --status-fail-border: #f4baba;
+    --status-fail-icon: #9f1c1c;
 
-    --status-missing-bg: #fff7ed;
-    --status-missing-text: #ea580c;
-    --status-missing-border: #fed7aa;
-    --status-missing-icon: #ea580c;
+    --status-missing-bg: #fff1e0;
+    --status-missing-text: #8a4200;
+    --status-missing-border: #f3c48b;
+    --status-missing-icon: #8a4200;
 
-    --status-review-bg: #fff7ed;
-    --status-review-text: #c2410c;
-    --status-review-border: #fed7aa;
-    --status-review-icon: #c2410c;
+    --status-review-bg: #fff1e0;
+    --status-review-text: #8a4200;
+    --status-review-border: #f3c48b;
+    --status-review-icon: #8a4200;
 
-    --status-na-bg: #f4f4f5;
-    --status-na-text: #71717a;
-    --status-na-border: #e4e4e7;
-    --status-na-icon: #71717a;
+    --status-na-bg: #eef0f3;
+    --status-na-text: #3d4452;
+    --status-na-border: #e3e6eb;
+    --status-na-icon: #5b6372;
 
-    --color-status-ready: #047857;
-    --color-status-flagged: #f0441c;
-    --color-status-pending: #ea580c;
-    --color-status-waived: #71717a;
-    --color-status-processing: #ea580c;
-    --color-status-draft: #71717a;
-    --color-status-queued: #c2410c;
-    --color-status-finalized: #047857;
-    --color-status-failed: #f0441c;
+    --color-status-ready: #1c3da8;
+    --color-status-flagged: #9f1c1c;
+    --color-status-pending: #8a4200;
+    --color-status-waived: #5b6372;
+    --color-status-processing: #8a4200;
+    --color-status-draft: #5b6372;
+    --color-status-queued: #8a4200;
+    --color-status-finalized: #0b5f58;
+    --color-status-failed: #9f1c1c;
 
-    --color-danger: #f0441c;
-    --color-danger-bg: rgba(240, 68, 28, 0.08);
-    --color-danger-border: rgba(240, 68, 28, 0.25);
+    --color-danger: #9f1c1c;
+    --color-danger-bg: #fdecec;
+    --color-danger-border: #f4baba;
 
     --color-success: #047857;
     --color-success-bg: #ecfdf5;
     --color-success-border: #a7f3d0;
 
-    --color-warning: #ea580c;
-    --color-warning-bg: #fff7ed;
-    --color-warning-border: #fed7aa;
+    --color-warning: #8a4200;
+    --color-warning-bg: #fff1e0;
+    --color-warning-border: #f3c48b;
 
-    --color-info: #09090b;
-    --color-info-bg: #f4f4f5;
-    --color-info-border: #e4e4e7;
+    --color-info: #1c3da8;
+    --color-info-bg: #e6eeff;
+    --color-info-border: #b9c8f5;
 
     --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
 
-    --color-primary-100: #ffedd5;
-    --color-primary-300: #fdba74;
-    --color-primary-400: #fb923c;
-    --color-primary-500: #f97316;
-    --color-primary-600: #ea580c;
+    --color-primary-100: #e6eeff;
+    --color-primary-300: #93a9ef;
+    --color-primary-400: #5b78dc;
+    --color-primary-500: #2549c9;
+    --color-primary-600: #1a3698;
 
     /* 4px Modular Spacing Scale */
     --space-0-5: 0.125rem;
@@ -214,8 +214,17 @@
 
     --sidebar-width: 260px;
     --sidebar-collapsed-width: 68px;
-    --header-height: 64px;
-    --content-max-width: 1440px;
+    --header-height: 52px;
+    --content-max-width: 1360px;
+
+    /* Design chip tones (clause review UI) */
+    --tone-amend-bg: #e2f4f1;
+    --tone-amend-text: #0b5f58;
+    --tone-fix-bg: #f1e9ff;
+    --tone-fix-text: #5a2cb0;
+    --quote-bg: #fbfaf6;
+    --quote-border: #e7e2d3;
+    --font-serif: 'Source Serif 4', Georgia, serif;
   }
 
   .dark {
@@ -230,8 +239,8 @@
     --popover: 240 6% 7%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 10% 3.9%;
+    --primary: 226 80% 72%;
+    --primary-foreground: 220 17% 10%;
 
     --secondary: 240 3.7% 15.9%;
     --secondary-foreground: 0 0% 98%;
@@ -256,13 +265,13 @@
     --border: 240 4% 16%;
     --border-strong: 240 5% 26%;
     --input: 240 4% 16%;
-    --ring: 0 0% 98%;
+    --ring: 226 80% 72%;
 
     /* Swiss Vermilion Signature Brand & Primary Action Tokens */
-    --vermilion: #f0441c;
-    --vermilion-hover: #ff5a36;
-    --vermilion-subtle: rgba(240, 68, 28, 0.15);
-    --vermilion-border: rgba(240, 68, 28, 0.35);
+    --vermilion: #7d98f0;
+    --vermilion-hover: #a3b6f5;
+    --vermilion-subtle: rgba(125, 152, 240, 0.15);
+    --vermilion-border: rgba(125, 152, 240, 0.35);
 
     --color-surface-bg: #09090b;
     --color-surface-card: #121215;
@@ -281,9 +290,9 @@
     --text-body: #e4e4e7;
     --text-muted: #a1a1aa;
 
-    --btn-primary-bg: #f0441c;
+    --btn-primary-bg: #3a5fe0;
     --btn-primary-text: #ffffff;
-    --btn-primary-hover: #ff5a36;
+    --btn-primary-hover: #5b78dc;
 
     /* Emerald Green for Positive Health, Passed Criteria & High Confidence Data */
     --status-emerald-bg: rgba(6, 78, 59, 0.25);
@@ -349,7 +358,13 @@
     --color-info: #ffffff;
     --color-info-bg: #18181b;
     --color-info-border: #27272a;
-    --color-primary-100: #fed7aa;
+    --color-primary-100: #1e2a52;
+    --tone-amend-bg: rgba(11, 95, 88, 0.25);
+    --tone-amend-text: #6fd3c7;
+    --tone-fix-bg: rgba(90, 44, 176, 0.25);
+    --tone-fix-text: #c4a8f5;
+    --quote-bg: #17181c;
+    --quote-border: #2c2e35;
 
     --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.2);
     --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
