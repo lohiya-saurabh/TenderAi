@@ -24,6 +24,7 @@ import {
 } from './application/compliance-risk.calculator.js';
 import { ComplianceRepository } from './compliance.repository.js';
 import { ComplianceQueries } from './compliance.queries.js';
+import { mapLegacyStatus } from './application/clause-model.js';
 
 export interface ReviewComplianceDto {
   status?: DemoComplianceItem['status'];
@@ -161,8 +162,10 @@ export class ComplianceService {
     dto: ReviewComplianceDto,
   ): Promise<ReviewComplianceResult> {
     const orgId = this.getTenantOrgId();
-    const userId = TenantContextHolder.get()?.userId || 'usr_reviewer';
-    const reviewer = 'Reviewer';
+    const tenant = TenantContextHolder.get();
+    const userId = tenant?.userId || 'usr_reviewer';
+    // The authenticated reviewer, never a placeholder name.
+    const reviewer = tenant?.userName || userId;
 
     const item = await this.repository.findItemById(bidId, itemId, orgId);
 
@@ -204,6 +207,8 @@ export class ComplianceService {
       newStatus === 'WAIVED' ||
       newStatus === 'NOT_APPLICABLE';
 
+    // Keep the two Phase 1 axes in step with the legacy single status.
+    const axes = mapLegacyStatus(newStatus, true);
     await this.repository.updateItemReview(itemId, orgId, {
       status: newStatus,
       reviewNotes: newNotes,
@@ -212,6 +217,9 @@ export class ComplianceService {
       humanReviewRequired: isResolved ? false : item.humanReviewRequired,
       version: nextVersion,
       updatedAt: now,
+      reviewStatus: newStatus === 'PENDING' ? 'UNREVIEWED' : axes.review,
+      reviewedByName: reviewer,
+      fulfilmentStatus: axes.fulfilment,
     });
 
     // Recalculate summary metrics on bid in PostgreSQL

@@ -627,3 +627,48 @@ def test_create_from_settings_uses_llm_max_tokens(monkeypatch):
     monkeypatch.setattr(settings, "llm_max_tokens", 3000)
     monkeypatch.setattr(settings, "openrouter_api_key", "sk-test")
     assert OpenAICompatibleLlmClient.create_from_settings(settings).max_tokens == 3000
+
+
+@pytest.mark.asyncio
+async def test_reasoning_mandatory_model_is_skipped_for_an_hour_and_success_keeps_cooldowns():
+    from tenderpulse_ai.infrastructure.llm.openai_compatible_client import (
+        _MODEL_COOLDOWNS,
+        LlmEndpoint,
+    )
+
+    _MODEL_COOLDOWNS.clear()
+    calls = []
+
+    def handler(request):
+        model = json.loads(request.content)["model"]
+        calls.append(model)
+        if model == "router/free":
+            return httpx.Response(
+                400,
+                json={
+                    "error": {
+                        "message": "Reasoning is mandatory for this endpoint and cannot be disabled."
+                    }
+                },
+            )
+        return httpx.Response(
+            200, json={"choices": [{"message": {"content": '{"candidates":[]}'}}]}
+        )
+
+    endpoints = [
+        LlmEndpoint(provider="p", base_url="https://a.example/v1", api_key="k", model=m)
+        for m in ("router/free", "good/model")
+    ]
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        client = OpenAICompatibleLlmClient(api_key="k", endpoints=endpoints, client=http)
+        assert await client.extract_compliance("s", "u", max_retries=0) == []
+        assert await client.extract_compliance("s", "u", max_retries=0) == []
+    assert calls == ["router/free", "good/model", "good/model"]  # not retried on the 2nd call
+    assert _MODEL_COOLDOWNS["router/free"] > time.time() + 3000
+    _MODEL_COOLDOWNS.clear()
+
+
+def test_concrete_free_models_are_tried_before_the_router():
+    from tenderpulse_ai.infrastructure.llm.openai_compatible_client import PROVIDER_SPECS
+
+    assert PROVIDER_SPECS["openrouter"]["models"][-1] == "openrouter/free"

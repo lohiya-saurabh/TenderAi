@@ -40,3 +40,10 @@ class DocumentExtractionResponse(BaseModel):
         default_factory=list,
         description="Pages whose LLM extraction failed (no valid model answer); review them manually",
     )
+    conflicts: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Wire conflicts (shared contract): values linked to clauses by itemKey",
+    )
+    coverage: dict[str, Any] | None = Field(
+        default=None, description="Pages analysed / not analysed for this document"
+    )

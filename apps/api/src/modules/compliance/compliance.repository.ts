@@ -59,6 +59,9 @@ export class ComplianceRepository {
       humanReviewRequired?: boolean;
       version: number;
       updatedAt: Date;
+      reviewStatus?: string;
+      reviewedByName?: string | null;
+      fulfilmentStatus?: string;
     },
   ): Promise<void> {
     await this.db

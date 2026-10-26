@@ -172,7 +172,7 @@ def test_positional_attribution_replaces_regex_guess():
     )
     item.provenance.clause_reference = "Clause 42.17 (Page 2)"
     assert attribute_positional_clause_refs([item], doc, tree) == 1
-    assert item.provenance.clause_reference == "Clause 5(xix) (Page 2)"
+    assert item.provenance.clause_reference == "Clause 5(xix)"
 
 
 # ------------------------------------------------------------------------------

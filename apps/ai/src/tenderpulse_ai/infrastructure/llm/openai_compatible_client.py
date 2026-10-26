@@ -15,6 +15,7 @@ from tenderpulse_ai.domain.models import (
     ExecutionRulesProps,
     ProvenanceProps,
 )
+from tenderpulse_ai.domain.requirement_attributes import parse_attributes
 
 logger = logging.getLogger("tenderpulse_ai.infrastructure.llm")
 
@@ -36,9 +37,9 @@ class LlmEndpoint:
 
 # Curated rotation pool of reliable, active free models on OpenRouter
 FALLBACK_FREE_MODELS: list[str] = [
-    "liquid/lfm-2.5-2.6b:free",
     "nvidia/nemotron-3.5-lightning:free",
     "nvidia/nemotron-3.5-super-vl:free",
+    "liquid/lfm-2.5-2.6b:free",
     "openrouter/free",
 ]
 
@@ -66,11 +67,13 @@ PROVIDER_SPECS: dict[str, dict[str, Any]] = {
     },
     "openrouter": {
         "base_url": "https://openrouter.ai/api/v1",
+        # Concrete models first: the "openrouter/free" router forwards to arbitrary free models
+        # (some reject reasoning-off with HTTP 400, some are safety classifiers).
         "models": [
-            "openrouter/free",
-            "liquid/lfm-2.5-2.6b:free",
             "nvidia/nemotron-3.5-lightning:free",
             "nvidia/nemotron-3.5-super-vl:free",
+            "liquid/lfm-2.5-2.6b:free",
+            "openrouter/free",
         ],
         "extra_headers": {
             "HTTP-Referer": "https://tenderpulse.ai",
@@ -682,8 +685,11 @@ class OpenAICompatibleLlmClient:
                             if attempt < max_retries:
                                 await asyncio.sleep(1.5 * (attempt + 1))
                                 continue
-                        _MODEL_COOLDOWNS[ep.model] = time.time() + 300.0
-                        _MODEL_COOLDOWNS[k] = time.time() + 300.0
+                        # A model that cannot run with reasoning disabled never will.
+                        permanent = "reasoning is mandatory" in response.text.lower()
+                        cooldown = 3600.0 if permanent else 300.0
+                        _MODEL_COOLDOWNS[ep.model] = time.time() + cooldown
+                        _MODEL_COOLDOWNS[k] = time.time() + cooldown
                         logger.warning(
                             "[OpenAICompatibleClient] Endpoint '%s' (%s) returned HTTP %d: %s. Rotating...",
                             ep.model,
@@ -767,8 +773,6 @@ class OpenAICompatibleLlmClient:
                     # A valid answer may legitimately hold no obligations ([]); only an
                     # unparseable one rotates to the next model (raised by _parse_response).
                     result = parse(data)
-                    _MODEL_COOLDOWNS.pop(ep.model, None)
-                    _MODEL_COOLDOWNS.pop(k, None)
                     if replay.mode() == "record":
                         replay.save(payload["messages"], data)
                     return result
@@ -812,6 +816,9 @@ class OpenAICompatibleLlmClient:
                 except Exception as exc:  # noqa: BLE001
                     duration_ms = round((time.perf_counter() - start_time) * 1000, 1)
                     last_error = exc
+                    # Unusable output (not JSON, wrong shape): try other models first next time.
+                    _MODEL_COOLDOWNS[ep.model] = time.time() + 300.0
+                    _MODEL_COOLDOWNS[k] = time.time() + 300.0
                     logger.error(
                         "[OpenAICompatibleClient] Unhandled error during extraction on %s: %s",
                         ep.model,
@@ -937,22 +944,28 @@ class OpenAICompatibleLlmClient:
             except (ValueError, TypeError):
                 denom = None
 
-        signing_rank = (
-            raw_rules.get("signing_authority_rank")
-            or raw_rules.get("signingAuthorityRank")
-            or "Authorized Signatory"
-        )
+        def _tri(*keys: str) -> bool | None:
+            """True/False only when the model states it; absent = not stated (None)."""
+            for k in keys:
+                v = raw_rules.get(k)
+                if isinstance(v, bool):
+                    return v
+            return None
+
+        signing_rank = str(
+            raw_rules.get("signing_authority_rank") or raw_rules.get("signingAuthorityRank") or ""
+        ).strip()
 
         execution_rules = ExecutionRulesProps(
-            stamp_paper_required=bool(
-                raw_rules.get("stamp_paper_required") or raw_rules.get("stampPaperRequired")
-            ),
+            stamp_paper_required=_tri("stamp_paper_required", "stampPaperRequired"),
             stamp_paper_denomination_inr=denom,
-            notarization_required=bool(
-                raw_rules.get("notarization_required") or raw_rules.get("notarizationRequired")
+            notarization_required=_tri("notarization_required", "notarizationRequired"),
+            udin_required=_tri("udin_required", "udinRequired"),
+            apostille_required=_tri("apostille_required", "apostilleRequired"),
+            client_countersign_required=_tri(
+                "client_countersign_required", "clientCountersignRequired"
             ),
-            udin_required=bool(raw_rules.get("udin_required") or raw_rules.get("udinRequired")),
-            signing_authority_rank=str(signing_rank),
+            signing_authority_rank=signing_rank or None,
         )
 
         # Provenance mapping & Token-Saving Block Resolution
@@ -994,6 +1007,7 @@ class OpenAICompatibleLlmClient:
             or (matched_block.get("page_number") if matched_block else None)
             or 1
         )
+        # Only a clause number the tender states (block heading); never a "Page N" placeholder.
         clause_ref = (
             raw_prov.get("clause_reference")
             or raw_prov.get("clauseReference")
@@ -1001,7 +1015,6 @@ class OpenAICompatibleLlmClient:
             or raw.get("clause_reference")
             or raw.get("clause")
             or (matched_block.get("clause_reference") if matched_block else None)
-            or f"Page {page_num}"
         )
         quote = (
             raw_prov.get("verbatim_quote")
@@ -1016,16 +1029,16 @@ class OpenAICompatibleLlmClient:
 
         if not clean_quote:
             return None
-        conf = float(raw_prov.get("confidence_score") or raw_prov.get("confidenceScore") or 0.95)
-
         provenance = ProvenanceProps(
             source_document_id=str(doc_id),
             source_file_name=str(file_name),
             page_number=int(page_num),
-            clause_reference=str(clause_ref),
-            source_block_id=str(b_id) if b_id else None,
+            clause_reference=clause_ref,
+            # The persisted tender chunk id when the block came from one (B1.. ids are
+            # prompt-local and meaningless outside this call).
+            source_block_id=(matched_block.get("chunk_id") if matched_block else None),
             verbatim_quote=clean_quote,
-            confidence_score=conf,
+            confidence_score=None,  # set by deterministic validation once verified
         )
 
         return CandidateComplianceItem(
@@ -1034,4 +1047,5 @@ class OpenAICompatibleLlmClient:
             description=description,
             execution_rules=execution_rules,
             provenance=provenance,
+            attributes=parse_attributes(raw, clean_quote),
         )

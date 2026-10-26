@@ -22,7 +22,7 @@ export interface RawExtractedItem {
     pageNumber?: number;
     clauseReference?: string;
     verbatimQuote?: string;
-    confidenceScore?: number;
+    confidenceScore?: number | null;
   };
 }
 
@@ -258,14 +258,18 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
             stampPaperDenominationInr: item.executionRules?.stampPaperDenominationInr ?? undefined,
             notarizationRequired: Boolean(item.executionRules?.notarizationRequired),
             udinRequired: Boolean(item.executionRules?.udinRequired),
-            signingAuthorityRank:
-              item.executionRules?.signingAuthorityRank ?? 'Authorized Signatory',
+            signingAuthorityRank: item.executionRules?.signingAuthorityRank ?? '',
           },
           provenance: {
             pageNumber: Number(item.provenance.pageNumber) || 1,
-            clauseReference: item.provenance.clauseReference ?? 'NIT Clause',
+            // A missing reference is shown as its page, never as an invented clause name.
+            clauseReference:
+              item.provenance.clauseReference || `Page ${Number(item.provenance.pageNumber) || 1}`,
             verbatimQuote: item.provenance.verbatimQuote,
-            confidenceScore: Number(item.provenance.confidenceScore) || 0.95,
+            confidenceScore:
+              typeof item.provenance.confidenceScore === 'number'
+                ? item.provenance.confidenceScore
+                : null,
           },
         };
       });

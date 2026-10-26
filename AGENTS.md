@@ -34,7 +34,8 @@ Do **not** recursively inspect every individual file across the repository to ob
 - **FastAPI AI Worker (`apps/ai`)**: Keep modules single-responsibility under `tenderpulse_ai/extraction/`:
   - DTOs in `extraction/contracts.py`
   - Metrics & numeric parsing in `extraction/metrics.py`
-  - Positional clause attribution (structure-tree path of the block holding a quote) in `extraction/clause_references.py`
+  - Clause attribution (the tender's own line-start number around the quote, same page only; else `None`) in `extraction/clause_references.py`
+  - Grounded requirement attributes and the location key in `domain/requirement_attributes.py`
   - Deduplication & contradiction detection in `extraction/deduplication.py`
   - Open Knowledge Format compilation in `extraction/okf_compiler.py`
   - **Extraction is LLM-only**: no rule, regex or synthetic item producer exists, for tenders (`workflow/nodes.py` llm_extraction) or company evidence (`domain/evidence_extractor.py`). Code may validate and normalize model output (grounding, category mapping, whitespace) but never invents titles, descriptions, quotes, categories or figures. No code may contain tender-specific phrases, figures, issuer/agency/product names
@@ -43,10 +44,14 @@ Do **not** recursively inspect every individual file across the repository to ob
 
 ### Invariant 4: Frontend UI Cleanliness & Safety
 - **No Raw JSON Rendering**: Never render raw JSON strings or unparsed serialized objects in UI cards, banners, or tables. Parse JSON into structured typographic elements (Title, Reason, Shortfall Detail callouts via `bidDetailData.ts` and `BidVerdictCard.tsx`).
-- **Responsive Data Layouts**: Always wrap wide data tables in `overflow-x-auto` with min-width constraints (`min-w-[1050px]`) to ensure horizontal scrolling inside containers without breaking page layout (`ComplianceTable.tsx`).
+- **Clause Contract**: The AI→API payload, API clause model and UI types are one contract: `packages/shared-types/src/clause.ts` + `schema/extraction-completed.schema.json` + golden fixture `fixtures/extraction-completed.phase1.json` (regenerate with `UPDATE_FIXTURES=1 pytest tests/test_clause_contract.py`). Clause identity is location (document, page, quote), never the title; a human review is never overwritten by re-extraction.
+- **No Invented Values**: A value the tender does not state is `null`/empty end to end and renders as "Not stated" / "No page" / "Not assessed" (no default signatory, page 1, LOW risk, 0.95 confidence, or VERIFIED without evidence). Never show a percentage for confidence: the only per-item score is the deterministic validation result. Status is never derived from category.
+- **Responsive Data Layouts**: Always wrap wide data tables in `overflow-x-auto` with min-width constraints so they scroll inside their container instead of breaking the page layout.
+- **Clause Workspace** (`/bids/:id/clauses`, `pages/ClauseWorkspacePage.tsx`, `components/clauses/`): the only place clauses are reviewed. View state (saved view, facets, search, group-by, selected clause, verify layout) lives in the URL (`workspaceState.ts`); the list is virtualised with fixed row heights (`ClauseList.tsx`); Confirm needs the source viewed unless the clause is a clean spot-check; clauses in an unresolved conflict are resolved in `/bids/:id/conflicts`. Status chips always carry text (never colour alone).
 
 ### Invariant 5: LLM Gateway Resiliency & Bounded Concurrency
-- Enforce bounded concurrency (`asyncio.Semaphore(2)`) on parallel page inference to stay within in-flight credit caps.
+- Enforce bounded concurrency on parallel page windows (`LLM_MAX_CONCURRENCY`, default 3) to stay within in-flight credit caps (HTTP 402 "in-flight" backs off).
+- Latency is output-bound (free models generate ~60–90 tokens/s): the extraction prompt asks for minified JSON with only `block_id`, `category`, `title` (≤8 words), `description` (≤30 words), `quote`, and `execution_rules` only when a formality applies (page/clause come from the block). `targeted_refine` asks only for corrections of the rejected candidates, never a re-extraction of the window. Concrete free models are tried before the `openrouter/free` router; a model answering "Reasoning is mandatory" is cooled down for 1 h, unusable output for 5 min, and a success never clears a cooldown set while it was running.
 - Implement multi-model failover: HTTP 404 marks model permanently unavailable (`float("inf")`), HTTP 429 locks out the whole provider (base URL) for 60s (`block_provider` — free-tier limits are per key, so same-provider models are skipped in 0ms), HTTP 402 with in-flight limits backs off and retries, and HTTP 401/403 trips circuit breaker.
 - **No fallback**: when no model gives a valid answer (unreachable, all providers 429/blocked, invalid JSON, no key) the call raises `LLMExtractionError`. A failed page window is marked `extraction_error`, escalated to review and listed in `DocumentExtractionResponse.failed_pages`; if every window fails the pipeline raises (the queue worker retries, then publishes `status=FAILED`; `/api/v1/extract` returns HTTP 503 `LLM_EXTRACTION_FAILED`). Evidence extraction returns `status=FAILED` with the reason. A valid empty answer (`[]`) is a legitimate result and is not retried.
 - Every non-index page reaches the model (no keyword page filter), as every clause chunk of the window (no top-k). The model must copy each `verbatim_quote` exactly; quotes are never filled in from block text. Extraction calls disable reasoning (OpenRouter `reasoning: {effort: "none"}`) and use `LLM_MAX_TOKENS` (4096); a model returning empty content with `finish_reason=length` is cooled down for 10 min; rotation stops at `LLM_TIMEOUT_SECONDS`.
@@ -84,4 +89,7 @@ npm run build -w @tenderpulse/web
 # 3. Web & API Unit Test Suites
 npm test -w @tenderpulse/web
 npx vitest run apps/api/src/modules/compliance/application/__tests__/compliance-item.mapper.spec.ts
+
+# 4. Browser tests (clause workspace U1–U13; starts its own API on a fresh demo DB + Vite)
+npx playwright test
 ```

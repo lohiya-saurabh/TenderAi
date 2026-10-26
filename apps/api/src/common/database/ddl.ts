@@ -254,6 +254,91 @@ export async function initDatabaseDdl(db: PGlite): Promise<void> {
 
     CREATE INDEX IF NOT EXISTS idx_compliance_items_bid_org ON compliance_items(bid_id, organization_id);
 
+    -- Phase 1 clause contract: location identity, grounded attributes, two status axes.
+    ALTER TABLE compliance_items ADD COLUMN IF NOT EXISTS document_id TEXT;
+    ALTER TABLE compliance_items ADD COLUMN IF NOT EXISTS item_key TEXT;
+    ALTER TABLE compliance_items ADD COLUMN IF NOT EXISTS doc_order INT;
+    ALTER TABLE compliance_items ADD COLUMN IF NOT EXISTS primary_page INT;
+    ALTER TABLE compliance_items ADD COLUMN IF NOT EXISTS supporting_pages JSONB;
+    ALTER TABLE compliance_items ADD COLUMN IF NOT EXISTS clause_ref TEXT;
+    ALTER TABLE compliance_items ADD COLUMN IF NOT EXISTS source_block_id TEXT;
+    ALTER TABLE compliance_items ADD COLUMN IF NOT EXISTS quote_check TEXT;
+    ALTER TABLE compliance_items ADD COLUMN IF NOT EXISTS attributes JSONB;
+    ALTER TABLE compliance_items ADD COLUMN IF NOT EXISTS flags JSONB;
+    ALTER TABLE compliance_items ADD COLUMN IF NOT EXISTS review_status TEXT;
+    ALTER TABLE compliance_items ADD COLUMN IF NOT EXISTS reviewed_by_name TEXT;
+    ALTER TABLE compliance_items ADD COLUMN IF NOT EXISTS fulfilment_status TEXT;
+    ALTER TABLE compliance_items ADD COLUMN IF NOT EXISTS fulfilment_owner_id TEXT;
+
+    -- Legacy single-status rows -> review axis + fulfilment axis (idempotent: only unmapped rows).
+    -- READY / FLAGGED / PENDING were assigned by the system (by category), so without a human
+    -- reviewer they are UNREVIEWED; a status a human set keeps its meaning.
+    UPDATE compliance_items SET review_status = CASE
+        WHEN reviewed_by IS NULL OR reviewed_by = '' THEN
+          CASE WHEN status IN ('REVIEW_REQUIRED', 'PENDING_REVIEW', 'UNDER_REVIEW') THEN 'NEEDS_REVIEW'
+               ELSE 'UNREVIEWED' END
+        WHEN status IN ('PASS', 'APPROVED', 'COMPLIANT', 'READY', 'FAIL', 'NON_COMPLIANT', 'MISSING',
+                        'WAIVED', 'NOT_APPLICABLE', 'NA') THEN 'CONFIRMED'
+        WHEN status IN ('REVIEW_REQUIRED', 'PENDING_REVIEW', 'UNDER_REVIEW', 'FLAGGED') THEN 'NEEDS_REVIEW'
+        WHEN status IN ('REJECTED', 'NOT_A_REQUIREMENT') THEN 'NOT_A_REQUIREMENT'
+        ELSE 'UNREVIEWED' END
+      WHERE review_status IS NULL;
+    UPDATE compliance_items SET fulfilment_status = CASE
+        WHEN status IN ('PASS', 'APPROVED', 'COMPLIANT') AND reviewed_by IS NOT NULL AND reviewed_by <> '' THEN 'DONE'
+        WHEN status IN ('FAIL', 'NON_COMPLIANT') THEN 'AT_RISK'
+        WHEN status IN ('WAIVED', 'NOT_APPLICABLE', 'NA') THEN 'NOT_APPLICABLE'
+        ELSE 'NOT_STARTED' END
+      WHERE fulfilment_status IS NULL;
+    UPDATE compliance_items SET primary_page = NULLIF((provenance->>'pageNumber'), '')::INT
+      WHERE primary_page IS NULL AND (provenance->>'pageNumber') ~ '^[0-9]+$';
+    UPDATE compliance_items SET document_id = COALESCE(provenance->>'documentId', provenance->>'sourceDocumentId')
+      WHERE document_id IS NULL;
+    UPDATE compliance_items SET quote_check = 'NO_PAGE_TEXT' WHERE quote_check IS NULL;
+    -- Legacy clause references, minus the placeholders older pipelines invented.
+    UPDATE compliance_items SET clause_ref = NULLIF(TRIM(REGEXP_REPLACE(
+        COALESCE(provenance->>'clauseReference', provenance->>'sectionOrClause', ''),
+        '\\s*\\(Pages?[\\s0-9,]*\\)\\s*$', '')), '')
+      WHERE clause_ref IS NULL AND item_key IS NULL
+        AND COALESCE(provenance->>'clauseReference', provenance->>'sectionOrClause', '')
+            !~* '^\\s*(page\\s*[0-9]+|clause( reference)?|nit clause)?\\s*$';
+    ALTER TABLE compliance_items ALTER COLUMN review_status SET DEFAULT 'UNREVIEWED';
+    ALTER TABLE compliance_items ALTER COLUMN fulfilment_status SET DEFAULT 'NOT_STARTED';
+    ALTER TABLE compliance_items ALTER COLUMN quote_check SET DEFAULT 'NO_PAGE_TEXT';
+
+    CREATE INDEX IF NOT EXISTS idx_compliance_items_doc ON compliance_items(document_id);
+
+    CREATE TABLE IF NOT EXISTS clause_conflicts (
+      id TEXT PRIMARY KEY,
+      organization_id TEXT NOT NULL,
+      bid_id TEXT NOT NULL REFERENCES bids(id) ON DELETE CASCADE,
+      document_id TEXT,
+      topic TEXT NOT NULL,
+      attribute TEXT NOT NULL,
+      conflict_values JSONB NOT NULL,
+      ai_precedence_note TEXT,
+      resolution TEXT NOT NULL DEFAULT 'UNRESOLVED',
+      chosen_clause_id TEXT,
+      note TEXT,
+      resolved_by TEXT,
+      resolved_by_name TEXT,
+      resolved_at TIMESTAMPTZ,
+      version INT NOT NULL DEFAULT 1,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_clause_conflicts_bid ON clause_conflicts(bid_id, organization_id);
+
+    CREATE TABLE IF NOT EXISTS extraction_coverage (
+      document_id TEXT PRIMARY KEY,
+      organization_id TEXT NOT NULL,
+      bid_id TEXT NOT NULL REFERENCES bids(id) ON DELETE CASCADE,
+      page_count INT,
+      failed_pages JSONB NOT NULL DEFAULT '[]'::jsonb,
+      status TEXT NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_extraction_coverage_bid ON extraction_coverage(bid_id, organization_id);
+
     CREATE TABLE IF NOT EXISTS document_processing_outbox (
       id TEXT PRIMARY KEY,
       organization_id TEXT NOT NULL,

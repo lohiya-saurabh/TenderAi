@@ -108,9 +108,15 @@ def test_adversarial_pbg_percentage_variations(
         assert any(pbg_val_1 in q for q in quotes)
         assert any(pbg_val_2 in q for q in quotes)
     else:
-        # Equivalent floats must fuse cleanly
-        assert len(consolidated) == 1
-        assert "Pages 18, 95" in consolidated[0]["provenance"]["clauseReference"]
+        # Same value stated in two sections (ITB p.18, GCC p.95): two clauses, each with its
+        # own location identity, and no conflict between them.
+        assert len(consolidated) == 2
+        assert len({it["itemKey"] for it in consolidated}) == 2
+        assert [it["provenance"]["clauseReference"] for it in consolidated] == [
+            "ITB Clause 38.1",
+            "GCC Clause 59.2",
+        ]
+        assert detect_clause_contradictions(consolidated) == []
 
 
 def test_adversarial_pbg_dynamic_order_of_precedence_ruling():

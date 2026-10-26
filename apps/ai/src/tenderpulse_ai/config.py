@@ -44,6 +44,8 @@ class Settings(BaseSettings):
     llm_max_tokens: int = 4096
     llm_max_retries: int = 2
     batch_page_window_size: int = 3
+    # Page windows extracted in parallel (provider in-flight limits; 402 "in-flight" backs off).
+    llm_max_concurrency: int = 3
     # Extraction is LLM-only. "record" saves raw responses, "replay" serves them offline
     # (tests, benchmarks); see infrastructure/llm/replay.py.
     llm_replay_mode: str = "off"

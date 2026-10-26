@@ -265,17 +265,23 @@ describe('DocumentProcessingRuntime (Option B: Two-Queue Architecture)', () => {
           eq(schema.complianceItems.organizationId, bid.organizationId),
         ),
       );
-    expect(
-      persistedItems.filter((item) => item.provenance.documentId === documentId),
-    ).toHaveLength(1);
+    // Identity is the clause's location (document, page, quote), never its title: the new
+    // text is a new clause, and the reviewed row is kept exactly as the reviewer left it.
+    const forDocument = persistedItems.filter((item) => item.provenance.documentId === documentId);
+    expect(forDocument).toHaveLength(2);
 
-    const refreshed = persistedItems.find((item) => item.id === reviewedComplianceId);
-    expect(refreshed?.provenance.verbatimQuote).toBe(
+    const reviewed = persistedItems.find((item) => item.id === reviewedComplianceId);
+    expect(reviewed?.provenance.verbatimQuote).toBe('The EMD amount will be deposited.');
+    expect(reviewed?.status).toBe('READY');
+    expect(reviewed?.humanReviewRequired).toBe(false);
+    expect(reviewed?.version).toBe(4);
+
+    const extracted = forDocument.find((item) => item.id !== reviewedComplianceId);
+    expect(extracted?.provenance.verbatimQuote).toBe(
       'The bidder must submit earnest money deposit of INR 50,00,000.',
     );
-    expect(refreshed?.status).toBe('READY');
-    expect(refreshed?.humanReviewRequired).toBe(false);
-    expect(refreshed?.version).toBe(4);
+    expect(extracted?.reviewStatus).toBe('UNREVIEWED');
+    expect(extracted?.documentId).toBe(documentId);
   });
 
   it('routes malformed completion messages missing required identifiers to dead-letter queue', async () => {

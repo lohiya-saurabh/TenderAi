@@ -56,3 +56,11 @@ export class InternalServerError extends HttpError {
     this.name = 'InternalServerError';
   }
 }
+
+/** The request is well-formed but breaks a review rule (e.g. confirming without opening the source). */
+export class UnprocessableError extends HttpError {
+  constructor(message: string) {
+    super(422, message);
+    this.name = 'UnprocessableError';
+  }
+}

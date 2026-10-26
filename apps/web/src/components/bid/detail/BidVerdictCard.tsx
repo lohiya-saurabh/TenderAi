@@ -257,7 +257,7 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
               ? typeof ldRisk === 'object' && 'penaltySummary' in (ldRisk as Record<string, unknown>)
                 ? String((ldRisk as Record<string, unknown>).penaltySummary)
                 : 'Exposure Flagged ⚠'
-              : 'Clean / Standard GCC Terms'}
+              : 'Not assessed'}
           </span>
         </div>
 

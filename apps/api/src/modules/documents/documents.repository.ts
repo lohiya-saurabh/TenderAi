@@ -4,7 +4,7 @@
  */
 import { Injectable, Inject } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { eq, and, asc, inArray, or, lte } from 'drizzle-orm';
 import {
   DRIZZLE_TOKEN,
@@ -16,6 +16,14 @@ import type {
   DocumentExtractionCompletedEvent,
   ExtractedComplianceItemDto,
 } from '@tenderpulse/shared-types';
+import {
+  checkQuote,
+  clauseId,
+  conflictId,
+  isPageTextChunk,
+  locationKey,
+  stripChunkHeading,
+} from '@/modules/compliance/application/clause-model.js';
 
 @Injectable()
 export class DocumentsRepository {
@@ -376,6 +384,24 @@ export class DocumentsRepository {
           .where(inArray(schema.complianceItems.id, params.complianceItemIdsToDelete));
       }
 
+      // 3b. Conflicts and coverage recorded for this document
+      await tx
+        .delete(schema.clauseConflicts)
+        .where(
+          and(
+            eq(schema.clauseConflicts.documentId, params.docId),
+            eq(schema.clauseConflicts.organizationId, params.orgId),
+          ),
+        );
+      await tx
+        .delete(schema.extractionCoverage)
+        .where(
+          and(
+            eq(schema.extractionCoverage.documentId, params.docId),
+            eq(schema.extractionCoverage.organizationId, params.orgId),
+          ),
+        );
+
       // 4. Update parent bid metrics
       await tx
         .update(schema.bids)
@@ -505,164 +531,7 @@ export class DocumentsRepository {
 
       effectiveCompanyId = event.companyId || lockedBid.companyId;
 
-      const existingBidItems = await tx
-        .select({
-          id: schema.complianceItems.id,
-          category: schema.complianceItems.category,
-          title: schema.complianceItems.title,
-          executionRules: schema.complianceItems.executionRules,
-          provenance: schema.complianceItems.provenance,
-        })
-        .from(schema.complianceItems)
-        .where(
-          and(
-            eq(schema.complianceItems.bidId, event.bidId),
-            eq(schema.complianceItems.organizationId, event.organizationId),
-          ),
-        );
-
-      const existingByRequirement = new Map(
-        existingBidItems.map((existingItem) => [
-          `${existingItem.category}:${existingItem.title.trim().toLocaleLowerCase().replace(/\s+/g, ' ')}`,
-          existingItem,
-        ]),
-      );
-
-      for (const item of items) {
-        const normalizedTitle = item.title.trim().toLocaleLowerCase().replace(/\s+/g, ' ');
-        const requirementKey = `${item.category}:${normalizedTitle}`;
-        const existingItem = existingByRequirement.get(requirementKey);
-        const itemId = `cmp-${createHash('sha256')
-          .update(
-            `${event.organizationId}:${effectiveCompanyId}:${event.bidId}:${item.category}:${normalizedTitle}`,
-          )
-          .digest('hex')
-          .slice(0, 48)}`;
-
-        const newProvenance = {
-          documentId: event.documentId,
-          sourceDocumentId: event.documentId,
-          documentName: lockedDocument.fileName,
-          sourceFileName: lockedDocument.fileName,
-          pageNumber: item.provenance.pageNumber,
-          sectionOrClause: item.provenance.clauseReference,
-          clauseReference: item.provenance.clauseReference,
-          verbatimQuote: item.provenance.verbatimQuote,
-          confidenceScore: item.provenance.confidenceScore ?? 0.95,
-        };
-
-        if (existingItem) {
-          interface ExecutionRulesRecord {
-            stampPaperRequired?: boolean;
-            stampPaperDenominationInr?: number;
-            notarizationRequired?: boolean;
-            udinRequired?: boolean;
-          }
-          interface ProvenanceRecord {
-            verbatimQuote?: string;
-            confidenceScore?: number;
-          }
-          const exRules = (existingItem.executionRules ?? {}) as ExecutionRulesRecord;
-          const mergedExecutionRules = {
-            ...exRules,
-            ...item.executionRules,
-            stampPaperRequired: Boolean(
-              exRules.stampPaperRequired || item.executionRules?.stampPaperRequired,
-            ),
-            stampPaperDenominationInr:
-              Math.max(
-                exRules.stampPaperDenominationInr || 0,
-                item.executionRules?.stampPaperDenominationInr || 0,
-              ) || undefined,
-            notarizationRequired: Boolean(
-              exRules.notarizationRequired || item.executionRules?.notarizationRequired,
-            ),
-            udinRequired: Boolean(exRules.udinRequired || item.executionRules?.udinRequired),
-          };
-
-          const exProv = (existingItem.provenance ?? {}) as ProvenanceRecord;
-          const curQuote = item.provenance.verbatimQuote || '';
-          const exQuote = exProv.verbatimQuote || '';
-          const preferNewQuote =
-            (!exQuote && Boolean(curQuote)) ||
-            (exQuote.length < 50 && curQuote.length >= 50) ||
-            ((item.provenance.confidenceScore || 0) > (exProv.confidenceScore || 0) &&
-              curQuote.length >= 40);
-
-          const provenanceToSet = preferNewQuote ? newProvenance : existingItem.provenance;
-
-          await tx
-            .update(schema.complianceItems)
-            .set({
-              companyId: effectiveCompanyId,
-              executionRules: mergedExecutionRules,
-              provenance: provenanceToSet,
-              workflowRunId: event.workflowRunId ?? event.jobId,
-              correlationId: event.correlationId ?? event.jobId,
-              updatedAt: now,
-            })
-            .where(eq(schema.complianceItems.id, existingItem.id));
-
-          existingByRequirement.set(requirementKey, {
-            ...existingItem,
-            executionRules: mergedExecutionRules,
-            provenance: provenanceToSet,
-          });
-          continue;
-        }
-
-        await tx.insert(schema.complianceItems).values({
-          id: itemId,
-          bidId: event.bidId,
-          organizationId: event.organizationId,
-          companyId: effectiveCompanyId,
-          category: item.category,
-          title: item.title,
-          description: item.description ?? '',
-          status: item.category === 'EXECUTION' ? 'FLAGGED' : 'READY',
-          humanReviewRequired: true,
-          reviewNotes: `Extracted from document ${event.documentId}, page ${item.provenance.pageNumber}.`,
-          version: 1,
-          executionRules: item.executionRules,
-          provenance: newProvenance,
-          workflowRunId: event.workflowRunId ?? event.jobId,
-          correlationId: event.correlationId ?? event.jobId,
-          createdAt: now,
-          updatedAt: now,
-        });
-
-        existingByRequirement.set(requirementKey, {
-          id: itemId,
-          category: item.category,
-          title: item.title,
-          executionRules: item.executionRules,
-          provenance: newProvenance,
-        });
-      }
-
-      const allBidItems = await tx
-        .select({
-          category: schema.complianceItems.category,
-          status: schema.complianceItems.status,
-        })
-        .from(schema.complianceItems)
-        .where(
-          and(
-            eq(schema.complianceItems.bidId, event.bidId),
-            eq(schema.complianceItems.organizationId, event.organizationId),
-          ),
-        );
-
-      const totalRequirements = allBidItems.length;
-      const flaggedRequirements = allBidItems.filter(
-        (item) =>
-          item.status === 'FLAGGED' || item.status === 'FAIL' || item.category === 'EXECUTION',
-      ).length;
-      const approvedRequirements = allBidItems.filter(
-        (item) => item.status === 'READY' || item.status === 'PASS',
-      ).length;
-
-      // Persist extracted tender document chunks if present
+      // ── Page text for server-side quote verification (and the source viewer) ──
       if (event.chunks && event.chunks.length > 0) {
         await tx
           .delete(schema.tenderDocumentChunks)
@@ -696,6 +565,234 @@ export class DocumentsRepository {
           await tx.insert(schema.tenderDocumentChunks).values(batch);
         }
       }
+      const storedChunks = await tx
+        .select({
+          pageNumber: schema.tenderDocumentChunks.pageNumber,
+          content: schema.tenderDocumentChunks.content,
+          chunkType: schema.tenderDocumentChunks.chunkType,
+        })
+        .from(schema.tenderDocumentChunks)
+        .where(
+          and(
+            eq(schema.tenderDocumentChunks.documentId, event.documentId),
+            eq(schema.tenderDocumentChunks.organizationId, event.organizationId),
+          ),
+        );
+      const textByPage = new Map<number, string[]>();
+      for (const c of storedChunks.filter((c) => isPageTextChunk(c.chunkType))) {
+        textByPage.set(c.pageNumber, [
+          ...(textByPage.get(c.pageNumber) ?? []),
+          stripChunkHeading(c.content),
+        ]);
+      }
+
+      // ── Clauses: one row per location (document, page, quote); never merged by title ──
+      const existingDocRows = await tx
+        .select({
+          id: schema.complianceItems.id,
+          reviewStatus: schema.complianceItems.reviewStatus,
+        })
+        .from(schema.complianceItems)
+        .where(
+          and(
+            eq(schema.complianceItems.bidId, event.bidId),
+            eq(schema.complianceItems.organizationId, event.organizationId),
+            eq(schema.complianceItems.documentId, event.documentId),
+          ),
+        );
+      const existingById = new Map(existingDocRows.map((r) => [r.id, r]));
+      const idByItemKey = new Map<string, string>();
+      const seen = new Set<string>();
+
+      for (const [index, item] of items.entries()) {
+        if (item.is_conflict) {
+          // Pre-Phase-1 AI payload: conflicts were sent as pseudo clauses. They are not
+          // clauses; current payloads send them in event.conflicts.
+          continue;
+        }
+        const page = item.provenance.pageNumber;
+        const quote = item.provenance.verbatimQuote;
+        const itemKey = item.itemKey || locationKey(event.documentId, page, quote);
+        const id = clauseId(event.organizationId, event.bidId, itemKey);
+        idByItemKey.set(itemKey, id);
+        if (seen.has(id)) continue; // same location twice in one payload
+        seen.add(id);
+
+        const supporting = (item.provenance.supportingPages ?? []).filter((p) => p !== page);
+        const pagesToCheck = [page, ...supporting, page + 1];
+        const quoteCheck = checkQuote(
+          quote,
+          pagesToCheck.flatMap((p) => textByPage.get(p) ?? []),
+        );
+        const flags = [...(item.flags ?? [])];
+        const provenance = {
+          documentId: event.documentId,
+          sourceDocumentId: event.documentId,
+          documentName: lockedDocument.fileName,
+          sourceFileName: lockedDocument.fileName,
+          pageNumber: page,
+          sectionOrClause: item.provenance.clauseReference ?? null,
+          clauseReference: item.provenance.clauseReference ?? null,
+          verbatimQuote: quote,
+          confidenceScore: item.provenance.confidenceScore ?? null,
+        };
+        const aiFields = {
+          companyId: effectiveCompanyId,
+          category: item.category,
+          title: item.title,
+          description: item.description ?? '',
+          executionRules: item.executionRules ?? {},
+          provenance,
+          documentId: event.documentId,
+          itemKey,
+          docOrder: item.docOrder ?? index,
+          primaryPage: page,
+          supportingPages: supporting,
+          clauseRef: item.provenance.clauseReference ?? null,
+          sourceBlockId: item.provenance.sourceBlockId ?? null,
+          quoteCheck,
+          attributes: item.attributes ?? null,
+          flags,
+          workflowRunId: event.workflowRunId ?? event.jobId,
+          correlationId: event.correlationId ?? event.jobId,
+          updatedAt: now,
+        };
+
+        if (existingById.has(id)) {
+          // Re-extraction of the same text: refresh the AI fields, keep the human review.
+          await tx
+            .update(schema.complianceItems)
+            .set(aiFields)
+            .where(eq(schema.complianceItems.id, id));
+          continue;
+        }
+
+        await tx.insert(schema.complianceItems).values({
+          id,
+          bidId: event.bidId,
+          organizationId: event.organizationId,
+          ...aiFields,
+          // Nothing has been reviewed yet. Status is never derived from the category.
+          status: 'PENDING',
+          reviewStatus: 'UNREVIEWED',
+          fulfilmentStatus: 'NOT_STARTED',
+          humanReviewRequired: true,
+          reviewNotes: null,
+          version: 1,
+          createdAt: now,
+        });
+      }
+
+      // Clauses of this document that the new extraction no longer contains: unreviewed ones
+      // go; anything a person reviewed is kept.
+      const stale = existingDocRows
+        .filter((r) => !seen.has(r.id) && r.reviewStatus === 'UNREVIEWED')
+        .map((r) => r.id);
+      if (stale.length > 0) {
+        await tx.delete(schema.complianceItems).where(inArray(schema.complianceItems.id, stale));
+      }
+
+      // ── Conflicts: own records, each value linked to the clause that states it ──
+      const existingConflicts = await tx
+        .select({
+          id: schema.clauseConflicts.id,
+          resolution: schema.clauseConflicts.resolution,
+        })
+        .from(schema.clauseConflicts)
+        .where(
+          and(
+            eq(schema.clauseConflicts.bidId, event.bidId),
+            eq(schema.clauseConflicts.organizationId, event.organizationId),
+            eq(schema.clauseConflicts.documentId, event.documentId),
+          ),
+        );
+      const conflictIdsSeen = new Set<string>();
+      for (const c of event.conflicts ?? []) {
+        const values = c.values
+          .filter((v) => idByItemKey.has(v.itemKey))
+          .map((v) => ({
+            display: v.display,
+            clauseId: idByItemKey.get(v.itemKey) as string,
+            quote: v.quote,
+            page: v.page,
+            clauseRef: v.clauseRef ?? null,
+          }));
+        if (values.length < 2) continue;
+        const id = conflictId(event.organizationId, event.bidId, c.conflictKey);
+        conflictIdsSeen.add(id);
+        await tx
+          .insert(schema.clauseConflicts)
+          .values({
+            id,
+            organizationId: event.organizationId,
+            bidId: event.bidId,
+            documentId: event.documentId,
+            topic: c.topic,
+            attribute: c.attribute,
+            values,
+            aiPrecedenceNote: c.aiPrecedenceNote ?? null,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .onConflictDoUpdate({
+            target: schema.clauseConflicts.id,
+            set: {
+              topic: c.topic,
+              attribute: c.attribute,
+              values,
+              aiPrecedenceNote: c.aiPrecedenceNote ?? null,
+              updatedAt: now,
+            },
+          });
+      }
+      const staleConflicts = existingConflicts
+        .filter((c) => !conflictIdsSeen.has(c.id) && c.resolution === 'UNRESOLVED')
+        .map((c) => c.id);
+      if (staleConflicts.length > 0) {
+        await tx
+          .delete(schema.clauseConflicts)
+          .where(inArray(schema.clauseConflicts.id, staleConflicts));
+      }
+
+      // ── Coverage: which pages were analysed ──
+      if (event.coverage) {
+        const coverageRow = {
+          organizationId: event.organizationId,
+          bidId: event.bidId,
+          pageCount: event.coverage.pageCount,
+          failedPages: event.coverage.failedPages ?? [],
+          status: event.coverage.status,
+          updatedAt: now,
+        };
+        await tx
+          .insert(schema.extractionCoverage)
+          .values({ documentId: event.documentId, ...coverageRow })
+          .onConflictDoUpdate({
+            target: schema.extractionCoverage.documentId,
+            set: coverageRow,
+          });
+      }
+
+      const allBidItems = await tx
+        .select({
+          status: schema.complianceItems.status,
+          reviewStatus: schema.complianceItems.reviewStatus,
+        })
+        .from(schema.complianceItems)
+        .where(
+          and(
+            eq(schema.complianceItems.bidId, event.bidId),
+            eq(schema.complianceItems.organizationId, event.organizationId),
+          ),
+        );
+
+      const totalRequirements = allBidItems.length;
+      const flaggedRequirements = allBidItems.filter(
+        (item) => item.reviewStatus === 'NEEDS_REVIEW' || item.status === 'FAIL',
+      ).length;
+      const approvedRequirements = allBidItems.filter(
+        (item) => item.reviewStatus === 'CONFIRMED' || item.reviewStatus === 'CORRECTED',
+      ).length;
 
       // Update this document to COMPLETED
       await tx

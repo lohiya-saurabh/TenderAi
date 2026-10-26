@@ -116,7 +116,11 @@ async def test_ungrounded_quote_is_retried_with_feedback_then_escalated():
     assert response.items == []
     assert response.human_review_required is True
     assert len(fake.calls) == 3  # first answer + 2 targeted refinements
-    assert "PRIOR VERIFICATION FEEDBACK" in fake.calls[-1]
+    # Refinement asks only for corrections of the rejected candidates (small output)
+    assert "REFINEMENT" not in fake.calls[0]
+    assert "REFINEMENT" in fake.calls[-1]
+    assert "Rs. 99 crore" in fake.calls[-1]
+    assert "Do NOT repeat candidates that were not rejected" in fake.calls[-1]
 
 
 def _candidate(quote: str):
@@ -255,3 +259,50 @@ def test_emd_risk_reports_the_stated_amount_never_an_estimate():
 
     assert "Rs. 12.5 Lakh" in detail("The Bidder shall furnish an EMD of Rs. 12.5 lakh.")
     assert "Rs." not in detail("The Bidder shall furnish the EMD as specified.")  # no 2% guess
+
+
+@pytest.mark.asyncio
+async def test_no_invented_defaults_and_conflicts_link_real_clauses():
+    """Confidence is the validator's score, nothing is defaulted, and a conflict is its own
+    record whose values link (by itemKey) to the real clauses — never an extra clause row."""
+    pages = [
+        "Clause 7.1 The Contractor shall furnish a Performance Security of 3% of the Contract Price.",
+        "Clause 22.4 The Contractor shall furnish a Performance Security of 5% of the Contract Price.",
+    ]
+
+    def model(s, u):
+        out = []
+        for page, text in ((1, pages[0]), (2, pages[1])):
+            if f'page="{page}"' in u:
+                c = _candidate(text.split(" ", 2)[2])
+                c.title = "Performance Security"
+                c.provenance.page_number = page
+                c.provenance.confidence_score = 0.99  # a self-reported score is not trusted
+                out.append(c)
+        return out
+
+    from tenderpulse_ai.domain.models import ExecutionRulesProps
+
+    assert ExecutionRulesProps().signing_authority_rank is None
+    assert ExecutionRulesProps().stamp_paper_required is None  # tri-state: not stated
+    response = await ProductionExtractionPipeline(fake_llm_client(model)).execute(_request(pages))
+    items = response.items
+    assert len(items) == 2  # same title, different clauses: both kept
+    assert len({i["itemKey"] for i in items}) == 2
+    assert all(i["executionRules"]["signingAuthorityRank"] is None for i in items)
+    assert all("is_conflict" not in i for i in items)
+    # the validator's deterministic score replaces the model's self-report (0.99)
+    assert all(i["provenance"]["confidenceScore"] != 0.99 for i in items)
+    assert len(response.conflicts) == 1
+    conflict = response.conflicts[0]
+    joined = " ".join(" ".join(p.split()) for p in pages)
+    assert {v["itemKey"] for v in conflict["values"]} == {i["itemKey"] for i in items}
+    assert all(v["quote"] in joined for v in conflict["values"])  # real tender text
+    assert {v["display"] for v in conflict["values"]} == {"3%", "5%"}
+    assert all("CONFLICT" in i["flags"] for i in items)
+    assert response.coverage == {
+        "documentId": response.document_id,
+        "pageCount": 2,
+        "failedPages": [],
+        "status": "COMPLETE",
+    }

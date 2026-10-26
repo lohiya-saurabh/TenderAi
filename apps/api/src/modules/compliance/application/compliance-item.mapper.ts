@@ -24,7 +24,11 @@ export function deduplicateComplianceItems(
 ): schema.ComplianceItem[] {
   const uniqueMap = new Map<string, schema.ComplianceItem>();
   for (const row of records) {
-    const key = `${row.category}:${row.title.trim().toLowerCase().replace(/\s+/g, ' ')}`;
+    // Clauses with a location identity (Phase 1) are distinct even when titles match; only
+    // legacy rows (no item key) are still merged by title.
+    const key = row.itemKey
+      ? `loc:${row.id}`
+      : `${row.category}:${row.title.trim().toLowerCase().replace(/\s+/g, ' ')}`;
     const existing = uniqueMap.get(key);
     if (!existing) {
       uniqueMap.set(key, row);
@@ -111,7 +115,8 @@ export function mapComplianceRecord(record: schema.ComplianceItem): DemoComplian
     page: Number(prov.pageNumber || 1),
     section: String(prov.sectionOrClause || prov.clauseReference || ''),
     verbatimQuote: cleanQuote,
-    confidenceScore: Number(prov.confidenceScore || 0.9),
+    // null = no score computed (never a default percentage)
+    confidenceScore: typeof prov.confidenceScore === 'number' ? prov.confidenceScore : null,
   };
 
   return {

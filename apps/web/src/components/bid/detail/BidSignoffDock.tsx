@@ -1,18 +1,14 @@
 import React from 'react';
-import { Button } from '@/components/ui/button.js';
-import { CheckCircle2, Clock, ArrowUpRight } from 'lucide-react';
 import { useCompany } from '@/context/useCompany.js';
 
 export interface BidSignoffDockProps {
-  onApproveBid?: () => void;
-  onSubmitPreBidQuery?: () => void;
   activeSection?: string;
 }
 
-export const BidSignoffDock: React.FC<BidSignoffDockProps> = ({
-  onApproveBid,
-  onSubmitPreBidQuery,
-}) => {
+/** Section outline + company verification status. The previous hard-coded
+ *  PASSED/FLAGGED sign-off rows and alert() buttons were removed: they showed
+ *  results that were never computed. */
+export const BidSignoffDock: React.FC<BidSignoffDockProps> = () => {
   const { selectedCompany } = useCompany();
   const isGstVerified = Boolean(selectedCompany?.gstinVerifiedAt);
   const isMcaVerified = Boolean(selectedCompany?.mcaVerifiedAt);
@@ -69,68 +65,6 @@ export const BidSignoffDock: React.FC<BidSignoffDockProps> = ({
             5. Compliance Matrix
           </button>
         </nav>
-      </div>
-
-      {/* 2. Sign-Off Status Dock */}
-      <div className="p-4 border border-border rounded-lg bg-card shadow-xs space-y-3.5 transition-colors">
-        <div className="mono text-[11px] uppercase font-semibold text-muted-foreground tracking-wider">
-          Bid Sign-Off Status
-        </div>
-
-        <div className="space-y-2 text-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground font-medium flex items-center gap-1.5">
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-              Technical Review
-            </span>
-            <span className="font-bold mono text-emerald-600 dark:text-emerald-400 text-xs">
-              PASSED
-            </span>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground font-medium flex items-center gap-1.5">
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-              Finance &amp; EMD
-            </span>
-            <span className="font-bold mono text-emerald-600 dark:text-emerald-400 text-xs">
-              PASSED
-            </span>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground font-medium flex items-center gap-1.5">
-              <Clock className="h-3.5 w-3.5 text-vermilion" />
-              Legal / LD Cap
-            </span>
-            <span className="font-bold mono text-vermilion text-xs">
-              FLAGGED
-            </span>
-          </div>
-        </div>
-
-        <div className="space-y-2 pt-2 border-t border-border">
-          <Button
-            type="button"
-            variant="default"
-            size="sm"
-            onClick={onApproveBid}
-            className="w-full h-9 text-xs font-bold shadow-xs cursor-pointer bg-vermilion hover:bg-vermilion-hover text-white border-transparent"
-          >
-            Approve Bid Submission
-          </Button>
-
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onSubmitPreBidQuery}
-            className="w-full h-8 text-xs font-semibold border-border hover:border-vermilion hover:text-vermilion cursor-pointer flex items-center justify-center gap-1 transition-colors"
-          >
-            <span>Submit Pre-Bid Query</span>
-            <ArrowUpRight className="h-3 w-3" />
-          </Button>
-        </div>
       </div>
 
       {/* 3. Evidence Vault Summary */}

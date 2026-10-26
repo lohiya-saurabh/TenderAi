@@ -5,6 +5,7 @@ from typing import Any
 
 from tenderpulse_ai.agent.validation import clean_whitespace
 from tenderpulse_ai.domain.models import VerifiedComplianceItem
+from tenderpulse_ai.domain.requirement_attributes import location_key
 from tenderpulse_ai.extraction.contracts import DocumentExtractionRequest
 
 
@@ -179,7 +180,7 @@ def _are_items_contradictory(it1: dict[str, Any], it2: dict[str, Any]) -> bool:
         if (is_monetary1 and is_bsd2) or (is_bsd1 and is_monetary2):
             return True
 
-    # 3. GST Pricing Treatment Conflict
+    # 4. GST Pricing Treatment Conflict
     is_inc1 = bool(re.search(_GST_INC_PATTERN, t1))
     is_exc1 = bool(re.search(_GST_EXC_PATTERN, t1))
     is_inc2 = bool(re.search(_GST_INC_PATTERN, t2))
@@ -192,6 +193,15 @@ def _are_items_contradictory(it1: dict[str, Any], it2: dict[str, Any]) -> bool:
         return True
 
     return False
+
+
+_TRI_STATE_RULES = (
+    "stampPaperRequired",
+    "notarizationRequired",
+    "udinRequired",
+    "apostilleRequired",
+    "clientCountersignRequired",
+)
 
 
 def consolidate_verified_items(
@@ -225,8 +235,14 @@ def consolidate_verified_items(
             if existing["category"] != payload_cat:
                 continue
 
-            # 1. Exact title match within category
-            if existing["title"].strip().lower() == norm_title:
+            # 1. Same title within category is a duplicate only when it is the same text
+            # or the same page: two clauses titled "Performance Security" in ITB and in
+            # SCC are different requirements and must stay separate.
+            if existing["title"].strip().lower() == norm_title and (
+                existing["provenance"]["pageNumber"] == cur_page
+                or quote_overlap_ratio(existing["provenance"]["verbatimQuote"] or "", cur_quote_raw)
+                >= 0.5
+            ):
                 matched_existing = existing
                 break
 
@@ -255,23 +271,26 @@ def consolidate_verified_items(
             if cur_page not in existing["supporting_pages"]:
                 existing["supporting_pages"].append(cur_page)
 
-            # Rule fusion (most restrictive requirements win)
+            # Rule fusion, tri-state: required (True) wins, then an explicit "not required"
+            # (False); None (not stated) never overrides a stated value.
             ex_rules = existing["executionRules"]
             new_rules = payload["executionRules"]
-
-            if new_rules.get("stampPaperRequired"):
-                ex_rules["stampPaperRequired"] = True
+            for key in _TRI_STATE_RULES:
+                values = (ex_rules.get(key), new_rules.get(key))
+                ex_rules[key] = True if True in values else (False if False in values else None)
 
             new_denom = new_rules.get("stampPaperDenominationInr")
             ex_denom = ex_rules.get("stampPaperDenominationInr")
             if new_denom is not None:
                 ex_rules["stampPaperDenominationInr"] = max(ex_denom or 0, new_denom)
+            if not ex_rules.get("signingAuthorityRank") and new_rules.get("signingAuthorityRank"):
+                ex_rules["signingAuthorityRank"] = new_rules["signingAuthorityRank"]
 
-            if new_rules.get("notarizationRequired"):
-                ex_rules["notarizationRequired"] = True
-
-            if new_rules.get("udinRequired"):
-                ex_rules["udinRequired"] = True
+            # Attributes: a stated value is never replaced by "not stated".
+            ex_attrs = existing.setdefault("attributes", {})
+            for key, value in (payload.get("attributes") or {}).items():
+                if ex_attrs.get(key) in (None, []) and value not in (None, []):
+                    ex_attrs[key] = value
 
             ex_quote = existing["provenance"]["verbatimQuote"] or ""
             currency_pattern = r"(?:₹|\b(?:rs\.?|inr|crore|lakh)\b|\b\d{1,3}(?:,\d{2,3})+\b)"
@@ -299,15 +318,15 @@ def consolidate_verified_items(
             elif ex_has_currency and not cur_has_currency:
                 prefer_new_quote = False
             else:
+                new_conf = payload["provenance"]["confidenceScore"] or 0.0
+                ex_conf = existing["provenance"]["confidenceScore"] or 0.0
                 prefer_new_quote = (
-                    payload["provenance"]["confidenceScore"]
-                    > existing["provenance"]["confidenceScore"]
+                    new_conf > ex_conf
                     or (cur_has_currency and not ex_has_currency)
                     or (cur_has_numbers and not ex_has_numbers)
                     or (not ex_has_numbers and len(ex_quote) < 60 and len(cur_quote_raw) >= 60)
                     or (
-                        payload["provenance"]["confidenceScore"]
-                        == existing["provenance"]["confidenceScore"]
+                        new_conf == ex_conf
                         and (cur_has_numbers == ex_has_numbers)
                         and len(cur_quote_raw) > len(ex_quote)
                     )
@@ -324,41 +343,77 @@ def consolidate_verified_items(
                 existing["title"] = payload["title"]
                 existing["category"] = payload_cat
                 existing["description"] = payload["description"]
-                existing["provenance"]["confidenceScore"] = max(
-                    existing["provenance"]["confidenceScore"],
-                    payload["provenance"]["confidenceScore"],
-                )
+                scores = [
+                    v
+                    for v in (
+                        existing["provenance"]["confidenceScore"],
+                        payload["provenance"]["confidenceScore"],
+                    )
+                    if v is not None
+                ]
+                existing["provenance"]["confidenceScore"] = max(scores) if scores else None
                 existing["provenance"]["verbatimQuote"] = payload["provenance"]["verbatimQuote"]
-                clause_ref = (
-                    payload["provenance"].get("clauseReference")
-                    or payload["provenance"].get("sectionOrClause")
-                    or existing["provenance"].get("clauseReference")
-                    or existing["provenance"].get("sectionOrClause")
-                )
-                existing["provenance"]["clauseReference"] = clause_ref
-                existing["provenance"]["sectionOrClause"] = clause_ref
+                existing["provenance"]["clauseReference"] = payload["provenance"].get(
+                    "clauseReference"
+                ) or existing["provenance"].get("clauseReference")
+                existing["provenance"]["sourceBlockId"] = payload["provenance"].get("sourceBlockId")
                 existing["provenance"]["pageNumber"] = payload["provenance"]["pageNumber"]
 
     formatted_items = consolidated_items
     for item in formatted_items:
-        pages = sorted(item.pop("supporting_pages", [item["provenance"]["pageNumber"]]))
-        if len(pages) > 1:
-            base_ref = (
-                item["provenance"].get("clauseReference")
-                or item["provenance"].get("sectionOrClause")
-                or "Clause"
-            )
-            base_ref_clean = re.sub(r"\s*\(Pages?\s+[\d,\s]+\)\s*$", "", base_ref)
-            base_ref_clean = re.sub(r"\s*\(Page\s+\d+\)\s*$", "", base_ref_clean)
-            combined_clause = f"{base_ref_clean} (Pages {', '.join(str(p) for p in pages)})"
-            item["provenance"]["clauseReference"] = combined_clause
-            item["provenance"]["sectionOrClause"] = combined_clause
-        item["provenance"]["sourceDocumentId"] = request.document_id
-        item["provenance"]["sourceFileName"] = request.file_name
+        prov = item["provenance"]
+        pages = sorted(set(item.pop("supporting_pages", [prov["pageNumber"]])))
+        # Supporting pages are a list; the clause reference stays the tender's own number.
+        prov["supportingPages"] = [p for p in pages if p != prov["pageNumber"]]
+        prov["sourceDocumentId"] = request.document_id
+        prov["sourceFileName"] = request.file_name
+        item["itemKey"] = location_key(
+            request.document_id, prov["pageNumber"], prov["verbatimQuote"] or ""
+        )
 
     # Document reading order (stable within a page), independent of retrieval ranking.
-    formatted_items.sort(key=lambda it: it["provenance"]["pageNumber"])
+    page_text = {p.page_number: " ".join(p.text.lower().split()) for p in request.pages}
+
+    def _reading_position(it: dict[str, Any]) -> tuple[int, int]:
+        page = it["provenance"]["pageNumber"]
+        quote = " ".join((it["provenance"]["verbatimQuote"] or "").lower().split())
+        pos = page_text.get(page, "").find(quote[:60]) if quote else -1
+        return (page, pos if pos >= 0 else 10**9)
+
+    formatted_items.sort(key=_reading_position)
+    for order, it in enumerate(formatted_items):
+        it["docOrder"] = order
     return formatted_items
+
+
+def _conflict_source(item: dict[str, Any], display: str) -> dict[str, Any]:
+    """The tender text behind one side of a conflict (verbatim, never generated)."""
+    prov = item.get("provenance", {})
+    return {
+        "itemKey": item.get("itemKey"),
+        "display": display,
+        "title": item.get("title", ""),
+        "clauseReference": prov.get("clauseReference"),
+        "pageNumber": prov.get("pageNumber"),
+        "verbatimQuote": prov.get("verbatimQuote", ""),
+    }
+
+
+_INR_RE = re.compile(r"(?:₹|\brs\.?|\binr)\s*([\d,]+(?:\.\d+)?)", re.IGNORECASE)
+
+
+def _stated_inr(item: dict[str, Any]) -> float | None:
+    """The rupee amount the clause states (grounded attribute first, else the quote)."""
+    amount = (item.get("attributes") or {}).get("amount") or {}
+    if amount.get("inr"):
+        return float(amount["inr"])
+    m = _INR_RE.search(item.get("provenance", {}).get("verbatimQuote") or "")
+    if not m:
+        return None
+    try:
+        return float(m.group(1).replace(",", ""))
+    except ValueError:
+        return None
 
 
 def detect_clause_contradictions(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -421,10 +476,44 @@ def detect_clause_contradictions(items: list[dict[str, Any]]) -> list[dict[str, 
                 "detail": f"Conflicting PBG values extracted: {', '.join(conflicting_strs)}.",
                 "order_of_precedence_ruling": ruling,
                 "conflicting_values": conflicting_strs,
+                "attribute": "Performance security %",
+                "sources": [
+                    _conflict_source(v[0], f"{p:g}%") for p, v in sorted(pct_to_items.items())
+                ],
             }
         )
 
-    # 2. EMD vs Bid Securing Declaration Detector
+    # 2. EMD / bid security amount stated differently in two clauses
+    amount_to_items: dict[float, list[dict[str, Any]]] = {}
+    for it in items:
+        title = it.get("title", "").lower()
+        if not any(k in title for k in ("earnest money", "emd", "bid security")):
+            continue
+        inr = _stated_inr(it)
+        if inr is not None:
+            amount_to_items.setdefault(inr, []).append(it)
+    if len(amount_to_items) > 1:
+        ordered = sorted(amount_to_items.items())
+        refs = [
+            v[0].get("provenance", {}).get("clauseReference")
+            or f"Page {v[0].get('provenance', {}).get('pageNumber')}"
+            for _, v in ordered
+        ]
+        contradictions.append(
+            {
+                "type": "CLAUSE_CONTRADICTION",
+                "topic": "EMD / Bid Security Amount Conflict",
+                "detail": "Different EMD amounts stated: "
+                + ", ".join(f"Rs. {a:,.0f} ({r})" for (a, _), r in zip(ordered, refs))
+                + ".",
+                "order_of_precedence_ruling": None,
+                "conflicting_values": [f"Rs. {a:,.0f}" for a, _ in ordered],
+                "attribute": "EMD amount",
+                "sources": [_conflict_source(v[0], f"Rs. {a:,.0f}") for a, v in ordered],
+            }
+        )
+
+    # 3. EMD vs Bid Securing Declaration Detector
     emd_items = [
         it
         for it in items
@@ -471,10 +560,15 @@ def detect_clause_contradictions(items: list[dict[str, Any]]) -> list[dict[str, 
                 "detail": f"Tender cites monetary EMD requirement ({m_ref}) and Bid Securing Declaration ({b_ref}).",
                 "order_of_precedence_ruling": f"Specific Notice Inviting Tender / EMD provision ({m_ref}) governs over generic BSD format ({b_ref}).",
                 "conflicting_values": [m_ref, b_ref],
+                "attribute": "Bid security form",
+                "sources": [
+                    _conflict_source(monetary_emd[0], "Monetary EMD"),
+                    _conflict_source(bsd_items[0], "Bid Securing Declaration"),
+                ],
             }
         )
 
-    # 3. GST Pricing Treatment Conflict
+    # 4. GST Pricing Treatment Conflict
     gst_inc = [
         it
         for it in items
@@ -516,6 +610,11 @@ def detect_clause_contradictions(items: list[dict[str, Any]]) -> list[dict[str, 
                 "detail": f"Contradictory GST clauses found: Inclusive ({inc_ref}) vs Exclusive ({exc_ref}).",
                 "order_of_precedence_ruling": f"Financial Proposal Instructions ({exc_ref}) govern price schedule comparison over general contract clauses ({inc_ref}).",
                 "conflicting_values": [inc_ref, exc_ref],
+                "attribute": "GST treatment",
+                "sources": [
+                    _conflict_source(gst_inc[0], "Prices inclusive of GST"),
+                    _conflict_source(gst_exc[0], "Prices exclusive of GST"),
+                ],
             }
         )
 

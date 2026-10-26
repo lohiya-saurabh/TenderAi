@@ -17,7 +17,7 @@ class DocumentChunk(BaseModel):
     document_id: str
     page_number: int
     text: str
-    clause_reference: str
+    clause_reference: str | None = None
     embedding: list[float] | None = None
     parent_id: str | None = None
     tier: str = "TIER2_PARENT"  # TIER1_SKELETON, TIER2_PARENT, TIER3_CHILD

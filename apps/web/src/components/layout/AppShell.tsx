@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from '@/components/layout/Sidebar.js';
 import { Header } from '@/components/layout/Header.js';
 
 export const AppShell: React.FC = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  // The clause workspace uses the full width (list, source and panel side by side).
+  const fullWidth = /^\/bids\/[^/]+\/clauses/.test(useLocation().pathname);
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
@@ -30,7 +32,13 @@ export const AppShell: React.FC = () => {
           onToggleSidebarCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         />
 
-        <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+        <main
+          className={
+            fullWidth
+              ? 'flex-1 w-full px-4 py-3'
+              : 'flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8'
+          }
+        >
           <Outlet />
         </main>
       </div>

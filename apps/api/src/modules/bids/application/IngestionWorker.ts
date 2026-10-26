@@ -29,7 +29,7 @@ export interface ExtractedComplianceItem {
     pageNumber: number;
     clauseReference: string;
     verbatimQuote: string;
-    confidenceScore: number;
+    confidenceScore: number | null;
   };
 }
 

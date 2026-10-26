@@ -553,6 +553,7 @@ export class DocumentsService {
         typeof item.provenance === 'string'
           ? (JSON.parse(item.provenance) as Record<string, unknown>)
           : (item.provenance as Record<string, unknown>);
+      if (item.documentId) return item.documentId === docId;
       if (!prov) return false;
       return (
         prov.documentId === docId ||
@@ -571,8 +572,12 @@ export class DocumentsService {
       (c) => !itemIdsToDelete.includes(c.id),
     );
     const totalRequirements = remainingCompliances.length;
-    const flaggedRequirements = remainingCompliances.filter((c) => c.status === 'FLAGGED').length;
-    const approvedRequirements = remainingCompliances.filter((c) => c.status === 'APPROVED').length;
+    const flaggedRequirements = remainingCompliances.filter(
+      (c) => c.reviewStatus === 'NEEDS_REVIEW' || c.status === 'FAIL',
+    ).length;
+    const approvedRequirements = remainingCompliances.filter(
+      (c) => c.reviewStatus === 'CONFIRMED' || c.reviewStatus === 'CORRECTED',
+    ).length;
 
     // Check if any documents remain for this bid
     const remainingDocs = (await this.queries.listDocumentsByBid(bidId, orgId)).filter(

@@ -817,16 +817,6 @@ export function getReviewNeededItems(items: ComplianceItem[]): ComplianceItem[] 
     });
 }
 
-/** Requirements flagged by review — the real "missing / insufficient evidence" signal. */
-export function getFlaggedItems(items: ComplianceItem[]): ComplianceItem[] {
-  const getTitle = (item: ComplianceItem) => (item as { title?: string }).title || item.requirement;
-  const getStatus = (item: ComplianceItem): string => item.status;
-
-  return items
-    .filter((i) => getStatus(i) === 'FLAGGED' || getStatus(i) === 'FAIL')
-    .sort((a, b) => getTitle(a).localeCompare(getTitle(b)));
-}
-
 // ---------------------------------------------------------------------------
 // Deadline buffer (real input signal for the future decision engine)
 // ---------------------------------------------------------------------------

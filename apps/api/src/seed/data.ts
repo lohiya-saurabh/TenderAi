@@ -159,7 +159,7 @@ export interface DemoComplianceItem {
     page: number;
     section: string;
     verbatimQuote: string;
-    confidenceScore: number;
+    confidenceScore: number | null;
   };
   companyEvidence?: DemoCompanyEvidence | null;
   risk?: DemoRequirementRisk | null;

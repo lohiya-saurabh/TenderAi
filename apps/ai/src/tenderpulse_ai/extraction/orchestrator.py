@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import logging
 from typing import Any
 
 from tenderpulse_ai.chat.okf_registry import register_tender_okf
 from tenderpulse_ai.domain.models import VerifiedComplianceItem
-from tenderpulse_ai.extraction.clause_references import attribute_positional_clause_refs
+from tenderpulse_ai.extraction.clause_references import (
+    attribute_clause_refs_from_pages,
+    attribute_positional_clause_refs,
+)
 from tenderpulse_ai.extraction.contracts import (
     DocumentExtractionRequest,
     DocumentExtractionResponse,
@@ -91,7 +95,7 @@ class ProductionExtractionPipeline:
                 tenant_id=sec_ctx.tenant_id,
                 document_id=request.document_id,
                 page_number=c.page_number,
-                clause_reference=c.clause_reference or f"Page {c.page_number}",
+                clause_reference=c.clause_reference or None,
                 text=c.verbatim_text or c.content,
                 parent_id=c.parent_id,
                 tier=c.tier.value if hasattr(c.tier, "value") else str(c.tier),
@@ -139,7 +143,7 @@ class ProductionExtractionPipeline:
         ]
 
         # Process page windows through LangGraph compliance workflow (bounded concurrency to respect gateway in-flight limits)
-        sem = asyncio.Semaphore(2)
+        sem = asyncio.Semaphore(max(1, settings.llm_max_concurrency))
 
         async def _process_window(window: list[NormalizedPage]) -> dict[str, Any]:
             async with sem:
@@ -167,7 +171,6 @@ class ProductionExtractionPipeline:
                             tenant_id=sec_ctx.tenant_id,
                             document_id=request.document_id,
                             page_number=p.page_number,
-                            clause_reference=f"Page {p.page_number}",
                             text=p.text,
                         )
                         for p in window
@@ -262,6 +265,8 @@ class ProductionExtractionPipeline:
 
         # Positional AST clause attribution (line-start markers only), then consolidation
         attribute_positional_clause_refs(all_verified_items, docling_doc, doc_tree)
+        # The tender's own line-start number around the quote is authoritative (same page only).
+        attribute_clause_refs_from_pages(all_verified_items, page_text_by_number)
         formatted_items = consolidate_verified_items(all_verified_items, request)
 
         # Intra-document clause contradiction detection
@@ -281,36 +286,29 @@ class ProductionExtractionPipeline:
         )
         register_tender_okf(request.bid_id, okf_bundle)
 
-        # Flag contradictions in formatted_items for human review
-        for idx, c in enumerate(contradictions):
-            c_id = c.get("id") or f"contra_{request.document_id}_{idx}"
-            topic = c.get("topic") or "Contradiction detected"
-            detail = (
-                c.get("detail")
-                or c.get("description")
-                or "Conflicting parameters across sections of the tender"
-            )
-            ruling = c.get("order_of_precedence_ruling") or "Order of precedence required"
-            formatted_items.append(
-                {
-                    "id": c_id,
-                    "category": "STATUTORY",
-                    "title": f"Contradiction: {topic}",
-                    "description": f"{detail}. Ruling: {ruling}",
-                    "execution_rules": {},
-                    "executionRules": {},
-                    "provenance": {
-                        "sourceDocumentId": request.document_id,
-                        "sourceFileName": request.file_name,
-                        "pageNumber": 1,
-                        "clauseReference": "Order of Precedence",
-                        "verbatimQuote": ruling,
-                        "confidenceScore": 0.85,
-                    },
-                    "verification_status": "FLAGGED_FOR_HUMAN_REVIEW",
-                    "verification_reason": detail,
-                }
-            )
+        # Conflicts are their own records linked to the clauses that state each value; they
+        # are never added to the clause list. The generated precedence note is AI text and
+        # travels separately from the verbatim quotes.
+        conflicts = [to_wire_conflict(request.document_id, c) for c in contradictions]
+        conflicts = [c for c in conflicts if len(c["values"]) >= 2]
+
+        coverage = {
+            "documentId": request.document_id,
+            "pageCount": len(request.pages),
+            "failedPages": [
+                {"page": p, "reason": "LLM_EXTRACTION_FAILED"} for p in sorted(set(failed_pages))
+            ],
+            "status": "PARTIAL" if failed_pages else "COMPLETE",
+        }
+        failed_set = set(failed_pages)
+        for item in formatted_items:
+            page = item["provenance"]["pageNumber"]
+            flags: list[str] = []
+            if failed_set & {page - 1, page + 1}:
+                flags.append("NEAR_FAILED_PAGE")
+            if any(item["itemKey"] in {v["itemKey"] for v in c["values"]} for c in conflicts):
+                flags.append("CONFLICT")
+            item["flags"] = flags
 
         return DocumentExtractionResponse(
             bid_id=request.bid_id,
@@ -323,7 +321,35 @@ class ProductionExtractionPipeline:
             okf_bundle=okf_bundle.model_dump(),
             uncertainty_items=contradictions,
             failed_pages=sorted(set(failed_pages)),
+            conflicts=conflicts,
+            coverage=coverage,
         )
+
+
+def to_wire_conflict(document_id: str, contradiction: dict[str, Any]) -> dict[str, Any]:
+    """Shared-contract conflict: each value links to the clause (itemKey) that states it."""
+    values = [
+        {
+            "display": s.get("display") or s.get("title") or "",
+            "itemKey": s.get("itemKey"),
+            "quote": s.get("verbatimQuote") or "",
+            "page": s.get("pageNumber"),
+            "clauseRef": s.get("clauseReference"),
+        }
+        for s in contradiction.get("sources", [])
+        if s.get("itemKey") and s.get("verbatimQuote")
+    ]
+    topic = contradiction.get("topic") or "Conflicting values"
+    key_src = "|".join(sorted(v["itemKey"] for v in values))
+    return {
+        "conflictKey": "cf_"
+        + hashlib.sha256(f"{document_id}|{topic}|{key_src}".encode()).hexdigest()[:24],
+        "topic": topic,
+        "attribute": contradiction.get("attribute") or topic,
+        "values": values,
+        # Generated reasoning, never tender text; the UI labels it "AI suggestion".
+        "aiPrecedenceNote": contradiction.get("order_of_precedence_ruling"),
+    }
 
 
 __all__ = ["ProductionExtractionPipeline"]

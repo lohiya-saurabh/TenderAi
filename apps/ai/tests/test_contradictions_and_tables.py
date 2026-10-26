@@ -205,7 +205,15 @@ def test_deduplication_merges_non_contradictory_items_across_pages():
     assert len(consolidated) == 1
     merged = consolidated[0]
     assert merged["executionRules"]["udinRequired"] is True
-    assert "Pages 10, 15" in merged["provenance"]["clauseReference"]
+    # Pages are a list; the clause reference stays the tender's own number.
+    assert merged["provenance"]["clauseReference"] == "Clause 4.2"
+    assert merged["provenance"]["pageNumber"] in (10, 15)
+    assert sorted(
+        [merged["provenance"]["pageNumber"], *merged["provenance"]["supportingPages"]]
+    ) == [
+        10,
+        15,
+    ]
 
 
 def test_detect_clause_contradictions_float_normalization():

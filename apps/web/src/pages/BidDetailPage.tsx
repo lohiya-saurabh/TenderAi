@@ -13,7 +13,7 @@ import {
 } from '@/api/bids.js';
 import {
   listComplianceItems,
-  reviewComplianceItem,
+
   type ComplianceItem,
 } from '@/api/compliance.js';
 import { useApi } from '@/hooks/useApi.js';
@@ -25,13 +25,12 @@ import { LoadingSkeleton } from '@/components/common/LoadingSkeleton.js';
 import { Modal } from '@/components/common/Modal.js';
 import { PlusCircleIcon, ChevronRightIcon } from '@/components/common/Icons.js';
 import { ExtractionProgress } from '@/components/progress/ExtractionProgress.js';
-import { ComplianceTable } from '@/components/compliance/ComplianceTable.js';
+import { ClauseWorkspaceEntry } from '@/components/clauses/ClauseWorkspaceEntry.js';
 import { TenderInfoHeader } from '@/components/bid/detail/TenderInfoHeader.js';
 import { BidVerdictCard } from '@/components/bid/detail/BidVerdictCard.js';
 import { ObligationsCard } from '@/components/bid/detail/ObligationsCard.js';
 import { IngestedDocumentsSection } from '@/components/bid/detail/IngestedDocumentsSection.js';
 import { BidSignoffDock } from '@/components/bid/detail/BidSignoffDock.js';
-import { MissingDataCallout } from '@/components/bid/detail/MissingDataCallout.js';
 import { formatCurrency, formatCompactINR } from '@/utils/formatCurrency.js';
 import {
   mapApiDecisionToBidDecision,
@@ -59,7 +58,7 @@ import { useCompany } from '@/context/useCompany.js';
  *
  * Every section renders from existing APIs. Nothing is
  * fabricated — missing backend capabilities are documented
- * in MissingDataCallout and inline per section.
+ * inline per section.
  */
 export const BidDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -105,7 +104,7 @@ export const BidDetailPage: React.FC = () => {
     isLoading: complianceLoading,
     error: complianceError,
     refetch: refetchCompliance,
-    setData: setComplianceItems,
+
   } = useApi<ComplianceItem[]>(fetchCompliance, [bidId]);
 
   // Memoized & deduplicated compliance items (unconditionally declared before any early returns)
@@ -243,63 +242,6 @@ export const BidDetailPage: React.FC = () => {
       setReprocessingDocId(null);
     }
   };
-
-  // Review Item handler (optimistic concurrency control)
-  const handleReviewItem = async (
-    itemId: string,
-    status: ComplianceItem['status'],
-    notes?: string,
-  ) => {
-    setActionError(null);
-    const targetItem = complianceItems?.find((i) => i.id === itemId);
-    const expectedVersion = targetItem?.version;
-
-    // Optimistic UI update
-    setComplianceItems((prev) =>
-      prev
-        ? prev.map((item) =>
-            item.id === itemId
-              ? {
-                  ...item,
-                  status,
-                  reviewNotes: notes || item.reviewNotes,
-                  version: item.version + 1,
-                }
-              : item,
-          )
-        : null,
-    );
-
-    const res = await reviewComplianceItem(bidId, itemId, {
-      status,
-      notes,
-      expectedVersion,
-    });
-
-    if (!res.ok) {
-      setActionError(res.error.message || 'Failed to update compliance review status.');
-      refetchCompliance();
-    } else {
-      refetchBid();
-    }
-  };
-
-  // Inspect handlers for the new ComplianceTable
-  const handleInspectEvidence = useCallback(
-    (item: ComplianceItem) => {
-      // Navigate to the detailed review page for evidence inspection
-      window.open(`/bids/${bidId}/compliance/${item.id}`, '_blank');
-    },
-    [bidId],
-  );
-
-  const handleInspectAssessment = useCallback(
-    (item: ComplianceItem) => {
-      // Navigate to the detailed review page for assessment inspection
-      window.open(`/bids/${bidId}/compliance/${item.id}`, '_blank');
-    },
-    [bidId],
-  );
 
   const handleDeleteBid = async () => {
     setIsDeleting(true);
@@ -589,10 +531,7 @@ export const BidDetailPage: React.FC = () => {
         {/* RIGHT COLUMN: Sticky Sign-Off & Outline Dock (3-4 Cols) */}
         {/* ===================================================================== */}
         <div className="hidden lg:block lg:col-span-4 xl:col-span-3 space-y-6 lg:sticky lg:top-20">
-          <BidSignoffDock
-            onApproveBid={() => alert('Bid submission marked as approved for executive board.')}
-            onSubmitPreBidQuery={() => alert('Pre-bid query drafted for Clause 15.2 LD Cap.')}
-          />
+          <BidSignoffDock />
         </div>
       </div>
 
@@ -607,7 +546,6 @@ export const BidDetailPage: React.FC = () => {
           <IngestedDocumentsSection
             bidId={bidId}
             documents={bid.documents}
-            totalClauses={items.length}
             canUploadDoc={canUploadDoc}
             showUploader={showUploader}
             onToggleUploader={() => setShowUploader(!showUploader)}
@@ -634,46 +572,12 @@ export const BidDetailPage: React.FC = () => {
         </div>
 
         {/* ===================================================================== */}
-        {/* 6. EXTRACTED COMPLIANCE MATRIX (Full-Width Clean & Categorized) */}
+        {/* 6. CLAUSES: entry to the clause workspace */}
         {/* ===================================================================== */}
-        <div id="compliance-matrix" className="space-y-3 w-full min-w-0 max-w-full">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-base font-bold tracking-tight text-foreground">
-                5. Extracted Compliance Matrix
-              </h2>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Complete catalog of {items.length} candidate requirements parsed from ingested
-                documents
-              </p>
-            </div>
-            <span className="mono text-xs font-semibold text-muted-foreground">
-              Showing {items.length} Extracted Clauses
-            </span>
-          </div>
-
-          {complianceLoading && items.length === 0 ? (
-            <div className="flex flex-col gap-3">
-              <LoadingSkeleton height="80px" />
-              <LoadingSkeleton height="80px" />
-              <LoadingSkeleton height="80px" />
-            </div>
-          ) : complianceError ? (
-            <ErrorBanner message={complianceError.message} onRetry={refetchCompliance} />
-          ) : (
-            <div className="border border-border rounded-xl overflow-hidden bg-card shadow-xs w-full min-w-0 max-w-full">
-              <ComplianceTable
-                items={items}
-                onReviewItem={handleReviewItem}
-                onInspectEvidence={handleInspectEvidence}
-                onInspectAssessment={handleInspectAssessment}
-              />
-            </div>
-          )}
+        <div id="compliance-matrix">
+          <ClauseWorkspaceEntry bidId={bidId} refreshKey={items.length} />
         </div>
 
-        {/* 7. Documented data sources & missing endpoints */}
-        <MissingDataCallout />
       </div>
 
       {/* Delete Tender Confirmation Modal */}

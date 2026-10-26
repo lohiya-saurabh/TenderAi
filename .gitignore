@@ -69,3 +69,6 @@ playwright-screenshots/
 # AI extraction benchmark snapshots and parsed-page cache
 apps/ai/.bench/
 apps/ai/.cache/
+
+# Playwright clause-workspace runs (fresh API database, results, report)
+/.e2e/

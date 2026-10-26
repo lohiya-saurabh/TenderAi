@@ -1,0 +1,232 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tenderpulse.ai/schema/extraction-completed.json",
+  "title": "DocumentExtractionCompletedEvent (AI -> API)",
+  "description": "Mirrors packages/shared-types/src/events.ts + clause.ts. null = not stated in the tender.",
+  "type": "object",
+  "required": ["jobId", "organizationId", "bidId", "documentId", "status", "items", "conflicts", "coverage"],
+  "properties": {
+    "jobId": { "type": "string" },
+    "organizationId": { "type": "string" },
+    "companyId": { "type": ["string", "null"] },
+    "bidId": { "type": "string" },
+    "documentId": { "type": "string" },
+    "status": { "type": "string" },
+    "items": { "type": "array", "items": { "$ref": "#/$defs/item" } },
+    "chunks": { "type": "array" },
+    "conflicts": { "type": "array", "items": { "$ref": "#/$defs/conflict" } },
+    "coverage": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/coverage" }] },
+    "error": { "type": ["string", "null"] },
+    "workflowRunId": { "type": ["string", "null"] },
+    "traceId": { "type": ["string", "null"] },
+    "correlationId": { "type": ["string", "null"] },
+    "timestamp": { "type": "string" }
+  },
+  "$defs": {
+    "tri": { "type": ["boolean", "null"] },
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "itemKey",
+        "docOrder",
+        "category",
+        "title",
+        "description",
+        "executionRules",
+        "attributes",
+        "provenance",
+        "flags",
+        "verificationStatus"
+      ],
+      "properties": {
+        "itemKey": { "type": "string", "pattern": "^cl_[0-9a-f]{24}$" },
+        "docOrder": { "type": "integer", "minimum": 0 },
+        "category": {
+          "enum": ["FINANCIAL", "TECHNICAL", "STATUTORY", "LEGAL", "OPERATIONAL", "COMMERCIAL", "EXECUTION"]
+        },
+        "title": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "executionRules": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "stampPaperRequired",
+            "stampPaperDenominationInr",
+            "notarizationRequired",
+            "signingAuthorityRank",
+            "udinRequired",
+            "apostilleRequired",
+            "clientCountersignRequired"
+          ],
+          "properties": {
+            "stampPaperRequired": { "$ref": "#/$defs/tri" },
+            "stampPaperDenominationInr": { "type": ["integer", "null"], "exclusiveMinimum": 0 },
+            "notarizationRequired": { "$ref": "#/$defs/tri" },
+            "signingAuthorityRank": { "type": ["string", "null"], "minLength": 1 },
+            "udinRequired": { "$ref": "#/$defs/tri" },
+            "apostilleRequired": { "$ref": "#/$defs/tri" },
+            "clientCountersignRequired": { "$ref": "#/$defs/tri" }
+          }
+        },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "obligationType",
+            "action",
+            "stage",
+            "parties",
+            "mandatory",
+            "disqualifying",
+            "deadline",
+            "amount",
+            "formRef"
+          ],
+          "properties": {
+            "obligationType": {
+              "enum": [
+                null,
+                "ELIGIBILITY",
+                "DOCUMENT",
+                "FORMALITY",
+                "DEADLINE",
+                "FINANCIAL_COMMITMENT",
+                "PENALTY",
+                "COVENANT",
+                "INFO"
+              ]
+            },
+            "action": { "enum": [null, "ATTACH_DOCUMENT", "PRICE_IN_BOQ", "UNDERTAKE", "INFO_ONLY"] },
+            "stage": {
+              "enum": [
+                null,
+                "PRE_BID",
+                "WITH_BID_ONLINE",
+                "WITH_BID_PHYSICAL",
+                "ON_CLARIFICATION",
+                "POST_AWARD",
+                "EXECUTION"
+              ]
+            },
+            "parties": {
+              "type": "array",
+              "items": { "enum": ["BIDDER", "CA_AUDITOR", "PAST_CLIENT", "NOTARY", "BANK", "JV_PARTNER"] }
+            },
+            "mandatory": { "enum": [null, "MANDATORY", "DESIRABLE"] },
+            "disqualifying": { "enum": [null, true] },
+            "deadline": {
+              "oneOf": [
+                { "type": "null" },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["kind", "date", "anchor", "offsetDays"],
+                  "properties": {
+                    "kind": { "enum": ["ABSOLUTE", "RELATIVE"] },
+                    "date": { "type": ["string", "null"] },
+                    "anchor": { "enum": [null, "BID_DUE", "LOA", "AWARD", "AGREEMENT", "BID_END"] },
+                    "offsetDays": { "type": ["integer", "null"] }
+                  }
+                }
+              ]
+            },
+            "amount": {
+              "oneOf": [
+                { "type": "null" },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["inr", "percent", "basis"],
+                  "properties": {
+                    "inr": { "type": ["number", "null"] },
+                    "percent": { "type": ["number", "null"] },
+                    "basis": { "type": ["string", "null"] }
+                  }
+                }
+              ]
+            },
+            "formRef": { "type": ["string", "null"] }
+          }
+        },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "sourceDocumentId",
+            "sourceFileName",
+            "pageNumber",
+            "supportingPages",
+            "clauseReference",
+            "sourceBlockId",
+            "verbatimQuote",
+            "confidenceScore"
+          ],
+          "properties": {
+            "sourceDocumentId": { "type": "string", "minLength": 1 },
+            "sourceFileName": { "type": "string", "minLength": 1 },
+            "pageNumber": { "type": "integer", "minimum": 1 },
+            "supportingPages": { "type": "array", "items": { "type": "integer", "minimum": 1 } },
+            "clauseReference": { "type": ["string", "null"], "minLength": 1 },
+            "sourceBlockId": { "type": ["string", "null"] },
+            "verbatimQuote": { "type": "string", "minLength": 1 },
+            "confidenceScore": { "type": ["number", "null"], "minimum": 0, "maximum": 1 }
+          }
+        },
+        "flags": {
+          "type": "array",
+          "items": {
+            "enum": ["CONFLICT", "QUOTE_NOT_FOUND", "NEAR_FAILED_PAGE", "MISSING_FIELDS", "AMENDED", "BUYER_ADDED"]
+          }
+        },
+        "verificationStatus": { "enum": ["VERIFIED"] }
+      }
+    },
+    "conflict": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["conflictKey", "topic", "attribute", "values", "aiPrecedenceNote"],
+      "properties": {
+        "conflictKey": { "type": "string", "pattern": "^cf_[0-9a-f]{24}$" },
+        "topic": { "type": "string" },
+        "attribute": { "type": "string" },
+        "values": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["display", "itemKey", "quote", "page", "clauseRef"],
+            "properties": {
+              "display": { "type": "string" },
+              "itemKey": { "type": "string", "pattern": "^cl_[0-9a-f]{24}$" },
+              "quote": { "type": "string", "minLength": 1 },
+              "page": { "type": "integer", "minimum": 1 },
+              "clauseRef": { "type": ["string", "null"] }
+            }
+          }
+        },
+        "aiPrecedenceNote": { "type": ["string", "null"] }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["documentId", "pageCount", "failedPages", "status"],
+      "properties": {
+        "documentId": { "type": "string" },
+        "pageCount": { "type": "integer", "minimum": 0 },
+        "failedPages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["page", "reason"],
+            "properties": { "page": { "type": "integer", "minimum": 1 }, "reason": { "type": "string" } }
+          }
+        },
+        "status": { "enum": ["COMPLETE", "PARTIAL"] }
+      }
+    }
+  }
+}

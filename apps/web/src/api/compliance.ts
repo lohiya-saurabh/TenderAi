@@ -23,7 +23,8 @@ export interface Provenance {
   pageNumber: number;
   sectionOrClause?: string | null;
   verbatimQuote: string;
-  confidenceScore: number;
+  /** Deterministic validation score (1 = all checks passed); null = not checked */
+  confidenceScore: number | null;
 }
 
 /** Company evidence linked to a requirement */
@@ -61,7 +62,7 @@ export interface AssessmentRationale {
   tenderRequirement: string;
   companyCapability: string;
   comparisonResult: 'MET' | 'NOT_MET' | 'PARTIAL' | 'UNCLEAR';
-  confidenceScore: number;
+  confidenceScore: number | null;
   details: string[];
 }
 
@@ -71,7 +72,7 @@ export interface SourceCitation {
   page: number;
   section: string;
   verbatimQuote: string;
-  confidenceScore: number;
+  confidenceScore: number | null;
 }
 
 /** Enhanced compliance item for the Requirement/Compliance Matrix */

@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button.js';
 export interface IngestedDocumentsSectionProps {
   bidId: string;
   documents?: BidDocument[];
-  totalClauses?: number;
   canUploadDoc: boolean;
   showUploader: boolean;
   onToggleUploader: () => void;
@@ -22,7 +21,6 @@ export interface IngestedDocumentsSectionProps {
 export const IngestedDocumentsSection: React.FC<IngestedDocumentsSectionProps> = ({
   bidId,
   documents = [],
-  totalClauses = 27,
   canUploadDoc,
   showUploader,
   onToggleUploader,
@@ -100,14 +98,10 @@ export const IngestedDocumentsSection: React.FC<IngestedDocumentsSectionProps> =
       ) : (
         /* Ingested Document Cards Grid */
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-          {documents.map((doc, idx) => {
+          {documents.map((doc) => {
             const isCompleted = doc.status === 'COMPLETED';
             const isProcessing =
               doc.status === 'PROCESSING' || doc.status === 'QUEUED_FOR_EXTRACTION';
-            const clauseEstimate = Math.max(
-              9,
-              Math.round((totalClauses || 27) / (documents.length || 1)) + (idx === 0 ? 5 : -4),
-            );
 
             return (
               <div
@@ -155,7 +149,7 @@ export const IngestedDocumentsSection: React.FC<IngestedDocumentsSectionProps> =
 
                 <div className="pt-3 border-t border-border flex items-center justify-between text-[11px] mono">
                   <span className="text-muted-foreground">
-                    {formatFileSize(doc.fileSizeBytes)} · {clauseEstimate} clauses
+                    {formatFileSize(doc.fileSizeBytes)}
                   </span>
 
                   <div className="flex items-center gap-2">

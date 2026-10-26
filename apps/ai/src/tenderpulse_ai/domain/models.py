@@ -3,6 +3,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
+from tenderpulse_ai.domain.requirement_attributes import RequirementAttributes, location_key
+
 
 class WorkflowStatus(str, Enum):
     INITIALIZED = "INITIALIZED"
@@ -16,29 +18,33 @@ class WorkflowStatus(str, Enum):
 
 
 class ExecutionRulesProps(BaseModel):
-    stamp_paper_required: bool = Field(default=False)
-    stamp_paper_denomination_inr: int | None = Field(default=None)
-    notarization_required: bool = Field(default=False)
-    signing_authority_rank: str = Field(default="Authorized Signatory")
-    udin_required: bool = Field(default=False)
+    """Attestation formalities. Tri-state: True = the clause requires it, False = the clause
+    explicitly says it is not needed, None = the clause does not say (never assumed)."""
 
-    @field_validator("stamp_paper_denomination_inr")
-    @classmethod
-    def validate_denomination(cls, v, values):
-        return v
+    stamp_paper_required: bool | None = Field(default=None)
+    stamp_paper_denomination_inr: int | None = Field(default=None)
+    notarization_required: bool | None = Field(default=None)
+    # None = the clause names no signatory (never a default rank).
+    signing_authority_rank: str | None = Field(default=None)
+    udin_required: bool | None = Field(default=None)
+    apostille_required: bool | None = Field(default=None)
+    client_countersign_required: bool | None = Field(default=None)
 
 
 class ProvenanceProps(BaseModel):
     source_document_id: str = Field(default="doc-general")
     source_file_name: str = Field(default="NIT_Document.pdf")
     page_number: int = Field(default=1, ge=1)
-    clause_reference: str = Field(default="Clause Reference")
+    # None = the tender gives no clause number for this text (never a placeholder).
+    clause_reference: str | None = Field(default=None)
     source_block_id: str | None = Field(default=None)
     verbatim_quote: str = Field(
         default="",
         description="Verbatim quote from source text for grounding",
     )
-    confidence_score: float = Field(default=0.95, ge=0.0, le=1.0)
+    # Deterministic validation score set at verification (1.0 = every check passed);
+    # None until checked. The model is never asked for, and never trusted with, a confidence.
+    confidence_score: float | None = Field(default=None, ge=0.0, le=1.0)
 
     @field_validator("source_document_id", mode="before")
     @classmethod
@@ -52,8 +58,8 @@ class ProvenanceProps(BaseModel):
 
     @field_validator("clause_reference", mode="before")
     @classmethod
-    def validate_clause_ref(cls, v: Any) -> str:
-        return str(v) if v and str(v).strip() else "Clause Reference"
+    def validate_clause_ref(cls, v: Any) -> str | None:
+        return str(v).strip() if v and str(v).strip() else None
 
     @field_validator("verbatim_quote", mode="before")
     @classmethod
@@ -78,6 +84,7 @@ class CandidateComplianceItem(BaseModel):
     description: str = Field(..., min_length=1)
     execution_rules: ExecutionRulesProps
     provenance: ProvenanceProps
+    attributes: RequirementAttributes = Field(default_factory=RequirementAttributes)
 
 
 class VerifiedComplianceItem(BaseModel):
@@ -88,31 +95,43 @@ class VerifiedComplianceItem(BaseModel):
     description: str
     execution_rules: ExecutionRulesProps
     provenance: ProvenanceProps
+    attributes: RequirementAttributes = Field(default_factory=RequirementAttributes)
     is_verified: bool = True
     verification_method: str = "EXACT_SUBSTRING_GROUNDING"
 
     def to_api_payload(self) -> dict[str, Any]:
-        """Maps to apps/api ExtractedComplianceItemInput format."""
+        """Wire item for the API (shared contract: packages/shared-types ExtractedClauseDto).
+
+        ``None`` always means "not stated in the tender"; nothing is defaulted here.
+        """
+        rules = self.execution_rules
+        prov = self.provenance
         return {
+            "itemKey": location_key(prov.source_document_id, prov.page_number, prov.verbatim_quote),
             "category": self.category,
             "title": self.title,
             "description": self.description,
             "executionRules": {
-                "stampPaperRequired": self.execution_rules.stamp_paper_required,
-                "stampPaperDenominationInr": self.execution_rules.stamp_paper_denomination_inr or 0,
-                "notarizationRequired": self.execution_rules.notarization_required,
-                "signingAuthorityRank": self.execution_rules.signing_authority_rank,
-                "udinRequired": self.execution_rules.udin_required,
+                "stampPaperRequired": rules.stamp_paper_required,
+                "stampPaperDenominationInr": rules.stamp_paper_denomination_inr,
+                "notarizationRequired": rules.notarization_required,
+                "signingAuthorityRank": rules.signing_authority_rank,
+                "udinRequired": rules.udin_required,
+                "apostilleRequired": rules.apostille_required,
+                "clientCountersignRequired": rules.client_countersign_required,
             },
+            "attributes": self.attributes.to_api(),
             "provenance": {
-                "sourceDocumentId": self.provenance.source_document_id,
-                "sourceFileName": self.provenance.source_file_name,
-                "pageNumber": self.provenance.page_number,
-                "clauseReference": self.provenance.clause_reference,
-                "sourceBlockId": self.provenance.source_block_id,
-                "verbatimQuote": self.provenance.verbatim_quote,
-                "confidenceScore": self.provenance.confidence_score,
+                "sourceDocumentId": prov.source_document_id,
+                "sourceFileName": prov.source_file_name,
+                "pageNumber": prov.page_number,
+                "supportingPages": [],
+                "clauseReference": prov.clause_reference,
+                "sourceBlockId": prov.source_block_id,
+                "verbatimQuote": prov.verbatim_quote,
+                "confidenceScore": prov.confidence_score,
             },
+            "verificationStatus": "VERIFIED",
         }
 
 

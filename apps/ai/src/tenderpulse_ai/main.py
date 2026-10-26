@@ -356,6 +356,8 @@ async def _execute_and_publish_extraction(
                 status="COMPLETED",
                 items=result.items,
                 chunks=getattr(result, "chunks", []),
+                conflicts=getattr(result, "conflicts", []),
+                coverage=getattr(result, "coverage", None),
                 workflow_run_id=request.workflow_run_id,
                 trace_id=trace_id,
                 correlation_id=request.correlation_id,
