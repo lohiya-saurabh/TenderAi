@@ -60,6 +60,11 @@ class Settings(BaseSettings):
     sambanova_api_key: str | None = None
     openrouter_api_key: str | None = None
 
+    # Dense Retrieval Embeddings (local ONNX model via fastembed)
+    embedding_provider: str = "local"  # "local", "none"
+    embedding_model: str = "BAAI/bge-small-en-v1.5"
+    embedding_cache_dir: str | None = None  # model download/cache dir; None = fastembed default
+
     # AWS & Object Storage Settings
     aws_region: str = "ap-south-1"
     aws_s3_bucket: str = "tenderai-ap-south-1-1029"

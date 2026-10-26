@@ -1,3 +1,4 @@
+import logging
 import math
 import re
 from collections import Counter
@@ -26,10 +27,43 @@ class DocumentChunk(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
+logger = logging.getLogger("tenderpulse_ai.tools.retrieval")
+
+# Chunk metadata key naming the model that produced chunk.embedding.
+EMBEDDING_MODEL_METADATA_KEY = "embedding_model"
+
+
 class QueryEmbedder(Protocol):
     """Port for a dense embedding model. Chunk embeddings must come from the same model."""
 
     def embed_query(self, text: str) -> list[float]: ...
+
+
+def embed_missing_chunks(chunks: list["DocumentChunk"], embedder: Any) -> list["DocumentChunk"]:
+    """
+    Returns chunks with embeddings filled in for any that lack one, tagged with the
+    embedder's model name. Needs an embedder with embed_documents(); on any failure
+    the chunks are returned unchanged and retrieval stays BM25-only.
+    """
+    embed_documents = getattr(embedder, "embed_documents", None)
+    missing = [c for c in chunks if c.embedding is None and c.text.strip()]
+    if embed_documents is None or not missing:
+        return chunks
+    try:
+        vectors = embed_documents([c.text for c in missing])
+    except Exception as err:
+        logger.warning("Chunk embedding failed (%s); continuing with BM25 only.", err)
+        return chunks
+    model_name = getattr(embedder, "model_name", None)
+    filled: dict[str, DocumentChunk] = {}
+    for chunk, vector in zip(missing, vectors):
+        metadata = dict(chunk.metadata)
+        if model_name:
+            metadata[EMBEDDING_MODEL_METADATA_KEY] = model_name
+        filled[chunk.chunk_id] = chunk.model_copy(
+            update={"embedding": vector, "metadata": metadata}
+        )
+    return [filled.get(c.chunk_id, c) for c in chunks]
 
 
 # Equivalent procurement terms. Tenders mix acronyms and spelled-out forms
@@ -243,6 +277,22 @@ def compute_cosine_similarity(vec_a: list[float], vec_b: list[float]) -> float:
     return dot_product / (norm_a * norm_b)
 
 
+def _competition_ranks(scored: list[tuple[float, "DocumentChunk"]]) -> dict[str, int]:
+    """
+    Ranks a score-sorted list so equal scores share a rank ("1224"). Positional ranks
+    would hand an arbitrary advantage to whichever tied chunk happened to come first.
+    """
+    ranks: dict[str, int] = {}
+    previous: float | None = None
+    rank = 0
+    for position, (score, chunk) in enumerate(scored, start=1):
+        if previous is None or score != previous:
+            rank = position
+            previous = score
+        ranks[chunk.chunk_id] = rank
+    return ranks
+
+
 def reciprocal_rank_fusion(
     dense_ranks: dict[str, int],
     sparse_ranks: dict[str, int],
@@ -294,7 +344,9 @@ class ScopedRetrievalTool:
         self._call_counts: dict[str, int] = {}
 
     def seed_chunks(self, chunks: list[DocumentChunk]):
-        """Helper to seed chunks for tests or local execution."""
+        """Seeds chunks, embedding any that lack a vector when an embedder is configured."""
+        if self.embedder is not None:
+            chunks = embed_missing_chunks(chunks, self.embedder)
         for chunk in chunks:
             self._chunks_by_id[chunk.chunk_id] = chunk
             key = f"{chunk.tenant_id}:{chunk.document_id}"
@@ -478,12 +530,24 @@ class ScopedRetrievalTool:
             key=lambda x: x[0],
             reverse=True,
         )
-        sparse_ranks = {c.chunk_id: rank + 1 for rank, (_, c) in enumerate(sparse_scored)}
+        sparse_ranks = _competition_ranks(sparse_scored)
 
         # Dense: only with real vectors. No proxy, so RRF never double-counts BM25.
         embedded = [c for c in scoped_chunks if c.embedding is not None]
-        if query_embedding is None and self.embedder is not None and embedded:
-            query_embedding = self.embedder.embed_query(query)
+        if query_embedding is None and self.embedder is not None:
+            # Vectors from a different model live in a different space: never mix them.
+            model_name = getattr(self.embedder, "model_name", None)
+            if model_name:
+                embedded = [
+                    c
+                    for c in embedded
+                    if c.metadata.get(EMBEDDING_MODEL_METADATA_KEY, model_name) == model_name
+                ]
+            if embedded:
+                try:
+                    query_embedding = self.embedder.embed_query(query)
+                except Exception as err:
+                    logger.warning("Query embedding failed (%s); using BM25 only.", err)
         dense_ranks: dict[str, int] = {}
         if query_embedding is not None and embedded:
             dense_scored = sorted(
@@ -494,7 +558,7 @@ class ScopedRetrievalTool:
                 key=lambda x: x[0],
                 reverse=True,
             )
-            dense_ranks = {c.chunk_id: rank + 1 for rank, (_, c) in enumerate(dense_scored)}
+            dense_ranks = _competition_ranks(dense_scored)
 
         # Reciprocal Rank Fusion (RRF)
         fused_scores = reciprocal_rank_fusion(dense_ranks, sparse_ranks, k=60)

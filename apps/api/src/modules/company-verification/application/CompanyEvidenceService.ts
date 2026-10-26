@@ -429,7 +429,7 @@ export class CompanyEvidenceService {
             clauseReference: c.clause_reference ?? `Page ${c.page_number ?? 1}`,
             boundingBox: c.bounding_box ?? null,
             metadata: c.metadata ?? null,
-            embedding: null,
+            embedding: Array.isArray(c.embedding) ? c.embedding : null,
           });
         }
         await this.repository.insertEvidenceChunks(chunkRecords);

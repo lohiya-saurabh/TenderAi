@@ -22,6 +22,8 @@ export interface ExtractedEvidenceChunk {
   clause_reference?: string;
   bounding_box?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
+  /** Dense vector from the AI worker's local model; the model is named in metadata.embedding_model. */
+  embedding?: number[] | null;
 }
 
 export interface AiEvidenceExtractionResult {

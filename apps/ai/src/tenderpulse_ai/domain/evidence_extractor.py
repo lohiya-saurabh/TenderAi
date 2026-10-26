@@ -9,6 +9,7 @@ answers, the response is status=FAILED with the reason.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from typing import Any
@@ -18,9 +19,11 @@ from pydantic import BaseModel, Field
 from tenderpulse_ai.decision.schemas import EvidenceChunkWire
 from tenderpulse_ai.domain.pdf_resolver import resolve_pdf_to_pages
 from tenderpulse_ai.extraction.metrics import extract_monetary_amounts
+from tenderpulse_ai.infrastructure.embeddings import get_embedder
 from tenderpulse_ai.pipeline import NormalizedPage
 from tenderpulse_ai.security.context import SecurityContext
 from tenderpulse_ai.security.sanitizer import UNTRUSTED_DATA_DIRECTIVE, SecretSanitizer
+from tenderpulse_ai.tools.retrieval import EMBEDDING_MODEL_METADATA_KEY
 
 logger = logging.getLogger("tenderpulse_ai.evidence_extractor")
 
@@ -282,8 +285,32 @@ class CompanyEvidenceExtractor:
             company_id=request.company_id,
             status="COMPLETED",
             extracted_attributes=attrs,
-            chunks=chunks,
+            chunks=await asyncio.to_thread(self._embed_chunks, chunks),
         )
+
+    @staticmethod
+    def _embed_chunks(chunks: list[EvidenceChunkWire]) -> list[EvidenceChunkWire]:
+        """
+        Attaches a dense vector (and the model that produced it) to each chunk so the
+        API can store it. Chunks are returned unchanged when embeddings are disabled
+        or fail; they are embedded later at retrieval time instead.
+        """
+        embedder = get_embedder()
+        pending = [c for c in chunks if c.embedding is None and c.content.strip()]
+        if embedder is None or not pending:
+            return chunks
+        try:
+            vectors = embedder.embed_documents([c.content for c in pending])
+        except Exception as err:
+            logger.warning("Evidence chunk embedding failed (%s); storing without vectors.", err)
+            return chunks
+        for chunk, vector in zip(pending, vectors):
+            chunk.embedding = vector
+            chunk.metadata = {
+                **(chunk.metadata or {}),
+                EMBEDDING_MODEL_METADATA_KEY: embedder.model_name,
+            }
+        return chunks
 
     @staticmethod
     def _failed(

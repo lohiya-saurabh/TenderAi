@@ -1,3 +1,9 @@
+import os
+
+# The suite never downloads or runs the local embedding model unless a developer
+# opts in (EMBEDDING_PROVIDER=local); set before settings is first imported.
+os.environ.setdefault("EMBEDDING_PROVIDER", "none")
+
 import pytest
 
 from tenderpulse_ai.config import settings

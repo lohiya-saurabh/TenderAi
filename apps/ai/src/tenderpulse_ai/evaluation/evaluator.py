@@ -19,6 +19,7 @@ from tenderpulse_ai.evaluation.models import (
     EvaluationSuiteMetrics,
     SyntheticEvaluationCase,
 )
+from tenderpulse_ai.infrastructure.embeddings import get_embedder
 from tenderpulse_ai.models.llm_client import StructuredLLMClient
 from tenderpulse_ai.security.context import SecurityContext
 from tenderpulse_ai.security.exceptions import UnauthorizedDocumentAccessException
@@ -121,7 +122,7 @@ class ComplianceWorkflowEvaluator:
         notes: list[str] = []
 
         # 1. Setup Tools & Seed Data
-        retrieval_tool = ScopedRetrievalTool()
+        retrieval_tool = ScopedRetrievalTool(embedder=get_embedder())
         page_text_tool = PageTextTool()
 
         seed_tenant = case.metadata.get("seed_tenant_id", case.tenant_id)

@@ -13,6 +13,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY apps/ai/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Bake the local embedding model into the image so containers never download it at runtime.
+ARG EMBEDDING_MODEL=BAAI/bge-small-en-v1.5
+ENV EMBEDDING_PROVIDER=local \
+    EMBEDDING_MODEL=${EMBEDDING_MODEL} \
+    EMBEDDING_CACHE_DIR=/opt/fastembed
+RUN python -c "import os; from fastembed import TextEmbedding; TextEmbedding(os.environ['EMBEDDING_MODEL'], cache_dir=os.environ['EMBEDDING_CACHE_DIR'])"
+
 COPY apps/ai/src/ ./src/
 
 ENV PYTHONPATH=/app/src

@@ -21,6 +21,7 @@ from tenderpulse_ai.extraction.deduplication import (
     detect_clause_contradictions,
 )
 from tenderpulse_ai.extraction.okf_compiler import compile_tender_to_okf
+from tenderpulse_ai.infrastructure.embeddings import get_embedder
 from tenderpulse_ai.models.llm_client import LLMExtractionError, StructuredLLMClient
 from tenderpulse_ai.tools.page_text import PageTextTool
 from tenderpulse_ai.tools.retrieval import DocumentChunk, ScopedRetrievalTool
@@ -147,7 +148,7 @@ class ProductionExtractionPipeline:
 
         async def _process_window(window: list[NormalizedPage]) -> dict[str, Any]:
             async with sem:
-                retrieval_tool = ScopedRetrievalTool()
+                retrieval_tool = ScopedRetrievalTool(embedder=get_embedder())
                 page_text_tool = PageTextTool()
 
                 window_page_numbers = {p.page_number for p in window}
@@ -163,7 +164,9 @@ class ProductionExtractionPipeline:
 
                 # Seed 3-tier chunks for all pages in the current window
                 window_chunks = [c for c in all_doc_chunks if c.page_number in window_page_numbers]
-                retrieval_tool.seed_chunks(
+                # Seeding embeds chunks with the local model: run it off the event loop.
+                await asyncio.to_thread(
+                    retrieval_tool.seed_chunks,
                     window_chunks
                     or [
                         DocumentChunk(
@@ -174,7 +177,7 @@ class ProductionExtractionPipeline:
                             text=p.text,
                         )
                         for p in window
-                    ]
+                    ],
                 )
                 # Index all document chunks by ID for small-to-big parent expansion
                 for c in all_doc_chunks:

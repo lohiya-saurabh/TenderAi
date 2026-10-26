@@ -18,6 +18,7 @@ from tenderpulse_ai.decision.schemas import (
     ReviewTriggerType,
 )
 from tenderpulse_ai.decision.workflow.state import BidDecisionWorkflowState
+from tenderpulse_ai.infrastructure.embeddings import get_embedder
 from tenderpulse_ai.security.sanitizer import UNTRUSTED_DATA_DIRECTIVE, SecretSanitizer
 from tenderpulse_ai.tools.retrieval import DocumentChunk, ScopedRetrievalTool
 
@@ -62,7 +63,7 @@ def make_evidence_retrieval_node(ctx: DecisionWorkflowContext):
                 doc_map[d_id] = d
 
         # Seed hybrid retrieval tool
-        retrieval_tool = ScopedRetrievalTool(enable_jev_rerank=True)
+        retrieval_tool = ScopedRetrievalTool(enable_jev_rerank=True, embedder=get_embedder())
         seeded_chunks: list[DocumentChunk] = []
 
         for c in evidence_chunks:
