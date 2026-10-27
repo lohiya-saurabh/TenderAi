@@ -67,17 +67,26 @@ echo -e "${GREEN}✅ TypeScript type-checking passed cleanly.${NC}"
 # 4. Python AI Engine Lint & Format check (Ruff)
 echo -e "\n${BOLD}[4/4] 🐍 Checking Python AI Engine (Ruff lint & format)...${NC}"
 # Only the ruff pinned in apps/ai/uv.lock: other versions format differently.
-RUFF_CMD=""
-if [ -x "$REPO_ROOT/apps/ai/.venv/bin/ruff" ]; then
-  RUFF_CMD="$REPO_ROOT/apps/ai/.venv/bin/ruff"
-elif command -v uv &>/dev/null; then
-  RUFF_CMD="uv run --directory apps/ai --extra dev ruff"
+
+# Automatically bootstrap apps/ai/.venv if missing and uv is available
+if [ ! -x "$REPO_ROOT/apps/ai/.venv/bin/ruff" ] && command -v uv &>/dev/null; then
+  echo -e "${YELLOW}ℹ️  apps/ai/.venv is missing or incomplete. Syncing with uv...${NC}"
+  uv sync --directory "$REPO_ROOT/apps/ai" --extra dev
 fi
 
-if [ -n "$RUFF_CMD" ]; then
-  if ! (cd "$REPO_ROOT/apps/ai" && $RUFF_CMD check . && $RUFF_CMD format --check .); then
+RUFF_BIN="$REPO_ROOT/apps/ai/.venv/bin/ruff"
+
+if [ -x "$RUFF_BIN" ]; then
+  if ! (cd "$REPO_ROOT/apps/ai" && "$RUFF_BIN" check . && "$RUFF_BIN" format --check .); then
     echo -e "\n${RED}❌ FAILED: Python Ruff linting or formatting check failed!${NC}"
-    echo -e "${YELLOW}Run: cd apps/ai && ruff check --fix . && ruff format .${NC}"
+    echo -e "${YELLOW}Run: cd apps/ai && uv run --extra dev ruff check --fix . && uv run --extra dev ruff format .${NC}"
+    exit 1
+  fi
+  echo -e "${GREEN}✅ Python Ruff checks passed cleanly.${NC}"
+elif command -v uv &>/dev/null; then
+  if ! (cd "$REPO_ROOT/apps/ai" && uv run --extra dev ruff check . && uv run --extra dev ruff format --check .); then
+    echo -e "\n${RED}❌ FAILED: Python Ruff linting or formatting check failed!${NC}"
+    echo -e "${YELLOW}Run: cd apps/ai && uv run --extra dev ruff check --fix . && uv run --extra dev ruff format .${NC}"
     exit 1
   fi
   echo -e "${GREEN}✅ Python Ruff checks passed cleanly.${NC}"
