@@ -43,26 +43,28 @@ FALLBACK_FREE_MODELS: list[str] = [
     "openrouter/free",
 ]
 
-# Option C: High-speed, high-rate-limit free tier provider specs
+# Option C: High-speed, high-rate-limit free tier provider specs.
+# Free-tier catalogues change often; these were checked against each provider's /models
+# endpoint (and a JSON-mode request) on 2026-10-27. Retired models return HTTP 404/410.
 PROVIDER_SPECS: dict[str, dict[str, Any]] = {
     "gemini": {
         "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
-        "models": ["gemini-2.5-flash", "gemini-1.5-flash"],
+        "models": ["gemini-3.5-flash", "gemini-3.1-flash-lite"],
         "extra_headers": {},
     },
     "groq": {
         "base_url": "https://api.groq.com/openai/v1",
-        "models": ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"],
+        "models": ["openai/gpt-oss-120b", "qwen/qwen3.8-27b"],
         "extra_headers": {},
     },
     "cerebras": {
         "base_url": "https://api.cerebras.ai/v1",
-        "models": ["llama3.1-70b", "llama3.1-8b"],
+        "models": ["gpt-oss-120b", "qwen-3.8-27b"],
         "extra_headers": {},
     },
     "sambanova": {
         "base_url": "https://api.sambanova.ai/v1",
-        "models": ["Meta-Llama-3.3-70B-Instruct", "Meta-Llama-3.1-8B-Instruct"],
+        "models": ["DeepSeek-V3.2", "gpt-oss-120b"],
         "extra_headers": {},
     },
     "openrouter": {
@@ -280,13 +282,14 @@ class OpenAICompatibleLlmClient:
             if s_key:
                 _add_provider_endpoints("sambanova", s_key)
         else:
-            # Option C: Multi-Provider Free Rotation (Groq + Gemini + Cerebras + SambaNova + OpenRouter)
-            if getattr(settings, "gemini_api_key", None):
-                _add_provider_endpoints("gemini", settings.gemini_api_key)
+            # Option C: Multi-Provider Free Rotation, fastest first
+            # (Groq + Cerebras ~1s, Gemini ~3s, SambaNova often overloaded, then OpenRouter)
             if getattr(settings, "groq_api_key", None):
                 _add_provider_endpoints("groq", settings.groq_api_key)
             if getattr(settings, "cerebras_api_key", None):
                 _add_provider_endpoints("cerebras", settings.cerebras_api_key)
+            if getattr(settings, "gemini_api_key", None):
+                _add_provider_endpoints("gemini", settings.gemini_api_key)
             if getattr(settings, "sambanova_api_key", None):
                 _add_provider_endpoints("sambanova", settings.sambanova_api_key)
             if getattr(settings, "openrouter_api_key", None):
