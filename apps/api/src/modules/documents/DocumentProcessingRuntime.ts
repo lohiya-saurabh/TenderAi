@@ -38,12 +38,17 @@ const OUTBOX_LEASE_MS = 5 * 60_000;
  *    DocumentExtractionCompletedEvent emitted by the Python AI worker.
  *    Delegates atomic single-writer PostgreSQL persistence to DocumentCompletionService
  *    and deletes the completion queue message upon transaction commit.
+ *
+ * The two run as independent loops: the completion consumer sits in a 20s SQS long
+ * poll, and a shared loop made every new upload wait for that poll to time out before
+ * its job was published. Shutdown aborts the in-flight long poll.
  */
 @Injectable()
 export class DocumentProcessingRuntime implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new StructuredLogger(DocumentProcessingRuntime.name, 'api');
   private running = false;
-  private loop: Promise<void> | undefined;
+  private loops: Promise<void>[] = [];
+  private readonly shutdown = new AbortController();
 
   public readonly completionService: DocumentCompletionService;
   private readonly repository: DocumentsRepository;
@@ -79,42 +84,74 @@ export class DocumentProcessingRuntime implements OnModuleInit, OnModuleDestroy 
     }
 
     this.running = true;
-    this.loop = this.run();
+    this.loops = [this.runOutboxPublisher(), this.runCompletionConsumer()];
   }
 
   public async onModuleDestroy(): Promise<void> {
     this.running = false;
-    await this.loop;
+    this.shutdown.abort();
+    await Promise.all(this.loops);
   }
 
-  private async run(): Promise<void> {
+  /**
+   * Transactional Outbox Publisher: reads pending outbox records every second and
+   * enqueues them to the Ingestion Queue. NestJS is strictly the PRODUCER of the
+   * Ingestion Queue; it NEVER consumes it.
+   */
+  private async runOutboxPublisher(): Promise<void> {
     while (this.running) {
       try {
-        // 1. Transactional Outbox Publisher:
-        // Reads pending outbox records and enqueues to the Ingestion Queue.
-        // NestJS is strictly the PRODUCER of the Ingestion Queue; it NEVER consumes it.
         await this.publishPendingOutboxMessages();
+      } catch (error) {
+        this.logger.error(
+          'Outbox publisher loop encountered an error; worker remains healthy.',
+          error,
+        );
+      }
+      await this.pause(POLL_INTERVAL_MS);
+    }
+  }
 
-        // 2. Dedicated Completion Queue Consumer:
-        // Polls the Completion Queue for DocumentExtractionCompletedEvent published by Python.
-        // NestJS is strictly the CONSUMER of the Completion Queue.
+  /**
+   * Dedicated Completion Queue Consumer: long-polls for DocumentExtractionCompletedEvent
+   * published by Python and handles each as soon as it arrives. NestJS is strictly the
+   * CONSUMER of the Completion Queue.
+   */
+  private async runCompletionConsumer(): Promise<void> {
+    while (this.running) {
+      try {
         const [completionMsg] = await this.completionQueue.receiveMessages(
           1,
           VISIBILITY_TIMEOUT_SECONDS,
+          { abortSignal: this.shutdown.signal },
         );
         if (completionMsg) {
           await this.processCompletionMessage(completionMsg);
           continue;
         }
       } catch (error) {
+        if (!this.running) break;
         this.logger.error(
-          'Document processing polling loop encountered an error; worker remains healthy.',
+          'Completion consumer loop encountered an error; worker remains healthy.',
           error,
         );
       }
-
-      await new Promise<void>((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+      // Real SQS already waited in a long poll; this keeps instant-return queues from spinning.
+      await this.pause(POLL_INTERVAL_MS);
     }
+  }
+
+  /** Sleeps up to ms, waking early on shutdown. */
+  private pause(ms: number): Promise<void> {
+    return new Promise<void>((resolve) => {
+      if (this.shutdown.signal.aborted) return resolve();
+      const timer = setTimeout(done, ms);
+      function done() {
+        clearTimeout(timer);
+        resolve();
+      }
+      this.shutdown.signal.addEventListener('abort', done, { once: true });
+    });
   }
 
   /**

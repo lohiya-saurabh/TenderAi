@@ -84,6 +84,34 @@ PROVIDER_SPECS: dict[str, dict[str, Any]] = {
     },
 }
 
+
+def reasoning_effort_for(ep: LlmEndpoint) -> str | None:
+    """
+    Lowest reasoning setting each non-OpenRouter model accepts. JSON extraction needs no
+    chain-of-thought, and left at the default these models spend most (sometimes all) of
+    max_tokens on hidden reasoning. Measured 2026-10-27 on a real tender page: gpt-oss
+    369 -> 38 reasoning tokens ("none" is not accepted), Qwen 683 -> 0, Gemini 8.0s -> 2.9s.
+    """
+    model = ep.model.lower()
+    if "gpt-oss" in model:
+        return "low"
+    if "qwen" in model or "generativelanguage.googleapis.com" in ep.base_url:
+        return "none"
+    return None
+
+
+def apply_reasoning_controls(payload: dict[str, Any], ep: LlmEndpoint) -> None:
+    """Sets the endpoint's reasoning control, clearing any left by a previous endpoint."""
+    payload.pop("reasoning", None)
+    payload.pop("reasoning_effort", None)
+    if "openrouter.ai" in ep.base_url:
+        payload["reasoning"] = {"effort": "none", "exclude": True}
+        return
+    effort = reasoning_effort_for(ep)
+    if effort:
+        payload["reasoning_effort"] = effort
+
+
 # In-memory cooldown registry to prevent hammer-retrying rate-limited endpoints (endpoint_key -> unban_timestamp)
 _MODEL_COOLDOWNS: dict[str, float] = {}
 
@@ -429,6 +457,7 @@ class OpenAICompatibleLlmClient:
                 headers.update(ep.extra_headers)
 
             payload["model"] = ep.model
+            apply_reasoning_controls(payload, ep)
             if is_provider_blocked(ep.base_url):
                 continue
 
@@ -592,13 +621,9 @@ class OpenAICompatibleLlmClient:
                 headers.update(ep.extra_headers)
 
             payload["model"] = ep.model
-            # Structured JSON extraction needs no chain-of-thought: free OpenRouter models are
-            # often reasoning models whose hidden reasoning otherwise consumes max_tokens and
-            # returns empty content (finish_reason="length").
-            if "openrouter.ai" in ep.base_url:
-                payload["reasoning"] = {"effort": "none", "exclude": True}
-            else:
-                payload.pop("reasoning", None)
+            # Structured JSON extraction needs no chain-of-thought: reasoning models otherwise
+            # spend max_tokens on hidden reasoning and return empty content (finish="length").
+            apply_reasoning_controls(payload, ep)
             if is_provider_blocked(ep.base_url):
                 continue
             # Rotation budget: never chain slow models past the client timeout; the caller

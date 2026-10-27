@@ -88,6 +88,7 @@ export class AwsSqsJobQueue implements IJobQueue {
   public async receiveMessages(
     maxMessages = 10,
     visibilityTimeoutSeconds = 300,
+    options: { abortSignal?: AbortSignal } = {},
   ): Promise<QueueMessage<IngestionJobMessage>[]> {
     const command = new ReceiveMessageCommand({
       QueueUrl: this.queueUrl,
@@ -97,7 +98,7 @@ export class AwsSqsJobQueue implements IJobQueue {
       MessageSystemAttributeNames: ['ApproximateReceiveCount'],
     });
 
-    const response = await this.sqsClient.send(command);
+    const response = await this.sqsClient.send(command, { abortSignal: options.abortSignal });
     if (!response.Messages || response.Messages.length === 0) {
       return [];
     }
