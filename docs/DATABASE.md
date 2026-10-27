@@ -48,12 +48,12 @@ All tenant data carries `organization_id`, and every query filters by it (see [S
 
 **Bids and tenders**
 
-| Table                    | Purpose                                                                                                                                   |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `bids`                   | A tender being bid on: authority, value, deadline, status, requirement counters, `version` for optimistic locking                         |
-| `tender_documents`       | Uploaded files: storage path, status (`UPLOADED` → `QUEUED_FOR_EXTRACTION` → `PROCESSING` → `COMPLETED` / `FAILED`), attempts, last error |
-| `tender_document_chunks` | 3-tier chunks from the worker: page, section, clause reference, bounding box, `embedding` (JSONB vector plus model tag in `metadata`)     |
-| `bid_decisions`          | Bid-or-no-bid result per profile version: verdict, readiness score, full response                                                         |
+| Table                    | Purpose                                                                                                                                         |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bids`                   | A tender being bid on: authority, value, deadline, status, requirement counters, `version` for optimistic locking                               |
+| `tender_documents`       | Uploaded files: storage path, status (`QUEUED_FOR_EXTRACTION` → `COMPLETED` / `FAILED`; `UPLOADED` is the column default), attempts, last error |
+| `tender_document_chunks` | 3-tier chunks from the worker: page, section, clause reference, bounding box, `embedding` (JSONB vector plus model tag in `metadata`)           |
+| `bid_decisions`          | Bid-or-no-bid result per profile version: verdict, readiness score, full response                                                               |
 
 **Clauses**
 
