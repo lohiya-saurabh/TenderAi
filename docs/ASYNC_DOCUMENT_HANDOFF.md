@@ -152,6 +152,7 @@ The AI worker runs an asynchronous daemon consumer in its application lifecycle 
 3. **Execution Pipeline**: Downloads PDF directly from ObjectStorage using `storageReference`, parses document layout AST via Docling, and executes the LangGraph compliance extraction graph.
 4. **Publish-Before-Ack Guarantee**: Publishes `DocumentExtractionCompletedEvent` to the Completion Queue, and ONLY THEN calls `ack()` on the Ingestion Queue message. If extraction or publish fails, the message is not acked and will be redelivered or routed to DLQ upon reaching max retries.
 5. **HTTP Fallback Endpoint**: Still supports `POST /api/v1/extract` and `POST /api/v1/worker/process-message` protected by `X-Internal-Service-Key` for synchronous debugging and test suites.
+
 - **Security Context**: Tenant and company context are passed directly in the verified request, establishing an immutable `SecurityContext`.
 
 ### 4.2 Document Parsing, AST Hierarchy & Precomputation Hoisting

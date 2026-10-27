@@ -186,3 +186,34 @@ async def test_an_outage_with_nothing_rate_limited_still_fails_fast():
     with pytest.raises(LLMExtractionError, match="ReadTimeout"):
         await client.extract_compliance("sys", "user", max_retries=0)
     assert time.monotonic() - started < 5
+
+
+async def test_a_hanging_provider_is_not_retried_before_rotating():
+    """Page 84: SambaNova timed out 3 times in a row (~45s each) before anything else ran."""
+    calls: list[str] = []
+
+    def handler(request: httpx.Request):
+        model = json.loads(request.content)["model"]
+        calls.append(model)
+        if model == "slow/model":
+            raise httpx.ReadTimeout("")
+        if calls.count("fast/model") == 1:
+            return httpx.Response(429, headers={"retry-after": "1"}, json={"error": "slow down"})
+        content = json.dumps(_CANDIDATES)
+        return httpx.Response(200, json={"choices": [{"message": {"content": content}}]})
+
+    endpoints = [
+        LlmEndpoint(provider="f", base_url="https://f.example/v1", api_key="k", model="fast/model"),
+        LlmEndpoint(provider="s", base_url="https://s.example/v1", api_key="k", model="slow/model"),
+    ]
+    client = OpenAICompatibleLlmClient(
+        endpoints=endpoints,
+        client=httpx.AsyncClient(transport=httpx.MockTransport(handler)),
+        rate_limit_max_wait_seconds=10,
+    )
+
+    items = await client.extract_compliance("sys", "user", max_retries=2)
+
+    assert len(items) == 1
+    assert calls.count("slow/model") == 1  # one timeout, then rotate; not three
+    assert calls[-1] == "fast/model"

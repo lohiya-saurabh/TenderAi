@@ -272,6 +272,7 @@ A central architectural pattern in TenderPulse AI is the explicit operational di
 In public procurement compliance, **missing a mandatory requirement is far more dangerous than passing an irrelevant passage to the LLM**. If a system achieves 100% LLM extraction accuracy on 80 candidate passages, but the candidate filter silently discarded 20 actual requirements, the maximum downstream recall is capped at **80%**.
 
 #### Why Naive Binary Gating Failed:
+
 1. **Short Requirement Elimination**: Arbitrary string length cutoffs (e.g., `len(text) < 15`) silently dropped compact mandatory rules: `"Submit EMD"`, `"Must sign"`, `"₹5,00,000"`, or table cells containing financial thresholds.
 2. **Keyword Blindness**: Restrictive heuristics (only matching `shall` or `must`) missed critical negative covenants and eligibility bans: `"Bids submitted by firms appearing on the debarred list will be rejected."`
 3. **Context Severance**: Evaluating a single paragraph in isolation loses the fact that it resides inside `SECTION 2: ELIGIBILITY AND QUALIFICATION CRITERIA`.
@@ -491,13 +492,13 @@ flowchart TD
 3. **`candidate_detection`**: Scores passages across generic procurement categories (no tender-specific terms) with **Context Fusion**; the result only scopes the clause contexts the validator judges against — it never decides what reaches the model.
 4. **`context_assembly`**: Builds per-clause contexts (preceding/following clause, definitions, cross-references) used by the validator.
 5. **`llm_extraction`** (LLM-only): every non-index page of the document is processed in windows of `BATCH_PAGE_WINDOW_SIZE` pages; every TIER2 clause chunk of the window (no top-k, no skeleton or table renderings) is sent inside `<untrusted_document_data>` envelopes. The model returns JSON candidates with an exact `verbatim_quote`; nothing is filled in by code. A model that returns no valid answer raises `LLMExtractionError`: the window is marked `extraction_error`, routed to review and listed in `failed_pages`; when every window fails the pipeline raises (worker → `status=FAILED`, `/api/v1/extract` → HTTP 503). There is no rule-based or synthetic fallback. `LLM_REPLAY_MODE=record|replay` records / replays raw responses for offline tests and benchmarks.
-7. **`validation`**: Pure Python exact-substring grounding check (`DeterministicValidator`) asserting that every extracted `verbatim_quote` exists character-for-character in source text and meets sentence-bounded constraints (`extract_complete_clause_window`, max 650 chars). Quotes stitched across a page break ground against the window's pages joined without separators plus `continuation_text` (the page after the window).
-8. **`uncertainty_verification` (Node 6B)**: Detects intra-document clause contradictions (e.g., 3% vs. 10% PBG; Rs. 7.18L EMD vs. Bid Securing Declaration; GST inclusive vs. exclusive) and emits `CLAUSE_CONTRADICTION` uncertainty items citing both clauses and applying the tender's Order of Precedence.
-9. **`confidence_routing`**: A window with `extraction_error` escalates directly. Otherwise it evaluates the unintentional failure count (`len(unverified) - intentional_rejections`; deleted clauses and quotes already covered by a verified item do not count) and the confidence score. Routing to `targeted_refine` is conditional on `failed > 0 and retry_count < 2`. If 100% of items are verified but confidence is low ($< 0.80$), it routes directly to `escalate_human_review`.
-10. **`targeted_refine`**: Feeds the specific grounding failure reasons back to the model in Node 5 (at most 2 retries).
-11. **`escalate_human_review`**: Formats review payload for human triage with clear provenance links and ambiguity summaries.
-12. **`human_review`**: Calls LangGraph's native `interrupt()`, snapshotting state to PostgreSQL and halting execution until human resume via `POST /api/v1/compliance/review`.
-13. **`postgres_store`**: Deterministically prepares verified items for single-writer persistence by NestJS `DocumentCompletionService` via `DocumentExtractionCompletedEvent`.
+6. **`validation`**: Pure Python exact-substring grounding check (`DeterministicValidator`) asserting that every extracted `verbatim_quote` exists character-for-character in source text and meets sentence-bounded constraints (`extract_complete_clause_window`, max 650 chars). Quotes stitched across a page break ground against the window's pages joined without separators plus `continuation_text` (the page after the window).
+7. **`uncertainty_verification` (Node 6B)**: Detects intra-document clause contradictions (e.g., 3% vs. 10% PBG; Rs. 7.18L EMD vs. Bid Securing Declaration; GST inclusive vs. exclusive) and emits `CLAUSE_CONTRADICTION` uncertainty items citing both clauses and applying the tender's Order of Precedence.
+8. **`confidence_routing`**: A window with `extraction_error` escalates directly. Otherwise it evaluates the unintentional failure count (`len(unverified) - intentional_rejections`; deleted clauses and quotes already covered by a verified item do not count) and the confidence score. Routing to `targeted_refine` is conditional on `failed > 0 and retry_count < 2`. If 100% of items are verified but confidence is low ($< 0.80$), it routes directly to `escalate_human_review`.
+9. **`targeted_refine`**: Feeds the specific grounding failure reasons back to the model in Node 5 (at most 2 retries).
+10. **`escalate_human_review`**: Formats review payload for human triage with clear provenance links and ambiguity summaries.
+11. **`human_review`**: Calls LangGraph's native `interrupt()`, snapshotting state to PostgreSQL and halting execution until human resume via `POST /api/v1/compliance/review`.
+12. **`postgres_store`**: Deterministically prepares verified items for single-writer persistence by NestJS `DocumentCompletionService` via `DocumentExtractionCompletedEvent`.
 
 ---
 
@@ -722,7 +723,7 @@ Automated evaluation is implemented in [`apps/ai/src/tenderpulse_ai/evaluation/`
 ### ADR-AI-06: Recall-First Candidate Scoring, Context Fusion & Two-Tier Rescue Pass vs. Naive Binary Gating (ADR 0028)
 
 - **WHY**: In enterprise tender compliance, missing a mandatory clause results in instantaneous commercial disqualification. A binary gate that silently drops short blocks (`len < 15`) or un-keyworded debarments irrevocably caps downstream recall regardless of model quality.
-- **WHAT**: Continuous priority scoring ($0.0 - 1.0$), cross-page boilerplate elimination, AST context fusion. *Update (LLM-only extraction):* the Tier-2 `rescue_pass` and the keyword page filter were removed — every clause chunk of every non-index page now reaches the model, which removes the detector from the recall path entirely.
+- **WHAT**: Continuous priority scoring ($0.0 - 1.0$), cross-page boilerplate elimination, AST context fusion. _Update (LLM-only extraction):_ the Tier-2 `rescue_pass` and the keyword page filter were removed — every clause chunk of every non-index page now reaches the model, which removes the detector from the recall path entirely.
 - **HOW**: Implemented in [`CandidateDetector`](file:///Users/belikesaurabh/main/TenderAi/apps/ai/src/tenderpulse_ai/domain/candidate_detector.py).
 - **WHY NOT Alternatives**:
   - _Naive character length cutoffs_: Silently drops short table cells (`"₹5,00,000"`) and compact directives (`"Submit EMD"`).

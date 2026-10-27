@@ -91,6 +91,7 @@ Moving these steps to FastAPI decouples the API from long‑running document pro
 ## Production Implementation Status
 
 The service boundary separation is fully realized in production:
+
 - Asynchronous queue choreography is mediated via `IJobQueue` (`AwsSqsJobQueue` / `GcpPubSubJobQueue`) and transactional outbox.
 - FastAPI AI worker runs Docling Parser Engine, 3-tier Structural RAG, and the 12-node LangGraph extraction pipeline.
 - Single-Writer Principle is enforced: NestJS `DocumentCompletionService` atomically persists verified compliance items, updates bid status, and writes immutable audit logs.

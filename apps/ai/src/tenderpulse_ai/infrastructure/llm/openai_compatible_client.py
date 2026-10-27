@@ -667,7 +667,8 @@ class OpenAICompatibleLlmClient:
             return parse(replay.load(payload["messages"]))
 
         last_error: Exception | None = None
-        waited = 0.0
+        call_started = time.monotonic()
+        budget = self.rate_limit_max_wait_seconds
 
         # Free tiers rate-limit every provider at once on long tenders. Instead of failing
         # the page, wait for the soonest endpoint to free up, within a total budget.
@@ -675,6 +676,7 @@ class OpenAICompatibleLlmClient:
             # The rotation budget limits chaining slow models within one round; time spent
             # waiting for a rate limit to clear must not count against it.
             request_started = time.perf_counter()
+            round_cut_short = False
             endpoints_to_try = self._get_candidate_endpoints()
 
             for ep in endpoints_to_try:
@@ -700,6 +702,7 @@ class OpenAICompatibleLlmClient:
                         "[OpenAICompatibleClient] Rotation budget of %.0fs exhausted; skipping remaining endpoints.",
                         self.timeout,
                     )
+                    round_cut_short = True
                     break
 
                 for attempt in range(max_retries + 1):
@@ -911,7 +914,9 @@ class OpenAICompatibleLlmClient:
                         ):
                             cool_down(ep, TRANSIENT_ERROR_COOLDOWN_SECONDS)
                             break
-                        if attempt < max_retries:
+                        # A timed-out endpoint is usually overloaded: retrying it wastes a full
+                        # timeout per attempt, so rotate to the next provider straight away.
+                        if attempt < max_retries and not isinstance(exc, httpx.TimeoutException):
                             await asyncio.sleep(0.5 * (2**attempt))
                             continue
                         # Retries spent: rest this endpoint briefly so the others go first.
@@ -938,18 +943,21 @@ class OpenAICompatibleLlmClient:
             # One provider timing out is no reason to fail the page while others are only
             # rate-limited: keep going while one frees up within the budget. With no
             # rate-limited provider left (a real outage), fail fast as before.
+            elapsed = time.monotonic() - call_started
+            # The rotation budget skipped endpoints that may be usable right now: try them.
+            if round_cut_short and elapsed < budget:
+                continue
             wait = seconds_until_an_endpoint_frees(
                 self._all_endpoints(), rate_limited_only=last_error is not None
             )
-            budget = self.rate_limit_max_wait_seconds
-            if wait is None or waited + wait > budget:
+            if wait is None or elapsed + wait > budget:
                 if last_error:
                     raise LLMExtractionError(
                         f"All LLM endpoints failed; last error: {describe_error(last_error)}"
                     ) from last_error
                 raise LLMExtractionError(
                     "No LLM endpoint available (none configured, or all providers blocked/cooling"
-                    f" down; waited {waited:.0f}s of a {budget:.0f}s budget)."
+                    f" down; {elapsed:.0f}s spent of a {budget:.0f}s budget)."
                 )
             pause = wait + random.uniform(
                 0.2, 1.5
@@ -963,7 +971,6 @@ class OpenAICompatibleLlmClient:
                 },
             )
             await asyncio.sleep(pause)
-            waited += pause
 
     def _parse_response(
         self,

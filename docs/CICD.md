@@ -32,17 +32,17 @@ flowchart TD
 
 ## 3. The 10 Pipeline Stages Explained
 
-| Stage  | Name                     | Tooling                      | Quality Threshold (Failure Policy)                                                                      |
-| :----- | :----------------------- | :--------------------------- | :------------------------------------------------------------------------------------------------------ |
-| **0**  | **Branch Policy Gate**   | GitHub Actions + Rulesets    | **Strict Enforcer**: PRs to `main` must originate ONLY from `develop`. Direct pushes to `main` blocked. |
-| **1**  | **Formatting & Linting** | `prettier`, `eslint`, `ruff` | Zero ESLint errors (`--max-warnings=0`), zero Ruff violations.                                          |
-| **2**  | **Type Checking**        | `tsc --noEmit`, `mypy`       | Zero TypeScript errors across `@tenderpulse/api`, `@tenderpulse/web`, `@tenderpulse/ui`, and `shared-types`. |
-| **3**  | **Unit & Integration**   | `vitest`                     | 100% test pass rate across all domain entities, value objects, state machines, and E2E vertical slices. |
-| **4**  | **AI Evaluation Gates**  | `pytest`, `apps/ai/tests`    | **Strict Pass**: Candidate Recall $\ge 98\%$ (`test_candidate_detector_recall.py`), Groundedness = 1.0. |
-| **5**  | **Security Auditing**    | `gitleaks`, `npm audit`      | Zero detected secrets/API keys; zero high/critical vulnerabilities.                                     |
-| **6**  | **Container Packaging**  | Docker Buildx, Amazon ECR    | Builds and pushes 3 Docker images: `tenderpulse-web`, `tenderpulse-api`, and `tenderpulse-ai-worker`.   |
-| **7**  | **Deploy on AWS**        | AWS OIDC, ECS Fargate, S3    | Automated rolling update of ECS Fargate tasks (`tenderpulse-cluster-prod`) and S3 + CloudFront SPA sync. |
-| **8**  | **Smoke Testing**        | Synthetic Runner / curl      | Automated HTTP checks against `/api/v1/health` and CloudWatch task stability.                            |
+| Stage | Name                     | Tooling                      | Quality Threshold (Failure Policy)                                                                           |
+| :---- | :----------------------- | :--------------------------- | :----------------------------------------------------------------------------------------------------------- |
+| **0** | **Branch Policy Gate**   | GitHub Actions + Rulesets    | **Strict Enforcer**: PRs to `main` must originate ONLY from `develop`. Direct pushes to `main` blocked.      |
+| **1** | **Formatting & Linting** | `prettier`, `eslint`, `ruff` | Zero ESLint errors (`--max-warnings=0`), zero Ruff violations.                                               |
+| **2** | **Type Checking**        | `tsc --noEmit`, `mypy`       | Zero TypeScript errors across `@tenderpulse/api`, `@tenderpulse/web`, `@tenderpulse/ui`, and `shared-types`. |
+| **3** | **Unit & Integration**   | `vitest`                     | 100% test pass rate across all domain entities, value objects, state machines, and E2E vertical slices.      |
+| **4** | **AI Evaluation Gates**  | `pytest`, `apps/ai/tests`    | **Strict Pass**: Candidate Recall $\ge 98\%$ (`test_candidate_detector_recall.py`), Groundedness = 1.0.      |
+| **5** | **Security Auditing**    | `gitleaks`, `npm audit`      | Zero detected secrets/API keys; zero high/critical vulnerabilities.                                          |
+| **6** | **Container Packaging**  | Docker Buildx, Amazon ECR    | Builds and pushes 3 Docker images: `tenderpulse-web`, `tenderpulse-api`, and `tenderpulse-ai-worker`.        |
+| **7** | **Deploy on AWS**        | AWS OIDC, ECS Fargate, S3    | Automated rolling update of ECS Fargate tasks (`tenderpulse-cluster-prod`) and S3 + CloudFront SPA sync.     |
+| **8** | **Smoke Testing**        | Synthetic Runner / curl      | Automated HTTP checks against `/api/v1/health` and CloudWatch task stability.                                |
 
 ---
 

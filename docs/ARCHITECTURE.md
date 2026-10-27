@@ -396,11 +396,13 @@ Both NestJS and FastAPI services implement a **Unified Canonical JSON Logging Sc
 ### 10.1 Dual-Sink Rotated Structured Logging (ADR 0027)
 
 To eliminate unmonitored disk filling and log duplication during high-frequency ingestion:
+
 - **Dual-Sink Architecture**: Implemented in [`RotatingLogStream.ts`](file:///Users/belikesaurabh/main/TenderAi/apps/api/src/common/logging/RotatingLogStream.ts). Emits newline-delimited canonical JSON synchronously to `stdout` for container log shippers (FluentBit / CloudWatch Agent) while simultaneously managing an on-disk stream sink with automatic rotation (10MB max file size, 5 archive retention) for local audit capture.
 - **Zero Double-Encoding**: Interceptors format canonical payloads once, preventing nested double-serialization of log metadata.
 
 ### 10.2 Frontend Request Coalescing & Polling Backoff
 
 In high-concurrency client interfaces:
+
 - **In-Flight GET Coalescing**: React 18 concurrent renders and sibling component mounting (`client.ts`) utilize an in-memory active promise map (`inFlightGetRequests`) to coalesce duplicate GET requests (`/notifications`, `/bids/:id`, `/compliance-items`) arriving within 2–15ms into a single network round-trip.
 - **Decoupled Polling Intervals**: Fallback polling backed off to 10s intervals, relying primarily on real-time Server-Sent Events (`ExtractionProgress.onComplete`) for instant completion state transitions.
