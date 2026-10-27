@@ -45,8 +45,8 @@ class Settings(BaseSettings):
     llm_max_retries: int = 2
     batch_page_window_size: int = 3
     # Page windows extracted in parallel (provider in-flight limits; 402 "in-flight" backs off).
-    # Parallel page windows. The default rotation's lead model (Cerebras qwen) allows 450
-    # req/min on the free tier, so 3 left most of it idle.
+    # Parallel page windows. With per-model rate limits, 8 keeps Cerebras, Groq and Gemini
+    # busy at once (99-page tender: 347s with 3 windows and per-provider limits, ~150s now).
     llm_max_concurrency: int = 8
     # When every provider is rate-limited, how long one LLM call may wait for one to free up.
     llm_rate_limit_max_wait_seconds: float = 180.0

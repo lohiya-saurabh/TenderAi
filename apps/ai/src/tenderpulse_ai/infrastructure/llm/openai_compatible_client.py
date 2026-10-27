@@ -140,13 +140,15 @@ PROVIDER_SPECS: dict[str, dict[str, Any]] = {
     },
     "groq": {
         "base_url": "https://api.groq.com/openai/v1",
-        "models": ["openai/gpt-oss-120b", "qwen/qwen3.8-27b", "openai/gpt-oss-20b"],
+        "models": ["openai/gpt-oss-120b", "openai/gpt-oss-20b"],
         "extra_headers": {},
     },
     "cerebras": {
         "base_url": "https://api.cerebras.ai/v1",
-        # qwen first: 450 req/min and 150k tokens/min on the free tier vs 5 req/min for gpt-oss.
-        "models": ["qwen-3.8-27b", "gpt-oss-120b"],
+        # No qwen (here or on Groq): despite 450 req/min it missed core obligations (turnover,
+        # performance security) that gpt-oss / Gemini runs agree on; see
+        # docs/audits/MODEL_ROTATION_QUALITY_BENCHMARK.md.
+        "models": ["gpt-oss-120b"],
         "extra_headers": {},
     },
     "sambanova": {
@@ -481,7 +483,7 @@ class OpenAICompatibleLlmClient:
                 _add_provider_endpoints("sambanova", s_key)
         else:
             # Option C: Multi-Provider Free Rotation, highest free-tier capacity first
-            # (Cerebras qwen 150k tok/min, Groq 8k tok/min per model, Gemini ~3s,
+            # (Cerebras gpt-oss 30k tok/min, Groq 8k tok/min per model, Gemini ~3s,
             # SambaNova often overloaded, then OpenRouter)
             if getattr(settings, "cerebras_api_key", None):
                 _add_provider_endpoints("cerebras", settings.cerebras_api_key)
