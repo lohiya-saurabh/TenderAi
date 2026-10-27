@@ -52,19 +52,22 @@ Extraction only runs when the API and the worker share real queues. With mock qu
 
 These queues were created by hand and are not in Terraform yet (see [DEPLOYMENT.md](DEPLOYMENT.md) §5).
 
-**Storage.** Leave `S3_BUCKET_NAME` unset and the API uses in-memory mock storage. Uploads then go to `/api/v1/mock-upload/...`, and the worker downloads the PDF from `/api/v1/mock-download/...`.
+**Storage.** Set `AWS_S3_BUCKET` to a dev bucket in both `.env` and `apps/ai/.env`. Uploads then go to S3, and completion events over 200 KB are claim-checked there; that happens for long tenders, roughly 100 pages or more. Both services must use the same bucket. If you leave the bucket unset, the API uses in-memory mock storage: uploads go to `/api/v1/mock-upload/...` and the worker downloads the PDF from `/api/v1/mock-download/...`. In that mode, completions too large for a queue message cannot be delivered.
+
+Leave `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` unset to use your AWS CLI profile. Both templates (`.env.example`, `apps/ai/.env.example`) list every variable described here, with placeholders such as `<account-id>` in place of real values.
 
 ## 5. LLM providers
 
 The worker rotates across the free tiers whose keys are set (in `.env` or `apps/ai/.env`; the worker reads both):
 
-| Variable             | Provider                                                    |
-| -------------------- | ----------------------------------------------------------- |
-| `CEREBRAS_API_KEY`   | Cerebras (`gpt-oss-120b`)                                   |
-| `GROQ_API_KEY`       | Groq (`gpt-oss-120b`, `gpt-oss-20b`)                        |
-| `GEMINI_API_KEY`     | Google Gemini (`gemini-3.5-flash`, `gemini-3.1-flash-lite`) |
-| `SAMBANOVA_API_KEY`  | SambaNova (`DeepSeek-V3.2`, `gpt-oss-120b`)                 |
-| `OPENROUTER_API_KEY` | OpenRouter; currently commented out, so disabled            |
+| Variable                                      | Provider                                                          |
+| --------------------------------------------- | ----------------------------------------------------------------- |
+| `CEREBRAS_API_KEY`                            | Cerebras (`gpt-oss-120b`)                                         |
+| `GROQ_API_KEY`                                | Groq (`gpt-oss-120b`, `gpt-oss-20b`)                              |
+| `GEMINI_API_KEY`                              | Google Gemini (`gemini-3.5-flash`, `gemini-3.1-flash-lite`)       |
+| `SAMBANOVA_API_KEY`                           | SambaNova (`DeepSeek-V3.2`, `gpt-oss-120b`)                       |
+| `OPENROUTER_API_KEY`                          | OpenRouter; currently commented out, so disabled                  |
+| `LLM_API_KEY` (+ `LLM_BASE_URL`, `LLM_MODEL`) | Single endpoint for tender chat; without it, chat skips the model |
 
 Tuning knobs, with defaults:
 

@@ -100,7 +100,7 @@ sequenceDiagram
 | ---------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
 | Ingestion queue  | AWS SQS, GCP Pub/Sub, in-memory mock             | `AWS_SQS_INGESTION_QUEUE_URL` (API) / `AWS_INGESTION_QUEUE_URL` (worker); Pub/Sub settings; `QUEUE_PROVIDER=mock` |
 | Completion queue | AWS SQS, GCP Pub/Sub, HTTP callback, mock        | `AWS_SQS_COMPLETION_QUEUE_URL`; `COMPLETION_QUEUE_PROVIDER` (worker)                                              |
-| Object storage   | AWS S3, GCS, in-memory mock                      | `S3_BUCKET_NAME` / `GCS_BUCKET_NAME`; `STORAGE_PROVIDER=mock`                                                     |
+| Object storage   | AWS S3, GCS, in-memory mock                      | `AWS_S3_BUCKET` (or `S3_BUCKET_NAME`, `STORAGE_BUCKET_NAME`) / `GCS_BUCKET_NAME`; `STORAGE_PROVIDER=mock`         |
 | Database         | node-postgres (runtime), PGlite (tests only)     | `DATABASE_URL` (required at runtime); `PGLITE_DATA_DIR` in tests                                                  |
 | Embeddings       | local fastembed (`BAAI/bge-small-en-v1.5`), none | `EMBEDDING_PROVIDER`                                                                                              |
 
