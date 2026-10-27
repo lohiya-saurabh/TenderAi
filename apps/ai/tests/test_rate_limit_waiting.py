@@ -108,3 +108,34 @@ async def test_gives_up_once_the_wait_budget_is_spent():
     with pytest.raises(LLMExtractionError, match="budget"):
         await client.extract_compliance("sys", "user", max_retries=0)
     assert time.monotonic() - started < 2
+
+
+async def test_time_spent_waiting_does_not_eat_the_rotation_budget():
+    """After a rate-limit wait, one bad model must not fail the page before the next is tried."""
+    calls: list[str] = []
+
+    def handler(request: httpx.Request):
+        model = json.loads(request.content)["model"]
+        calls.append(model)
+        if len(calls) <= 2:  # first round: both providers rate-limited
+            return httpx.Response(429, headers={"retry-after": "1"}, json={"error": "slow down"})
+        if model == "a/model":  # second round: provider A returns unusable output
+            return httpx.Response(200, json={"choices": [{"message": {"content": "not json"}}]})
+        content = json.dumps(_CANDIDATES)
+        return httpx.Response(200, json={"choices": [{"message": {"content": content}}]})
+
+    endpoints = [
+        LlmEndpoint(provider="a", base_url="https://a.example/v1", api_key="k", model="a/model"),
+        LlmEndpoint(provider="b", base_url="https://b.example/v1", api_key="k", model="b/model"),
+    ]
+    client = OpenAICompatibleLlmClient(
+        timeout=0.5,  # rotation budget far shorter than the rate-limit wait
+        endpoints=endpoints,
+        client=httpx.AsyncClient(transport=httpx.MockTransport(handler)),
+        rate_limit_max_wait_seconds=10,
+    )
+
+    items = await client.extract_compliance("sys", "user", max_retries=0)
+
+    assert len(items) == 1
+    assert calls == ["a/model", "b/model", "a/model", "b/model"]

@@ -646,12 +646,14 @@ class OpenAICompatibleLlmClient:
             return parse(replay.load(payload["messages"]))
 
         last_error: Exception | None = None
-        request_started = time.perf_counter()
         waited = 0.0
 
         # Free tiers rate-limit every provider at once on long tenders. Instead of failing
         # the page, wait for the soonest endpoint to free up, within a total budget.
         while True:
+            # The rotation budget limits chaining slow models within one round; time spent
+            # waiting for a rate limit to clear must not count against it.
+            request_started = time.perf_counter()
             endpoints_to_try = self._get_candidate_endpoints()
 
             for ep in endpoints_to_try:
