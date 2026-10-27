@@ -40,6 +40,8 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger,
   });
+  // Lets DatabaseModule close the PostgreSQL pool cleanly on SIGTERM (ECS task stop).
+  app.enableShutdownHooks();
 
   // Global HTTP Logging Interceptor for request tracing and latency metrics
   app.useGlobalInterceptors(new HttpLoggingInterceptor());
@@ -88,7 +90,7 @@ async function bootstrap() {
     `🚀 TenderPulse AI API Server running at http://localhost:${port}`,
     {
       port,
-      persistence: 'PostgreSQL 16 (PGlite in ./data/postgres)',
+      persistence: process.env.PGLITE_DATA_DIR ? 'PGlite (test)' : 'PostgreSQL (DATABASE_URL)',
       logLevels: resolveLogLevels().join(', '),
     },
   );

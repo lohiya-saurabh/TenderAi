@@ -5,7 +5,7 @@
  * Provisions 2 Tenant Organizations, 5 Authentic Bidding Companies, and 10 Real Tenders.
  * Enforces Zero Synthetic Fallbacks, Strict Tenant Isolation (Anti-IDOR), and Auditability.
  */
-import { PGlite } from '@electric-sql/pglite';
+import { openDb } from './lib/db.js';
 import bcrypt from 'bcrypt';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -15,7 +15,6 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
-const dbPath = path.join(rootDir, 'data/postgres');
 const evidenceDir = path.join(rootDir, 'data/procurement-evidence');
 const tenderDocsDir = path.join(evidenceDir, '01_Tender_Documents');
 const companyEvidenceDir = path.join(evidenceDir, '02_Company_Evidence_and_Credentials');
@@ -44,8 +43,7 @@ async function main() {
   console.log('   2 Tenant Orgs | 5 Companies | 10 Realistic Tenders | 0 Synthetic Fallbacks');
   console.log('========================================================================\n');
 
-  const pg = new PGlite(dbPath);
-  await pg.waitReady;
+  const pg = await openDb();
 
   try {
     const now = new Date().toISOString();

@@ -2,37 +2,53 @@
 /**
  * TenderPulse AI — Complete Data Wipe Script
  *
- * Stop the dev servers first (`npm run dev`): PGlite is single-process, and a running API
- * would keep (and re-write) the old database.
+ * Stop the dev servers first (`npm run dev`) so no connection holds locks on the schema.
  *
  *   npm run db:wipe              # database + uploads + S3 bucket + every configured SQS queue
  *   npm run db:wipe -- --local   # database + uploads only
  *
- * The database directories are removed outright; the API recreates the current schema
- * (including the clause tables and migrations) on its next start.
+ * The database's public schema is dropped and recreated; the API re-applies every
+ * migration on its next start. Only local databases are wiped unless --allow-remote.
  */
 import { S3Client, ListObjectsV2Command, DeleteObjectsCommand } from '@aws-sdk/client-s3';
 import { SQSClient, PurgeQueueCommand } from '@aws-sdk/client-sqs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { describeDatabase, isLocalDatabase, openDb } from './lib/db.js';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const localOnly = process.argv.includes('--local');
 
-// The API opens data/postgres relative to its working directory: the repo root under
-// `npm run dev`, apps/api when started from that folder. Both are wiped.
-const DB_DIRS = ['data/postgres', 'apps/api/data/postgres'];
+const allowRemote = process.argv.includes('--allow-remote');
 const UPLOAD_DIRS = ['apps/api/uploads', 'uploads'];
 
-function wipeLocal() {
-  console.log('\n🗑️  [1/3] Wiping local database and uploads...');
-  for (const rel of [...DB_DIRS, ...UPLOAD_DIRS]) {
+async function wipeDatabase() {
+  const target = describeDatabase();
+  if (!isLocalDatabase() && !allowRemote) {
+    console.error(
+      `   ❌ Refusing to wipe non-local database ${target}. Pass --allow-remote if you really mean it.`,
+    );
+    process.exit(1);
+  }
+  const db = await openDb();
+  try {
+    await db.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+    console.log(`   ✅ Dropped and recreated schema public on ${target}`);
+  } finally {
+    await db.close();
+  }
+}
+
+async function wipeLocal() {
+  console.log('\n🗑️  [1/3] Wiping database and local uploads...');
+  await wipeDatabase();
+  for (const rel of UPLOAD_DIRS) {
     const dir = path.join(rootDir, rel);
     if (!fs.existsSync(dir)) continue;
     fs.rmSync(dir, { recursive: true, force: true });
-    if (UPLOAD_DIRS.includes(rel)) fs.mkdirSync(dir, { recursive: true });
-    console.log(`   ✅ Removed ${rel}`);
+    fs.mkdirSync(dir, { recursive: true });
+    console.log(`   ✅ Cleared ${rel}`);
   }
 }
 
@@ -106,12 +122,12 @@ async function purgeSqs() {
 
 async function main() {
   console.log('💥 TenderPulse AI — data wipe' + (localOnly ? ' (local only)' : ' (local + AWS)'));
-  wipeLocal();
+  await wipeLocal();
   if (!localOnly) {
     await wipeS3();
     await purgeSqs();
   }
-  console.log('\n✨ Done. Start the API to recreate an empty database.\n');
+  console.log('\n✨ Done. Start the API to re-apply migrations on the empty database.\n');
 }
 
 main().catch((err) => {

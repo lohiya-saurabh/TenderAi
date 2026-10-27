@@ -3,7 +3,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 /**
  * Browser tests for the clause workspace (e2e/*.spec.ts). They start their own API (mock
- * queue and storage, fresh demo database in .e2e/) and the Vite dev server, and seed tenders
+ * queue and storage, fresh in-memory demo database) and the Vite dev server, and seed tenders
  * through the real extraction-completed webhook with the golden AI event.
  *
  *   npx playwright test
@@ -22,6 +22,8 @@ const API_ENV = {
   STORAGE_PROVIDER: 'mock',
   SEED_DEMO_DATA: 'true',
   LOG_LEVEL: 'warn',
+  // Throwaway in-memory database per run; the dev and production API use DATABASE_URL.
+  PGLITE_DATA_DIR: 'memory://',
 };
 
 export default defineConfig({

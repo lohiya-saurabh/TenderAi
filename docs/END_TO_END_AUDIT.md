@@ -348,6 +348,13 @@ gantt
    - Add composite indexes on `bids`, `compliance_items`, and `tender_documents`.
    - Add `FOR UPDATE SKIP LOCKED` to transactional outbox poller.
 
+   **Status (2026-10-27): done; production cut-over still needs `terraform apply`.**
+   - *Driver (3.1)*: the API runs on real PostgreSQL through a node-postgres pool from `DATABASE_URL` (`DATABASE_SSL=disable|require|verify-full`, `DATABASE_SSL_CA_FILE`). PGlite is used only when `PGLITE_DATA_DIR` is set (unit and e2e tests use `memory://`); with neither, startup fails with setup instructions instead of silently writing a local file. `DrizzleDb` is now driver-neutral, so no repository changed. The pool closes on SIGTERM.
+   - *Migrations (3.2)*: `ddl.ts` became versioned migrations in `apps/api/src/common/database/migrations/` (`0001_baseline` is the former DDL verbatim; `0002` adds `notifications.recipient_user_id → users(id)`). They are applied at startup in order, one transaction each, recorded in `schema_migrations` with a checksum, under a Postgres advisory lock so concurrent ECS tasks do not race. Drizzle Kit was dropped: its CLI cannot resolve `drizzle-orm` here (a React 19 optional peer of `drizzle-orm` conflicts with the web app's React 18), and the hand-written SQL keeps the triggers and functions Drizzle cannot express.
+   - *Indexes and foreign keys (3.3, 3.4)*: already present on `develop` apart from the notifications recipient key, now added by `0002`.
+   - *Outbox (3.5)*: no change needed. `claimOutboxMessage` is a single conditional `UPDATE … RETURNING`, so racing pollers re-check the row and only one wins; `src/test/postgres` proves it with 8 concurrent pollers on real PostgreSQL.
+   - *Infrastructure*: the RDS module now stores the connection string in Secrets Manager (`<project>/<env>/database-url`); the ECS API task receives it as `DATABASE_URL`, with `DATABASE_SSL=verify-full` against the RDS CA bundle baked into the API image. Validated with `terraform validate` for dev, staging and prod, but not applied: until it is, a newly deployed API cannot start in AWS (previously it silently used an ephemeral PGlite file inside the container).
+
 3. **P2 — User Experience & Architectural Hygiene**:
    - Persist user capability choices in `OnboardingPage.tsx`.
    - Replace `/dummy/` path in `listCloudFiles`.

@@ -288,6 +288,8 @@ describe('Phase 1 clause contract (API)', () => {
         VALUES ('b', 'o', 'c', 't', 'n', 'a', 1);
       ALTER TABLE compliance_items DROP COLUMN review_status;
       ALTER TABLE compliance_items DROP COLUMN fulfilment_status;
+      -- Databases built by the pre-migration DDL have no ledger, so the baseline runs on them.
+      DROP TABLE schema_migrations;
     `);
     const legacy = [
       'PENDING',

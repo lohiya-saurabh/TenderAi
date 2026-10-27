@@ -103,7 +103,7 @@ TenderPulse is architected around a **Two-Tier Distributed Service Boundary** wi
 | Domain | Technologies |
 |---|---|
 | **Frontend** | React 18, TypeScript, Vite, Tailwind CSS, Radix UI Primitives, Lucide Icons, TanStack Table |
-| **Backend API** | NestJS 10, Node.js 20+, TypeScript, Drizzle ORM, PGlite (Embedded) / PostgreSQL 15+ |
+| **Backend API** | NestJS 10, Node.js 20+, TypeScript, Drizzle ORM, PostgreSQL 16 (PGlite in tests) |
 | **AI & Orchestration** | Python 3.11+, FastAPI, LangGraph, Pydantic v2, Docling Parser Engine, 3-Tier Structural RAG |
 | **Storage & Cloud** | AWS S3 / Google Cloud Storage (Presigned URLs), AWS SQS / GCP Cloud Pub/Sub |
 | **Architecture Patterns** | Domain-Driven Design (DDD), Ports & Adapters (Hexagonal), Transactional Outbox, CQRS |
@@ -165,7 +165,7 @@ Copy the sample environment variables:
 cp .env.example .env
 ```
 
-The application runs out of the box in **Zero-Cloud Mode** using embedded `@electric-sql/pglite` and in-memory storage/queue adapters, requiring no external AWS or GCP credentials for local development.
+Local development needs a PostgreSQL 16 server (`DATABASE_URL`); see [CONTRIBUTING.md § Local database](CONTRIBUTING.md#4-local-database) for the one-time Homebrew setup. Storage and queues use in-memory adapters, so no AWS or GCP credentials are needed.
 
 ### 3. Launch Development Environment
 

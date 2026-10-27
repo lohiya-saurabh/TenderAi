@@ -1,22 +1,40 @@
 /**
- * DatabaseModule — Provides PGlite (embedded PostgreSQL) and Drizzle ORM as global injectables.
+ * DatabaseModule — provides the PostgreSQL client and Drizzle ORM as global injectables.
  *
- * Any module that needs type-safe query building injects 'DRIZZLE_TOKEN'.
+ * Runtime uses real PostgreSQL via DATABASE_URL (node-postgres pool). Tests use
+ * in-memory PGlite via PGLITE_DATA_DIR. Any module that needs type-safe query
+ * building injects 'DRIZZLE_TOKEN'.
  */
-import { Module, Global } from '@nestjs/common';
+import { Module, Global, Inject, Injectable, type OnApplicationShutdown } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { drizzle, type PgliteDatabase } from 'drizzle-orm/pglite';
+import { drizzle } from 'drizzle-orm/pglite';
 import { PGlite } from '@electric-sql/pglite';
 import { getDatabase, initDatabase } from '@/common/database/database.provider.js';
+import {
+  closeDatabase,
+  createDrizzleFor,
+  type DatabaseClient,
+  type DrizzleDb,
+} from '@/common/database/client.js';
 import * as schema from '@/common/database/schema.js';
+
+export type { DrizzleDb } from '@/common/database/client.js';
 
 export const DATABASE_TOKEN = 'DATABASE';
 export const DRIZZLE_TOKEN = 'DRIZZLE';
 
-export type DrizzleDb = PgliteDatabase<typeof schema>;
-
+/** Wraps an in-memory/embedded PGlite (tests) in Drizzle. */
 export function createDrizzle(db: PGlite): DrizzleDb {
-  return drizzle(db, { schema });
+  return drizzle(db, { schema }) as unknown as DrizzleDb;
+}
+
+@Injectable()
+class DatabaseLifecycle implements OnApplicationShutdown {
+  constructor(@Inject(DATABASE_TOKEN) private readonly client: DatabaseClient) {}
+
+  async onApplicationShutdown(): Promise<void> {
+    await closeDatabase(this.client);
+  }
 }
 
 @Global()
@@ -26,7 +44,7 @@ export function createDrizzle(db: PGlite): DrizzleDb {
       provide: DATABASE_TOKEN,
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => {
-        const db = await getDatabase();
+        const db = await getDatabase(configService);
         await initDatabase(db, undefined, configService);
         return db;
       },
@@ -34,10 +52,9 @@ export function createDrizzle(db: PGlite): DrizzleDb {
     {
       provide: DRIZZLE_TOKEN,
       inject: [DATABASE_TOKEN],
-      useFactory: (db: PGlite): DrizzleDb => {
-        return createDrizzle(db);
-      },
+      useFactory: (db: DatabaseClient): DrizzleDb => createDrizzleFor(db),
     },
+    DatabaseLifecycle,
   ],
   exports: [DATABASE_TOKEN, DRIZZLE_TOKEN],
 })

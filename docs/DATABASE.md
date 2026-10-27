@@ -2,7 +2,7 @@
 
 ## 1. Architectural Philosophy & Principles
 
-In accordance with **ADR 0002 (PostgreSQL over DynamoDB)**, **ADR 0009 (Bid State Machine & Optimistic Locking)**, and **AGENTS.md**, PostgreSQL 16 (executed via `@electric-sql/pglite` in local development and test environments, targeting Amazon RDS / GCP Cloud SQL in production) is the transactional source of truth for TenderPulse AI.
+In accordance with **ADR 0002 (PostgreSQL over DynamoDB)**, **ADR 0009 (Bid State Machine & Optimistic Locking)**, and **AGENTS.md**, PostgreSQL 16 (a local server in development, Amazon RDS / GCP Cloud SQL in production; in-memory `@electric-sql/pglite` only in automated tests) is the transactional source of truth for TenderPulse AI.
 
 Public procurement compliance is legally binding and high-stakes:
 
@@ -712,8 +712,9 @@ When reviewing the repository against earlier architectural drafts, three notabl
    - The files `apps/api/src/infrastructure/persistence/schema.prisma` and `schema.sql` are **legacy 3-table artifacts** (`bids`, `compliance_items`, `audit_logs`) from early Phase 1 prototyping. They define `estimated_value_paise` and native UUID types, whereas the live Drizzle schema uses `estimated_value_rupees`, `TEXT` IDs (for cross-engine compatibility between PGlite and PostgreSQL), and encompasses all 14 tables.
 2. **Denormalized Organization Key vs. Standalone Organizations Table**:
    - The active database schema does not feature a separate `organizations` table. Multi-tenancy is established via `organization_id TEXT NOT NULL` present across every business table. Tenant metadata is stored in `users.organization_name`, `tenant_settings`, and `subscriptions`.
-3. **Embedded PGlite Engine in Local Runtime**:
-   - In local development, the NestJS backend boots an embedded `@electric-sql/pglite` database stored under `apps/api/data/postgres`.
+3. **PostgreSQL at Runtime, PGlite in Tests**:
+   - The NestJS backend connects to PostgreSQL 16 through `DATABASE_URL` (node-postgres pool; `DATABASE_SSL=verify-full` against RDS). Without `DATABASE_URL` or `PGLITE_DATA_DIR` it refuses to start. Local setup: `CONTRIBUTING.md` § Local database.
+   - The schema is applied by versioned migrations (`apps/api/src/common/database/migrations/`, recorded in `schema_migrations` under a Postgres advisory lock), not ad-hoc DDL.
    - API tests set `PGLITE_DATA_DIR=memory://` (`apps/api/vitest.config.ts`), so every test file gets its own in-memory database and the files run in parallel without touching the dev database.
    - In production environments on AWS (`AWS.md`) or GCP (`GCP.md`), the system connects to a managed PostgreSQL 16 cluster (Amazon RDS / Cloud SQL) via standard connection strings.
 4. **Target Pivot Entities vs. Implemented Models**:

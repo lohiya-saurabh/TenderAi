@@ -31,6 +31,10 @@ variable "ai_worker_task_role_arn" { type = string }
 variable "api_image_uri" { type = string }
 variable "ai_worker_image_uri" { type = string }
 variable "app_secrets_arn" { type = string }
+variable "database_url_secret_arn" {
+  type        = string
+  description = "Secrets Manager ARN holding the API's DATABASE_URL (from the rds module)."
+}
 variable "api_desired_count" {
   type    = number
   default = 2
@@ -148,12 +152,19 @@ resource "aws_ecs_task_definition" "api" {
       ]
       environment = [
         { name = "NODE_ENV", value = var.environment == "prod" ? "production" : "development" },
-        { name = "PORT", value = "3000" }
+        { name = "PORT", value = "3000" },
+        # RDS enforces TLS (rds.force_ssl); verify the server against the bundle baked into the image.
+        { name = "DATABASE_SSL", value = "verify-full" },
+        { name = "DATABASE_SSL_CA_FILE", value = "/app/certs/rds-global-bundle.pem" }
       ]
       secrets = [
         {
           name      = "APP_SECRETS"
           valueFrom = var.app_secrets_arn
+        },
+        {
+          name      = "DATABASE_URL"
+          valueFrom = var.database_url_secret_arn
         }
       ]
       logConfiguration = {
@@ -260,3 +271,19 @@ output "ecs_cluster_id" { value = aws_ecs_cluster.main.id }
 output "ecs_cluster_name" { value = aws_ecs_cluster.main.name }
 output "api_service_name" { value = aws_ecs_service.api.name }
 output "ai_worker_service_name" { value = aws_ecs_service.ai_worker.name }
+
+# The task execution role resolves the DATABASE_URL secret when the API task starts.
+resource "aws_iam_role_policy" "api_database_url" {
+  name = "${var.project_name}-api-database-url-${var.environment}"
+  role = element(split("/", var.ecs_execution_role_arn), length(split("/", var.ecs_execution_role_arn)) - 1)
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["secretsmanager:GetSecretValue"]
+        Resource = var.database_url_secret_arn
+      }
+    ]
+  })
+}

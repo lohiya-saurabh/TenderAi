@@ -98,16 +98,16 @@ resource "aws_db_instance" "postgres" {
   vpc_security_group_ids = [var.rds_security_group_id]
   parameter_group_name   = aws_db_parameter_group.pg16.name
 
-  multi_az            = var.multi_az
-  publicly_accessible = false
-  skip_final_snapshot = var.environment == "dev" ? true : false
+  multi_az                  = var.multi_az
+  publicly_accessible       = false
+  skip_final_snapshot       = var.environment == "dev" ? true : false
   final_snapshot_identifier = "${var.project_name}-db-final-snapshot-${var.environment}"
 
-  backup_retention_period   = 30 # 30-day continuous Point-In-Time Recovery
-  backup_window             = "21:00-22:00" # UTC (02:30-03:30 IST)
-  maintenance_window        = "Sun:22:00-Sun:23:00"
+  backup_retention_period    = 30            # 30-day continuous Point-In-Time Recovery
+  backup_window              = "21:00-22:00" # UTC (02:30-03:30 IST)
+  maintenance_window         = "Sun:22:00-Sun:23:00"
   auto_minor_version_upgrade = true
-  deletion_protection       = var.environment == "prod" ? true : false
+  deletion_protection        = var.environment == "prod" ? true : false
 
   tags = {
     Name        = "${var.project_name}-db-${var.environment}"
@@ -115,7 +115,32 @@ resource "aws_db_instance" "postgres" {
   }
 }
 
+# 4. DATABASE_URL for the API, kept in Secrets Manager (never in task definitions or logs)
+resource "aws_secretsmanager_secret" "database_url" {
+  name                    = "${var.project_name}/${var.environment}/database-url"
+  description             = "PostgreSQL connection string for the TenderPulse API"
+  recovery_window_in_days = var.environment == "prod" ? 30 : 0
+
+  tags = {
+    Name        = "${var.project_name}-database-url-${var.environment}"
+    Environment = var.environment
+  }
+}
+
+resource "aws_secretsmanager_secret_version" "database_url" {
+  secret_id = aws_secretsmanager_secret.database_url.id
+  secret_string = format(
+    "postgresql://%s:%s@%s:%d/%s",
+    aws_db_instance.postgres.username,
+    urlencode(random_password.master_password.result),
+    aws_db_instance.postgres.address,
+    aws_db_instance.postgres.port,
+    aws_db_instance.postgres.db_name,
+  )
+}
+
 # Outputs
+output "database_url_secret_arn" { value = aws_secretsmanager_secret.database_url.arn }
 output "db_endpoint" { value = aws_db_instance.postgres.endpoint }
 output "db_address" { value = aws_db_instance.postgres.address }
 output "db_port" { value = aws_db_instance.postgres.port }

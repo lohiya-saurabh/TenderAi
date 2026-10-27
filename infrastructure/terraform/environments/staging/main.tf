@@ -88,6 +88,7 @@ module "ecs" {
   api_image_uri               = var.api_image_uri
   ai_worker_image_uri         = var.ai_worker_image_uri
   app_secrets_arn             = module.security.app_secrets_arn
+  database_url_secret_arn     = module.rds.database_url_secret_arn
   api_desired_count           = 2
   ai_worker_desired_count     = 2
 }
