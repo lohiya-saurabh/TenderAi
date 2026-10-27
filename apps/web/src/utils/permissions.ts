@@ -1,7 +1,7 @@
 /**
  * TenderPulse AI — Permission Constants & Helpers
  *
- * Mirrors the backend RBAC permission matrix from SECURITY_MODEL.md.
+ * Mirrors the backend RBAC permission matrix (docs/SECURITY.md §2).
  * These are used for UX gating ONLY — backend enforces authorization.
  */
 

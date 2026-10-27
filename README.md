@@ -1,219 +1,84 @@
 # TenderPulse AI
 
-<p align="center">
-  <strong>Enterprise Multi-Agent Platform for Autonomous Tender Ingestion, Risk Assessment & Compliance Matrix Generation</strong>
-</p>
+TenderPulse AI helps Indian bidders get through government tenders. Upload a tender (NIT, RFP, GCC/SCC, often hundreds of pages) and it:
 
-<p align="center">
-  <img src="https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript" alt="TypeScript" />
-  <img src="https://img.shields.io/badge/NestJS-10.x-ea2845?logo=nestjs" alt="NestJS" />
-  <img src="https://img.shields.io/badge/React-18.x-61dafb?logo=react" alt="React 18" />
-  <img src="https://img.shields.io/badge/Python-3.11-3776ab?logo=python" alt="Python 3.11" />
-  <img src="https://img.shields.io/badge/FastAPI-0.110+-009688?logo=fastapi" alt="FastAPI" />
-  <img src="https://img.shields.io/badge/LangGraph-Stateful_Agents-orange?logo=langchain" alt="LangGraph" />
-  <img src="https://img.shields.io/badge/PostgreSQL-Drizzle_ORM-336791?logo=postgresql" alt="PostgreSQL" />
-  <img src="https://img.shields.io/badge/License-MIT-green" alt="License" />
-</p>
+- extracts every bidder obligation with the **exact quote, page and clause** it comes from;
+- flags contradictions between clauses;
+- lists any pages it could not process;
+- gives the bid team a workspace to confirm each clause and track bid preparation.
 
----
+Nothing is made up: an item without a verbatim quote from the tender is rejected, and a value the tender does not state stays "Not stated".
 
-## Executive Summary
+## What it does
 
-**TenderPulse AI** is a production-grade, multi-tenant enterprise SaaS platform engineered to eliminate hundreds of manual engineering hours spent analyzing complex government and corporate procurement tenders (RFP/RFQ/NIT). 
+- **Clause extraction.** An LLM-only LangGraph pipeline turns each tender into categorized, quoted obligations: financial, technical, statutory, legal, operational, commercial and execution. Every quote is checked against the page text.
+- **Clause workspace.** Reviewers confirm, correct or reject each clause against its source. Conflicts get their own resolution view, and re-extraction never overwrites a review.
+- **Company profile and evidence.** A versioned capability profile, plus uploaded certificates and financials, with GSTIN, MCA, Udyam and DigiLocker verification.
+- **Bid or no-bid.** Eligibility is evaluated deterministically against the profile, with an AI summary of risks.
+- **Tender chat.** Questions answered from the tender, with citations, over tenant-scoped retrieval (BM25 plus local embeddings).
 
-Tender documents frequently span hundreds of pages of intricate legal clauses, technical specifications, and stringent qualification criteria. TenderPulse orchestrates a two-tier distributed system combining a **NestJS Orchestrator API** with a **FastAPI LangGraph AI State Machine** to autonomously ingest 100MB+ PDFs, parse qualification criteria, extract compliance requirements, evaluate bidder company documents, and construct an immutable, audited **Compliance Matrix**.
-
----
-
-## System Architecture
-
-TenderPulse is architected around a **Two-Tier Distributed Service Boundary** with strict domain-driven separation of concerns:
+## How it is built
 
 ```
-                                  ┌────────────────────────┐
-                                  │   React 18 / Vite UI   │
-                                  │   (Tailwind / Radix)   │
-                                  └───────────┬────────────┘
-                                              │
-                      ┌───────────────────────┼────────────────────────┐
-                      │ Authenticated REST /  │ Direct Presigned       │
-                      │ Realtime Events (SSE) │ Binary PUT (<100MB)    │
-                      ▼                       ▼                        ▼
-         ┌─────────────────────────┐     ┌───────────────────────────────────┐
-         │  NestJS Orchestration   │     │      Cloud Object Storage         │
-         │  (Single-Writer DB /    │     │      (AWS S3 / GCP Cloud Storage) │
-         │   Zero-Trust Auth /     │     └─────────────────┬─────────────────┘
-         │   Transactional Outbox) │                       │
-         └────────────┬────────────┘                       │
-                      │                                    │ Presigned Read
-                      │ Domain Events                      │ (No RAM bloat)
-                      ▼ (SQS / PubSub)                     │
-         ┌─────────────────────────┐                       │
-         │   FastAPI AI Worker     │◄──────────────────────┘
-         │   (LangGraph Cyclic     │
-         │    Multi-Agent Engine)  │
-         └────────────┬────────────┘
-                      │
-                      │ Validated Results & Provenance
-                      ▼
-         ┌─────────────────────────┐
-         │  PostgreSQL (Drizzle)   │
-         │  - Multi-Tenant Schema  │
-         │  - Immutable Audit Log  │
-         └─────────────────────────┘
+React SPA ──► NestJS API ──► PostgreSQL 16
+                 │  ▲
+       SQS job   ▼  │  SQS completion (claim-check to S3 for large results)
+             FastAPI AI worker (Docling, LangGraph, multi-provider LLM rotation)
 ```
 
-### Architectural Pillars
+- **Web:** `apps/web`, built with React 18, Vite, Tailwind and Radix.
+- **API:** `apps/api`, built with NestJS 12, Drizzle ORM and node-postgres. It owns authentication, tenancy and every database write.
+- **AI worker:** `apps/ai`, built with Python 3.14, FastAPI, LangGraph, Docling and fastembed. It is a pure compute service that never touches the database.
+- **Shared packages:** the clause contract and DTOs in `packages/shared-types`, and components in `packages/ui`.
+- **Infrastructure:** Terraform for AWS (ECS Fargate, RDS, S3, SQS, KMS) in `infrastructure/terraform`, with CI/CD in GitHub Actions.
 
-1. **Two-Tier Orchestration vs. Worker Separation ([ADR 0001](docs/adr/0001-two-tier-service-boundary.md))**:
-   - **NestJS Orchestrator**: Sole authority over user authentication, tenant scoping, database writes, and external API gateways.
-   - **FastAPI AI Worker**: Headless, stateless worker dedicated strictly to high-throughput compute, vector chunking, and cyclic LangGraph state machine execution.
+## Quick start
 
-2. **Direct-to-Storage Presigned Uploads ([ADR 0005](docs/adr/0005-s3-direct-upload-presigned-urls.md))**:
-   - Web clients request cryptographically signed URLs from the API and upload large PDF files directly to AWS S3 or Google Cloud Storage.
-   - Eliminates in-memory buffer exhaustion and prevents Node.js event-loop starvation when processing multi-megabyte tender dossiers.
-
-3. **Zero-Trust Multi-Tenant Isolation & Anti-IDOR Enforcement ([ADR 0011](docs/adr/0011-ai-security-and-tenant-isolation.md))**:
-   - Caller tenant identity (`organizationId`) is anchored exclusively in verified JWT claims (`TenantContextHolder`).
-   - Every database query and storage prefix operation enforces strict tenant boundary predicates (`WHERE organization_id = :orgId`), preventing Confused Deputy and Insecure Direct Object Reference (IDOR) attacks.
-
-4. **Deterministic Compliance Engine with Immutable Provenance ([ADR 0010](docs/adr/0010-provenance-value-object-immutability.md), [ADR 0021](docs/adr/0021-evidence-first-compliance-engine.md))**:
-   - Every compliance item links directly to verbatim tender text, source document ID, page number, and bounding box coordinates.
-   - Provenance records are treated as immutable value objects to ensure auditability during legal procurement disputes.
-
-5. **Cloud-Provider-Agnostic Ports & Adapters ([ADR 0014](docs/adr/0014-cloud-agnostic-ports-and-gcp-implementation.md))**:
-   - Domain logic depends strictly on generic interfaces (`IStorageService`, `IJobQueue`, `IEventPublisher`).
-   - Swappable infrastructure adapters provide first-class support for both **AWS** (S3, SQS, EventBridge) and **GCP** (GCS, Cloud Pub/Sub, Cloud Tasks), with in-memory mock adapters for zero-cloud local testing.
-
----
-
-## Core Capabilities
-
-- **Automated Tender Document Intake**: Upload Notice Inviting Tender (NIT), General Conditions of Contract (GCC), Special Conditions of Contract (SCC), and Bill of Quantities (BOQ).
-- **LangGraph Clause Extraction**: Deconstructs dense procurement legalese into classified clauses (Eligibility, Technical Specs, Financial Covenants, Penalties, Payment Milestones).
-- **Bid / No-Bid Decision Matrix**: Evaluates tender requirements against company profile (turnover, technical experience, blacklisting status) to compute an objective suitability score.
-- **Evidence-First Compliance Matching**: Cross-references company documentation against mandatory tender clauses, classifying each requirement as `Compliant`, `Non-Compliant`, or `Ambiguous`.
-- **Human-in-the-Loop Review Console**: High-confidence assessments (>=90%) can be auto-approved, while marginal or ambiguous clauses are flagged for human legal team verification.
-- **Enterprise Notification System**: Real-time server-sent events (SSE) and notification preferences notify procurement officers of deadline changes, extraction progress, and high-risk clause findings.
-
----
-
-## Technology Stack
-
-| Domain | Technologies |
-|---|---|
-| **Frontend** | React 18, TypeScript, Vite, Tailwind CSS, Radix UI Primitives, Lucide Icons, TanStack Table |
-| **Backend API** | NestJS 10, Node.js 20+, TypeScript, Drizzle ORM, PostgreSQL 16 (PGlite in tests) |
-| **AI & Orchestration** | Python 3.11+, FastAPI, LangGraph, Pydantic v2, Docling Parser Engine, 3-Tier Structural RAG |
-| **Storage & Cloud** | AWS S3 / Google Cloud Storage (Presigned URLs), AWS SQS / GCP Cloud Pub/Sub |
-| **Architecture Patterns** | Domain-Driven Design (DDD), Ports & Adapters (Hexagonal), Transactional Outbox, CQRS |
-| **Quality & Tooling** | Vitest, Pytest, Playwright (E2E), ESLint, Prettier, Docker & Docker Compose |
-
----
-
-## Repository Structure
-
-```
-.
-├── apps/
-│   ├── api/             # NestJS enterprise backend (Auth, Bids, Documents, Compliance)
-│   ├── ai/              # FastAPI Python service (LangGraph 12-node workflow, Docling, RAG)
-│   └── web/             # React 18 Single-Page Application (Procurement dashboard & tables)
-├── packages/
-│   ├── shared-types/    # Domain DTOs, interfaces, and cross-boundary type definitions
-│   └── ui/              # Reusable React component library & design tokens
-├── docs/                # Comprehensive technical documentation & 28 Architectural Decision Records
-│   ├── adr/             # Architecture Decision Records (0001 - 0028)
-│   ├── ARCHITECTURE.md  # Detailed system architecture and service boundaries
-│   ├── DATABASE.md      # Relational schema, Drizzle definitions, and indexing strategies
-│   └── SECURITY_MODEL.md# Multi-tenant isolation and security controls
-├── infrastructure/      # Terraform configurations and cloud provisioning templates
-├── scripts/             # Local development runners, DB seeders, and supervisor scripts
-└── docker-compose.yml   # Multi-container local orchestration
-```
-
----
-
-## Quickstart & Local Development
-
-### Prerequisites
-
-- **Node.js**: v20+ with `npm` v10+
-- **Python**: v3.11+
-- **Docker & Docker Compose** (Optional, for containerized services)
-
-### 1. Installation
-
-Clone the repository and install all monorepo dependencies:
+You need Node 22+, [uv](https://docs.astral.sh/uv/), PostgreSQL 16 and AWS credentials for the dev queues. The one-time database and queue setup is in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
 ```bash
-git clone https://github.com/lohiya-saurabh/TenderAi.git
-cd TenderAi
-
-# Install Node monorepo dependencies
 npm install
-
-# Setup Python AI service virtual environment (apps/ai/.venv, pinned by uv.lock)
 (cd apps/ai && uv sync --extra dev)
+cp .env.example .env && cp apps/ai/.env.example apps/ai/.env   # then fill in DATABASE_URL, queues, LLM keys
+npm run dev
 ```
 
-### 2. Environment Configuration
+| Service   | URL                                        |
+| --------- | ------------------------------------------ |
+| Web       | http://localhost:5173                      |
+| API       | http://localhost:3000/api/v1               |
+| AI worker | http://localhost:8000 (Swagger at `/docs`) |
 
-Copy the sample environment variables:
+`npm run dev` prints the demo logins. Run the checks before you push:
 
 ```bash
-cp .env.example .env
+npm run type-check && npm run lint && npm test
+(cd apps/ai && uv run ruff check src tests && uv run pytest -m unit)
 ```
 
-Local development needs a PostgreSQL 16 server (`DATABASE_URL`); see [CONTRIBUTING.md § Local database](CONTRIBUTING.md#4-local-database) for the one-time Homebrew setup. Storage and queues use in-memory adapters, so no AWS or GCP credentials are needed.
+## Repository layout
 
-### 3. Launch Development Environment
-
-Run the unified development script to start all services simultaneously:
-
-```bash
-./scripts/dev.sh
 ```
-
-This launches:
-- **FastAPI AI Worker**: `http://localhost:8000` (Swagger docs at `/docs`)
-- **NestJS API Gateway**: `http://localhost:3000`
-- **React Frontend**: `http://localhost:5173`
-
----
-
-## Verification & Test Suite
-
-The codebase maintains strict quality gates and comprehensive automated test coverage across all layers:
-
-```bash
-# Monorepo TypeScript type checking (0 errors across all workspaces)
-npm run type-check
-
-# Run NestJS API unit and integration tests (245 tests)
-npm --workspace=apps/api run test
-
-# Run React Web UI unit tests (163 tests)
-npm --workspace=apps/web run test
-
-# Run Python AI worker test suite (113 tests)
-cd apps/ai && pytest
+apps/api/          NestJS API
+apps/ai/           FastAPI AI worker
+apps/web/          React SPA
+packages/          shared-types (clause contract), ui, config
+infrastructure/    Terraform (AWS environments and modules, gcp-local)
+scripts/           dev runner, DB tools, setup helpers
+docs/              guides, ADRs, audits
 ```
-
----
 
 ## Documentation
 
-Comprehensive architecture guides and ADRs are available in the [`docs/`](docs/) directory:
-
-- [System Architecture](docs/ARCHITECTURE.md) — Two-tier service boundary and target topology.
-- [Product Specifications](docs/PRODUCT.md) — Bidder workflows and domain aggregate model.
-- [Database Schema & Indexes](docs/DATABASE.md) — Relational schema, multi-tenant tables, and audit logs.
-- [Security & Tenant Isolation](docs/SECURITY_MODEL.md) — Defense-in-depth, JWT verification, and data isolation.
-- [Architectural Decision Records (ADRs)](docs/adr/) — 22 formal ADRs documenting key trade-offs and decisions.
-
----
-
-## License
-
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+| Topic                          | Document                                                             |
+| ------------------------------ | -------------------------------------------------------------------- |
+| Index of all docs              | [docs/README.md](docs/README.md)                                     |
+| Product and domain             | [docs/PRODUCT.md](docs/PRODUCT.md), [docs/DOMAIN.md](docs/DOMAIN.md) |
+| Architecture and data flow     | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)                         |
+| HTTP API                       | [docs/API.md](docs/API.md)                                           |
+| Extraction pipeline and models | [docs/AI_PIPELINE.md](docs/AI_PIPELINE.md)                           |
+| Security                       | [docs/SECURITY.md](docs/SECURITY.md)                                 |
+| Database                       | [docs/DATABASE.md](docs/DATABASE.md)                                 |
+| Local development and tests    | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)                           |
+| Deployment and CI/CD           | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)                             |
+| Engineering rules              | [AGENTS.md](AGENTS.md), [CONTRIBUTING.md](CONTRIBUTING.md)           |

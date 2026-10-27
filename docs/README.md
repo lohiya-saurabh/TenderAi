@@ -1,85 +1,56 @@
-# Technical Documentation
+# Documentation
 
-Welcome to the TenderPulse technical documentation. This directory contains the complete architecture specifications, domain models, implementation guides, and Architectural Decision Records (ADRs) for the TenderPulse enterprise SaaS platform.
+Start with the root [README](../README.md) for a quick start. The engineering rules every change follows are in [AGENTS.md](../AGENTS.md).
 
----
+## Guides
 
-## 1. System Foundations
+| Document                           | Read it for                                                                                                          |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| [PRODUCT.md](PRODUCT.md)           | What we build and for whom: bidder workflows, the company capability profile, MVP scope                              |
+| [DOMAIN.md](DOMAIN.md)             | Indian public procurement (tender anatomy, two-packet bidding, disqualification cases) and the ubiquitous language   |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Services, code layout, the upload → outbox → queue → worker → completion flow, adapters, failure handling            |
+| [API.md](API.md)                   | Every HTTP route of the API and the internal AI worker routes                                                        |
+| [AI_PIPELINE.md](AI_PIPELINE.md)   | Extraction stages, the LangGraph workflow, the model rotation and rate limits, retrieval, human review, benchmarking |
+| [SECURITY.md](SECURITY.md)         | Authentication, RBAC, tenant isolation, prompt-injection boundaries, secret scrubbing, known gaps                    |
+| [DATABASE.md](DATABASE.md)         | PostgreSQL setup per environment, migrations, tables, the clause row                                                 |
+| [DEVELOPMENT.md](DEVELOPMENT.md)   | Running everything locally (Postgres, dev queues, provider keys) and the verification gates                          |
+| [DEPLOYMENT.md](DEPLOYMENT.md)     | AWS Terraform, CI/CD, GCP adapters, and what must be fixed before the next production deploy                         |
 
-- [PRODUCT.md](PRODUCT.md) — Product vision, bidder-side workflows, target market, and requirements.
-- [MVP.md](MVP.md) — Core delivery scope, release milestones, and feature boundaries.
-- [ARCHITECTURE.md](ARCHITECTURE.md) — System architecture, two-tier service boundaries, and target topology.
-- [LLD.md](LLD.md) — Low-Level Design (LLD): Tender ingestion, worker dispatch, and compliance lifecycle.
-- [DOMAIN.md](DOMAIN.md) — Procurement domain model, aggregates, entities, and business invariants.
-- [SECURITY_MODEL.md](SECURITY_MODEL.md) — Platform security architecture, tenant isolation, and defense-in-depth.
+## Decision records
 
----
+[`adr/`](adr/) holds the architectural decisions in the form they were taken; they are not rewritten afterwards. Where the code has since moved on, the guides above describe the current state:
 
-## 2. Core Platform & Architecture Specifications
+Some ADRs cite documents that have since been merged into the guides:
 
-- [SERVICE_BOUNDARY.md](SERVICE_BOUNDARY.md) — Service responsibilities, contracts, and handoff boundaries.
-- [ASYNC_DOCUMENT_HANDOFF.md](ASYNC_DOCUMENT_HANDOFF.md) — Asynchronous document ingestion, outbox pattern, worker execution, idempotency, and PostgreSQL persistence guide (Design B).
-- [STORAGE_ARCHITECTURE.md](STORAGE_ARCHITECTURE.md) — Direct-to-storage upload, object integrity verification, and bucket policies.
-- [DATABASE.md](DATABASE.md) — Relational schema, Drizzle ORM models, indexes, and audit logs.
-- [EVENTS.md](EVENTS.md) — Domain events, message broker choreography, and event schemas.
-- [CICD.md](CICD.md) — Continuous integration, automated test pipelines, and deployment flows.
-- [HUMAN_REVIEW.md](HUMAN_REVIEW.md) — Human-in-the-loop review workflow, confidence tiers, and reviewer overrides.
+- `ASYNC_DOCUMENT_HANDOFF.md`, `SERVICE_BOUNDARY.md`, `LLD.md`, `EVENTS.md` and `STORAGE_ARCHITECTURE.md` are now in ARCHITECTURE.md;
+- `SECURITY_MODEL.md` and `AI_SECURITY.md` are now in SECURITY.md;
+- `AI.md`, `AI_EVALUATION.md` and `HUMAN_REVIEW.md` are now in AI_PIPELINE.md;
+- `AWS.md`, `CICD.md` and `GCP.md` are now in DEPLOYMENT.md.
 
----
+| ADR                                                                          | Note                                                                                                                           |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| [0012](adr/0012-domain-events-and-eventbridge.md)                            | Domain events run on the in-process bus; EventBridge remains deferred                                                          |
+| [0019](adr/0019-deterministic-eligibility-matching-engine.md)                | The deterministic evaluator lives in the AI worker (`decision/evaluator.py`), not in NestJS                                    |
+| [0020](adr/0020-external-data-connectors-enrichment-port.md)                 | Implemented as the company-verification providers (GSTIN, MCA, Udyam, DigiLocker)                                              |
+| [0028](adr/0028-high-recall-candidate-scoring-context-fusion-rescue-pass.md) | Superseded in part: extraction is LLM-only and sends every clause chunk of a window to the model; there is no rescue-pass node |
 
-## 3. AI Intelligence & Verification
+## Audits and benchmarks
 
-- [AI.md](AI.md) — AI systems architecture, LangGraph state machine, and LLM orchestration.
-- [AI_SECURITY.md](AI_SECURITY.md) — Multi-tenant isolation, prompt injection defense, and grounding checks.
-- [AI_EVALUATION.md](AI_EVALUATION.md) — Evaluation harness, regression testing, and precision/recall benchmarks.
+[`audits/`](audits/) records diagnoses, benchmark results and the decisions taken from them:
 
----
+- [MODEL_ROTATION_QUALITY_BENCHMARK.md](audits/MODEL_ROTATION_QUALITY_BENCHMARK.md) — why qwen was dropped from the rotation (2026-10-27)
+- [END_TO_END_AUDIT.md](audits/END_TO_END_AUDIT.md) — the system audit whose remediation Phases 1–4 are complete
+- [PIPELINE_DIAGNOSTICS_AND_BENCHMARK_AUDIT.md](audits/PIPELINE_DIAGNOSTICS_AND_BENCHMARK_AUDIT.md) — pipeline stages, the 30-obligation benchmark matrix, multi-tender hazards
+- [DOCUMENT_AGNOSTIC_GENERALIZATION_AUDIT.md](audits/DOCUMENT_AGNOSTIC_GENERALIZATION_AUDIT.md) — the move to LLM-only, document-agnostic extraction
 
-## 4. Cloud Infrastructure & DevOps
+## Keeping docs current
 
-- [AWS.md](AWS.md) — AWS production architecture (ECS, S3, SQS, RDS Aurora).
-- [AWS_DEV_SETUP.md](AWS_DEV_SETUP.md) — Local development and emulation for AWS services (LocalStack).
-- [GCP.md](GCP.md) — GCP production architecture (Cloud Run, GCS, Cloud Pub/Sub, Cloud SQL).
-- [GCP_DEV_SETUP.md](GCP_DEV_SETUP.md) — Local development and emulation for GCP services.
+Every change updates the documents it affects in the same commit (rule in [AGENTS.md](../AGENTS.md) §3). In particular:
 
----
+- new or changed routes → `API.md`;
+- schema or migrations → `DATABASE.md`;
+- pipeline, models or prompts → `AI_PIPELINE.md`;
+- infrastructure or CI → `DEPLOYMENT.md`;
+- local setup → `DEVELOPMENT.md`.
 
-## 5. Architectural Decision Records (ADRs)
-
-All architectural decisions are documented in the [`adr/`](adr/) directory:
-
-- [ADR 0001: Two-Tier Service Boundary](adr/0001-two-tier-service-boundary.md)
-- [ADR 0002: PostgreSQL over DynamoDB](adr/0002-postgresql-over-dynamodb.md)
-- [ADR 0003: SQS Asynchronous Pipeline](adr/0003-sqs-asynchronous-pipeline.md)
-- [ADR 0004: LangGraph over LangChain](adr/0004-langgraph-over-langchain.md)
-- [ADR 0005: Direct S3 Upload via Presigned URLs](adr/0005-s3-direct-upload-presigned-urls.md)
-- [ADR 0006: Real-time Updates via SSE over AppSync](adr/0006-realtime-updates-sse-over-appsync.md)
-- [ADR 0007: Redis Justification and Deferral](adr/0007-redis-justification-and-deferral.md)
-- [ADR 0008: Domain-Driven Layered Architecture](adr/0008-domain-driven-layered-architecture.md)
-- [ADR 0009: Bid State Machine and Optimistic Locking](adr/0009-bid-state-machine-and-optimistic-locking.md)
-- [ADR 0010: Provenance Value Object Immutability](adr/0010-provenance-value-object-immutability.md)
-- [ADR 0011: AI Security and Tenant Isolation](adr/0011-ai-security-and-tenant-isolation.md)
-- [ADR 0012: Domain Events and EventBridge](adr/0012-domain-events-and-eventbridge.md)
-- [ADR 0013: AI Security and RAG Isolation](adr/0013-ai-security-and-rag-isolation.md)
-- [ADR 0014: Cloud-Agnostic Ports and GCP Implementation](adr/0014-cloud-agnostic-ports-and-gcp-implementation.md)
-- [ADR 0015: Two-Phase Cascade Deletion Architecture](adr/0015-two-phase-cascade-deletion-architecture.md)
-- [ADR 0016: Bidder-Side Pivot Aggregates](adr/0016-bidder-side-pivot-aggregates.md)
-- [ADR 0017: Enforce Layered Boundary at HTTP](adr/0017-enforce-layered-boundary-at-http.md)
-- [ADR 0018: Async-First Extraction and AI](adr/0018-async-first-extraction-and-ai.md)
-- [ADR 0019: Deterministic Eligibility Matching Engine](adr/0019-deterministic-eligibility-matching-engine.md)
-- [ADR 0020: External Data Connectors Enrichment Port](adr/0020-external-data-connectors-enrichment-port.md)
-- [ADR 0021: Evidence-First Compliance Engine](adr/0021-evidence-first-compliance-engine.md)
-- [ADR 0022: Durable Asynchronous Document Processing Runtime](adr/0022-durable-asynchronous-document-processing-runtime.md)
-- [ADR 0023: Company Evidence and Third-Party Verification Layer](adr/0023-company-evidence-and-third-party-verification-layer.md)
-- [ADR 0024: LangGraph Bid Decision Engine](adr/0024-langgraph-bid-decision-engine.md)
-- [ADR 0025: Modular Security Perimeter and Persistence Hardening](adr/0025-modular-security-perimeter-and-persistence-hardening.md)
-- [ADR 0026: High-Contrast Executive Dossier Design System](adr/0026-high-contrast-executive-dossier-design-system.md)
-- [ADR 0027: Dual-Sink Rotated Structured Logging](adr/0027-dual-sink-rotated-structured-logging.md)
-- [ADR 0028: High-Recall Candidate Scoring & Context Fusion Rescue Pass](adr/0028-high-recall-candidate-scoring-context-fusion-rescue-pass.md)
-
----
-
-## 6. Engineering Constitution & Audits
-
-- [AGENTS.md / docs/agents.md](agents.md) — Senior Engineering & Architectural Constitution, 5 Core Invariants, Ponytail standards, and Verification Gates.
-- [PIPELINE_DIAGNOSTICS_AND_BENCHMARK_AUDIT.md](audits/PIPELINE_DIAGNOSTICS_AND_BENCHMARK_AUDIT.md) — Comprehensive Diagnostic Audit, 30-Obligation Ground Truth Benchmark Matrix, and Architectural Remediation Roadmap.
+A benchmark or decision that changes behaviour gets a note in `audits/`.

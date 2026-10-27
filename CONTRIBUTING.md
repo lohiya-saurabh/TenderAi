@@ -48,55 +48,23 @@ Branches follow the standard prefix structure:
 
 ## 3. Pull Request & Quality Gate Requirements
 
-Before any PR can be merged to `main`:
+Work is merged into `develop`. `main` only ever receives merges from `develop`; CI rejects anything else (see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) §2).
+
+Before any PR is merged:
 
 1. `npm run type-check`: 0 TypeScript errors.
 2. `npm run lint`: 0 ESLint errors or warnings.
 3. `npm test`: 100% passing tests.
-4. Security check: No secrets or raw PII in commit history.
+4. `uv run ruff check src tests` and `uv run pytest -m unit` in `apps/ai`.
+5. Security check: no secrets or raw PII in commit history.
+6. The affected docs are updated in the same PR.
 
 ---
 
-## 4. Local database
+## 4. Local setup
 
-The API runs on real PostgreSQL 16 through `DATABASE_URL` (RDS in AWS). Tests use in-memory
-PGlite (`PGLITE_DATA_DIR=memory://`), so they need no server.
+Local development (PostgreSQL, dev queues, provider keys, running the stack) and the verification gates are in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). Schema changes and migrations are in [docs/DATABASE.md](docs/DATABASE.md) §2.
 
-One-time setup with Homebrew (`postgresql@16` is keg-only, hence the full paths):
+## 5. Documentation
 
-```bash
-brew install postgresql@16
-brew services start postgresql@16
-/opt/homebrew/opt/postgresql@16/bin/psql postgres -c "CREATE ROLE tenderpulse LOGIN CREATEDB PASSWORD 'tenderpulse_dev_password';"
-/opt/homebrew/opt/postgresql@16/bin/createdb -O tenderpulse tenderpulse_db
-```
-
-Then set this in `.env` (it is already in `.env.example`):
-
-```
-DATABASE_URL=postgresql://tenderpulse:tenderpulse_dev_password@localhost:5432/tenderpulse_db
-```
-
-The API applies pending schema migrations on startup. Useful commands:
-
-- `npm run db:status` / `npm run db:query "SELECT ..."`: inspect the database.
-- `npm run db:seed`: load the demo data. `npm run db:wipe -- --local`: drop everything
-  (refuses non-local hosts unless `--allow-remote`).
-
-### Schema changes
-
-Migrations live in `apps/api/src/common/database/migrations/`. To change the schema, edit the
-Drizzle schema in `schema/` and add a new `NNNN_description.ts` migration with the matching SQL,
-appended to `migrations/index.ts`. Never edit a migration that has been applied: the migrator
-stores a checksum and refuses to start if one changes.
-
-### Real-PostgreSQL tests
-
-`apps/api/src/test/postgres/` covers the node-postgres driver, migrations, demo seed and
-outbox claiming against a real server. It is skipped unless `TEST_DATABASE_URL` is set to a
-role that can create databases; each run uses a throwaway database:
-
-```bash
-TEST_DATABASE_URL=postgresql://tenderpulse:tenderpulse_dev_password@localhost:5432/postgres \
-  npx vitest run -w @tenderpulse/api src/test/postgres
-```
+Every change updates the documents it affects in the same commit; [docs/README.md](docs/README.md) says which document covers what.

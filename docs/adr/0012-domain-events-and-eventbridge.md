@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-In our modular monolith architecture ([ADR 0008](file:///Users/belikesaurabh/main/TenderAi/docs/adr/0008-domain-driven-layered-architecture.md)), several cross-cutting concerns must react to core business state transitions:
+In our modular monolith architecture ([ADR 0008](0008-domain-driven-layered-architecture.md)), several cross-cutting concerns must react to core business state transitions:
 
 1. **Audit Logging**: Every critical state transition must be recorded in an immutable audit trail.
 2. **Realtime Notifications (SSE)**: When a document finishes OCR and AI compliance extraction, the browser UI must be notified immediately.

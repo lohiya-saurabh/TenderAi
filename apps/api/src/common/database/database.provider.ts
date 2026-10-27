@@ -52,7 +52,7 @@ export async function getDatabase(
     throw new Error(
       'DATABASE_URL is not set. The API needs a PostgreSQL 16 database, e.g. ' +
         'postgresql://tenderpulse:tenderpulse_dev_password@localhost:5432/tenderpulse_db ' +
-        '(see CONTRIBUTING.md "Local database").',
+        '(see docs/DEVELOPMENT.md §3).',
     );
   }
   const maxConnections = Number(env('DATABASE_POOL_MAX')) || undefined;
