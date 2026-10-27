@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS companies (
   mca_verification_data JSONB,
   digilocker_linked_at TIMESTAMPTZ,
   digilocker_metadata JSONB,
+  onboarding_preferences JSONB,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

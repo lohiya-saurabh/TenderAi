@@ -102,7 +102,7 @@ Every AWS service considered for TenderPulse AI has been evaluated against stric
 | **ALB (Load Balancer)**    | **ACCEPTED**         | Layer 7 load balancing, SSL termination, path routing, long-lived SSE connections.        |
 | **API Gateway**            | **REJECTED**         | 29-second hard timeout breaks Server-Sent Events (SSE) and heavy doc workflows.           |
 | **NestJS on ECS Fargate**  | **ACCEPTED**         | Enterprise application boundary, auth/RBAC, bid state machine, Presigned URL signer.      |
-| **FastAPI on ECS Fargate** | **ACCEPTED**         | Python worker for PyMuPDF extraction, OCR, LangGraph orchestration, SQS consumer.         |
+| **FastAPI on ECS Fargate** | **ACCEPTED**         | Python worker for Docling extraction, 3-tier Structural RAG, LangGraph 12-node orchestration, SQS consumer. |
 | **Amazon RDS PostgreSQL**  | **ACCEPTED**         | Transactional source of truth, multi-tenant RLS, `pgvector`, Multi-AZ ACID storage.       |
 | **Redis / ElastiCache**    | **DEFERRED (Ph 24)** | Deferred to Phase 24 for distributed rate limiting and token revocation denylist.         |
 | **AWS SQS + DLQ**          | **ACCEPTED**         | Decoupled asynchronous job queue, worker resilience, automatic retry with DLQ.            |
@@ -180,20 +180,20 @@ Every AWS service considered for TenderPulse AI has been evaluated against stric
 
 ### 4.6 FastAPI Runtime (AI & Document Intelligence Worker on ECS Fargate)
 
-- **WHY**: Isolates heavy document layout parsing (PyMuPDF, pdfplumber), OCR, and LangGraph multi-step cyclic reasoning in Python, preventing memory spikes from impacting the main web API.
+- **WHY**: Isolates heavy document layout parsing (Docling Parser Engine), 3-tier Structural RAG, and LangGraph 12-node cyclic reasoning in Python, preventing memory spikes from impacting the main web API.
 - **WHAT**: Containerized asynchronous Python worker consuming messages from AWS SQS.
 - **HOW**:
   - Runs in private subnets with no public ingress.
   - Long-polls AWS SQS `tender-ingestion-queue`.
   - Fetches tender PDF from S3 via VPC Endpoint.
-  - Invokes AWS Bedrock Claude 3.5 Sonnet via PrivateLink.
+  - Invokes AWS Bedrock Claude 3.5 Sonnet via PrivateLink or OpenAI-compatible multi-model gateway.
   - Verifies verbatim substring grounding deterministically.
-  - Persists validated compliance items directly to PostgreSQL via PgBouncer.
-  - Acknowledges and deletes SQS message upon completion.
+  - Emits `DocumentExtractionCompletedEvent` to SQS completion queue for single-writer atomic PostgreSQL persistence by NestJS `DocumentCompletionService`.
+  - Acknowledges and deletes SQS ingestion message upon successful publication.
   - Auto-scales based on SQS `ApproximateNumberOfMessagesVisible`.
 - **COST**: 2 tasks × (1 vCPU, 2GB RAM) = approx. **$45/month**.
 - **FAILURES**: Worker crash mid-extraction. SQS visibility timeout (300s) expires; message returns to queue and is claimed by another worker. If a malformed PDF crashes worker 3 times, message moves to Dead-Letter Queue (DLQ).
-- **SECURITY**: Zero internet ingress. Outbound egress restricted strictly to VPC Endpoints. IAM Task Role restricted to `bedrock:InvokeModel`, `sqs:ReceiveMessage`, `sqs:DeleteMessage`, and S3 read.
+- **SECURITY**: Zero internet ingress. Outbound egress restricted strictly to VPC Endpoints. IAM Task Role restricted to `bedrock:InvokeModel`, `sqs:ReceiveMessage`, `sqs:DeleteMessage`, `sqs:SendMessage`, and S3 read.
 - **ALTERNATIVES**: AWS Batch (unnecessary queue orchestration overhead for sub-3-minute jobs), Celery on EC2 (requires managing VMs, Redis broker, and OS patching).
 
 ### 4.7 Amazon RDS PostgreSQL 16 (Multi-AZ Database)

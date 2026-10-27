@@ -217,7 +217,7 @@ export const CompanyDocumentChecklist: React.FC<CompanyDocumentChecklistProps> =
       <CardHeader className="px-5 py-4 border-b border-border bg-muted/20 flex flex-row items-center justify-between flex-wrap gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <ShieldAlert size={18} className="text-amber-500" />
+            <ShieldAlert size={18} className="text-[#8A4200] dark:text-orange-300" />
             <CardTitle className="text-base font-bold text-foreground">
               Company Document Checklist
             </CardTitle>
@@ -299,7 +299,7 @@ export const CompanyDocumentChecklist: React.FC<CompanyDocumentChecklistProps> =
                           Expired Certificate
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-amber-500 font-semibold">
+                        <span className="inline-flex items-center gap-1 text-[#8A4200] dark:text-orange-300 font-semibold">
                           <XCircle size={14} />
                           Missing in Profile
                         </span>

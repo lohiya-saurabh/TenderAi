@@ -6,16 +6,15 @@ import sys
 from contextlib import asynccontextmanager
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import ClassVar
 
-from fastapi import Depends, FastAPI, Header, HTTPException, status
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
+from fastapi.responses import JSONResponse
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
-from tenderpulse_ai.agent import (
-    AgentInput,
-    AgentOutput,
-    TenderRequirementAgent,
-    default_requirement_model,
+from tenderpulse_ai.chat import (
+    ChatCopilotAgent,
+    ChatQueryRequest,
+    ChatQueryResponse,
 )
 from tenderpulse_ai.config import settings
 from tenderpulse_ai.decision import (
@@ -28,6 +27,7 @@ from tenderpulse_ai.domain.evidence_extractor import (
     CompanyEvidenceExtractionResponse,
     CompanyEvidenceExtractor,
 )
+from tenderpulse_ai.infrastructure.llm import LLMExtractionError
 from tenderpulse_ai.infrastructure.queue import (
     DocumentExtractionCompletedEvent,
     DocumentQueueConsumerWorker,
@@ -46,8 +46,6 @@ from tenderpulse_ai.pipeline import (
     ProductionExtractionPipeline,
 )
 from tenderpulse_ai.security.context import SecurityContext
-from tenderpulse_ai.tools.page_text import PageTextTool
-from tenderpulse_ai.tools.retrieval import ScopedRetrievalTool
 
 # Initialize dual-sink logging: Rotated File (full structured JSON) + Console (clean one-liner)
 root_logger = logging.getLogger()
@@ -200,14 +198,6 @@ class QueueProcessingResponse(BaseModel):
 class StorageDocumentResolver:
     """Resolve queued documents from their storage reference when pages are absent."""
 
-    _known_documents: ClassVar[dict[str, str]] = {
-        "tenants/org_worker_1/bids/bid_fetch_1/doc_fetch_1/NIT.pdf": (
-            "The bidder must submit an Earnest Money Deposit (EMD) of INR 5,00,000 on a 100 Rupee stamp paper. "
-            "All bids must be signed by the authorized signatory and submitted before the tender closing time. "
-            "The tender document requires ID proof and compliance with all instructions to bidders."
-        ),
-    }
-
     @classmethod
     def resolve_pages(
         cls,
@@ -221,24 +211,39 @@ class StorageDocumentResolver:
                 detail="Queue message must include a storage_reference when document pages are absent.",
             )
 
-        blob_text = cls._known_documents.get(storage_reference)
-        if blob_text is not None:
-            return [NormalizedPage(page_number=1, text=blob_text)]
-
         candidate_path = Path(storage_reference)
+        if not candidate_path.is_file():
+            repo_candidate = Path(__file__).resolve().parents[4] / storage_reference
+            if repo_candidate.is_file():
+                candidate_path = repo_candidate
+
         if candidate_path.is_file():
+            if candidate_path.suffix.lower() == ".pdf":
+                try:
+                    from pypdf import PdfReader
+
+                    reader = PdfReader(str(candidate_path))
+                    resolved_pages = []
+                    for idx, page in enumerate(reader.pages, start=1):
+                        txt = page.extract_text() or ""
+                        if txt.strip():
+                            resolved_pages.append(NormalizedPage(page_number=idx, text=txt))
+                    if resolved_pages:
+                        return resolved_pages
+                except Exception as exc:
+                    logger.warning(
+                        "Failed to extract PDF text from candidate path %s: %s", candidate_path, exc
+                    )
             return [
                 NormalizedPage(
                     page_number=1, text=candidate_path.read_text(encoding="utf-8", errors="ignore")
                 )
             ]
 
-        generated_text = (
-            f"The bidder must submit an Earnest Money Deposit (EMD) of INR 5,00,000 on a 100 Rupee stamp paper. "
-            f"The {document_type} document {file_name} requires all submissions to be signed by the authorized signatory. "
-            f"Document source: {storage_reference}."
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Storage document '{storage_reference}' could not be resolved from storage or filesystem.",
         )
-        return [NormalizedPage(page_number=1, text=generated_text)]
 
 
 def verify_internal_key(
@@ -251,6 +256,15 @@ def verify_internal_key(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Unauthorized internal service call",
         )
+
+
+@app.exception_handler(LLMExtractionError)
+async def llm_extraction_failed(_request: Request, exc: LLMExtractionError) -> JSONResponse:
+    """LLM-only extraction: no model answer means no result (never a synthetic fallback)."""
+    return JSONResponse(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        content={"error": "LLM_EXTRACTION_FAILED", "detail": str(exc)},
+    )
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -341,6 +355,9 @@ async def _execute_and_publish_extraction(
                 document_id=request.document_id,
                 status="COMPLETED",
                 items=result.items,
+                chunks=getattr(result, "chunks", []),
+                conflicts=getattr(result, "conflicts", []),
+                coverage=getattr(result, "coverage", None),
                 workflow_run_id=request.workflow_run_id,
                 trace_id=trace_id,
                 correlation_id=request.correlation_id,
@@ -450,21 +467,6 @@ async def process_queue_message(request: QueueProcessingRequest):
 
 
 @app.post(
-    "/api/v1/agent/analyze-requirements",
-    response_model=AgentOutput,
-    dependencies=[Depends(verify_internal_key)],
-)
-async def analyze_requirements(request: AgentInput):
-    """Tender Requirement Intelligence Agent: bounded, read-only, tenant-scoped."""
-    agent = TenderRequirementAgent(
-        retrieval_tool=ScopedRetrievalTool(),
-        page_text_tool=PageTextTool(),
-        model_fn=default_requirement_model,
-    )
-    return await agent.analyze(request)
-
-
-@app.post(
     "/api/v1/agent/bid-decision",
     response_model=BidDecisionResponse,
     dependencies=[Depends(verify_internal_key)],
@@ -508,3 +510,21 @@ async def get_queue_status():
         "completion_queue_provider": settings.completion_queue_provider,
         "worker_running": bool(worker and worker.is_running),
     }
+
+
+@app.post(
+    "/api/v1/chat/query",
+    response_model=ChatQueryResponse,
+    dependencies=[Depends(verify_internal_key)],
+)
+async def chat_query(request: ChatQueryRequest):
+    """Tender Chat Copilot: conversational RAG intelligence with LangGraph stateful workflow."""
+    logger.info(
+        "Received chat query for org=%s, bid=%s, company=%s, conv=%s",
+        request.security_context.tenant_id,
+        request.bid_id,
+        request.company_id,
+        request.conversation_id,
+    )
+    agent = ChatCopilotAgent()
+    return await agent.query(request)

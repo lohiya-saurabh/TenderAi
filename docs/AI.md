@@ -263,7 +263,7 @@ A central architectural pattern in TenderPulse AI is the explicit operational di
    - Models the legal outline: `PART I` $\to$ `SECTION 2: ELIGIBILITY` $\to$ `Clause 4.1`.
    - Each node maintains `parent_id` pointers and an array of `block_ids` physically contained within its boundary.
 3. **LangGraph Workflow Nodes**:
-   - The stateful execution nodes in the LangGraph graph (`docling_parse_node`, `build_structure_node`, `candidate_detection_node`, `llm_extraction_node`, `rescue_pass_node`, `validation_node`).
+   - The stateful execution nodes in the LangGraph graph (`docling_parse_node`, `build_structure_node`, `candidate_detection_node`, `llm_extraction_node`, `validation_node`).
 
 ---
 
@@ -295,7 +295,7 @@ Implemented in [`CandidateDetector`](file:///Users/belikesaurabh/main/TenderAi/a
    - Boosts applied for currency symbols (`₹`, `INR`, `Crore`), deadlines, and multiple reinforcing rule matches.
 4. **Two-Tier Triage Pipeline**:
    - **Tier 1 (`PRIMARY`)**: Candidates scoring above threshold routed to main LLM extraction.
-   - **Tier 2 (`RESCUE`)**: Unselected passages are retained in state and swept by a dedicated LangGraph `rescue_pass` node, guaranteeing that un-keyworded or split clauses are safely recovered before finalizing the matrix.
+   - Superseded: extraction now sends every clause chunk of every non-index page to the model, so no passage depends on the detector's selection (the former Tier-2 `rescue_pass` was removed).
 5. **Candidate Recall Acceptance Gate**:
    CI/CD enforces $\ge 98\%$ candidate recall on our manually annotated tender benchmark (`test_candidate_detector_recall.py`).
 
@@ -466,11 +466,12 @@ flowchart TD
     N1 --> N2[2. build_structure]
     N2 --> N3[3. candidate_detection]
     N3 --> N4[4. context_assembly]
-    N4 --> N5[5. llm_extraction: Tier 1 Primary]
-    N5 --> N5B[5B. rescue_pass: Tier 2 Sweep]
-    N5B --> N6[6. validation: Deterministic Grounding]
-    N6 --> N7{7. confidence_routing}
+    N4 --> N5[5. llm_extraction: every clause chunk of the window]
+    N5 --> N6[6. validation: Deterministic Grounding]
+    N6 --> N6B[6B. uncertainty_verification: Contradiction Detection]
+    N6B --> N7{7. confidence_routing}
 
+    N7 -- "extraction_error (no model answer)" --> N9
     N7 -- "unverified > 0 & retry < 2" --> N8[8. targeted_refine]
     N8 --> N5
 
@@ -485,18 +486,18 @@ flowchart TD
 
 #### Node Contracts:
 
-1. **`docling_parse`**: Fetches physical page text and generates Docling layout blocks. Supports **Hoisted Document Precomputation**: in multi-page documents, pre-computed document AST structures short-circuit in 0ms, eliminating $O(N^2)$ redundant re-parsing.
-2. **`build_structure`**: Builds `DocumentStructureTree` mapping sections, tables, and clause hierarchies (`PART > SECTION > CLAUSE`).
-3. **`candidate_detection`**: Runs high-recall rule detection across 20+ procurement categories with **Context Fusion** and normalized priority scoring ($0.0 - 1.0$), partitioning passages into `(candidates, unselected)`.
-4. **`context_assembly`**: Constructs isolated prompt budgets ($\le 24,000$ chars) with preceding/following clause context and definitions wrapped in `<untrusted_document_data>` XML envelopes.
-5. **`llm_extraction`**: Structured-output LLM generates `CandidateComplianceItem` list from Tier-1 `PRIMARY` candidates.
-6. **`rescue_pass` (Node 5B)**: Dedicated safety-net node sweeping Tier-2 `unselected` passages. Evaluates unselected blocks in compact batches to catch un-keyworded or split clauses, tagging them with `extraction_tier="RESCUE"` before passing all items to validation.
-7. **`validation`**: Pure Python exact-substring grounding check asserting that every extracted `verbatim_quote` exists character-for-character in source text.
-8. **`confidence_routing`**: Evaluates unverified count and confidence score. Crucially, routing to `targeted_refine` is strictly conditional on `len(unverified) > 0 and retry_count < 2`. If 100% of items are verified but confidence is low ($< 0.80$), it routes directly to `escalate_human_review` without wasting LLM calls on futile retries.
-9. **`targeted_refine`**: Cyclically feeds specific grounding failure reasons back to Node 5 (bounded to max 1 retry).
-10. **`escalate_human_review`**: Formats review payload for human triage with clear provenance links.
-11. **`human_review`**: Calls LangGraph's native `interrupt()`, snapshotting state to PostgreSQL and halting execution until human resume via `POST /api/v1/compliance/review`.
-12. **`postgres_store`**: Deterministically persists verified records to PostgreSQL via `BulkIngestComplianceUseCase`.
+1. **`docling_parse`**: Fetches physical page text and generates Docling layout blocks. Page text comes from `domain/pdf_layout.py`: PDFium text, ruled tables re-rendered row by row (`cell | cell`, pdfplumber, only on pages a PDFium path pre-filter flags as ruled) with a row split by a page break joined back, and Tesseract OCR for image-only pages (`OCR_LANGUAGES`). Supports **Hoisted Document Precomputation**: in multi-page documents, pre-computed document AST structures short-circuit in 0ms, eliminating $O(N^2)$ redundant re-parsing. Runs issuer-agnostic running furniture stripping (`detect_repeated_furniture`: edge lines recurring on ≥30% of pages, plus generic page-number/reference-code patterns), deleted clause sanitizing (`DELETED_CLAUSE_PATTERN`), the universal sub-clause tokenizer (`LIST_MARKER_PATTERN`: `(ii)`, `xv.`, `a)`, `Note: (1)`, `12. (A)`), and `stitch_cross_page_continuations` for paragraphs sliced by a page break (`DoclingBlock.spans_next_page`). Tables that end a page continue onto the next page when the column count matches (headers carried).
+2. **`build_structure`**: Builds `DocumentStructureTree` mapping sections, tables, and clause hierarchies (`PART > SECTION > CLAUSE`) using `GUARDED_CLAUSE_PATTERN` to prevent chainages and dates from creating invalid headings. A positional `ClauseTracker` (line-start markers only) records `block_paths` such as `Clause 5(xix)`, `Clause 13.C(ii)(a)`; backward bare numbers (`1.` inside Clause 13's table) are sub-items, not new clauses. After validation the orchestrator checks each item's clause reference against the path of the block holding its quote (`attribute_positional_clause_refs`): a model reference that agrees is kept, a generic or mid-sentence one is replaced by the path.
+3. **`candidate_detection`**: Scores passages across generic procurement categories (no tender-specific terms) with **Context Fusion**; the result only scopes the clause contexts the validator judges against — it never decides what reaches the model.
+4. **`context_assembly`**: Builds per-clause contexts (preceding/following clause, definitions, cross-references) used by the validator.
+5. **`llm_extraction`** (LLM-only): every non-index page of the document is processed in windows of `BATCH_PAGE_WINDOW_SIZE` pages; every TIER2 clause chunk of the window (no top-k, no skeleton or table renderings) is sent inside `<untrusted_document_data>` envelopes. The model returns JSON candidates with an exact `verbatim_quote`; nothing is filled in by code. A model that returns no valid answer raises `LLMExtractionError`: the window is marked `extraction_error`, routed to review and listed in `failed_pages`; when every window fails the pipeline raises (worker → `status=FAILED`, `/api/v1/extract` → HTTP 503). There is no rule-based or synthetic fallback. `LLM_REPLAY_MODE=record|replay` records / replays raw responses for offline tests and benchmarks.
+7. **`validation`**: Pure Python exact-substring grounding check (`DeterministicValidator`) asserting that every extracted `verbatim_quote` exists character-for-character in source text and meets sentence-bounded constraints (`extract_complete_clause_window`, max 650 chars). Quotes stitched across a page break ground against the window's pages joined without separators plus `continuation_text` (the page after the window).
+8. **`uncertainty_verification` (Node 6B)**: Detects intra-document clause contradictions (e.g., 3% vs. 10% PBG; Rs. 7.18L EMD vs. Bid Securing Declaration; GST inclusive vs. exclusive) and emits `CLAUSE_CONTRADICTION` uncertainty items citing both clauses and applying the tender's Order of Precedence.
+9. **`confidence_routing`**: A window with `extraction_error` escalates directly. Otherwise it evaluates the unintentional failure count (`len(unverified) - intentional_rejections`; deleted clauses and quotes already covered by a verified item do not count) and the confidence score. Routing to `targeted_refine` is conditional on `failed > 0 and retry_count < 2`. If 100% of items are verified but confidence is low ($< 0.80$), it routes directly to `escalate_human_review`.
+10. **`targeted_refine`**: Feeds the specific grounding failure reasons back to the model in Node 5 (at most 2 retries).
+11. **`escalate_human_review`**: Formats review payload for human triage with clear provenance links and ambiguity summaries.
+12. **`human_review`**: Calls LangGraph's native `interrupt()`, snapshotting state to PostgreSQL and halting execution until human resume via `POST /api/v1/compliance/review`.
+13. **`postgres_store`**: Deterministically prepares verified items for single-writer persistence by NestJS `DocumentCompletionService` via `DocumentExtractionCompletedEvent`.
 
 ---
 
@@ -647,7 +648,7 @@ Automated evaluation is implemented in [`apps/ai/src/tenderpulse_ai/evaluation/`
 
 - **WHY**: Indian public procurement compliance requires cyclical error feedback (grounding verification retries), multi-day human approval gates, and resilient mid-stream state recovery upon worker restarts.
 - **WHAT**: Adoption of LangGraph `StateGraph` with typed states, channel reducers (`operator.add`), native `interrupt()`, and persistent PostgreSQL checkpointers.
-- **HOW**: Implemented in `apps/ai/src/tenderpulse_ai/workflow/graph.py` (11-node cyclic extraction graph) and `apps/ai/src/tenderpulse_ai/decision/workflow/graph.py` (6-node decision graph).
+- **HOW**: Implemented in `apps/ai/src/tenderpulse_ai/workflow/graph.py` (12-node cyclic extraction graph) and `apps/ai/src/tenderpulse_ai/decision/workflow/graph.py` (6-node decision graph).
 - **WHY NOT Alternatives**:
   - _LangChain LCEL_: Pure linear DAG; cannot loop backward with error feedback without resetting execution state.
   - _Autonomous ReAct Loops_: Unbounded tool loops (`Thought -> Action -> Observation`) exhibit unpredictable runtimes, spiraling API bills, and infinite loop risks.
@@ -721,8 +722,8 @@ Automated evaluation is implemented in [`apps/ai/src/tenderpulse_ai/evaluation/`
 ### ADR-AI-06: Recall-First Candidate Scoring, Context Fusion & Two-Tier Rescue Pass vs. Naive Binary Gating (ADR 0028)
 
 - **WHY**: In enterprise tender compliance, missing a mandatory clause results in instantaneous commercial disqualification. A binary gate that silently drops short blocks (`len < 15`) or un-keyworded debarments irrevocably caps downstream recall regardless of model quality.
-- **WHAT**: Continuous priority scoring ($0.0 - 1.0$), cross-page boilerplate elimination, AST context fusion, and a dedicated LangGraph Tier-2 `rescue_pass` sweeping unselected blocks.
-- **HOW**: Implemented in [`CandidateDetector`](file:///Users/belikesaurabh/main/TenderAi/apps/ai/src/tenderpulse_ai/domain/candidate_detector.py) and LangGraph `make_rescue_pass_node` in [`nodes.py`](file:///Users/belikesaurabh/main/TenderAi/apps/ai/src/tenderpulse_ai/workflow/nodes.py).
+- **WHAT**: Continuous priority scoring ($0.0 - 1.0$), cross-page boilerplate elimination, AST context fusion. *Update (LLM-only extraction):* the Tier-2 `rescue_pass` and the keyword page filter were removed — every clause chunk of every non-index page now reaches the model, which removes the detector from the recall path entirely.
+- **HOW**: Implemented in [`CandidateDetector`](file:///Users/belikesaurabh/main/TenderAi/apps/ai/src/tenderpulse_ai/domain/candidate_detector.py).
 - **WHY NOT Alternatives**:
   - _Naive character length cutoffs_: Silently drops short table cells (`"₹5,00,000"`) and compact directives (`"Submit EMD"`).
   - _Keyword-only filtering without section context_: Blind to restrictions without deontic modals (`"Bids appearing on the debarred list will be rejected."`).

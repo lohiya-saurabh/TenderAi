@@ -1,11 +1,13 @@
 import re
 
+from tenderpulse_ai.domain.cross_reference_resolver import CrossReferenceResolver
 from tenderpulse_ai.domain.models import (
     AssembledClauseContext,
     CandidatePassage,
     DoclingParsedDocument,
     DocumentStructureTree,
 )
+from tenderpulse_ai.domain.tender_chunker import TenderDocumentChunk
 
 
 class ContextAssembler:
@@ -21,14 +23,17 @@ class ContextAssembler:
     - Following clause
     - Relevant definitions
     - Referenced clauses
+    - 1-hop Hydrated Cross-References (Contract Data, Appendix, NIT)
     """
 
     DEF_PATTERN = re.compile(
         r'"([^"]+)"\s+(means|shall\s+mean|refers\s+to|is\s+defined\s+as)\b', re.IGNORECASE
     )
+    # Keyword + separator + a real identifier (number, Roman numeral or single capital):
+    # "partners" is not "Part ners", "Section of the" is not a reference.
     REF_PATTERN = re.compile(
-        r"\b(Clause|Sub-Clause|Section|Article|Part|Schedule|Annexure|Appendix)\s*[-–—]?\s*([A-Za-z\d]+(?:\.[A-Za-z\d]+)*)\b",
-        re.IGNORECASE,
+        r"\b((?i:Sub-Clause|Clause|Section|Article|Part|Schedule|Annexure|Appendix))"
+        r"(?:\s+|\s*[-–—]\s*)((?:\d+[A-Za-z]?|[IVXLC]+[A-Z]?|[A-Z])(?:\.\d+[A-Za-z]?)*)\b"
     )
 
     def assemble_contexts(
@@ -36,6 +41,7 @@ class ContextAssembler:
         doc: DoclingParsedDocument,
         tree: DocumentStructureTree,
         candidates: list[CandidatePassage],
+        chunks: list[TenderDocumentChunk] | None = None,
     ) -> list[AssembledClauseContext]:
         # 1. Extract definitions from document
         definitions: dict[str, str] = {}
@@ -48,6 +54,12 @@ class ContextAssembler:
         # 2. Build block index map
         block_list = doc.blocks
         block_index_map = {b.block_id: i for i, b in enumerate(block_list)}
+
+        # 3. Initialize CrossReferenceResolver if chunks provided
+        resolver: CrossReferenceResolver | None = None
+        if chunks:
+            resolver = CrossReferenceResolver()
+            resolver.index_chunks(chunks)
 
         assembled_list: list[AssembledClauseContext] = []
 
@@ -74,6 +86,31 @@ class ContextAssembler:
                 if re.search(r"\b" + re.escape(term) + r"\b", candidate.text, re.IGNORECASE):
                     matched_defs[term] = def_text
 
+            hydrated_context: str | None = None
+            if resolver and chunks:
+                target_canon = CrossReferenceResolver.canonicalize_ref_id(
+                    candidate.section_number, candidate.section_path
+                )
+                matching_chunk = resolver._ref_index.get(target_canon) if target_canon else None
+                if not matching_chunk:
+                    for chk in chunks:
+                        if candidate.text in chk.content or (
+                            chk.verbatim_text and chk.verbatim_text in candidate.text
+                        ):
+                            matching_chunk = chk
+                            break
+
+                if matching_chunk:
+                    hydrated = resolver.hydrate_context(matching_chunk, candidate.text)
+                    if hydrated != candidate.text:
+                        hydrated_context = hydrated
+                    outbound, _ = resolver.resolve_references(
+                        matching_chunk.canonical_ref_id or matching_chunk.id
+                    )
+                    for ref_id in outbound:
+                        if ref_id not in referenced:
+                            referenced.append(ref_id)
+
             assembled_list.append(
                 AssembledClauseContext(
                     candidate_id=candidate.candidate_id,
@@ -85,6 +122,7 @@ class ContextAssembler:
                     relevant_definitions=matched_defs,
                     referenced_clauses=referenced,
                     page_number=candidate.page_number,
+                    hydrated_context=hydrated_context,
                 )
             )
 

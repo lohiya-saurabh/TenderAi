@@ -1,11 +1,11 @@
 /**
- * TenderPulse AI — Company Capability Profile API
+ * TenderPulse AI — Company Capability Profile types
  *
- * CRUD for the pinned, versioned Company Capability Profile.
+ * Wire types for the pinned, versioned Company Capability Profile.
  * The profile is the factual basis for all bid/no-bid evaluations.
+ * Requests go through the company-scoped client in `@/api/companies.js`
+ * (`/api/v1/companies/:companyId/profile`).
  */
-
-import { apiGet, apiPost, type ApiResult } from '@/api/client.js';
 
 export interface CompanyProfilePayload {
   company_name: string;
@@ -79,6 +79,7 @@ export interface CompanyProfilePayload {
 
 export interface CompanyProfileVersion {
   id: string;
+  companyId?: string;
   organizationId: string;
   version: number;
   name: string;
@@ -88,6 +89,7 @@ export interface CompanyProfileVersion {
 }
 
 export interface CompanyProfileView {
+  companyId?: string;
   active: CompanyProfileVersion | null;
   versions: CompanyProfileVersion[];
 }
@@ -107,39 +109,11 @@ export interface ExpiringCertificateItem {
 
 export interface ExpiringCertificatesResponse {
   organizationId: string;
+  companyId?: string;
   activeProfileVersionId: string | null;
   evaluatedAt: string;
   filterWithinDays: number;
   totalExpiringCount: number;
   totalExpiredCount: number;
   certificates: ExpiringCertificateItem[];
-}
-
-/** Active profile + version history */
-export function getCompanyProfile(): Promise<ApiResult<CompanyProfileView>> {
-  return apiGet<CompanyProfileView>('/api/v1/company-profile');
-}
-
-/** Fetch expiring certificates and licenses within the specified days window */
-export function getExpiringCertificates(
-  withinDays = 90,
-): Promise<ApiResult<ExpiringCertificatesResponse>> {
-  return apiGet<ExpiringCertificatesResponse>(
-    `/api/v1/company-profile/expiring-certificates?withinDays=${withinDays}`,
-  );
-}
-
-/** Pin a new immutable profile version and make it active (ADMIN only) */
-export function createCompanyProfileVersion(
-  name: string,
-  payload: CompanyProfilePayload,
-): Promise<ApiResult<CompanyProfileVersion>> {
-  return apiPost<CompanyProfileVersion>('/api/v1/company-profile', { name, payload });
-}
-
-/** Fetch a specific pinned version by id */
-export function getCompanyProfileVersion(
-  versionId: string,
-): Promise<ApiResult<CompanyProfileVersion>> {
-  return apiGet<CompanyProfileVersion>(`/api/v1/company-profile/versions/${versionId}`);
 }

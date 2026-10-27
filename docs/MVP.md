@@ -33,7 +33,7 @@ The objective of the TenderPulse AI MVP is to deliver **the thinnest vertical sl
 
 ### Step 2: Asynchronous Ingestion & Document Processing
 
-- Background worker extracts text via digital PDF extraction (PyMuPDF/pdfplumber) with OCR fallback (Tesseract/AWS Textract) for scanned notices.
+- Background worker extracts text, layout structures, and tabular data via Docling Parser Engine (`domain/docling_parser.py`) with running furniture stripping, paragraph coalescing, and spatial table extraction, feeding into 3-tier Structural RAG.
 - Text is normalized, segmented into logical sections (Eligibility, General Conditions, Special Conditions, Annexures), and indexed with exact page coordinates.
 
 ### Step 3: Compliance & Eligibility Extraction

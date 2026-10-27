@@ -22,7 +22,7 @@ export interface RawExtractedItem {
     pageNumber?: number;
     clauseReference?: string;
     verbatimQuote?: string;
-    confidenceScore?: number;
+    confidenceScore?: number | null;
   };
 }
 
@@ -59,10 +59,13 @@ export interface DocumentExtractionPort {
   ): Promise<ExtractedComplianceItem[]>;
 }
 
+import type { ConfigService } from '@nestjs/config';
+
 export interface AiExtractorConfig {
   aiBaseUrl?: string;
   internalServiceKey?: string;
   timeoutMs?: number;
+  configService?: ConfigService;
   customFetch?: (
     url: string,
     init: RequestInit,
@@ -84,17 +87,28 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
     private readonly normalizer: DocumentContentNormalizer = new DocumentContentNormalizer(),
     config: AiExtractorConfig = {},
   ) {
-    this.aiBaseUrl = config.aiBaseUrl ?? process.env.AI_ENGINE_URL ?? 'http://localhost:8000';
-    const internalServiceKey = config.internalServiceKey ?? process.env.INTERNAL_SERVICE_KEY;
-    if (!internalServiceKey && process.env.NODE_ENV === 'production') {
+    const configService = config.configService;
+    this.aiBaseUrl =
+      config.aiBaseUrl ??
+      configService?.get<string>('AI_ENGINE_URL') ??
+      '';
+    const internalServiceKey =
+      config.internalServiceKey ??
+      configService?.get<string>('INTERNAL_SERVICE_KEY');
+    const nodeEnv =
+      configService?.get<string>('NODE_ENV');
+    if (!internalServiceKey && nodeEnv === 'production') {
       throw new Error('INTERNAL_SERVICE_KEY must be configured in production.');
     }
-    this.internalServiceKey = internalServiceKey ?? 'tenderpulse-internal-secret-2026';
-    this.timeoutMs =
+    this.internalServiceKey = internalServiceKey ?? '';
+    const rawTimeout =
       config.timeoutMs ??
-      (process.env.AI_EXTRACTION_TIMEOUT_MS
-        ? parseInt(process.env.AI_EXTRACTION_TIMEOUT_MS, 10)
-        : 120000);
+      configService?.get<string>('AI_EXTRACTION_TIMEOUT_MS');
+    this.timeoutMs = rawTimeout
+      ? typeof rawTimeout === 'number'
+        ? rawTimeout
+        : parseInt(String(rawTimeout), 10)
+      : 120000;
     this.customFetch = config.customFetch;
   }
 
@@ -244,14 +258,18 @@ export class AiDocumentExtractor implements IDocumentExtractor, DocumentExtracti
             stampPaperDenominationInr: item.executionRules?.stampPaperDenominationInr ?? undefined,
             notarizationRequired: Boolean(item.executionRules?.notarizationRequired),
             udinRequired: Boolean(item.executionRules?.udinRequired),
-            signingAuthorityRank:
-              item.executionRules?.signingAuthorityRank ?? 'Authorized Signatory',
+            signingAuthorityRank: item.executionRules?.signingAuthorityRank ?? '',
           },
           provenance: {
             pageNumber: Number(item.provenance.pageNumber) || 1,
-            clauseReference: item.provenance.clauseReference ?? 'NIT Clause',
+            // A missing reference is shown as its page, never as an invented clause name.
+            clauseReference:
+              item.provenance.clauseReference || `Page ${Number(item.provenance.pageNumber) || 1}`,
             verbatimQuote: item.provenance.verbatimQuote,
-            confidenceScore: Number(item.provenance.confidenceScore) || 0.95,
+            confidenceScore:
+              typeof item.provenance.confidenceScore === 'number'
+                ? item.provenance.confidenceScore
+                : null,
           },
         };
       });

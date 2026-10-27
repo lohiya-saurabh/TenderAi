@@ -3,7 +3,8 @@
  *
  * Connects to MCA official API / authorized gateway to retrieve company master data.
  */
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import type {
   CompanyRegistryProvider,
   McaCompanyMasterDetails,
@@ -37,10 +38,11 @@ export class McaRegistryAdapter implements CompanyRegistryProvider {
   private readonly apiKey?: string;
   private readonly timeoutMs: number;
 
-  constructor() {
-    this.baseUrl = (process.env.MCA_API_BASE_URL || 'https://api.mca.gov.in/v1').replace(/\/$/, '');
-    this.apiKey = process.env.MCA_API_KEY;
-    this.timeoutMs = parseInt(process.env.MCA_TIMEOUT_MS || '10000', 10);
+  constructor(@Optional() private readonly configService?: ConfigService) {
+    this.baseUrl = (this.configService?.get<string>('MCA_API_BASE_URL') || '').replace(/\/$/, '');
+    this.apiKey = this.configService?.get<string>('MCA_API_KEY');
+    const timeout = this.configService?.get<string>('MCA_TIMEOUT_MS');
+    this.timeoutMs = timeout ? parseInt(timeout, 10) : 10000;
   }
 
   public async verifyCin(cinOrLlpin: string): Promise<McaCompanyMasterDetails> {

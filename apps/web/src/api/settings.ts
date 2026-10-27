@@ -19,6 +19,7 @@ export interface WorkspaceSettings {
 }
 
 export interface UpdateWorkspaceSettingsDto {
+  organizationName?: string;
   defaultCompanyId?: string;
   notificationPreferences?: Partial<NotificationPreferences>;
 }

@@ -3,16 +3,12 @@
  */
 import { Injectable, Inject } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
-import { eq } from 'drizzle-orm';
 import bcrypt from 'bcrypt';
-import {
-  DRIZZLE_TOKEN,
-  type DrizzleDb,
-  createDrizzle,
-} from '@/common/database/database.module.js';
+import { type DrizzleDb } from '@/common/database/database.module.js';
 import * as schema from '@/common/database/schema.js';
 import { NotFoundError, BadRequestError, UnauthorizedError } from '@/common/errors/errors.js';
 import { TenantContextHolder } from '@/common/security/TenantContext.js';
+import { UsersRepository } from '@/modules/users/users.repository.js';
 
 export interface UpdateUserProfileDto {
   name?: string;
@@ -37,10 +33,16 @@ export interface UserProfileView {
 
 @Injectable()
 export class UsersService {
-  private readonly db: DrizzleDb;
+  private readonly repository: UsersRepository;
 
-  constructor(@Inject(DRIZZLE_TOKEN) db: DrizzleDb | PGlite) {
-    this.db = 'select' in db ? (db as DrizzleDb) : createDrizzle(db as PGlite);
+  constructor(
+    @Inject(UsersRepository)
+    repositoryOrDb: UsersRepository | DrizzleDb | PGlite,
+  ) {
+    this.repository =
+      repositoryOrDb instanceof UsersRepository
+        ? repositoryOrDb
+        : new UsersRepository(repositoryOrDb);
   }
 
   /**
@@ -49,12 +51,7 @@ export class UsersService {
   public async getMe(): Promise<UserProfileView> {
     const userId = this.requireUserId();
 
-    const [user] = await this.db
-      .select()
-      .from(schema.users)
-      .where(eq(schema.users.id, userId))
-      .limit(1);
-
+    const user = await this.repository.findById(userId);
     if (!user) {
       throw new NotFoundError(`User '${userId}' not found.`);
     }
@@ -76,12 +73,7 @@ export class UsersService {
     if (dto.name !== undefined) updates.name = dto.name.trim();
     if (dto.phone !== undefined) updates.phone = dto.phone.trim() || null;
 
-    const [updated] = await this.db
-      .update(schema.users)
-      .set(updates)
-      .where(eq(schema.users.id, userId))
-      .returning();
-
+    const updated = await this.repository.updateUser(userId, updates);
     if (!updated) {
       throw new NotFoundError(`User '${userId}' not found.`);
     }
@@ -104,12 +96,7 @@ export class UsersService {
       throw new BadRequestError('New password must be at least 8 characters long.');
     }
 
-    const [user] = await this.db
-      .select()
-      .from(schema.users)
-      .where(eq(schema.users.id, userId))
-      .limit(1);
-
+    const user = await this.repository.findById(userId);
     if (!user) {
       throw new NotFoundError(`User '${userId}' not found.`);
     }
@@ -120,11 +107,7 @@ export class UsersService {
     }
 
     const newHash = await bcrypt.hash(dto.newPassword, 10);
-
-    await this.db
-      .update(schema.users)
-      .set({ password: newHash })
-      .where(eq(schema.users.id, userId));
+    await this.repository.updatePassword(userId, newHash);
 
     return { success: true, message: 'Password updated successfully.' };
   }

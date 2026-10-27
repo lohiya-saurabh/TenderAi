@@ -1,15 +1,13 @@
-import { PGlite } from '@electric-sql/pglite';
+import { openDb } from './lib/db.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
-const dbPath = path.join(rootDir, 'data/postgres');
 
 async function testDownload() {
-  const pg = new PGlite(dbPath);
-  await pg.waitReady;
+  const pg = await openDb();
   try {
     const docs = await pg.query('SELECT id, file_name, file_size_bytes, storage_path FROM company_evidence_documents;');
     console.log(`Found ${docs.rows.length} evidence documents:`);

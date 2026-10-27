@@ -70,3 +70,16 @@ All architectural decisions are documented in the [`adr/`](adr/) directory:
 - [ADR 0020: External Data Connectors Enrichment Port](adr/0020-external-data-connectors-enrichment-port.md)
 - [ADR 0021: Evidence-First Compliance Engine](adr/0021-evidence-first-compliance-engine.md)
 - [ADR 0022: Durable Asynchronous Document Processing Runtime](adr/0022-durable-asynchronous-document-processing-runtime.md)
+- [ADR 0023: Company Evidence and Third-Party Verification Layer](adr/0023-company-evidence-and-third-party-verification-layer.md)
+- [ADR 0024: LangGraph Bid Decision Engine](adr/0024-langgraph-bid-decision-engine.md)
+- [ADR 0025: Modular Security Perimeter and Persistence Hardening](adr/0025-modular-security-perimeter-and-persistence-hardening.md)
+- [ADR 0026: High-Contrast Executive Dossier Design System](adr/0026-high-contrast-executive-dossier-design-system.md)
+- [ADR 0027: Dual-Sink Rotated Structured Logging](adr/0027-dual-sink-rotated-structured-logging.md)
+- [ADR 0028: High-Recall Candidate Scoring & Context Fusion Rescue Pass](adr/0028-high-recall-candidate-scoring-context-fusion-rescue-pass.md)
+
+---
+
+## 6. Engineering Constitution & Audits
+
+- [AGENTS.md / docs/agents.md](agents.md) — Senior Engineering & Architectural Constitution, 5 Core Invariants, Ponytail standards, and Verification Gates.
+- [PIPELINE_DIAGNOSTICS_AND_BENCHMARK_AUDIT.md](audits/PIPELINE_DIAGNOSTICS_AND_BENCHMARK_AUDIT.md) — Comprehensive Diagnostic Audit, 30-Obligation Ground Truth Benchmark Matrix, and Architectural Remediation Roadmap.

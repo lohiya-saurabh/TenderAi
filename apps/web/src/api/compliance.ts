@@ -5,7 +5,7 @@
  * Updated to support the enhanced Requirement/Compliance Matrix.
  */
 
-import { apiGet, apiPatch, type ApiResult } from '@/api/client.js';
+import { apiGet, apiPatch, type ApiResult, type RequestOptions } from '@/api/client.js';
 
 /** Execution/statutory rules specific to Indian tender compliance */
 export interface ExecutionRules {
@@ -23,7 +23,8 @@ export interface Provenance {
   pageNumber: number;
   sectionOrClause?: string | null;
   verbatimQuote: string;
-  confidenceScore: number;
+  /** Deterministic validation score (1 = all checks passed); null = not checked */
+  confidenceScore: number | null;
 }
 
 /** Company evidence linked to a requirement */
@@ -61,7 +62,7 @@ export interface AssessmentRationale {
   tenderRequirement: string;
   companyCapability: string;
   comparisonResult: 'MET' | 'NOT_MET' | 'PARTIAL' | 'UNCLEAR';
-  confidenceScore: number;
+  confidenceScore: number | null;
   details: string[];
 }
 
@@ -71,7 +72,7 @@ export interface SourceCitation {
   page: number;
   section: string;
   verbatimQuote: string;
-  confidenceScore: number;
+  confidenceScore: number | null;
 }
 
 /** Enhanced compliance item for the Requirement/Compliance Matrix */
@@ -82,7 +83,7 @@ export interface ComplianceItem {
   // Core requirement info
   requirement: string;
   description: string;
-  category: 'LEGAL' | 'TECHNICAL' | 'FINANCIAL' | 'STATUTORY' | 'EXECUTION' | 'COMMERCIAL';
+  category: 'LEGAL' | 'TECHNICAL' | 'FINANCIAL' | 'STATUTORY' | 'EXECUTION' | 'COMMERCIAL' | 'OPERATIONAL';
   subCategory?: string;
   isMandatory: boolean;
   tenderClauseRef?: string;
@@ -127,16 +128,20 @@ export interface UpdateComplianceItemResponse {
 }
 
 /** List all compliance items for a bid */
-export function listComplianceItems(bidId: string): Promise<ApiResult<ComplianceItem[]>> {
-  return apiGet<ComplianceItem[]>(`/api/v1/bids/${bidId}/compliance-items`);
+export function listComplianceItems(
+  bidId: string,
+  options?: RequestOptions,
+): Promise<ApiResult<ComplianceItem[]>> {
+  return apiGet<ComplianceItem[]>(`/api/v1/bids/${bidId}/compliance-items`, options);
 }
 
 /** Get a single compliance item by ID */
 export function getComplianceItem(
   bidId: string,
   itemId: string,
+  options?: RequestOptions,
 ): Promise<ApiResult<ComplianceItem>> {
-  return apiGet<ComplianceItem>(`/api/v1/bids/${bidId}/compliance-items/${itemId}`);
+  return apiGet<ComplianceItem>(`/api/v1/bids/${bidId}/compliance-items/${itemId}`, options);
 }
 
 /** Review (Approve/Flag/Waive/Edit) a compliance item with optimistic concurrency check */

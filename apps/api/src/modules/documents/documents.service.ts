@@ -1,21 +1,17 @@
 /**
  * DocumentsService — Upload URL generation, upload confirmation, and download URL resolution.
  */
-import { Injectable, Inject, Logger } from '@nestjs/common';
+import { Injectable, Inject, Optional, Logger } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { PGlite } from '@electric-sql/pglite';
-import { eq, and, inArray } from 'drizzle-orm';
-import {
-  DRIZZLE_TOKEN,
-  type DrizzleDb,
-  createDrizzle,
-} from '@/common/database/database.module.js';
-import * as schema from '@/common/database/schema.js';
+import { type DrizzleDb } from '@/common/database/database.module.js';
 import { STORAGE_TOKEN } from '@/infrastructure/storage/storage.module.js';
 import type { IStorageService } from '@/modules/bids/application/IStorageService.js';
 import { ConflictError, NotFoundError, BadRequestError } from '@/common/errors/errors.js';
 import { TenderDocumentRelevanceValidator } from '@/modules/documents/TenderDocumentRelevanceValidator.js';
 import { TenantContextHolder } from '@/common/security/TenantContext.js';
+import { DocumentsRepository } from './documents.repository.js';
+import { DocumentsQueries } from './documents.queries.js';
 
 export interface UploadUrlResult {
   documentId: string;
@@ -45,7 +41,8 @@ export interface DeleteDocumentResult {
 @Injectable()
 export class DocumentsService {
   private readonly logger = new Logger(DocumentsService.name);
-  private readonly db: DrizzleDb;
+  private readonly repository: DocumentsRepository;
+  private readonly queries: DocumentsQueries;
   private readonly pendingUploads = new Map<
     string,
     {
@@ -59,10 +56,17 @@ export class DocumentsService {
   >();
 
   constructor(
-    @Inject(DRIZZLE_TOKEN) db: DrizzleDb | PGlite,
+    @Inject(DocumentsRepository) repoOrDb: DocumentsRepository | DrizzleDb | PGlite,
     @Inject(STORAGE_TOKEN) private readonly storageService: IStorageService | null,
+    @Optional() @Inject(DocumentsQueries) queries?: DocumentsQueries,
   ) {
-    this.db = 'select' in db ? (db as DrizzleDb) : createDrizzle(db as PGlite);
+    if (repoOrDb instanceof DocumentsRepository) {
+      this.repository = repoOrDb;
+      this.queries = queries ?? new DocumentsQueries(repoOrDb.getDb());
+    } else {
+      this.repository = new DocumentsRepository(repoOrDb);
+      this.queries = queries ?? new DocumentsQueries(this.repository.getDb());
+    }
   }
 
   public async registerUploadedMockObject(storagePath: string, content: Buffer): Promise<void> {
@@ -99,12 +103,8 @@ export class DocumentsService {
   public async getOrgIdForBid(bidId: string): Promise<string> {
     const orgId = TenantContextHolder.get()?.organizationId;
     if (orgId) return orgId;
-    const [bid] = await this.db
-      .select({ organizationId: schema.bids.organizationId })
-      .from(schema.bids)
-      .where(eq(schema.bids.id, bidId))
-      .limit(1);
-    return bid?.organizationId || 'org_default';
+    const found = await this.queries.getOrgIdForBid(bidId);
+    return found || 'org_default';
   }
 
   public async generateUploadUrl(
@@ -118,11 +118,7 @@ export class DocumentsService {
     const orgId = this.resolveTenantOrgId();
 
     // Verify bid exists and belongs to the caller's authenticated tenant boundary (Anti-IDOR)
-    const [bidRecord] = await this.db
-      .select({ id: schema.bids.id })
-      .from(schema.bids)
-      .where(and(eq(schema.bids.id, bidId), eq(schema.bids.organizationId, orgId)))
-      .limit(1);
+    const bidRecord = await this.queries.findBidById(bidId, orgId);
 
     if (!bidRecord) {
       throw new NotFoundError(`Bid project '${bidId}' not found.`);
@@ -187,11 +183,7 @@ export class DocumentsService {
     const orgId = this.resolveTenantOrgId();
     const userId = TenantContextHolder.get()?.userId || 'usr_admin';
 
-    const [bidRecord] = await this.db
-      .select()
-      .from(schema.bids)
-      .where(and(eq(schema.bids.id, bidId), eq(schema.bids.organizationId, orgId)))
-      .limit(1);
+    const bidRecord = await this.queries.findBidById(bidId, orgId);
 
     if (!bidRecord) {
       throw new NotFoundError(`Bid project '${bidId}' not found.`);
@@ -206,17 +198,7 @@ export class DocumentsService {
     const pending = this.pendingUploads.get(docId);
 
     // Look up existing DB row if pending in-memory cache was lost due to restart
-    const [existingDoc] = await this.db
-      .select()
-      .from(schema.tenderDocuments)
-      .where(
-        and(
-          eq(schema.tenderDocuments.bidId, bidId),
-          eq(schema.tenderDocuments.id, docId),
-          eq(schema.tenderDocuments.organizationId, orgId),
-        ),
-      )
-      .limit(1);
+    const existingDoc = await this.queries.findDocumentById(docId, orgId);
 
     let fileName = pending?.fileName || existingDoc?.fileName;
     let storagePath = pending?.storagePath || existingDoc?.storagePath;
@@ -329,91 +311,26 @@ export class DocumentsService {
       timestamp: now.toISOString(),
     };
 
-    await this.db.transaction(async (tx) => {
-      const persistedDocument = await tx
-        .insert(schema.tenderDocuments)
-        .values({
-          id: docId,
-          bidId,
-          organizationId: orgId,
-          fileName,
-          storagePath,
-          fileSizeBytes,
-          mimeType,
-          documentType,
-          status: 'QUEUED_FOR_EXTRACTION',
-          processingAttempts: 0,
-          processingStartedAt: null,
-          processingCompletedAt: null,
-          lastProcessingError: null,
-          uploadedAt: now,
-        })
-        .onConflictDoUpdate({
-          target: schema.tenderDocuments.id,
-          set: {
-            fileName,
-            storagePath,
-            fileSizeBytes,
-            mimeType,
-            documentType,
-            status: 'QUEUED_FOR_EXTRACTION',
-            processingAttempts: 0,
-            processingStartedAt: null,
-            processingCompletedAt: null,
-            lastProcessingError: null,
-            uploadedAt: now,
-          },
-          setWhere: and(
-            eq(schema.tenderDocuments.organizationId, orgId),
-            eq(schema.tenderDocuments.bidId, bidId),
-          ),
-        })
-        .returning({ id: schema.tenderDocuments.id });
-      if (persistedDocument.length === 0) {
+    try {
+      await this.repository.confirmDocumentUploadWithOutbox({
+        docId,
+        bidId,
+        orgId,
+        userId,
+        fileName,
+        storagePath,
+        fileSizeBytes,
+        mimeType,
+        documentType,
+        message,
+        now,
+      });
+    } catch (err) {
+      if (err instanceof Error && err.message.startsWith('CONFLICT:')) {
         throw new ConflictError('Document ID is already assigned to another tenant or bid.');
       }
-
-      await tx
-        .update(schema.bids)
-        .set({ status: 'QUEUED', updatedAt: now })
-        .where(and(eq(schema.bids.id, bidId), eq(schema.bids.organizationId, orgId)));
-
-      await tx.insert(schema.auditLogs).values({
-        id: `aud-upload-${docId}-${randomUUID()}`,
-        bidId,
-        organizationId: orgId,
-        userId,
-        userName: userId,
-        eventType: 'DOCUMENT_UPLOADED',
-        aggregateType: 'TenderDocument',
-        aggregateId: docId,
-        payload: { fileName, storagePath },
-        timestamp: now,
-      });
-
-      await tx
-        .insert(schema.documentProcessingOutbox)
-        .values({
-          id: `outbox-${docId}`,
-          organizationId: orgId,
-          documentId: docId,
-          payload: message,
-          status: 'PENDING',
-          nextAttemptAt: now,
-          createdAt: now,
-        })
-        .onConflictDoUpdate({
-          target: schema.documentProcessingOutbox.id,
-          set: {
-            payload: message,
-            status: 'PENDING',
-            attempts: 0,
-            nextAttemptAt: now,
-            lastError: null,
-            publishedAt: null,
-          },
-        });
-    });
+      throw err;
+    }
 
     this.logger.log(
       `Confirmed upload for doc ${docId} (bid: ${bidId}, size: ${fileSizeBytes}B). Enqueued outbox event outbox-${docId}.`,
@@ -428,27 +345,7 @@ export class DocumentsService {
   public async reprocessDocument(bidId: string, docId: string): Promise<ReprocessDocumentResult> {
     const orgId = await this.getOrgIdForBid(bidId);
     const userId = TenantContextHolder.get()?.userId || 'usr_admin';
-    const [source] = await this.db
-      .select({
-        document: schema.tenderDocuments,
-        bid: schema.bids,
-      })
-      .from(schema.tenderDocuments)
-      .innerJoin(
-        schema.bids,
-        and(
-          eq(schema.bids.id, schema.tenderDocuments.bidId),
-          eq(schema.bids.organizationId, schema.tenderDocuments.organizationId),
-        ),
-      )
-      .where(
-        and(
-          eq(schema.tenderDocuments.id, docId),
-          eq(schema.tenderDocuments.bidId, bidId),
-          eq(schema.tenderDocuments.organizationId, orgId),
-        ),
-      )
-      .limit(1);
+    const source = await this.queries.findDocumentWithBid(docId, orgId);
 
     if (!source) {
       throw new NotFoundError(`Document '${docId}' not found in bid '${bidId}'.`);
@@ -504,28 +401,12 @@ export class DocumentsService {
       timestamp: now.toISOString(),
     };
 
-    await this.db.transaction(async (tx) => {
-      await tx
-        .update(schema.tenderDocuments)
-        .set({
-          status: 'QUEUED_FOR_EXTRACTION',
-          processingAttempts: 0,
-          processingStartedAt: null,
-          processingCompletedAt: null,
-          lastProcessingError: null,
-        })
-        .where(
-          and(
-            eq(schema.tenderDocuments.id, docId),
-            eq(schema.tenderDocuments.bidId, bidId),
-            eq(schema.tenderDocuments.organizationId, orgId),
-          ),
-        );
-      await tx
-        .update(schema.bids)
-        .set({ status: 'QUEUED', updatedAt: now })
-        .where(and(eq(schema.bids.id, bidId), eq(schema.bids.organizationId, orgId)));
-      await tx.insert(schema.documentProcessingOutbox).values({
+    await this.repository.queueReprocessing({
+      docId,
+      bidId,
+      orgId,
+      now,
+      outboxData: {
         id: `outbox-${jobId}`,
         organizationId: orgId,
         documentId: docId,
@@ -533,8 +414,8 @@ export class DocumentsService {
         status: 'PENDING',
         nextAttemptAt: now,
         createdAt: now,
-      });
-      await tx.insert(schema.auditLogs).values({
+      },
+      auditLogData: {
         id: `aud-reprocess-${randomUUID()}`,
         bidId,
         organizationId: orgId,
@@ -545,7 +426,7 @@ export class DocumentsService {
         aggregateId: docId,
         payload: { jobId, workflowRunId, correlationId },
         timestamp: now,
-      });
+      },
     });
 
     return { documentId: docId, status: 'QUEUED_FOR_EXTRACTION', jobId };
@@ -562,17 +443,7 @@ export class DocumentsService {
     hostHeader?: string,
   ): Promise<{ downloadUrl: string; expiresInSeconds: number }> {
     const orgId = await this.getOrgIdForBid(bidId);
-    const [docRow] = await this.db
-      .select()
-      .from(schema.tenderDocuments)
-      .where(
-        and(
-          eq(schema.tenderDocuments.bidId, bidId),
-          eq(schema.tenderDocuments.id, docId),
-          eq(schema.tenderDocuments.organizationId, orgId),
-        ),
-      )
-      .limit(1);
+    const docRow = await this.queries.findDocumentById(docId, orgId);
 
     let fileName = docRow?.fileName || 'tender_document.pdf';
     let storagePath = docRow?.storagePath || `tenants/${orgId}/bids/${bidId}/${docId}/${fileName}`;
@@ -620,24 +491,10 @@ export class DocumentsService {
     message: string;
   }> {
     const orgId = await this.getOrgIdForBid(bidId);
-    const [bid] = await this.db
-      .select({ status: schema.bids.status })
-      .from(schema.bids)
-      .where(and(eq(schema.bids.id, bidId), eq(schema.bids.organizationId, orgId)))
-      .limit(1);
-
-    const docs = await this.db
-      .select({ status: schema.tenderDocuments.status })
-      .from(schema.tenderDocuments)
-      .where(
-        and(
-          eq(schema.tenderDocuments.bidId, bidId),
-          eq(schema.tenderDocuments.organizationId, orgId),
-        ),
-      );
+    const { bidStatus, docs } = await this.queries.getBidAndDocsStatus(bidId, orgId);
 
     if (
-      bid?.status === 'REVIEW_READY' ||
+      bidStatus === 'REVIEW_READY' ||
       (docs.length > 0 && docs.every((d) => d.status === 'COMPLETED'))
     ) {
       return {
@@ -648,7 +505,7 @@ export class DocumentsService {
       };
     }
 
-    if (bid?.status === 'FAILED' || (docs.length > 0 && docs.some((d) => d.status === 'FAILED'))) {
+    if (bidStatus === 'FAILED' || (docs.length > 0 && docs.some((d) => d.status === 'FAILED'))) {
       return {
         status: 'FAILED',
         step: 'FAILED',
@@ -657,7 +514,7 @@ export class DocumentsService {
       };
     }
 
-    if (bid?.status === 'PROCESSING' || docs.some((d) => d.status === 'PROCESSING')) {
+    if (bidStatus === 'PROCESSING' || docs.some((d) => d.status === 'PROCESSING')) {
       return {
         status: 'PROCESSING',
         step: 'EXTRACTING_COMPLIANCE',
@@ -682,38 +539,21 @@ export class DocumentsService {
     const orgId = organizationId || (await this.getOrgIdForBid(bidId));
     const userId = TenantContextHolder.get()?.userId || 'usr_admin';
     // 1. Verify existence & tenant boundary (Anti-IDOR)
-    const [doc] = await this.db
-      .select()
-      .from(schema.tenderDocuments)
-      .where(
-        and(
-          eq(schema.tenderDocuments.id, docId),
-          eq(schema.tenderDocuments.bidId, bidId),
-          eq(schema.tenderDocuments.organizationId, orgId),
-        ),
-      )
-      .limit(1);
+    const doc = await this.queries.findDocumentById(docId, orgId);
 
     if (!doc) {
       throw new NotFoundError(`Document '${docId}' not found in bid '${bidId}'.`);
     }
 
     // 2. Find all compliance items for this bid that originate from this document
-    const allCompliances = await this.db
-      .select()
-      .from(schema.complianceItems)
-      .where(
-        and(
-          eq(schema.complianceItems.bidId, bidId),
-          eq(schema.complianceItems.organizationId, orgId),
-        ),
-      );
+    const allCompliances = await this.queries.listComplianceItemsByBid(bidId, orgId);
 
     const itemsToDelete = allCompliances.filter((item) => {
       const prov =
         typeof item.provenance === 'string'
           ? (JSON.parse(item.provenance) as Record<string, unknown>)
           : (item.provenance as Record<string, unknown>);
+      if (item.documentId) return item.documentId === docId;
       if (!prov) return false;
       return (
         prov.documentId === docId ||
@@ -725,83 +565,58 @@ export class DocumentsService {
 
     // 3. Record audit event before deleting
     const now = new Date();
-    await this.db.insert(schema.auditLogs).values({
-      id: `aud-docdel-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
-      bidId,
-      organizationId: orgId,
-      userId,
-      userName: userId === 'usr_bid_mgr_01' ? 'Vikramaditya Sharma' : 'Authorized User',
-      eventType: 'DOCUMENT_DELETED',
-      aggregateType: 'TenderDocument',
-      aggregateId: docId,
-      payload: {
-        fileName: doc.fileName,
-        storagePath: doc.storagePath,
-        removedCompliancesCount: itemsToDelete.length,
-        removedComplianceIds: itemsToDelete.map((i) => i.id),
-      },
-      timestamp: now,
-    });
+    const itemIdsToDelete = itemsToDelete.map((i) => i.id);
 
-    // 4. Delete the matched compliance items
-    if (itemsToDelete.length > 0) {
-      const itemIdsToDelete = itemsToDelete.map((i) => i.id);
-      await this.db
-        .delete(schema.complianceItems)
-        .where(inArray(schema.complianceItems.id, itemIdsToDelete));
-    }
-
-    // 5. Delete the document record
-    await this.db
-      .delete(schema.tenderDocuments)
-      .where(
-        and(
-          eq(schema.tenderDocuments.id, docId),
-          eq(schema.tenderDocuments.bidId, bidId),
-          eq(schema.tenderDocuments.organizationId, orgId),
-        ),
-      );
-
-    // 6. Recalculate remaining metrics for the parent bid project
-    const remainingCompliances = await this.db
-      .select()
-      .from(schema.complianceItems)
-      .where(
-        and(
-          eq(schema.complianceItems.bidId, bidId),
-          eq(schema.complianceItems.organizationId, orgId),
-        ),
-      );
-
+    // 4. Recalculate remaining metrics for the parent bid project
+    const remainingCompliances = allCompliances.filter(
+      (c) => !itemIdsToDelete.includes(c.id),
+    );
     const totalRequirements = remainingCompliances.length;
-    const flaggedRequirements = remainingCompliances.filter((c) => c.status === 'FLAGGED').length;
-    const approvedRequirements = remainingCompliances.filter((c) => c.status === 'APPROVED').length;
+    const flaggedRequirements = remainingCompliances.filter(
+      (c) => c.reviewStatus === 'NEEDS_REVIEW' || c.status === 'FAIL',
+    ).length;
+    const approvedRequirements = remainingCompliances.filter(
+      (c) => c.reviewStatus === 'CONFIRMED' || c.reviewStatus === 'CORRECTED',
+    ).length;
 
     // Check if any documents remain for this bid
-    const remainingDocs = await this.db
-      .select()
-      .from(schema.tenderDocuments)
-      .where(
-        and(
-          eq(schema.tenderDocuments.bidId, bidId),
-          eq(schema.tenderDocuments.organizationId, orgId),
-        ),
-      );
-
+    const remainingDocs = (await this.queries.listDocumentsByBid(bidId, orgId)).filter(
+      (d) => d.id !== docId,
+    );
     const nextStatus = remainingDocs.length === 0 ? 'DRAFT' : undefined;
 
-    await this.db
-      .update(schema.bids)
-      .set({
+    await this.repository.deleteDocumentCascade({
+      docId,
+      bidId,
+      orgId,
+      complianceItemIdsToDelete: itemIdsToDelete,
+      auditLog: {
+        id: `aud-docdel-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
+        bidId,
+        organizationId: orgId,
+        userId,
+        userName: userId === 'usr_bid_mgr_01' ? 'Vikramaditya Sharma' : 'Authorized User',
+        eventType: 'DOCUMENT_DELETED',
+        aggregateType: 'TenderDocument',
+        aggregateId: docId,
+        payload: {
+          fileName: doc.fileName,
+          storagePath: doc.storagePath,
+          removedCompliancesCount: itemsToDelete.length,
+          removedComplianceIds: itemIdsToDelete,
+        },
+        timestamp: now,
+      },
+      updatedMetrics: {
         totalRequirements,
         flaggedRequirements,
         approvedRequirements,
         ...(nextStatus ? { status: nextStatus } : {}),
         updatedAt: now,
-      })
-      .where(and(eq(schema.bids.id, bidId), eq(schema.bids.organizationId, orgId)));
+      },
+    });
 
-    // 7. Prune cloud storage blob & folder prefix
+    // 5. Prune cloud storage blob & folder prefix
     if (this.storageService) {
       try {
         await this.storageService.deleteObject(doc.storagePath);
@@ -809,7 +624,7 @@ export class DocumentsService {
         console.warn(`[DocumentsService] Failed to delete document blob ${doc.storagePath}:`, err);
       }
 
-      const docPrefix = `tenants/${organizationId}/bids/${bidId}/${docId}/`;
+      const docPrefix = `tenants/${orgId}/bids/${bidId}/${docId}/`;
       try {
         await this.storageService.deletePrefix(docPrefix);
       } catch (err) {

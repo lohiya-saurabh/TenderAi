@@ -1,7 +1,7 @@
-import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { and, eq, lte, or } from 'drizzle-orm';
-import { DRIZZLE_TOKEN, type DrizzleDb } from '@/common/database/database.module.js';
-import * as schema from '@/common/database/schema.js';
+import { Inject, Injectable, OnModuleDestroy, OnModuleInit, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { PGlite } from '@electric-sql/pglite';
+import { type DrizzleDb } from '@/common/database/database.module.js';
 import {
   INGESTION_QUEUE_TOKEN,
   COMPLETION_QUEUE_TOKEN,
@@ -12,6 +12,8 @@ import type {
   QueueMessage,
 } from '@/modules/bids/application/IJobQueue.js';
 import { DocumentCompletionService } from '@/modules/documents/DocumentCompletionService.js';
+import { DocumentsRepository } from '@/modules/documents/documents.repository.js';
+import { DocumentsQueries } from '@/modules/documents/documents.queries.js';
 import type { DocumentExtractionCompletedEvent } from '@tenderpulse/shared-types';
 import { StructuredLogger } from '@/common/logging/StructuredLogger.js';
 import { LoggingContextHolder } from '@/common/logging/LoggingContext.js';
@@ -36,70 +38,120 @@ const OUTBOX_LEASE_MS = 5 * 60_000;
  *    DocumentExtractionCompletedEvent emitted by the Python AI worker.
  *    Delegates atomic single-writer PostgreSQL persistence to DocumentCompletionService
  *    and deletes the completion queue message upon transaction commit.
+ *
+ * The two run as independent loops: the completion consumer sits in a 20s SQS long
+ * poll, and a shared loop made every new upload wait for that poll to time out before
+ * its job was published. Shutdown aborts the in-flight long poll.
  */
 @Injectable()
 export class DocumentProcessingRuntime implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new StructuredLogger(DocumentProcessingRuntime.name, 'api');
   private running = false;
-  private loop: Promise<void> | undefined;
+  private loops: Promise<void>[] = [];
+  private readonly shutdown = new AbortController();
 
   public readonly completionService: DocumentCompletionService;
+  private readonly repository: DocumentsRepository;
+  private readonly queries: DocumentsQueries;
 
   constructor(
-    @Inject(DRIZZLE_TOKEN) private readonly db: DrizzleDb,
+    @Inject(DocumentsRepository) repoOrDb: DocumentsRepository | DrizzleDb | PGlite,
     @Inject(INGESTION_QUEUE_TOKEN) public readonly ingestionQueue: IJobQueue,
     @Inject(COMPLETION_QUEUE_TOKEN) public readonly completionQueue: IJobQueue,
     completionService?: DocumentCompletionService,
+    @Optional() private readonly configService?: ConfigService,
+    @Optional() @Inject(DocumentsQueries) queries?: DocumentsQueries,
   ) {
+    if (repoOrDb instanceof DocumentsRepository) {
+      this.repository = repoOrDb;
+      this.queries = queries ?? new DocumentsQueries(repoOrDb.getDb());
+    } else {
+      this.repository = new DocumentsRepository(repoOrDb);
+      this.queries = queries ?? new DocumentsQueries(this.repository.getDb());
+    }
     this.completionService =
       completionService instanceof DocumentCompletionService
         ? completionService
-        : new DocumentCompletionService(this.db);
+        : new DocumentCompletionService(this.repository);
   }
 
   public onModuleInit(): void {
-    if (process.env.DOCUMENT_PROCESSING_CONSUMER_ENABLED === 'false') {
+    const consumerEnabled =
+      this.configService?.get<string>('DOCUMENT_PROCESSING_CONSUMER_ENABLED');
+    if (consumerEnabled === 'false') {
       this.logger.warn('Document processing consumer is disabled by configuration.');
       return;
     }
 
     this.running = true;
-    this.loop = this.run();
+    this.loops = [this.runOutboxPublisher(), this.runCompletionConsumer()];
   }
 
   public async onModuleDestroy(): Promise<void> {
     this.running = false;
-    await this.loop;
+    this.shutdown.abort();
+    await Promise.all(this.loops);
   }
 
-  private async run(): Promise<void> {
+  /**
+   * Transactional Outbox Publisher: reads pending outbox records every second and
+   * enqueues them to the Ingestion Queue. NestJS is strictly the PRODUCER of the
+   * Ingestion Queue; it NEVER consumes it.
+   */
+  private async runOutboxPublisher(): Promise<void> {
     while (this.running) {
       try {
-        // 1. Transactional Outbox Publisher:
-        // Reads pending outbox records and enqueues to the Ingestion Queue.
-        // NestJS is strictly the PRODUCER of the Ingestion Queue; it NEVER consumes it.
         await this.publishPendingOutboxMessages();
+      } catch (error) {
+        this.logger.error(
+          'Outbox publisher loop encountered an error; worker remains healthy.',
+          error,
+        );
+      }
+      await this.pause(POLL_INTERVAL_MS);
+    }
+  }
 
-        // 2. Dedicated Completion Queue Consumer:
-        // Polls the Completion Queue for DocumentExtractionCompletedEvent published by Python.
-        // NestJS is strictly the CONSUMER of the Completion Queue.
+  /**
+   * Dedicated Completion Queue Consumer: long-polls for DocumentExtractionCompletedEvent
+   * published by Python and handles each as soon as it arrives. NestJS is strictly the
+   * CONSUMER of the Completion Queue.
+   */
+  private async runCompletionConsumer(): Promise<void> {
+    while (this.running) {
+      try {
         const [completionMsg] = await this.completionQueue.receiveMessages(
           1,
           VISIBILITY_TIMEOUT_SECONDS,
+          { abortSignal: this.shutdown.signal },
         );
         if (completionMsg) {
           await this.processCompletionMessage(completionMsg);
           continue;
         }
       } catch (error) {
+        if (!this.running) break;
         this.logger.error(
-          'Document processing polling loop encountered an error; worker remains healthy.',
+          'Completion consumer loop encountered an error; worker remains healthy.',
           error,
         );
       }
-
-      await new Promise<void>((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+      // Real SQS already waited in a long poll; this keeps instant-return queues from spinning.
+      await this.pause(POLL_INTERVAL_MS);
     }
+  }
+
+  /** Sleeps up to ms, waking early on shutdown. */
+  private pause(ms: number): Promise<void> {
+    return new Promise<void>((resolve) => {
+      if (this.shutdown.signal.aborted) return resolve();
+      const timer = setTimeout(done, ms);
+      function done() {
+        clearTimeout(timer);
+        resolve();
+      }
+      this.shutdown.signal.addEventListener('abort', done, { once: true });
+    });
   }
 
   /**
@@ -109,57 +161,16 @@ export class DocumentProcessingRuntime implements OnModuleInit, OnModuleDestroy 
   public async publishPendingOutboxMessages(): Promise<void> {
     const now = new Date();
     const staleLease = new Date(now.getTime() - OUTBOX_LEASE_MS);
-    const pending = await this.db
-      .select()
-      .from(schema.documentProcessingOutbox)
-      .where(
-        or(
-          and(
-            eq(schema.documentProcessingOutbox.status, 'PENDING'),
-            lte(schema.documentProcessingOutbox.nextAttemptAt, now),
-          ),
-          and(
-            eq(schema.documentProcessingOutbox.status, 'PUBLISHING'),
-            lte(schema.documentProcessingOutbox.lockedAt, staleLease),
-          ),
-        ),
-      )
-      .limit(10);
+    const pending = await this.queries.findPendingOutboxMessages(now, staleLease, 10);
 
     for (const record of pending) {
-      const claim = await this.db
-        .update(schema.documentProcessingOutbox)
-        .set({ status: 'PUBLISHING', lockedAt: now })
-        .where(
-          and(
-            eq(schema.documentProcessingOutbox.id, record.id),
-            or(
-              and(
-                eq(schema.documentProcessingOutbox.status, 'PENDING'),
-                lte(schema.documentProcessingOutbox.nextAttemptAt, now),
-              ),
-              and(
-                eq(schema.documentProcessingOutbox.status, 'PUBLISHING'),
-                lte(schema.documentProcessingOutbox.lockedAt, staleLease),
-              ),
-            ),
-          ),
-        )
-        .returning({ id: schema.documentProcessingOutbox.id });
-      if (claim.length === 0) continue;
+      const claimed = await this.repository.claimOutboxMessage(record.id, now, staleLease);
+      if (!claimed) continue;
 
       const message = record.payload as IngestionJobMessage;
       try {
         await this.ingestionQueue.enqueue(message);
-        await this.db
-          .update(schema.documentProcessingOutbox)
-          .set({
-            status: 'PUBLISHED',
-            publishedAt: new Date(),
-            lockedAt: null,
-            lastError: null,
-          })
-          .where(eq(schema.documentProcessingOutbox.id, record.id));
+        await this.repository.markOutboxPublished(record.id, new Date());
 
         this.logger.info(
           'outbox.message.published',
@@ -170,16 +181,12 @@ export class DocumentProcessingRuntime implements OnModuleInit, OnModuleDestroy 
         const attempts = record.attempts + 1;
         const retrySeconds = Math.min(5 * 2 ** Math.min(attempts - 1, 6), 300);
         const messageText = error instanceof Error ? error.message : String(error);
-        await this.db
-          .update(schema.documentProcessingOutbox)
-          .set({
-            attempts,
-            lastError: messageText,
-            nextAttemptAt: new Date(Date.now() + retrySeconds * 1000),
-            status: 'PENDING',
-            lockedAt: null,
-          })
-          .where(eq(schema.documentProcessingOutbox.id, record.id));
+        await this.repository.markOutboxFailed(
+          record.id,
+          attempts,
+          messageText,
+          new Date(Date.now() + retrySeconds * 1000),
+        );
         this.logger.error(
           `Failed to publish document job ${record.id} to Ingestion Queue; retrying in ${retrySeconds}s.`,
           error,
@@ -247,20 +254,16 @@ export class DocumentProcessingRuntime implements OnModuleInit, OnModuleDestroy 
             );
             if (event.documentId && event.organizationId) {
               try {
-                await this.db
-                  .update(schema.tenderDocuments)
-                  .set({
+                await this.repository.updateDocumentStatus(
+                  event.documentId,
+                  event.organizationId,
+                  {
                     status: 'FAILED',
                     lastProcessingError:
                       'Malformed completion message missing required identifiers (documentId, bidId, or organizationId).',
                     processingCompletedAt: new Date(),
-                  })
-                  .where(
-                    and(
-                      eq(schema.tenderDocuments.id, event.documentId),
-                      eq(schema.tenderDocuments.organizationId, event.organizationId),
-                    ),
-                  );
+                  },
+                );
               } catch (dbErr) {
                 this.logger.error(
                   `Failed to mark malformed doc ${event.documentId} as FAILED`,
@@ -302,54 +305,13 @@ export class DocumentProcessingRuntime implements OnModuleInit, OnModuleDestroy 
             const dlqReason = `Exceeded max attempts (${MAX_PROCESSING_ATTEMPTS}): ${errorMessage}`;
             if (event.documentId && event.organizationId) {
               try {
-                await this.db
-                  .update(schema.tenderDocuments)
-                  .set({
-                    status: 'FAILED',
-                    lastProcessingError: dlqReason,
-                    processingCompletedAt: new Date(),
-                  })
-                  .where(
-                    and(
-                      eq(schema.tenderDocuments.id, event.documentId),
-                      eq(schema.tenderDocuments.organizationId, event.organizationId),
-                    ),
-                  );
-
-                if (event.bidId) {
-                  const allBidDocs = await this.db
-                    .select({
-                      id: schema.tenderDocuments.id,
-                      status: schema.tenderDocuments.status,
-                    })
-                    .from(schema.tenderDocuments)
-                    .where(
-                      and(
-                        eq(schema.tenderDocuments.bidId, event.bidId),
-                        eq(schema.tenderDocuments.organizationId, event.organizationId),
-                      ),
-                    );
-
-                  const terminalStatuses = new Set(['COMPLETED', 'FAILED']);
-                  const allDocsTerminal =
-                    allBidDocs.length > 0 &&
-                    allBidDocs.every((d) => terminalStatuses.has(d.status));
-
-                  if (allDocsTerminal) {
-                    await this.db
-                      .update(schema.bids)
-                      .set({
-                        status: 'REVIEW_READY',
-                        updatedAt: new Date(),
-                      })
-                      .where(
-                        and(
-                          eq(schema.bids.id, event.bidId),
-                          eq(schema.bids.organizationId, event.organizationId),
-                        ),
-                      );
-                  }
-                }
+                await this.repository.markDocumentFailed({
+                  documentId: event.documentId,
+                  organizationId: event.organizationId,
+                  bidId: event.bidId || '',
+                  error: dlqReason,
+                  now: new Date(),
+                });
               } catch (dbErr) {
                 this.logger.error(
                   `Failed to update tender document status to FAILED for doc ${event.documentId}`,

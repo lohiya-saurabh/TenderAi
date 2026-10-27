@@ -1,4 +1,5 @@
 import { PubSub, ClientConfig, v1 } from '@google-cloud/pubsub';
+import { ConfigService } from '@nestjs/config';
 import {
   IJobQueue,
   IngestionJobMessage,
@@ -32,17 +33,21 @@ export class GcpPubSubJobQueue implements IJobQueue {
   private readonly projectId: string;
   private readonly logger = new StructuredLogger('GcpPubSubJobQueue', 'api');
 
-  constructor(config: GcpPubSubConfig) {
+  constructor(config: GcpPubSubConfig, configService?: ConfigService) {
+    const cfg = configService ?? new ConfigService();
     this.topicName = config.topicName;
     this.subscriptionName = config.subscriptionName;
     this.dlqTopicName = config.dlqTopicName;
     this.dlqSubscriptionName = config.dlqSubscriptionName;
-    this.projectId = config.projectId || process.env.GCP_PROJECT_ID || 'tenderpulse-local';
+    this.projectId = config.projectId || cfg.get<string>('GCP_PROJECT_ID') || 'tenderpulse-local';
+
+    const keyFilename = config.keyFilename || cfg.get<string>('GOOGLE_APPLICATION_CREDENTIALS') || undefined;
+    const apiEndpoint = config.apiEndpoint || cfg.get<string>('PUBSUB_EMULATOR_HOST') || undefined;
 
     const clientConfig: ClientConfig = {
       projectId: this.projectId,
-      keyFilename: config.keyFilename || process.env.GOOGLE_APPLICATION_CREDENTIALS || undefined,
-      apiEndpoint: config.apiEndpoint || process.env.PUBSUB_EMULATOR_HOST || undefined,
+      keyFilename,
+      apiEndpoint,
     };
 
     if (config.credentials) {
@@ -52,8 +57,8 @@ export class GcpPubSubJobQueue implements IJobQueue {
     this.pubSub = new PubSub(clientConfig);
     this.subClient = new v1.SubscriberClient({
       projectId: this.projectId,
-      keyFilename: config.keyFilename || process.env.GOOGLE_APPLICATION_CREDENTIALS || undefined,
-      apiEndpoint: config.apiEndpoint || process.env.PUBSUB_EMULATOR_HOST || undefined,
+      keyFilename,
+      apiEndpoint,
       credentials: config.credentials,
     });
   }

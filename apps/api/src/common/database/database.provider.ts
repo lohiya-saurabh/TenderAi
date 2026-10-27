@@ -1,63 +1,81 @@
 /**
- * PGlite database factory and schema initialization orchestrator.
+ * Database factory and schema initialization orchestrator.
+ *
+ * Selection (first match wins):
+ *   1. PGLITE_DATA_DIR (or an explicit dataDir) → PGlite. Tests set memory:// so each
+ *      run gets a throwaway in-memory database.
+ *   2. DATABASE_URL → real PostgreSQL through a node-postgres pool.
+ *   3. Neither → startup fails with setup instructions.
  */
 import path from 'node:path';
 import fs from 'node:fs';
 import { PGlite } from '@electric-sql/pglite';
-import { drizzle } from 'drizzle-orm/pglite';
-import * as schema from '@/common/database/schema.js';
-import { initDatabaseDdl } from './ddl.js';
+import { ConfigService } from '@nestjs/config';
+import {
+  createDrizzleFor,
+  createPostgresPool,
+  isPglite,
+  type DatabaseClient,
+} from '@/common/database/client.js';
+import { runMigrations } from '@/common/database/migrator.js';
 import { seedDatabase, type SeedDatabaseOptions } from './seed-database.js';
 
-let dbInstance: PGlite | null = null;
+let dbInstance: DatabaseClient | null = null;
 
-export async function getDatabase(dataDir?: string): Promise<PGlite> {
+async function openPglite(dbPath: string): Promise<PGlite> {
+  if (!dbPath.startsWith('memory://') && !fs.existsSync(dbPath)) {
+    fs.mkdirSync(dbPath, { recursive: true });
+  }
+  const pg = new PGlite(dbPath);
+  await pg.waitReady;
+  return pg;
+}
+
+export async function getDatabase(
+  configOrDataDir?: ConfigService | string,
+): Promise<DatabaseClient> {
   if (dbInstance) {
     return dbInstance;
   }
+  const config = typeof configOrDataDir === 'string' ? undefined : configOrDataDir;
+  const dataDir = typeof configOrDataDir === 'string' ? configOrDataDir : undefined;
+  const env = (key: string) => config?.get<string>(key) ?? process.env[key];
 
-  const dbPath = dataDir || path.resolve(process.cwd(), 'data/postgres');
-  if (!fs.existsSync(dbPath)) {
-    fs.mkdirSync(dbPath, { recursive: true });
-  }
-
-  // Remove stale postmaster.pid if an ungraceful shutdown occurred
-  const pidFile = path.join(dbPath, 'postmaster.pid');
-  if (fs.existsSync(pidFile)) {
-    try {
-      fs.unlinkSync(pidFile);
-    } catch {
-      // ignore
-    }
-  }
-
-  try {
-    const pg = new PGlite(dbPath);
-    await pg.waitReady;
-    dbInstance = pg;
+  const pgliteDir = dataDir ?? env('PGLITE_DATA_DIR');
+  if (pgliteDir) {
+    dbInstance = await openPglite(pgliteDir);
     return dbInstance;
-  } catch (err) {
-    console.warn(
-      '[Database] PGlite failed to boot from disk (dirty shutdown/WASM recovery). Recovering clean database...',
-      err,
+  }
+
+  const databaseUrl = env('DATABASE_URL');
+  if (!databaseUrl) {
+    throw new Error(
+      'DATABASE_URL is not set. The API needs a PostgreSQL 16 database, e.g. ' +
+        'postgresql://tenderpulse:tenderpulse_dev_password@localhost:5432/tenderpulse_db ' +
+        '(see CONTRIBUTING.md "Local database").',
     );
-    try {
-      fs.rmSync(dbPath, { recursive: true, force: true });
-      fs.mkdirSync(dbPath, { recursive: true });
-    } catch {
-      // ignore
-    }
-    const pg = new PGlite(dbPath);
-    await pg.waitReady;
-    dbInstance = pg;
-    return dbInstance;
   }
+  const maxConnections = Number(env('DATABASE_POOL_MAX')) || undefined;
+  dbInstance = createPostgresPool({
+    connectionString: databaseUrl,
+    sslMode: env('DATABASE_SSL'),
+    sslCaFile: env('DATABASE_SSL_CA_FILE'),
+    maxConnections,
+  });
+  // Fail fast on bad credentials/host instead of on the first request.
+  await dbInstance.query('SELECT 1');
+  return dbInstance;
 }
 
 export type InitDatabaseOptions = SeedDatabaseOptions;
 
-export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): Promise<void> {
-  let seedDemoEnv = process.env.SEED_DEMO_DATA;
+export async function initDatabase(
+  db: DatabaseClient,
+  options?: InitDatabaseOptions,
+  configService?: ConfigService,
+): Promise<void> {
+  const config = configService ?? new ConfigService();
+  let seedDemoEnv = config.get<string>('SEED_DEMO_DATA');
   const envFilePath = path.resolve(process.cwd(), '.env');
   if (fs.existsSync(envFilePath)) {
     try {
@@ -76,14 +94,15 @@ export async function initDatabase(db: PGlite, options?: InitDatabaseOptions): P
   const seedFullProfile = options?.seedFullProfile ?? defaultSeed;
   const seedBidsAndCompliance = options?.seedBidsAndCompliance ?? defaultSeed;
 
-  // 1. Run DDL migrations & indexes
-  await initDatabaseDdl(db);
+  // 1. Apply versioned schema migrations
+  const migrations = await runMigrations(db);
 
   // 2. Initialize Drizzle & run seeds
-  const drizzleDb = drizzle(db, { schema });
-  await seedDatabase(drizzleDb, { seedUsers, seedFullProfile, seedBidsAndCompliance });
+  await seedDatabase(createDrizzleFor(db), { seedUsers, seedFullProfile, seedBidsAndCompliance });
 
   console.log(
-    `✅ PostgreSQL database ready (${seedUsers || seedBidsAndCompliance ? 'demo seeded' : 'clean state'}).`,
+    `✅ PostgreSQL database ready (${isPglite(db) ? 'PGlite' : 'node-postgres'}; ` +
+      `${migrations.applied.length} migration(s) applied; ` +
+      `${seedUsers || seedBidsAndCompliance ? 'demo seeded' : 'clean state'}).`,
   );
 }

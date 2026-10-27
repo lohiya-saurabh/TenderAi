@@ -125,10 +125,18 @@ export interface DemoAssessmentRationale {
 export interface DemoComplianceItem {
   id: string;
   bidId: string;
-  category: 'LEGAL' | 'TECHNICAL' | 'FINANCIAL' | 'STATUTORY' | 'EXECUTION' | 'COMMERCIAL';
+  category:
+    | 'LEGAL'
+    | 'TECHNICAL'
+    | 'FINANCIAL'
+    | 'STATUTORY'
+    | 'EXECUTION'
+    | 'COMMERCIAL'
+    | 'OPERATIONAL';
   title: string;
   requirement?: string;
   description: string;
+  tenderClauseRef?: string;
   status:
     | 'PASS'
     | 'FAIL'
@@ -151,7 +159,7 @@ export interface DemoComplianceItem {
     page: number;
     section: string;
     verbatimQuote: string;
-    confidenceScore: number;
+    confidenceScore: number | null;
   };
   companyEvidence?: DemoCompanyEvidence | null;
   risk?: DemoRequirementRisk | null;

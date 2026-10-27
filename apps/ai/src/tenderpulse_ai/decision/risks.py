@@ -53,17 +53,22 @@ class CommercialRiskAnalyzer:
             ),
             None,
         )
-        if emd_req and estimated_value_inr_crores > 0:
-            # Typical Indian procurement EMD is 1-2% of estimated value
-            estimated_emd_crores = estimated_value_inr_crores * 0.02
+        if emd_req:
+            # Only the tender's own stated amount is reported, never an estimate.
+            from tenderpulse_ai.extraction.metrics import extract_monetary_amounts
+
+            amounts = extract_monetary_amounts(
+                f"{emd_req.provenance.verbatim_quote} {emd_req.description}"
+            )
+            stated = f" of {amounts[0]['formatted']}" if amounts else ""
             risks.append(
                 RiskItem(
                     title="Working Capital Lock-in (EMD)",
                     severity=RiskSeverity.MEDIUM,
                     category="COMMERCIAL",
                     detail=(
-                        f"Tender estimated value ₹{estimated_value_inr_crores:.2f} Cr implies estimated "
-                        f"EMD requirement ~₹{estimated_emd_crores * 100:.1f} Lakhs locked during tender evaluation."
+                        f"The tender requires an EMD / bid security{stated} that stays locked "
+                        "until bid evaluation and award."
                     ),
                     mitigation_advice="Verify MSME exemption eligibility or arrange bank guarantee facility in advance.",
                 )

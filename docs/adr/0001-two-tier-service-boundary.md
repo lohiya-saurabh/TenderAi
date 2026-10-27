@@ -13,7 +13,7 @@ TenderPulse AI requires two fundamentally different types of computation:
 
 ### The Problem
 
-- If we build everything in **Node.js (NestJS)**: The Python ecosystem is decades ahead in PDF parsing (PyMuPDF, pdfminer), computer vision/OCR (Tesseract, PaddleOCR), and AI agent orchestration (LangGraph). Node.js wrappers for PDF parsing frequently suffer from native memory leaks, lack deep font/layout extraction, and AI agent frameworks in JS/TS lag significantly behind Python.
+- If we build everything in **Node.js (NestJS)**: The Python ecosystem is decades ahead in PDF parsing (Docling layout engine, PDFium), computer vision/OCR (Tesseract, PaddleOCR), and AI agent orchestration (LangGraph). Node.js wrappers for PDF parsing frequently suffer from native memory leaks, lack deep font/layout extraction, and AI agent frameworks in JS/TS lag significantly behind Python.
 - If we build everything in **Python (FastAPI)**: FastAPI is excellent for data science and AI APIs, but building enterprise multi-tenant SaaS with robust DDD (Domain-Driven Design), enterprise auth guards, modular dependency injection, migration pipelines, and strict relational transaction boundaries is significantly more mature, organized, and maintainable in TypeScript with NestJS.
 - If we build a **Distributed Microservices Mesh**: Overkill for early-stage SaaS; adds network latency, distributed transaction complexity, service discovery overhead, and massive operational cost.
 
@@ -24,14 +24,14 @@ We adopt a **Two-Tier Specialized Service Architecture**:
 1. **NestJS (TypeScript)** serves as the **Primary Domain & API Boundary**:
    - Front-facing API gateway for the React SPA.
    - Enforces authentication, authorization, multi-tenancy, and audit logging.
-   - Owns the primary transactional PostgreSQL database.
+   - Owns the primary transactional PostgreSQL database (**Single-Writer Principle**).
    - Issues S3 presigned upload URLs.
-   - Dispatches document processing jobs to AWS SQS.
-2. **FastAPI (Python 3.11+)** serves as the **AI & Document Intelligence Boundary**:
+   - Dispatches document processing jobs to AWS SQS / GCP PubSub.
+2. **FastAPI (Python 3.12+)** serves as the **AI & Document Intelligence Boundary**:
    - Operates behind the internal network (not exposed directly to the public internet).
-   - Runs asynchronous workers consuming jobs from AWS SQS.
-   - Leverages PyMuPDF, OCR engines, and LangGraph for structured compliance extraction.
-   - Writes extraction results back to the database or posts them via internal webhook/queue.
+   - Runs asynchronous workers consuming jobs from AWS SQS / GCP PubSub.
+   - Leverages Docling Parser Engine, 3-tier Structural RAG, and LangGraph for structured compliance extraction.
+   - Emits extraction completion events to the dedicated completion queue for NestJS atomic persistence.
 
 ## Alternatives Considered
 

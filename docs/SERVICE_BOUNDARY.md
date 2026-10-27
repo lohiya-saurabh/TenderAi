@@ -11,7 +11,7 @@ Responsibilities across the two-tier boundary are:
 | Upload confirmation, object existence verification, transactional outbox | NestJS API     | `DocumentsService.confirmUpload()` & `document_processing_outbox` |
 | Asynchronous queue dispatch & lease-locking                              | NestJS API     | `DocumentProcessingRuntime` via `IJobQueue`                       |
 | Direct PDF download & streaming parse (C++ PDFium / Docling)             | FastAPI Worker | `tenderpulse_ai.domain.pdf_resolver.resolve_pdf_to_pages()`       |
-| Stateful AI extraction & grounding verification (LangGraph)              | FastAPI Worker | `ProductionExtractionPipeline` / 8-node LangGraph workflow        |
+| Stateful AI extraction & grounding verification (LangGraph)              | FastAPI Worker | `ProductionExtractionPipeline` / 12-node LangGraph workflow       |
 | Asynchronous completion event publication                                | FastAPI Worker | `CompletionPublisher` (`DocumentExtractionCompletedEvent`)        |
 | Invariant checking, tenant re-verification & deduplication               | NestJS API     | `DocumentCompletionService.processExtractionCompleted()`          |
 | Exclusive, atomic PostgreSQL persistence (**Single-Writer Principle**)   | NestJS API     | PostgreSQL transaction in `DocumentCompletionService`             |
@@ -88,11 +88,12 @@ Moving these steps to FastAPI decouples the API from long‑running document pro
 
 ---
 
-## Next Steps (Do Not Implement Yet)
+## Production Implementation Status
 
-- Document the exact FastAPI endpoint contracts that NestJS will call.
-- Identify the minimal set of metadata that must be passed from NestJS to FastAPI (e.g., `documentId`, `storageReference`, `tenantId`).
-- Ensure the worker’s queue consumer is wired to the same job schema used by `IJobQueue.enqueue`.
-- Plan for graceful degradation: keep the regex fallback in NestJS only until the worker is production‑ready.
+The service boundary separation is fully realized in production:
+- Asynchronous queue choreography is mediated via `IJobQueue` (`AwsSqsJobQueue` / `GcpPubSubJobQueue`) and transactional outbox.
+- FastAPI AI worker runs Docling Parser Engine, 3-tier Structural RAG, and the 12-node LangGraph extraction pipeline.
+- Single-Writer Principle is enforced: NestJS `DocumentCompletionService` atomically persists verified compliance items, updates bid status, and writes immutable audit logs.
+- Deterministic evaluation and eligibility analysis are mediated via `AiDecisionClient` and `compliance-item.mapper.ts`.
 
-_This file captures the current service boundary analysis and should be version‑controlled alongside the related architectural documentation._
+_This file captures the current service boundary analysis and is version‑controlled alongside the related architectural documentation._

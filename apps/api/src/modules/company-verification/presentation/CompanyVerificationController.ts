@@ -10,7 +10,8 @@
  * - GET  /api/v1/companies/:companyId/verification/history (Audit trail)
  * - POST /api/v1/companies/:companyId/verification/review-discrepancy (Human review action)
  */
-import { Controller, Get, Post, Param, Body, Query, HttpCode } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Query, HttpCode, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { EvidenceVerificationService } from '@/modules/company-verification/application/EvidenceVerificationService.js';
 import { RequirePermission } from '@/common/security/decorators/permissions.decorator.js';
 import { Permissions } from '@/common/security/permissions.js';
@@ -18,7 +19,10 @@ import { BadRequestError } from '@/common/errors/errors.js';
 
 @Controller('api/v1/companies/:companyId/verification')
 export class CompanyVerificationController {
-  constructor(private readonly verificationService: EvidenceVerificationService) {}
+  constructor(
+    private readonly verificationService: EvidenceVerificationService,
+    @Optional() private readonly configService?: ConfigService,
+  ) {}
 
   @Post('gstin')
   @HttpCode(200)
@@ -56,7 +60,10 @@ export class CompanyVerificationController {
     @Param('companyId') companyId: string,
     @Query('redirectUri') redirectUri?: string,
   ) {
-    const defaultRedirect = `${process.env.APP_BASE_URL || 'http://localhost:5173'}/company-profile?tab=evidence&digilocker=callback`;
+    const appBaseUrl = this.configService?.get<string>('APP_BASE_URL');
+    const defaultRedirect = appBaseUrl
+      ? `${appBaseUrl}/company-profile?tab=evidence&digilocker=callback`
+      : '';
     return this.verificationService.generateDigiLockerAuth(
       companyId,
       redirectUri || defaultRedirect,
@@ -73,7 +80,10 @@ export class CompanyVerificationController {
     if (!body.code || !body.state) {
       throw new BadRequestError('code and state are required.');
     }
-    const defaultRedirect = `${process.env.APP_BASE_URL || 'http://localhost:5173'}/company-profile?tab=evidence&digilocker=callback`;
+    const appBaseUrl = this.configService?.get<string>('APP_BASE_URL');
+    const defaultRedirect = appBaseUrl
+      ? `${appBaseUrl}/company-profile?tab=evidence&digilocker=callback`
+      : '';
     return this.verificationService.handleDigiLockerCallback(
       companyId,
       body.code,

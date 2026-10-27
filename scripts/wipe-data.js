@@ -2,188 +2,135 @@
 /**
  * TenderPulse AI — Complete Data Wipe Script
  *
- * Wipes all records from the local PostgreSQL (PGlite) database across all 17 tables,
- * purges all cloud objects from the AWS S3 storage bucket, and purges cloud SQS queues.
+ * Stop the dev servers first (`npm run dev`) so no connection holds locks on the schema.
+ *
+ *   npm run db:wipe              # database + uploads + S3 bucket + every configured SQS queue
+ *   npm run db:wipe -- --local   # database + uploads only
+ *
+ * The database's public schema is dropped and recreated; the API re-applies every
+ * migration on its next start. Only local databases are wiped unless --allow-remote.
  */
-import { PGlite } from '@electric-sql/pglite';
 import { S3Client, ListObjectsV2Command, DeleteObjectsCommand } from '@aws-sdk/client-s3';
 import { SQSClient, PurgeQueueCommand } from '@aws-sdk/client-sqs';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { describeDatabase, isLocalDatabase, openDb } from './lib/db.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const rootDir = path.resolve(__dirname, '..');
-const dbPath = path.join(rootDir, 'data/postgres');
+const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const localOnly = process.argv.includes('--local');
+
+const allowRemote = process.argv.includes('--allow-remote');
+const UPLOAD_DIRS = ['apps/api/uploads', 'uploads'];
 
 async function wipeDatabase() {
-  console.log('\n🗑️  [1/3] Wiping Local PostgreSQL Database (PGlite)...');
-  const pg = new PGlite(dbPath);
-  await pg.waitReady;
-
-  const tables = [
-    'audit_logs',
-    'bid_decisions',
-    'compliance_items',
-    'document_processing_outbox',
-    'tender_documents',
-    'bids',
-    'evidence_verification_history',
-    'company_evidence_chunks',
-    'company_evidence_documents',
-    'company_profiles',
-    'company_profile_versions',
-    'tenant_settings',
-    'companies',
-    'notifications',
-    'subscriptions',
-    'usage_records',
-    'refresh_tokens',
-    'users',
-  ];
-
-  try {
-    const truncateSql = `TRUNCATE TABLE ${tables.join(', ')} CASCADE;`;
-    await pg.exec(truncateSql);
-    console.log(`   ✅ Truncated ${tables.length} tables cleanly.`);
-
-    // Verify row counts
-    let totalRows = 0;
-    for (const table of tables) {
-      const res = await pg.query(`SELECT count(*) FROM ${table};`);
-      const count = parseInt(res.rows[0]?.count || '0', 10);
-      totalRows += count;
-    }
-    console.log(`   ✅ Database verification: Total records across all tables = ${totalRows}.`);
-
-    // Clean transient uploads directory
-    const uploadsDir = path.join(rootDir, 'apps/api/uploads');
-    const fs = await import('node:fs');
-    if (fs.existsSync(uploadsDir)) {
-      fs.rmSync(uploadsDir, { recursive: true, force: true });
-      fs.mkdirSync(uploadsDir, { recursive: true });
-      console.log('   ✅ Cleared transient uploads directory.');
-    }
-  } catch (err) {
-    console.error('   ❌ Database wipe error:', err.message);
-    throw err;
-  } finally {
-    await pg.close();
-  }
-}
-
-async function wipeCloudS3() {
-  console.log('\n☁️  [2/3] Wiping Cloud Storage (AWS S3 Bucket)...');
-  const bucket = process.env.AWS_S3_BUCKET;
-  const region = process.env.AWS_REGION || 'ap-south-1';
-  const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
-
-  if (!bucket || !accessKeyId || !secretAccessKey) {
-    console.log('   ℹ️  No AWS S3 credentials or bucket configured. Skipping cloud S3 wipe.');
-    return;
-  }
-
-  const s3 = new S3Client({
-    region,
-    credentials: { accessKeyId, secretAccessKey },
-  });
-
-  try {
-    let continuationToken = undefined;
-    let totalDeleted = 0;
-
-    do {
-      const listRes = await s3.send(
-        new ListObjectsV2Command({
-          Bucket: bucket,
-          ContinuationToken: continuationToken,
-          MaxKeys: 1000,
-        }),
-      );
-
-      const contents = listRes.Contents || [];
-      if (contents.length > 0) {
-        const objectsToDelete = contents.map((c) => ({ Key: c.Key }));
-        await s3.send(
-          new DeleteObjectsCommand({
-            Bucket: bucket,
-            Delete: { Objects: objectsToDelete },
-          }),
-        );
-        totalDeleted += contents.length;
-        contents.forEach((c) => console.log(`   - Deleted S3 Object: ${c.Key}`));
-      }
-
-      continuationToken = listRes.NextContinuationToken;
-    } while (continuationToken);
-
-    console.log(
-      `   ✅ Cloud S3 wipe complete: Deleted ${totalDeleted} objects from bucket '${bucket}'.`,
+  const target = describeDatabase();
+  if (!isLocalDatabase() && !allowRemote) {
+    console.error(
+      `   ❌ Refusing to wipe non-local database ${target}. Pass --allow-remote if you really mean it.`,
     );
-  } catch (err) {
-    console.error('   ❌ Cloud S3 wipe error:', err.message);
+    process.exit(1);
+  }
+  const db = await openDb();
+  try {
+    await db.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+    console.log(`   ✅ Dropped and recreated schema public on ${target}`);
+  } finally {
+    await db.close();
   }
 }
 
-async function wipeCloudSQS() {
-  console.log('\n📬 [3/3] Purging Cloud Message Queues (AWS SQS)...');
-  const region = process.env.AWS_REGION || 'ap-south-1';
+async function wipeLocal() {
+  console.log('\n🗑️  [1/3] Wiping database and local uploads...');
+  await wipeDatabase();
+  for (const rel of UPLOAD_DIRS) {
+    const dir = path.join(rootDir, rel);
+    if (!fs.existsSync(dir)) continue;
+    fs.rmSync(dir, { recursive: true, force: true });
+    fs.mkdirSync(dir, { recursive: true });
+    console.log(`   ✅ Cleared ${rel}`);
+  }
+}
+
+function awsCredentials() {
   const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
   const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
-  const queueUrl = process.env.AWS_SQS_QUEUE_URL;
-  const dlqUrl = process.env.AWS_SQS_DLQ_URL;
+  if (!accessKeyId || !secretAccessKey) return null;
+  return {
+    region: process.env.AWS_REGION || 'ap-south-1',
+    credentials: { accessKeyId, secretAccessKey },
+  };
+}
 
-  if (!accessKeyId || !secretAccessKey) {
-    console.log('   ℹ️  No AWS SQS credentials configured. Skipping SQS purge.');
+async function wipeS3() {
+  console.log('\n☁️  [2/3] Emptying the S3 bucket...');
+  const bucket = process.env.AWS_S3_BUCKET || process.env.S3_BUCKET_NAME;
+  const config = awsCredentials();
+  if (!bucket || !config) {
+    console.log('   ℹ️  No bucket or AWS credentials configured. Skipped.');
     return;
   }
+  const s3 = new S3Client(config);
+  let token;
+  let total = 0;
+  do {
+    const page = await s3.send(
+      new ListObjectsV2Command({ Bucket: bucket, ContinuationToken: token, MaxKeys: 1000 }),
+    );
+    const objects = (page.Contents || []).map((c) => ({ Key: c.Key }));
+    if (objects.length > 0) {
+      await s3.send(new DeleteObjectsCommand({ Bucket: bucket, Delete: { Objects: objects } }));
+      total += objects.length;
+    }
+    token = page.NextContinuationToken;
+  } while (token);
+  console.log(`   ✅ Deleted ${total} objects from '${bucket}'.`);
+}
 
-  const sqs = new SQSClient({
-    region,
-    credentials: { accessKeyId, secretAccessKey },
-  });
-
-  const queuesToPurge = [
-    { name: 'Primary Ingestion Queue', url: queueUrl },
-    { name: 'Dead-Letter Queue (DLQ)', url: dlqUrl },
+async function purgeSqs() {
+  console.log('\n📬 [3/3] Purging SQS queues...');
+  const config = awsCredentials();
+  const urls = [
+    ...new Set(
+      [
+        'AWS_SQS_QUEUE_URL',
+        'AWS_SQS_INGESTION_QUEUE_URL',
+        'AWS_INGESTION_QUEUE_URL',
+        'AWS_SQS_DLQ_URL',
+        'AWS_SQS_COMPLETION_QUEUE_URL',
+        'AWS_SQS_COMPLETION_DLQ_URL',
+      ]
+        .map((k) => process.env[k])
+        .filter(Boolean),
+    ),
   ];
-
-  for (const q of queuesToPurge) {
-    if (q.url) {
-      try {
-        await sqs.send(new PurgeQueueCommand({ QueueUrl: q.url }));
-        console.log(`   ✅ Purged SQS Queue: ${q.name} (${q.url})`);
-      } catch (err) {
-        if (err.name === 'PurgeQueueInProgress') {
-          console.log(`   ℹ️  SQS Queue ${q.name} purge already in progress.`);
-        } else {
-          console.warn(`   ⚠️  Could not purge ${q.name}:`, err.message);
-        }
-      }
+  if (!config || urls.length === 0) {
+    console.log('   ℹ️  No queues or AWS credentials configured. Skipped.');
+    return;
+  }
+  const sqs = new SQSClient(config);
+  for (const url of urls) {
+    try {
+      await sqs.send(new PurgeQueueCommand({ QueueUrl: url }));
+      console.log(`   ✅ Purged ${url}`);
+    } catch (err) {
+      const note = err.name === 'PurgeQueueInProgress' ? 'purge already in progress' : err.message;
+      console.warn(`   ⚠️  ${url}: ${note}`);
     }
   }
 }
 
 async function main() {
-  console.log('==============================================================');
-  console.log('💥 TenderPulse AI — Initiating Full Data Wipe (DB + Cloud)');
-  console.log('==============================================================');
-
-  try {
-    await wipeDatabase();
-    await wipeCloudS3();
-    await wipeCloudSQS();
-
-    console.log('\n==============================================================');
-    console.log(
-      '✨ Full wipe finished successfully! Environment is ready for clean happy-path testing.',
-    );
-    console.log('==============================================================\n');
-  } catch (err) {
-    console.error('\n❌ Fatal wipe failure:', err);
-    process.exit(1);
+  console.log('💥 TenderPulse AI — data wipe' + (localOnly ? ' (local only)' : ' (local + AWS)'));
+  await wipeLocal();
+  if (!localOnly) {
+    await wipeS3();
+    await purgeSqs();
   }
+  console.log('\n✨ Done. Start the API to re-apply migrations on the empty database.\n');
 }
 
-main();
+main().catch((err) => {
+  console.error('\n❌ Wipe failed:', err);
+  process.exit(1);
+});

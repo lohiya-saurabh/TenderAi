@@ -26,8 +26,28 @@ if git diff --cached --quiet; then
   exit 0
 fi
 
-# 1. ESLint across all workspaces
-echo -e "\n${BOLD}[1/3] 🔍 Running ESLint across all workspaces (--max-warnings=0)...${NC}"
+# 1. Secret Detection & Credential Leak Gate
+echo -e "\n${BOLD}[1/4] 🔐 Scanning staged changes for hardcoded secrets & credentials...${NC}"
+if command -v gitleaks &>/dev/null; then
+  if ! gitleaks protect --staged -v; then
+    echo -e "\n${RED}❌ FAILED: Gitleaks detected sensitive credentials in staged changes!${NC}"
+    echo -e "${RED}Do not commit raw secrets. Store them in .env and access via process.env.${NC}"
+    exit 1
+  fi
+  echo -e "${GREEN}✅ Gitleaks secret scan passed cleanly.${NC}"
+else
+  STAGED_SECRETS=$(git diff --cached -U0 -- ':(exclude)*.env*' ':(exclude)*.example*' ':(exclude)*.md' ':(exclude)*.spec.*' ':(exclude)*.test.*' ':(exclude)*vitest.config.*' | grep -E '^\+[^+].*(JWT_SECRET\s*[:=]\s*["'\''][^"'\'']{8,}["'\'']|INTERNAL_SERVICE_KEY\s*[:=]\s*["'\''][^"'\'']{8,}["'\'']|BEGIN (RSA|EC|DSA|OPENSSH)? PRIVATE KEY|AKIA[0-9A-Z]{16})' || true)
+  if [ -n "$STAGED_SECRETS" ]; then
+    echo -e "\n${RED}❌ FAILED: Potential hardcoded secret detected in staged changes:${NC}"
+    echo -e "${YELLOW}$STAGED_SECRETS${NC}"
+    echo -e "${RED}Never hardcode secrets inside source code! Store them in .env and reference via process.env.${NC}"
+    exit 1
+  fi
+  echo -e "${GREEN}✅ Secret pattern scan passed (0 credentials detected).${NC}"
+fi
+
+# 2. ESLint across all workspaces
+echo -e "\n${BOLD}[2/4] 🔍 Running ESLint across all workspaces (--max-warnings=0)...${NC}"
 if ! npm run lint; then
   echo -e "\n${RED}❌ FAILED: ESLint reported errors or warnings!${NC}"
   echo -e "${RED}Fix all ESLint errors/warnings above before committing.${NC}"
@@ -35,8 +55,8 @@ if ! npm run lint; then
 fi
 echo -e "${GREEN}✅ ESLint passed cleanly (0 errors, 0 warnings).${NC}"
 
-# 2. TypeScript type-check across monorepo
-echo -e "\n${BOLD}[2/3] 📐 Running TypeScript type-checking (tsc --noEmit)...${NC}"
+# 3. TypeScript type-check across monorepo
+echo -e "\n${BOLD}[3/4] 📐 Running TypeScript type-checking (tsc --noEmit)...${NC}"
 if ! npm run type-check; then
   echo -e "\n${RED}❌ FAILED: TypeScript compilation errors found!${NC}"
   echo -e "${RED}Fix all TypeScript type errors above before committing.${NC}"
@@ -44,23 +64,29 @@ if ! npm run type-check; then
 fi
 echo -e "${GREEN}✅ TypeScript type-checking passed cleanly.${NC}"
 
-# 3. Python AI Engine Lint & Format check (Ruff)
-echo -e "\n${BOLD}[3/3] 🐍 Checking Python AI Engine (Ruff lint & format)...${NC}"
-RUFF_CMD=""
-if [ -x "$REPO_ROOT/.venv/bin/ruff" ]; then
-  RUFF_CMD="$REPO_ROOT/.venv/bin/ruff"
-elif command -v ruff &>/dev/null; then
-  RUFF_CMD="ruff"
-elif command -v uv &>/dev/null; then
-  RUFF_CMD="uv run --directory apps/ai ruff"
-elif [ -x "$REPO_ROOT/apps/ai/.venv/bin/ruff" ]; then
-  RUFF_CMD="$REPO_ROOT/apps/ai/.venv/bin/ruff"
+# 4. Python AI Engine Lint & Format check (Ruff)
+echo -e "\n${BOLD}[4/4] 🐍 Checking Python AI Engine (Ruff lint & format)...${NC}"
+# Only the ruff pinned in apps/ai/uv.lock: other versions format differently.
+
+# Automatically bootstrap apps/ai/.venv if missing and uv is available
+if [ ! -x "$REPO_ROOT/apps/ai/.venv/bin/ruff" ] && command -v uv &>/dev/null; then
+  echo -e "${YELLOW}ℹ️  apps/ai/.venv is missing or incomplete. Syncing with uv...${NC}"
+  uv sync --directory "$REPO_ROOT/apps/ai" --extra dev
 fi
 
-if [ -n "$RUFF_CMD" ]; then
-  if ! (cd "$REPO_ROOT/apps/ai" && $RUFF_CMD check . && $RUFF_CMD format --check .); then
+RUFF_BIN="$REPO_ROOT/apps/ai/.venv/bin/ruff"
+
+if [ -x "$RUFF_BIN" ]; then
+  if ! (cd "$REPO_ROOT/apps/ai" && "$RUFF_BIN" check . && "$RUFF_BIN" format --check .); then
     echo -e "\n${RED}❌ FAILED: Python Ruff linting or formatting check failed!${NC}"
-    echo -e "${YELLOW}Run: cd apps/ai && ruff check --fix . && ruff format .${NC}"
+    echo -e "${YELLOW}Run: cd apps/ai && uv run --extra dev ruff check --fix . && uv run --extra dev ruff format .${NC}"
+    exit 1
+  fi
+  echo -e "${GREEN}✅ Python Ruff checks passed cleanly.${NC}"
+elif command -v uv &>/dev/null; then
+  if ! (cd "$REPO_ROOT/apps/ai" && uv run --extra dev ruff check . && uv run --extra dev ruff format --check .); then
+    echo -e "\n${RED}❌ FAILED: Python Ruff linting or formatting check failed!${NC}"
+    echo -e "${YELLOW}Run: cd apps/ai && uv run --extra dev ruff check --fix . && uv run --extra dev ruff format .${NC}"
     exit 1
   fi
   echo -e "${GREEN}✅ Python Ruff checks passed cleanly.${NC}"
@@ -68,7 +94,7 @@ else
   # Check if Python files are staged
   if git diff --cached --name-only | grep -E '^apps/ai/.*\.py$' >/dev/null 2>&1; then
     echo -e "\n${RED}❌ FAILED: Python files are staged, but 'ruff' executable was not found.${NC}"
-    echo -e "${YELLOW}Please activate your virtualenv or install ruff via 'pip install ruff'.${NC}"
+    echo -e "${YELLOW}Run: cd apps/ai && uv sync --extra dev${NC}"
     exit 1
   else
     echo -e "${YELLOW}⚠️  Ruff not found in environment, but no Python files staged. Skipping.${NC}"

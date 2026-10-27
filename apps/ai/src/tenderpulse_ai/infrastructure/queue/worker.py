@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from pathlib import Path
 
 from tenderpulse_ai.config import settings
 from tenderpulse_ai.infrastructure.queue.consumer import (
@@ -166,7 +167,41 @@ class DocumentQueueConsumerWorker:
 
                 pages: list[NormalizedPage] = []
                 download_url = body.download_url
-                if not download_url and body.storage_reference and settings.aws_s3_bucket:
+
+                if not download_url and not pages and body.storage_reference:
+                    ref_path = Path(body.storage_reference)
+                    if not ref_path.is_file():
+                        repo_candidate = (
+                            Path(__file__).resolve().parents[5] / body.storage_reference
+                        )
+                        if repo_candidate.is_file():
+                            ref_path = repo_candidate
+                    if ref_path.is_file():
+                        if ref_path.suffix.lower() == ".pdf":
+                            try:
+                                from pypdf import PdfReader
+
+                                reader = PdfReader(str(ref_path))
+                                for idx, p in enumerate(reader.pages, start=1):
+                                    txt = p.extract_text() or ""
+                                    if txt.strip():
+                                        pages.append(NormalizedPage(page_number=idx, text=txt))
+                            except Exception as pdf_err:
+                                logger.warning("Could not read local PDF %s: %s", ref_path, pdf_err)
+                        else:
+                            pages = [
+                                NormalizedPage(
+                                    page_number=1,
+                                    text=ref_path.read_text(encoding="utf-8", errors="ignore"),
+                                )
+                            ]
+
+                if (
+                    not download_url
+                    and not pages
+                    and body.storage_reference
+                    and settings.aws_s3_bucket
+                ):
                     try:
                         import boto3
 
@@ -187,14 +222,6 @@ class DocumentQueueConsumerWorker:
                         )
                     except Exception as s3_err:
                         logger.warning("Could not generate presigned S3 download URL: %s", s3_err)
-
-                if not download_url and not pages:
-                    text_stub = (
-                        f"The bidder must submit an Earnest Money Deposit (EMD) of INR 5,00,000 on a 100 Rupee stamp paper. "
-                        f"The {body.document_type} document {body.file_name} requires all submissions to be signed by the authorized signatory. "
-                        f"Document source: {body.storage_reference}."
-                    )
-                    pages = [NormalizedPage(page_number=1, text=text_stub)]
 
                 extraction_request = DocumentExtractionRequest(
                     security_context=security_context,
@@ -218,6 +245,9 @@ class DocumentQueueConsumerWorker:
                     document_id=body.document_id,
                     status="COMPLETED",
                     items=result.items,
+                    chunks=getattr(result, "chunks", []),
+                    conflicts=getattr(result, "conflicts", []),
+                    coverage=getattr(result, "coverage", None),
                     workflow_run_id=body.workflow_run_id,
                     trace_id=trace_id,
                     correlation_id=body.correlation_id,

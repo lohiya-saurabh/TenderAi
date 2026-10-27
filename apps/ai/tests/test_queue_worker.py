@@ -33,9 +33,39 @@ async def test_queue_worker_processes_and_publishes_to_completion_queue():
     consumer.enqueue(job_msg)
     assert len(consumer.messages) == 1
 
+    class MockSuccessPipeline:
+        async def execute(self, request):
+            from tenderpulse_ai.pipeline import DocumentExtractionResponse
+
+            return DocumentExtractionResponse(
+                bid_id=request.bid_id,
+                document_id=request.document_id,
+                status="REVIEW_READY",
+                items=[
+                    {
+                        "category": "FINANCIAL",
+                        "title": "EMD Submission",
+                        "description": "Earnest Money Deposit required",
+                        "provenance": {
+                            "sourceDocumentId": request.document_id,
+                            "sourceFileName": request.file_name,
+                            "pageNumber": 1,
+                            "clauseReference": "Clause 1",
+                            "verbatimQuote": "EMD of Rs 5,00,000",
+                            "confidenceScore": 0.99,
+                        },
+                        "executionRules": {},
+                    }
+                ],
+                chunks=[],
+                human_review_required=False,
+                audit_events=[],
+            )
+
     worker = DocumentQueueConsumerWorker(
         consumer=consumer,
         publisher=publisher,
+        pipeline=MockSuccessPipeline(),  # type: ignore[arg-type]
         poll_interval_seconds=0.01,
         visibility_timeout_seconds=60,
         heartbeat_interval_seconds=10,

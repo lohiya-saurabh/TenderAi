@@ -11,15 +11,10 @@
  */
 import { Injectable, Inject, Optional, Logger } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
-import { eq, and, desc, or } from 'drizzle-orm';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import {
-  DRIZZLE_TOKEN,
-  type DrizzleDb,
-  createDrizzle,
-} from '@/common/database/database.module.js';
+import { type DrizzleDb } from '@/common/database/database.module.js';
 import * as schema from '@/common/database/schema.js';
 import { NotFoundError, BadRequestError } from '@/common/errors/errors.js';
 import { TenantContextHolder } from '@/common/security/TenantContext.js';
@@ -29,6 +24,7 @@ import { GoogleDriveConnector } from '@/modules/company-verification/infrastruct
 import { OneDriveConnector } from '@/modules/company-verification/infrastructure/OneDriveConnector.js';
 import { LocalUploadConnector } from '@/modules/company-verification/infrastructure/LocalUploadConnector.js';
 import { AiEvidenceExtractor } from '@/modules/company-verification/application/AiEvidenceExtractor.js';
+import { CompanyVerificationRepository } from '@/modules/company-verification/company-verification.repository.js';
 
 export interface UploadEvidenceDto {
   fileName: string;
@@ -65,17 +61,21 @@ export { parseFlexibleDate, escapePdfText, generateCompanyEvidencePdf };
 @Injectable()
 export class CompanyEvidenceService {
   private readonly logger = new Logger(CompanyEvidenceService.name);
-  private readonly db: DrizzleDb;
+  private readonly repository: CompanyVerificationRepository;
 
   constructor(
-    @Inject(DRIZZLE_TOKEN) db: DrizzleDb | PGlite,
+    @Inject(CompanyVerificationRepository)
+    repoOrDb: CompanyVerificationRepository | DrizzleDb | PGlite,
     @Optional() @Inject(STORAGE_TOKEN) private readonly storageService?: IStorageService | null,
     @Optional() private readonly googleDriveConnector?: GoogleDriveConnector,
     @Optional() private readonly oneDriveConnector?: OneDriveConnector,
     @Optional() private readonly localUploadConnector?: LocalUploadConnector,
     @Optional() private readonly aiEvidenceExtractor?: AiEvidenceExtractor,
   ) {
-    this.db = 'select' in db ? (db as DrizzleDb) : createDrizzle(db as PGlite);
+    this.repository =
+      repoOrDb instanceof CompanyVerificationRepository
+        ? repoOrDb
+        : new CompanyVerificationRepository(repoOrDb);
   }
 
   /**
@@ -113,36 +113,33 @@ export class CompanyEvidenceService {
     }
 
     const now = new Date();
-    const [inserted] = await this.db
-      .insert(schema.companyEvidenceDocuments)
-      .values({
-        id: docId,
-        organizationId: orgId,
-        companyId,
-        fileName: sanitizedFileName,
-        storagePath,
-        fileSizeBytes: dto.buffer.byteLength,
-        mimeType: dto.mimeType || 'application/pdf',
-        sha256Hash,
-        evidenceType: dto.evidenceType || 'OTHER',
-        issuer: dto.issuer ?? null,
-        referenceNumber: dto.referenceNumber ?? null,
-        validFrom: parseFlexibleDate(dto.validFrom),
-        validTo: parseFlexibleDate(dto.validTo),
-        sourceProvider: 'LOCAL_UPLOAD',
-        sourceReference: null,
-        importedAt: now,
-        verificationStatus: 'IMPORTED',
-        verificationMethod: 'MANUAL_UPLOAD',
-        verifiedAt: null,
-        verifiedBy: null,
-        discrepancyNotes: null,
-        extractedAttributes: dto.extractedAttributes ?? null,
-        metadata: { originalName: dto.fileName },
-        createdAt: now,
-        updatedAt: now,
-      })
-      .returning();
+    const inserted = await this.repository.insertEvidenceDocument({
+      id: docId,
+      organizationId: orgId,
+      companyId,
+      fileName: sanitizedFileName,
+      storagePath,
+      fileSizeBytes: dto.buffer.byteLength,
+      mimeType: dto.mimeType || 'application/pdf',
+      sha256Hash,
+      evidenceType: dto.evidenceType || 'OTHER',
+      issuer: dto.issuer ?? null,
+      referenceNumber: dto.referenceNumber ?? null,
+      validFrom: parseFlexibleDate(dto.validFrom),
+      validTo: parseFlexibleDate(dto.validTo),
+      sourceProvider: 'LOCAL_UPLOAD',
+      sourceReference: null,
+      importedAt: now,
+      verificationStatus: 'IMPORTED',
+      verificationMethod: 'MANUAL_UPLOAD',
+      verifiedAt: null,
+      verifiedBy: null,
+      discrepancyNotes: null,
+      extractedAttributes: dto.extractedAttributes ?? null,
+      metadata: { originalName: dto.fileName },
+      createdAt: now,
+      updatedAt: now,
+    });
 
     // Automatically trigger AI extraction and chunking
     const extracted = await this.extractAndPersistChunks(companyId, inserted!.id, dto.buffer);
@@ -188,16 +185,7 @@ export class CompanyEvidenceService {
     const orgId = this.requireOrg();
     await this.verifyCompanyOwnership(companyId, orgId);
 
-    return this.db
-      .select()
-      .from(schema.companyEvidenceDocuments)
-      .where(
-        and(
-          eq(schema.companyEvidenceDocuments.organizationId, orgId),
-          eq(schema.companyEvidenceDocuments.companyId, companyId),
-        ),
-      )
-      .orderBy(desc(schema.companyEvidenceDocuments.createdAt));
+    return this.repository.listEvidenceDocuments(companyId, orgId);
   }
 
   /**
@@ -210,20 +198,11 @@ export class CompanyEvidenceService {
     const orgId = this.requireOrg();
     await this.verifyCompanyOwnership(companyId, orgId);
 
-    const [doc] = await this.db
-      .select()
-      .from(schema.companyEvidenceDocuments)
-      .where(
-        and(
-          or(
-            eq(schema.companyEvidenceDocuments.id, evidenceIdOrName),
-            eq(schema.companyEvidenceDocuments.fileName, evidenceIdOrName),
-          ),
-          eq(schema.companyEvidenceDocuments.companyId, companyId),
-          eq(schema.companyEvidenceDocuments.organizationId, orgId),
-        ),
-      )
-      .limit(1);
+    const doc = await this.repository.findEvidenceDocument(
+      evidenceIdOrName,
+      companyId,
+      orgId,
+    );
 
     if (!doc) {
       throw new NotFoundError(`Evidence document '${evidenceIdOrName}' not found.`);
@@ -240,7 +219,12 @@ export class CompanyEvidenceService {
     evidenceIdOrName: string,
     hostHeader?: string,
     token?: string,
-  ): Promise<{ downloadUrl: string; expiresInSeconds: number; fileName: string; mimeType: string }> {
+  ): Promise<{
+    downloadUrl: string;
+    expiresInSeconds: number;
+    fileName: string;
+    mimeType: string;
+  }> {
     const doc = await this.getEvidenceById(companyId, evidenceIdOrName);
 
     if (this.storageService) {
@@ -370,6 +354,7 @@ export class CompanyEvidenceService {
    * Delete evidence item and purge from storage.
    */
   public async deleteEvidence(companyId: string, evidenceId: string): Promise<void> {
+    const orgId = this.requireOrg();
     const doc = await this.getEvidenceById(companyId, evidenceId);
 
     if (this.storageService) {
@@ -385,9 +370,7 @@ export class CompanyEvidenceService {
       }
     }
 
-    await this.db
-      .delete(schema.companyEvidenceDocuments)
-      .where(eq(schema.companyEvidenceDocuments.id, evidenceId));
+    await this.repository.deleteEvidenceDocument(evidenceId, orgId);
   }
 
   /**
@@ -429,13 +412,12 @@ export class CompanyEvidenceService {
 
       if (result.chunks && result.chunks.length > 0) {
         // Idempotently replace existing chunks for this evidence document
-        await this.db
-          .delete(schema.companyEvidenceChunks)
-          .where(eq(schema.companyEvidenceChunks.evidenceDocumentId, doc.id));
+        await this.repository.deleteEvidenceChunks(doc.id, orgId);
 
+        const chunkRecords: schema.NewCompanyEvidenceChunk[] = [];
         for (let i = 0; i < result.chunks.length; i++) {
           const c = result.chunks[i]!;
-          await this.db.insert(schema.companyEvidenceChunks).values({
+          chunkRecords.push({
             id: `chk_${doc.id}_${i}`,
             organizationId: orgId,
             companyId,
@@ -447,9 +429,10 @@ export class CompanyEvidenceService {
             clauseReference: c.clause_reference ?? `Page ${c.page_number ?? 1}`,
             boundingBox: c.bounding_box ?? null,
             metadata: c.metadata ?? null,
-            embedding: null,
+            embedding: Array.isArray(c.embedding) ? c.embedding : null,
           });
         }
+        await this.repository.insertEvidenceChunks(chunkRecords);
       }
 
       const extractedAttrs = result.extracted_attributes ?? {};
@@ -476,17 +459,11 @@ export class CompanyEvidenceService {
         if (parsed) updates.validTo = parsed;
       }
 
-      const [updated] = await this.db
-        .update(schema.companyEvidenceDocuments)
-        .set(updates)
-        .where(
-          and(
-            eq(schema.companyEvidenceDocuments.id, doc.id),
-            eq(schema.companyEvidenceDocuments.organizationId, orgId),
-            eq(schema.companyEvidenceDocuments.companyId, companyId),
-          ),
-        )
-        .returning();
+      const updated = await this.repository.updateEvidenceDocument(
+        doc.id,
+        orgId,
+        updates,
+      );
 
       return updated ?? doc;
     } catch {
@@ -496,11 +473,7 @@ export class CompanyEvidenceService {
   }
 
   private async verifyCompanyOwnership(companyId: string, orgId: string): Promise<schema.Company> {
-    const [comp] = await this.db
-      .select()
-      .from(schema.companies)
-      .where(and(eq(schema.companies.id, companyId), eq(schema.companies.organizationId, orgId)))
-      .limit(1);
+    const comp = await this.repository.findCompany(companyId, orgId);
 
     if (!comp) {
       throw new NotFoundError(`Company '${companyId}' not found in your organization.`);

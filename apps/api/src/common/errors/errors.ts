@@ -3,11 +3,14 @@
  */
 
 export class HttpError extends Error {
+  public readonly status: number;
+
   constructor(
     public readonly statusCode: number,
     message: string,
   ) {
     super(message);
+    this.status = statusCode;
     this.name = 'HttpError';
   }
 }
@@ -51,5 +54,13 @@ export class InternalServerError extends HttpError {
   constructor(message: string) {
     super(500, message);
     this.name = 'InternalServerError';
+  }
+}
+
+/** The request is well-formed but breaks a review rule (e.g. confirming without opening the source). */
+export class UnprocessableError extends HttpError {
+  constructor(message: string) {
+    super(422, message);
+    this.name = 'UnprocessableError';
   }
 }

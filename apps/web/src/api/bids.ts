@@ -4,7 +4,7 @@
  * CRUD operations and upload workflow for tender bid projects.
  */
 
-import { apiGet, apiPost, apiDelete, type ApiResult } from '@/api/client.js';
+import { apiGet, apiPost, apiDelete, type ApiResult, type RequestOptions } from '@/api/client.js';
 
 export type { ApiResult } from '@/api/client.js';
 
@@ -142,8 +142,8 @@ export function listBids(
 }
 
 /** Get a single bid by ID with document list */
-export function getBid(bidId: string): Promise<ApiResult<BidDetail>> {
-  return apiGet<BidDetail>(`/api/v1/bids/${bidId}`);
+export function getBid(bidId: string, options?: RequestOptions): Promise<ApiResult<BidDetail>> {
+  return apiGet<BidDetail>(`/api/v1/bids/${bidId}`, options);
 }
 
 /** Create a new bid project */

@@ -4,7 +4,8 @@
  * Calls official IRIS IRP Taxpayer Search & Verification API endpoints.
  * Handles authentication headers, timeout protection, error mapping, and sanitization.
  */
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import type {
   IGstVerificationPort,
   GstTaxpayerDetails,
@@ -57,12 +58,13 @@ export class IrisIrpGstAdapter implements IGstVerificationPort {
   private readonly apiKey?: string;
   private readonly timeoutMs: number;
 
-  constructor() {
-    this.baseUrl = (process.env.IRIS_IRP_BASE_URL || 'https://api.irisirp.com').replace(/\/$/, '');
-    this.clientId = process.env.IRIS_CLIENT_ID;
-    this.clientSecret = process.env.IRIS_CLIENT_SECRET;
-    this.apiKey = process.env.IRIS_API_KEY;
-    this.timeoutMs = parseInt(process.env.IRIS_TIMEOUT_MS || '10000', 10);
+  constructor(@Optional() private readonly configService?: ConfigService) {
+    this.baseUrl = (this.configService?.get<string>('IRIS_IRP_BASE_URL') || '').replace(/\/$/, '');
+    this.clientId = this.configService?.get<string>('IRIS_CLIENT_ID');
+    this.clientSecret = this.configService?.get<string>('IRIS_CLIENT_SECRET');
+    this.apiKey = this.configService?.get<string>('IRIS_API_KEY');
+    const timeout = this.configService?.get<string>('IRIS_TIMEOUT_MS');
+    this.timeoutMs = timeout ? parseInt(timeout, 10) : 10000;
   }
 
   public async verifyGstin(gstin: string): Promise<GstTaxpayerDetails> {

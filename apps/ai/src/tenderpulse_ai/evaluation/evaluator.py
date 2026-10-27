@@ -19,12 +19,24 @@ from tenderpulse_ai.evaluation.models import (
     EvaluationSuiteMetrics,
     SyntheticEvaluationCase,
 )
+from tenderpulse_ai.infrastructure.embeddings import get_embedder
 from tenderpulse_ai.models.llm_client import StructuredLLMClient
 from tenderpulse_ai.security.context import SecurityContext
 from tenderpulse_ai.security.exceptions import UnauthorizedDocumentAccessException
 from tenderpulse_ai.tools.page_text import PageTextTool
 from tenderpulse_ai.tools.retrieval import DocumentChunk, ScopedRetrievalTool
 from tenderpulse_ai.workflow.nodes import WorkflowNodeContext
+
+
+class _ScriptedModel:
+    """Scripted stand-in for the live gateway: the evaluation suite measures the workflow's
+    security and grounding gates against fixed model answers (offline, deterministic)."""
+
+    def __init__(self, fn):
+        self.fn = fn
+
+    async def extract_compliance(self, system_prompt, user_prompt, max_retries=1, block_map=None):
+        return self.fn(system_prompt, user_prompt)
 
 
 class ComplianceWorkflowEvaluator:
@@ -110,7 +122,7 @@ class ComplianceWorkflowEvaluator:
         notes: list[str] = []
 
         # 1. Setup Tools & Seed Data
-        retrieval_tool = ScopedRetrievalTool()
+        retrieval_tool = ScopedRetrievalTool(embedder=get_embedder())
         page_text_tool = PageTextTool()
 
         seed_tenant = case.metadata.get("seed_tenant_id", case.tenant_id)
@@ -147,8 +159,9 @@ class ComplianceWorkflowEvaluator:
         )
 
         # 3. Setup LLM Client with simulated model extractor
-        extractor_fn = self._create_simulated_model_extractor(case)
-        llm_client = StructuredLLMClient(extractor_fn=extractor_fn)
+        llm_client = StructuredLLMClient(
+            live_client=_ScriptedModel(self._create_simulated_model_extractor(case))
+        )
 
         # 4. Handle expected immediate security exceptions (e.g. Anti-IDOR whitelist breach)
         if case.expected_security_exception == "UnauthorizedDocumentAccessException":

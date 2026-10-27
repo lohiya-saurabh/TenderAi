@@ -3,13 +3,13 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { PGlite } from '@electric-sql/pglite';
-import { initDatabase } from '@/common/database/database.provider.js';
-import { createDrizzle, type DrizzleDb } from '@/common/database/database.module.js';
-import { TenantContextHolder } from '@/common/security/TenantContext.js';
-import { UsersService } from '@/modules/users/users.service.js';
-import { SettingsService } from '@/modules/settings/settings.service.js';
-import { TeamsService } from '@/modules/teams/teams.service.js';
-import { UnauthorizedError } from '@/common/errors/errors.js';
+import { initDatabase } from '../../common/database/database.provider.js';
+import { createDrizzle, type DrizzleDb } from '../../common/database/database.module.js';
+import { TenantContextHolder } from '../../common/security/TenantContext.js';
+import { UsersService } from '../users/users.service.js';
+import { SettingsService } from '../settings/settings.service.js';
+import { TeamsService } from '../teams/teams.service.js';
+import { UnauthorizedError } from '../../common/errors/errors.js';
 
 describe('Profile, Settings & Teams Integration Suite', () => {
   let db: PGlite;
@@ -121,6 +121,22 @@ describe('Profile, Settings & Teams Integration Suite', () => {
           expect(updated.defaultCompanyId).toBe('comp_acme_tech_002');
           expect(updated.notificationPreferences.notifyDeadlines).toBe(false);
           expect(updated.notificationPreferences.notifyHighRiskFlags).toBe(true);
+        },
+      );
+    });
+
+    it('updates organization name and reflects across workspace settings', async () => {
+      await TenantContextHolder.run(
+        { organizationId: TENANT_A, userId: USER_A_ADMIN, role: 'ADMIN' },
+        async () => {
+          const updated = await settingsService.updateWorkspaceSettings({
+            organizationName: 'Acme Global Infrastructure Holdings',
+          });
+
+          expect(updated.organizationName).toBe('Acme Global Infrastructure Holdings');
+
+          const refetched = await settingsService.getWorkspaceSettings();
+          expect(refetched.organizationName).toBe('Acme Global Infrastructure Holdings');
         },
       );
     });

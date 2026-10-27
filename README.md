@@ -103,8 +103,8 @@ TenderPulse is architected around a **Two-Tier Distributed Service Boundary** wi
 | Domain | Technologies |
 |---|---|
 | **Frontend** | React 18, TypeScript, Vite, Tailwind CSS, Radix UI Primitives, Lucide Icons, TanStack Table |
-| **Backend API** | NestJS 10, Node.js 20+, TypeScript, Drizzle ORM, PGlite (Embedded) / PostgreSQL 15+ |
-| **AI & Orchestration** | Python 3.11, FastAPI, LangGraph, LangChain, Pydantic v2, PyMuPDF |
+| **Backend API** | NestJS 10, Node.js 20+, TypeScript, Drizzle ORM, PostgreSQL 16 (PGlite in tests) |
+| **AI & Orchestration** | Python 3.11+, FastAPI, LangGraph, Pydantic v2, Docling Parser Engine, 3-Tier Structural RAG |
 | **Storage & Cloud** | AWS S3 / Google Cloud Storage (Presigned URLs), AWS SQS / GCP Cloud Pub/Sub |
 | **Architecture Patterns** | Domain-Driven Design (DDD), Ports & Adapters (Hexagonal), Transactional Outbox, CQRS |
 | **Quality & Tooling** | Vitest, Pytest, Playwright (E2E), ESLint, Prettier, Docker & Docker Compose |
@@ -117,13 +117,13 @@ TenderPulse is architected around a **Two-Tier Distributed Service Boundary** wi
 .
 ├── apps/
 │   ├── api/             # NestJS enterprise backend (Auth, Bids, Documents, Compliance)
-│   ├── ai/              # FastAPI Python service (LangGraph state machines, PDF parsers)
+│   ├── ai/              # FastAPI Python service (LangGraph 12-node workflow, Docling, RAG)
 │   └── web/             # React 18 Single-Page Application (Procurement dashboard & tables)
 ├── packages/
 │   ├── shared-types/    # Domain DTOs, interfaces, and cross-boundary type definitions
 │   └── ui/              # Reusable React component library & design tokens
-├── docs/                # Comprehensive technical documentation & 22 Architectural Decision Records
-│   ├── adr/             # Architecture Decision Records (0001 - 0022)
+├── docs/                # Comprehensive technical documentation & 28 Architectural Decision Records
+│   ├── adr/             # Architecture Decision Records (0001 - 0028)
 │   ├── ARCHITECTURE.md  # Detailed system architecture and service boundaries
 │   ├── DATABASE.md      # Relational schema, Drizzle definitions, and indexing strategies
 │   └── SECURITY_MODEL.md# Multi-tenant isolation and security controls
@@ -153,12 +153,8 @@ cd TenderAi
 # Install Node monorepo dependencies
 npm install
 
-# Setup Python AI service virtual environment
-cd apps/ai
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-cd ../..
+# Setup Python AI service virtual environment (apps/ai/.venv, pinned by uv.lock)
+(cd apps/ai && uv sync --extra dev)
 ```
 
 ### 2. Environment Configuration
@@ -169,7 +165,7 @@ Copy the sample environment variables:
 cp .env.example .env
 ```
 
-The application runs out of the box in **Zero-Cloud Mode** using embedded `@electric-sql/pglite` and in-memory storage/queue adapters, requiring no external AWS or GCP credentials for local development.
+Local development needs a PostgreSQL 16 server (`DATABASE_URL`); see [CONTRIBUTING.md § Local database](CONTRIBUTING.md#4-local-database) for the one-time Homebrew setup. Storage and queues use in-memory adapters, so no AWS or GCP credentials are needed.
 
 ### 3. Launch Development Environment
 

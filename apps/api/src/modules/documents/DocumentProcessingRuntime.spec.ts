@@ -119,6 +119,81 @@ describe('DocumentProcessingRuntime (Option B: Two-Queue Architecture)', () => {
     expect(ingestionReceiveMock).not.toHaveBeenCalled();
   });
 
+  it('publishes new jobs while the completion consumer is parked in a long poll, and shutdown aborts the poll', async () => {
+    vi.stubEnv('DOCUMENT_PROCESSING_CONSUMER_ENABLED', 'true');
+    database = new PGlite();
+    await initDatabase(database, {
+      seedUsers: true,
+      seedFullProfile: true,
+      seedBidsAndCompliance: true,
+    });
+    const db = createDrizzle(database);
+    const [bid] = await db.select().from(schema.bids).limit(1);
+    if (!bid) throw new Error('Test database did not seed a bid.');
+
+    const documentId = `doc-longpoll-test-${Date.now()}`;
+    const storageReference = `tenants/${bid.organizationId}/bids/${bid.id}/${documentId}/tender.pdf`;
+    await db.insert(schema.tenderDocuments).values({
+      id: documentId,
+      bidId: bid.id,
+      organizationId: bid.organizationId,
+      fileName: 'tender.pdf',
+      storagePath: storageReference,
+      fileSizeBytes: 2048,
+      mimeType: 'application/pdf',
+      documentType: 'NIT',
+      status: 'QUEUED_FOR_EXTRACTION',
+    });
+
+    let published = 0;
+    let pollAborted = false;
+    const ingestionQueue: IJobQueue = {
+      enqueue: async () => {
+        published += 1;
+      },
+      receiveMessages: async () => [],
+      deleteMessage: async () => {},
+      changeMessageVisibility: async () => {},
+      moveToDeadLetter: async () => {},
+      getDeadLetterMessages: async () => [],
+    };
+    // A long poll that only ends when aborted, like an SQS ReceiveMessage with no traffic.
+    const completionQueue: IJobQueue = {
+      enqueue: async () => {},
+      receiveMessages: (_max, _visibility, options) =>
+        new Promise((_resolve, reject) => {
+          options?.abortSignal?.addEventListener('abort', () => {
+            pollAborted = true;
+            reject(new Error('aborted'));
+          });
+        }),
+      deleteMessage: async () => {},
+      changeMessageVisibility: async () => {},
+      moveToDeadLetter: async () => {},
+      getDeadLetterMessages: async () => [],
+    };
+
+    runtime = new DocumentProcessingRuntime(db, ingestionQueue, completionQueue);
+    runtime.onModuleInit();
+
+    // The job arrives after the consumer is already parked in its long poll.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await db.insert(schema.documentProcessingOutbox).values({
+      id: `outbox-${documentId}`,
+      organizationId: bid.organizationId,
+      documentId,
+      payload: { documentId } as unknown as IngestionJobMessage,
+      status: 'PENDING',
+    });
+    await vi.waitFor(() => expect(published).toBe(1), { timeout: 3000 });
+
+    const started = Date.now();
+    await runtime.onModuleDestroy();
+    runtime = undefined;
+    expect(pollAborted).toBe(true);
+    expect(Date.now() - started).toBeLessThan(1000);
+  });
+
   it('consumes completion events from the Completion Queue and atomically persists compliance items', async () => {
     vi.stubEnv('DOCUMENT_PROCESSING_CONSUMER_ENABLED', 'true');
     database = new PGlite();
@@ -265,17 +340,23 @@ describe('DocumentProcessingRuntime (Option B: Two-Queue Architecture)', () => {
           eq(schema.complianceItems.organizationId, bid.organizationId),
         ),
       );
-    expect(
-      persistedItems.filter((item) => item.provenance.documentId === documentId),
-    ).toHaveLength(1);
+    // Identity is the clause's location (document, page, quote), never its title: the new
+    // text is a new clause, and the reviewed row is kept exactly as the reviewer left it.
+    const forDocument = persistedItems.filter((item) => item.provenance.documentId === documentId);
+    expect(forDocument).toHaveLength(2);
 
-    const refreshed = persistedItems.find((item) => item.id === reviewedComplianceId);
-    expect(refreshed?.provenance.verbatimQuote).toBe(
+    const reviewed = persistedItems.find((item) => item.id === reviewedComplianceId);
+    expect(reviewed?.provenance.verbatimQuote).toBe('The EMD amount will be deposited.');
+    expect(reviewed?.status).toBe('READY');
+    expect(reviewed?.humanReviewRequired).toBe(false);
+    expect(reviewed?.version).toBe(4);
+
+    const extracted = forDocument.find((item) => item.id !== reviewedComplianceId);
+    expect(extracted?.provenance.verbatimQuote).toBe(
       'The bidder must submit earnest money deposit of INR 50,00,000.',
     );
-    expect(refreshed?.status).toBe('READY');
-    expect(refreshed?.humanReviewRequired).toBe(false);
-    expect(refreshed?.version).toBe(4);
+    expect(extracted?.reviewStatus).toBe('UNREVIEWED');
+    expect(extracted?.documentId).toBe(documentId);
   });
 
   it('routes malformed completion messages missing required identifiers to dead-letter queue', async () => {

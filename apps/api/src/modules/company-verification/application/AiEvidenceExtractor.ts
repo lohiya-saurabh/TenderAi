@@ -7,6 +7,7 @@
  * and semantic chunking for the RAG Bid/No-Bid decision engine.
  */
 import { Injectable, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { StructuredLogger } from '@/common/logging/StructuredLogger.js';
 import { LoggingContextHolder } from '@/common/logging/LoggingContext.js';
 import type { SecurityContextDto } from '@tenderpulse/shared-types';
@@ -21,6 +22,8 @@ export interface ExtractedEvidenceChunk {
   clause_reference?: string;
   bounding_box?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
+  /** Dense vector from the AI worker's local model; the model is named in metadata.embedding_model. */
+  embedding?: number[] | null;
 }
 
 export interface AiEvidenceExtractionResult {
@@ -38,6 +41,7 @@ export interface AiEvidenceExtractorConfig {
   internalServiceKey?: string;
   timeoutMs?: number;
   customFetch?: typeof fetch;
+  configService?: ConfigService;
 }
 
 @Injectable()
@@ -48,11 +52,20 @@ export class AiEvidenceExtractor {
   private readonly timeoutMs: number;
   private readonly customFetch?: typeof fetch;
 
-  constructor(@Optional() config: AiEvidenceExtractorConfig = {}) {
-    this.aiBaseUrl = config.aiBaseUrl ?? process.env.AI_ENGINE_URL ?? 'http://localhost:8000';
-    const internalServiceKey = config.internalServiceKey ?? process.env.INTERNAL_SERVICE_KEY;
-    this.internalServiceKey = internalServiceKey ?? 'tenderpulse-internal-secret-2026';
-    this.timeoutMs = config.timeoutMs ?? (process.env.AI_EXTRACTION_TIMEOUT_MS ? parseInt(process.env.AI_EXTRACTION_TIMEOUT_MS, 10) : 60000);
+  constructor(
+    @Optional() config: AiEvidenceExtractorConfig = {},
+    @Optional() configService?: ConfigService,
+  ) {
+    const cs = config.configService ?? configService;
+    this.aiBaseUrl = config.aiBaseUrl ?? cs?.get<string>('AI_ENGINE_URL') ?? '';
+    const internalServiceKey = config.internalServiceKey ?? cs?.get<string>('INTERNAL_SERVICE_KEY');
+    this.internalServiceKey = internalServiceKey ?? '';
+    const rawTimeout = config.timeoutMs ?? cs?.get<string>('AI_EXTRACTION_TIMEOUT_MS');
+    this.timeoutMs = rawTimeout
+      ? typeof rawTimeout === 'number'
+        ? rawTimeout
+        : parseInt(String(rawTimeout), 10)
+      : 60000;
     this.customFetch = config.customFetch;
   }
 

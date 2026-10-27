@@ -3,33 +3,30 @@
  */
 import { Injectable, Inject } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
-import { eq, sql, and } from 'drizzle-orm';
-import {
-  DRIZZLE_TOKEN,
-  type DrizzleDb,
-  createDrizzle,
-} from '@/common/database/database.module.js';
-import * as schema from '@/common/database/schema.js';
+import { type DrizzleDb } from '@/common/database/database.module.js';
 import { ForbiddenError } from '@/common/errors/errors.js';
 import { PLAN_CATALOG, type PlanTier, type PlanEntitlements } from '@/modules/billing/billing.types.js';
+import { BillingRepository } from '@/modules/billing/billing.repository.js';
 
 @Injectable()
 export class EntitlementService {
-  private readonly db: DrizzleDb;
+  private readonly repository: BillingRepository;
 
-  constructor(@Inject(DRIZZLE_TOKEN) db: DrizzleDb | PGlite) {
-    this.db = 'select' in db ? (db as DrizzleDb) : createDrizzle(db as PGlite);
+  constructor(
+    @Inject(BillingRepository)
+    repositoryOrDb: BillingRepository | DrizzleDb | PGlite,
+  ) {
+    this.repository =
+      repositoryOrDb instanceof BillingRepository
+        ? repositoryOrDb
+        : new BillingRepository(repositoryOrDb);
   }
 
   /**
    * Get the active plan tier for a tenant.
    */
   public async getPlanTier(organizationId: string): Promise<PlanTier> {
-    const [sub] = await this.db
-      .select()
-      .from(schema.subscriptions)
-      .where(eq(schema.subscriptions.organizationId, organizationId))
-      .limit(1);
+    const sub = await this.repository.findSubscriptionByOrganization(organizationId);
 
     if (!sub || sub.status !== 'ACTIVE') {
       return 'FREE';
@@ -54,12 +51,7 @@ export class EntitlementService {
     const entitlements = await this.getEntitlements(organizationId);
     const maxAllowed = entitlements['companies.max'];
 
-    const countResult = await this.db
-      .select({ count: sql<string>`count(*)` })
-      .from(schema.companies)
-      .where(eq(schema.companies.organizationId, organizationId));
-
-    const currentCount = parseInt(countResult[0]?.count || '0', 10);
+    const currentCount = await this.repository.countActiveCompanies(organizationId);
 
     if (currentCount >= maxAllowed) {
       const currentTier = await this.getPlanTier(organizationId);
@@ -76,12 +68,7 @@ export class EntitlementService {
     const entitlements = await this.getEntitlements(organizationId);
     const maxAllowed = entitlements['users.max'];
 
-    const countResult = await this.db
-      .select({ count: sql<string>`count(*)` })
-      .from(schema.users)
-      .where(eq(schema.users.organizationId, organizationId));
-
-    const currentCount = parseInt(countResult[0]?.count || '0', 10);
+    const currentCount = await this.repository.countActiveUsers(organizationId);
 
     if (currentCount >= maxAllowed) {
       const currentTier = await this.getPlanTier(organizationId);
@@ -101,18 +88,7 @@ export class EntitlementService {
     const now = new Date();
     const periodKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-    const countResult = await this.db
-      .select({ total: sql<string>`coalesce(sum(${schema.usageRecords.quantity}), 0)` })
-      .from(schema.usageRecords)
-      .where(
-        and(
-          eq(schema.usageRecords.organizationId, organizationId),
-          eq(schema.usageRecords.metric, 'TENDER_ANALYSIS'),
-          eq(schema.usageRecords.periodKey, periodKey),
-        ),
-      );
-
-    const currentUsage = parseInt(countResult[0]?.total || '0', 10);
+    const currentUsage = await this.repository.sumTenderAnalysisUsage(organizationId, periodKey);
 
     if (currentUsage >= maxAllowed) {
       const currentTier = await this.getPlanTier(organizationId);
@@ -129,7 +105,7 @@ export class EntitlementService {
     const now = new Date();
     const periodKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-    await this.db.insert(schema.usageRecords).values({
+    await this.repository.recordUsage({
       id: `usage_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       organizationId,
       metric: 'TENDER_ANALYSIS',

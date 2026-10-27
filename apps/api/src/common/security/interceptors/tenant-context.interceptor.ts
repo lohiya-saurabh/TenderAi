@@ -29,6 +29,7 @@ export class TenantContextInterceptor implements NestInterceptor {
         {
           organizationId: user.organizationId,
           userId: user.sub,
+          userName: user.name || user.email,
           role: user.role,
           requestId,
         },

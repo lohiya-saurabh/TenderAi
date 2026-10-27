@@ -1,98 +1,76 @@
 import React from 'react';
-import { Breadcrumbs } from '@/components/layout/Breadcrumbs.js';
+import { NavLink } from 'react-router-dom';
+import { Sun, Moon } from 'lucide-react';
+import { useAuth } from '@/auth/useAuth.js';
+import { PERMISSIONS } from '@/utils/permissions.js';
+import { cn } from '@/lib/utils.js';
 import { UserAccountMenu } from '@/components/layout/UserAccountMenu.js';
-import { MenuIcon, SidebarCollapseIcon, SidebarExpandIcon } from '@/components/common/Icons.js';
-import { Button } from '@/components/ui/button.js';
-
 import { CompanySelector } from '@/components/layout/CompanySelector.js';
 import { NotificationBell } from '@/components/layout/NotificationBell.js';
 import { useTheme } from '@/context/useTheme.js';
-import { Sun, Moon } from 'lucide-react';
 
-export interface HeaderProps {
-  onToggleMobileSidebar?: () => void;
-  isSidebarCollapsed?: boolean;
-  onToggleSidebarCollapse?: () => void;
-}
+const NAV_ITEMS = [
+  { to: '/bids', label: 'Bids', permission: PERMISSIONS.BIDS_READ, end: false },
+  {
+    to: '/company-profile',
+    label: 'Company profile',
+    permission: PERMISSIONS.BIDS_READ,
+    end: true,
+  },
+  { to: '/settings', label: 'Settings', permission: PERMISSIONS.BIDS_READ, end: true },
+];
 
-export const Header: React.FC<HeaderProps> = ({
-  onToggleMobileSidebar,
-  isSidebarCollapsed = false,
-  onToggleSidebarCollapse,
-}) => {
+/**
+ * Top application bar: brand, primary navigation and account controls on one
+ * dark 52px strip. The `dark` class scopes the theme tokens, so the company
+ * selector, notifications and account menu render as dark-on-dark controls
+ * whichever theme the page itself uses.
+ */
+export const Header: React.FC = () => {
+  const { hasPermission } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const nextTheme = theme === 'dark' ? 'light' : 'dark';
 
   return (
-    <header className="sticky top-0 z-40 h-16 w-full border-b border-border bg-card/95 backdrop-blur-xs">
-      <div className="w-full max-w-7xl mx-auto h-full flex items-center justify-between px-4 sm:px-6 lg:px-8 gap-4">
-        {/* Left section: Navigation toggles & Breadcrumbs */}
-        <div className="flex items-center gap-3 min-w-0">
-          {/* Mobile Hamburger toggle button */}
-          {onToggleMobileSidebar && (
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="md:hidden h-8 w-8 text-foreground"
-              onClick={onToggleMobileSidebar}
-              aria-label="Open navigation menu"
+    <header className="dark sticky top-0 z-40 w-full bg-[#16191F] text-white">
+      <div className="min-h-[52px] px-4 sm:px-6 flex flex-wrap items-center gap-x-5 gap-y-1 py-1.5">
+        <NavLink
+          to="/bids"
+          className="font-bold text-[15px] tracking-[-0.01em] text-white no-underline"
+        >
+          TenderPulse
+        </NavLink>
+
+        <nav aria-label="Main" className="flex items-center gap-4 text-[13px]">
+          {NAV_ITEMS.filter((item) => hasPermission(item.permission)).map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              className={({ isActive }) =>
+                cn(
+                  'no-underline py-1 transition-colors',
+                  isActive ? 'text-white font-semibold' : 'text-[#C9D0DA] hover:text-white',
+                )
+              }
             >
-              <MenuIcon size={16} />
-            </Button>
-          )}
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
 
-          {/* Desktop Sidebar Collapse toggle */}
-          {onToggleSidebarCollapse && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="hidden md:inline-flex h-8 w-8 text-muted-foreground hover:text-foreground"
-              onClick={onToggleSidebarCollapse}
-              aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            >
-              {isSidebarCollapsed ? (
-                <SidebarExpandIcon size={16} />
-              ) : (
-                <SidebarCollapseIcon size={16} />
-              )}
-            </Button>
-          )}
-
-          {/* Dynamic Breadcrumbs */}
-          <Breadcrumbs />
-        </div>
-
-        {/* Right section: Theme Switcher, Company Switcher, Notification Bell & User Account dropdown */}
-        <div className="flex items-center gap-2 md:gap-3 shrink-0">
-          {/* Theme Switcher Button */}
-          <Button
+        <div className="ml-auto flex items-center gap-2">
+          <button
             type="button"
-            variant="outline"
-            size="sm"
             onClick={toggleTheme}
-            className="h-8 px-2.5 text-xs font-semibold gap-1.5 border-border hover:bg-accent cursor-pointer transition-colors shadow-2xs"
-            aria-label={`Current theme: ${theme === 'dark' ? 'Dark' : 'Light'}. Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-            title={`Current theme: ${theme === 'dark' ? 'Dark' : 'Light'}. Click to switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[#C9D0DA] hover:text-white hover:bg-white/10"
+            aria-label={`Switch to ${nextTheme} theme`}
+            title={`Switch to ${nextTheme} theme`}
           >
-            {theme === 'dark' ? (
-              <Moon className="h-3.5 w-3.5 text-orange-400" />
-            ) : (
-              <Sun className="h-3.5 w-3.5 text-amber-500" />
-            )}
-            <span className="hidden sm:inline text-xs font-mono font-medium text-foreground">
-              {theme === 'dark' ? 'Dark' : 'Light'}
-            </span>
-          </Button>
-
-          {/* Company Selector (1 Tenant -> N Companies) */}
+            {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </button>
           <CompanySelector />
-
-          {/* Real-Time Notifications Bell */}
           <NotificationBell />
-
-          {/* User Account Menu */}
           <UserAccountMenu />
         </div>
       </div>

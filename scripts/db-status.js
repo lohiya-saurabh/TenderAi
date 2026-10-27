@@ -5,18 +5,10 @@
  * Inspects all 17 tables, counts active rows, and outputs detailed summaries
  * for Users, Organizations, Companies, Bids, Documents, and Compliance Items.
  */
-import { PGlite } from '@electric-sql/pglite';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const rootDir = path.resolve(__dirname, '..');
-const dbPath = path.join(rootDir, 'data/postgres');
+import { describeDatabase, openDb } from './lib/db.js';
 
 async function inspectDatabase() {
-  const pg = new PGlite(dbPath);
-  await pg.waitReady;
+  const pg = await openDb();
 
   const tables = [
     'users',
@@ -40,7 +32,7 @@ async function inspectDatabase() {
   ];
 
   console.log('\n📊 ================== TENDERPULSE DATABASE AUDIT ==================');
-  console.log(`📍 Storage Path: ${dbPath}\n`);
+  console.log(`📍 Database: ${describeDatabase()}\n`);
 
   // 1. Table Counts
   const tableStats = [];

@@ -27,6 +27,9 @@ class DocumentExtractionCompletedEvent(BaseModel):
     document_id: str = Field(..., validation_alias=AliasChoices("document_id", "documentId"))
     status: str = "COMPLETED"
     items: list[dict[str, Any]] = Field(default_factory=list)
+    chunks: list[dict[str, Any]] = Field(default_factory=list)
+    conflicts: list[dict[str, Any]] = Field(default_factory=list)
+    coverage: dict[str, Any] | None = None
     error: str | None = None
     workflow_run_id: str | None = Field(
         default=None, validation_alias=AliasChoices("workflow_run_id", "workflowRunId")
@@ -47,6 +50,9 @@ class DocumentExtractionCompletedEvent(BaseModel):
             "documentId": self.document_id,
             "status": self.status,
             "items": self.items,
+            "chunks": self.chunks,
+            "conflicts": self.conflicts,
+            "coverage": self.coverage,
             "error": self.error,
             "workflowRunId": self.workflow_run_id,
             "traceId": self.trace_id,

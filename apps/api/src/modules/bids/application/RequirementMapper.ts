@@ -233,7 +233,7 @@ export function toRequirementCandidate(item: RequirementSourceItem): AiRequireme
       stamp_paper_required: executionRules.stampPaperRequired,
       stamp_paper_denomination_inr: executionRules.stampPaperDenominationInr,
       notarization_required: executionRules.notarizationRequired,
-      signing_authority_rank: executionRules.signingAuthorityRank ?? 'Authorized Signatory',
+      signing_authority_rank: executionRules.signingAuthorityRank ?? '',
       udin_required: executionRules.udinRequired,
     },
     provenance: {

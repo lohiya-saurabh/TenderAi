@@ -13,7 +13,10 @@ import { LoginPage } from '@/pages/LoginPage.js';
 import { DashboardPage } from '@/pages/DashboardPage.js';
 import { CreateBidPage } from '@/pages/CreateBidPage.js';
 import { BidDetailPage } from '@/pages/BidDetailPage.js';
-import { ComplianceReviewPage } from '@/pages/ComplianceReviewPage.js';
+import { ClauseWorkspacePage } from '@/pages/ClauseWorkspacePage.js';
+import { ConflictsPage } from '@/pages/ConflictsPage.js';
+import { ChecklistPage } from '@/pages/ChecklistPage.js';
+import { LegacyClauseRedirect } from '@/pages/LegacyClauseRedirect.js';
 import { CompanyProfilePage } from '@/pages/CompanyProfilePage.js';
 import { ProfilePage } from '@/pages/ProfilePage.js';
 import { SettingsPage } from '@/pages/SettingsPage.js';
@@ -109,13 +112,34 @@ export const App: React.FC = () => {
                 />
 
                 <Route
-                  path="/bids/:id/compliance/:itemId"
+                  path="/bids/:id/clauses"
                   element={
                     <ProtectedRoute requiredPermission={PERMISSIONS.BIDS_READ}>
-                      <ComplianceReviewPage />
+                      <ClauseWorkspacePage />
                     </ProtectedRoute>
                   }
                 />
+
+                <Route
+                  path="/bids/:id/conflicts"
+                  element={
+                    <ProtectedRoute requiredPermission={PERMISSIONS.BIDS_READ}>
+                      <ConflictsPage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/bids/:id/checklist"
+                  element={
+                    <ProtectedRoute requiredPermission={PERMISSIONS.BIDS_READ}>
+                      <ChecklistPage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Old per-item review links open the same clause in the workspace. */}
+                <Route path="/bids/:id/compliance/:itemId" element={<LegacyClauseRedirect />} />
 
                 <Route
                   path="/bids/:id/audit"

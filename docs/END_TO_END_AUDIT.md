@@ -58,7 +58,7 @@ flowchart TD
     subgraph AIWorker ["AI Tier (FastAPI / LangGraph)"]
         FastAPI_Worker["/api/v1/worker/process-message\n(Async Dispatch <20ms)"]
         Docling["Docling Parser +\nPDF Resolution"]
-        ExtractionGraph["Compliance LangGraph\n(8-Node Cyclic Graph)"]
+        ExtractionGraph["Compliance LangGraph\n(12-Node Extraction Pipeline)"]
         DecisionGraph["Bid Decision LangGraph\n(Deterministic Gatekeeper)"]
         Publisher["HttpCallbackCompletionPublisher\n(HMAC Webhook Callback)"]
     end
@@ -136,7 +136,7 @@ flowchart TD
 5. **AI Extraction & Single-Writer Persistence**:
    - FastAPI spawns background extraction task `_execute_and_publish_extraction`.
    - Docling parser reads PDF via presigned download URL.
-   - 8-node LangGraph extraction workflow executes with cyclic refinement and validation.
+   - 12-node LangGraph extraction workflow executes with cyclic refinement, rescue pass, uncertainty verification, and deterministic grounding.
    - Emits `DocumentExtractionCompletedEvent` via `HttpCallbackCompletionPublisher` to `POST /api/v1/internal/extraction-completed` authenticated via `X-Internal-Service-Key`.
    - NestJS `DocumentCompletionService` acquires `FOR UPDATE` transaction locks on `bids` and `tender_documents`, deduplicates items, fuses execution rules, inserts into `compliance_items`, transitions document to `COMPLETED`, and updates bid to `REVIEW_READY`.
 6. **Real-Time Client Notification**:
@@ -337,11 +337,23 @@ gantt
    - Guard `mock-upload` behind `NODE_ENV !== 'production'`.
    - Migrate SSE from URL token query params to session-authenticated headers.
 
+   **Status (2026-10-27): partly done.**
+   - *SSE (1.3)*: done. The web client streams `text/event-stream` over `fetch` with the normal `Authorization: Bearer` header (`apps/web/src/api/sse.ts`), refreshing once on 401 and reconnecting with capped backoff. `JwtAuthGuard` no longer accepts `?token=`, so a JWT in a URL is rejected instead of logged.
+   - *Logout (1.2) and mock upload (1.4)*: already in place: `POST /api/v1/auth/logout` revokes the refresh token, and `mock-upload` refuses requests in production.
+   - *Refresh token (1.1)*: not done; blocked on deployment. The API already sets `httpOnly` `tp_refresh_token` / `tp_access_token` cookies, but it also returns the refresh token in the JSON body and the SPA keeps it in `localStorage`. Production serves the SPA from S3/CloudFront and calls the ALB over plain HTTP on a different site, so `SameSite=Strict`/`Secure` cookies are never sent there. Going cookie-only needs the API served under the SPA's own origin (e.g. a CloudFront `/api/*` behaviour to the ALB), then removing the token from the response body and `localStorage`.
+
 2. **P1 — Data Integrity & Distributed Reliability**:
    - Provide standard `pg.Pool` connection factory in `database.provider.ts` when `DATABASE_URL` is set.
    - Configure Drizzle Kit for repeatable production migrations.
    - Add composite indexes on `bids`, `compliance_items`, and `tender_documents`.
    - Add `FOR UPDATE SKIP LOCKED` to transactional outbox poller.
+
+   **Status (2026-10-27): done; production cut-over still needs `terraform apply`.**
+   - *Driver (3.1)*: the API runs on real PostgreSQL through a node-postgres pool from `DATABASE_URL` (`DATABASE_SSL=disable|require|verify-full`, `DATABASE_SSL_CA_FILE`). PGlite is used only when `PGLITE_DATA_DIR` is set (unit and e2e tests use `memory://`); with neither, startup fails with setup instructions instead of silently writing a local file. `DrizzleDb` is now driver-neutral, so no repository changed. The pool closes on SIGTERM.
+   - *Migrations (3.2)*: `ddl.ts` became versioned migrations in `apps/api/src/common/database/migrations/` (`0001_baseline` is the former DDL verbatim; `0002` adds `notifications.recipient_user_id → users(id)`). They are applied at startup in order, one transaction each, recorded in `schema_migrations` with a checksum, under a Postgres advisory lock so concurrent ECS tasks do not race. Drizzle Kit was dropped: its CLI cannot resolve `drizzle-orm` here (a React 19 optional peer of `drizzle-orm` conflicts with the web app's React 18), and the hand-written SQL keeps the triggers and functions Drizzle cannot express.
+   - *Indexes and foreign keys (3.3, 3.4)*: already present on `develop` apart from the notifications recipient key, now added by `0002`.
+   - *Outbox (3.5)*: no change needed. `claimOutboxMessage` is a single conditional `UPDATE … RETURNING`, so racing pollers re-check the row and only one wins; `src/test/postgres` proves it with 8 concurrent pollers on real PostgreSQL.
+   - *Infrastructure*: the RDS module now stores the connection string in Secrets Manager (`<project>/<env>/database-url`); the ECS API task receives it as `DATABASE_URL`, with `DATABASE_SSL=verify-full` against the RDS CA bundle baked into the API image. Validated with `terraform validate` for dev, staging and prod, but not applied: until it is, a newly deployed API cannot start in AWS (previously it silently used an ephemeral PGlite file inside the container).
 
 3. **P2 — User Experience & Architectural Hygiene**:
    - Persist user capability choices in `OnboardingPage.tsx`.
@@ -349,6 +361,17 @@ gantt
    - Consolidate company profile endpoints under `/api/v1/companies/:id/profile`.
    - Add `AbortController` cancellation to `useApi.ts`.
 
+   **Status (2026-10-27): done.**
+   - *Onboarding*: sectors and turnover band are saved to a new `companies.onboarding_preferences` column via `PATCH /api/v1/companies/:id/onboarding-preferences`. They are deliberately **not** written as a capability profile version: these answers are self-declared, while the profile is the evidence-backed input to the deterministic evaluator (which reads `operating_regions` as geographic states). Save failures now show in the wizard.
+   - *Cloud files*: `listCloudFiles(companyId, provider, folderId)` was already company-scoped; no change needed.
+   - *Profile routes*: the web client only calls `/api/v1/companies/:companyId/profile`, `.../profile/versions/:versionId` (new) and `.../expiring-certificates`. The legacy `/api/v1/company-profile` controller remains for compatibility but is marked `@deprecated`, sends an RFC 9745 `Deprecation` header and logs each call; remove it once logs show no callers.
+   - *useApi*: fetchers receive an `AbortSignal`. A new request or unmount aborts the previous one, and the request-id guard still drops late responses. `apiGet` accepts `{ signal }`; cancellable GETs skip in-flight dedup so one caller's abort cannot cancel another's request.
+
 4. **P3 — AI Pipeline Hardening**:
    - Enforce XML prompt boundary delimiters against prompt injection.
    - Upgrade `ScopedRetrievalTool` to dense vector embeddings.
+
+   **Status (2026-10-27): done.**
+   - *Prompt boundaries*: `SecretSanitizer` now escapes every `untrusted*` opening or closing tag in any case or spacing, so document text can neither end its block early nor forge a new block with its own `page` attribute. Attributes are HTML-escaped. A shared `UNTRUSTED_DATA_DIRECTIVE` is in every system prompt that receives document text: clause extraction, the company evidence extractor and the executive memo. The memo now wraps the tender title, strengths, disqualifiers and risks as `<untrusted_context source="tender_facts">`, while the engine-computed verdict and score stay outside as authoritative. Retry feedback and the rejected quotes in the extraction refinement prompt, which echo model output, are wrapped the same way, as is the uploader-chosen file name in evidence extraction. The copilot no longer puts retrieved tender quotes or evidence in its system message: they travel as `<untrusted_context>` blocks in a separate message.
+   - *Retrieval*: `ScopedRetrievalTool` ranks with Okapi BM25 (IDF + length normalisation) instead of term-set overlap. Queries are expanded with a procurement synonym table (EMD / earnest money deposit / bid security, turnover / revenue, PBG, LD, DLP, …) at reduced weight, and the reranker uses the same table. The fake dense proxy is gone: dense cosine ranking and RRF run only when real vectors exist, from the caller or from an optional `QueryEmbedder`. Ranking ties are broken by dense rank, BM25 rank and chunk id, so results no longer depend on set iteration order. The three-tier (parent/child) handling from the structural RAG pipeline is kept on top of the shared ranker.
+   - *Dense embeddings (2026-10-27)*: a local ONNX model (`BAAI/bge-small-en-v1.5`, 384-d, ~67 MB, via fastembed with no PyTorch) runs in the AI worker behind the `QueryEmbedder` port. Evidence chunks are embedded at extraction and stored in the existing `company_evidence_chunks.embedding` JSONB column. Tender chunks, and older evidence rows without vectors, are embedded when seeded into the retrieval tool. Each vector is tagged with its model (`metadata.embedding_model`), so a model change never mixes vector spaces. The Docker image bakes the model in. `EMBEDDING_PROVIDER=none` or a failed model load falls back to BM25 + synonyms. pgvector is not needed yet, because ranking runs in memory over one tenant's scoped chunks; revisit if search spans whole corpora. Equal scores now share a rank, so a tied BM25 score no longer gives one chunk an arbitrary RRF advantage.

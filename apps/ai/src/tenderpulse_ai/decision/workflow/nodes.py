@@ -18,6 +18,8 @@ from tenderpulse_ai.decision.schemas import (
     ReviewTriggerType,
 )
 from tenderpulse_ai.decision.workflow.state import BidDecisionWorkflowState
+from tenderpulse_ai.infrastructure.embeddings import get_embedder
+from tenderpulse_ai.security.sanitizer import UNTRUSTED_DATA_DIRECTIVE, SecretSanitizer
 from tenderpulse_ai.tools.retrieval import DocumentChunk, ScopedRetrievalTool
 
 DecisionModelFn = Callable[[str, str], "str | Awaitable[str]"]
@@ -61,7 +63,7 @@ def make_evidence_retrieval_node(ctx: DecisionWorkflowContext):
                 doc_map[d_id] = d
 
         # Seed hybrid retrieval tool
-        retrieval_tool = ScopedRetrievalTool(enable_jev_rerank=True)
+        retrieval_tool = ScopedRetrievalTool(enable_jev_rerank=True, embedder=get_embedder())
         seeded_chunks: list[DocumentChunk] = []
 
         for c in evidence_chunks:
@@ -549,16 +551,24 @@ def make_executive_synthesis_node(ctx: DecisionWorkflowContext):
         system_prompt = (
             "You are the Chief Bidding Officer and Public Procurement Strategist for Indian tenders. "
             "Synthesize the deterministic bid/no-bid evaluation into a concise executive memo. "
-            "You must adhere strictly to the supplied facts and never alter the eligibility verdict."
+            "You must adhere strictly to the supplied facts and never alter the eligibility verdict. "
+            "The verdict and readiness score below are computed by the deterministic engine and "
+            "are authoritative.\n" + UNTRUSTED_DATA_DIRECTIVE
         )
 
-        user_prompt = (
+        # Verdict and score are engine output; titles and reasons derive from uploaded
+        # documents, so they are wrapped as untrusted context.
+        tender_facts = SecretSanitizer.wrap_untrusted_context(
+            "tender_facts",
             f"Tender: {state.get('tender_title', tender_id)}\n"
-            f"Verdict: {verdict.value}\n"
-            f"Readiness Score: {state.get('readiness_score', 0.0):.2f}\n"
             f"Key Strengths: {[r.title for r in reasons_to_pursue[:3]]}\n"
             f"Hard Disqualifiers: {[d.reason for d in hard_disqualifiers]}\n"
-            f"High Risks: {[r.title for r in commercial_risks if r.severity in ('HIGH', 'CRITICAL')]}\n"
+            f"High Risks: {[r.title for r in commercial_risks if r.severity in ('HIGH', 'CRITICAL')]}",
+        )
+        user_prompt = (
+            f"Verdict: {verdict.value}\n"
+            f"Readiness Score: {state.get('readiness_score', 0.0):.2f}\n\n"
+            f"{tender_facts}\n"
         )
 
         memo_result = ctx.model_fn(system_prompt, user_prompt)

@@ -32,12 +32,38 @@ class Settings(BaseSettings):
     log_max_bytes: int = 10485760  # 10 MB
     log_backup_count: int = 5
 
-    # LLM Gateway Settings (OpenRouter / OpenAI-Compatible)
+    # LLM Gateway Settings (Multi-Provider Free Rotation & OpenRouter)
+    llm_provider: str = (
+        "rotation"  # "rotation", "gemini", "groq", "cerebras", "sambanova", "openrouter"
+    )
     llm_api_key: str | None = None
     llm_base_url: str = "https://openrouter.ai/api/v1"
-    llm_model: str = "google/gemini-2.5-flash"
+    llm_model: str = "openrouter/free"
     llm_timeout_seconds: float = 45.0
+    # Output budget for structured extraction (JSON for up to ~25 chunks).
+    llm_max_tokens: int = 4096
     llm_max_retries: int = 2
+    batch_page_window_size: int = 3
+    # Page windows extracted in parallel (provider in-flight limits; 402 "in-flight" backs off).
+    llm_max_concurrency: int = 3
+    # Extraction is LLM-only. "record" saves raw responses, "replay" serves them offline
+    # (tests, benchmarks); see infrastructure/llm/replay.py.
+    llm_replay_mode: str = "off"
+    llm_replay_dir: str | None = None
+    # Tesseract language packs for scanned (image-only) pages, e.g. "eng+hin" for bilingual NITs.
+    ocr_languages: str = "eng"
+
+    # Provider-Specific API Keys (Option C: Multi-Provider Free Rotation)
+    gemini_api_key: str | None = None
+    groq_api_key: str | None = None
+    cerebras_api_key: str | None = None
+    sambanova_api_key: str | None = None
+    openrouter_api_key: str | None = None
+
+    # Dense Retrieval Embeddings (local ONNX model via fastembed)
+    embedding_provider: str = "local"  # "local", "none"
+    embedding_model: str = "BAAI/bge-small-en-v1.5"
+    embedding_cache_dir: str | None = None  # model download/cache dir; None = fastembed default
 
     # AWS & Object Storage Settings
     aws_region: str = "ap-south-1"
@@ -61,6 +87,63 @@ class Settings(BaseSettings):
     @classmethod
     def resolve_api_keys(cls, data: Any) -> Any:
         if isinstance(data, dict):
+            provider = (
+                data.get("llm_provider") or data.get("LLM_PROVIDER") or os.getenv("LLM_PROVIDER")
+            )
+            if provider:
+                data["llm_provider"] = str(provider).strip().lower()
+
+            gemini_key = (
+                data.get("gemini_api_key")
+                or data.get("GEMINI_API_KEY")
+                or data.get("GOOGLE_API_KEY")
+                or os.getenv("GEMINI_API_KEY")
+                or os.getenv("GOOGLE_API_KEY")
+            )
+            if gemini_key:
+                data["gemini_api_key"] = str(gemini_key).strip()
+
+            groq_key = (
+                data.get("groq_api_key") or data.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
+            )
+            if groq_key:
+                data["groq_api_key"] = str(groq_key).strip()
+
+            cerebras_key = (
+                data.get("cerebras_api_key")
+                or data.get("CEREBRAS_API_KEY")
+                or os.getenv("CEREBRAS_API_KEY")
+            )
+            if cerebras_key:
+                data["cerebras_api_key"] = str(cerebras_key).strip()
+
+            sambanova_key = (
+                data.get("sambanova_api_key")
+                or data.get("SAMBANOVA_API_KEY")
+                or os.getenv("SAMBANOVA_API_KEY")
+            )
+            if sambanova_key:
+                data["sambanova_api_key"] = str(sambanova_key).strip()
+
+            openrouter_key = (
+                data.get("openrouter_api_key")
+                or data.get("OPENROUTER_API_KEY")
+                or os.getenv("OPENROUTER_API_KEY")
+            )
+            if openrouter_key:
+                data["openrouter_api_key"] = str(openrouter_key).strip()
+
+            batch_size = (
+                data.get("batch_page_window_size")
+                or data.get("BATCH_PAGE_WINDOW_SIZE")
+                or os.getenv("BATCH_PAGE_WINDOW_SIZE")
+            )
+            if batch_size:
+                try:
+                    data["batch_page_window_size"] = max(1, min(int(batch_size), 5))
+                except (ValueError, TypeError):
+                    data["batch_page_window_size"] = 3
+
             key = (
                 data.get("llm_api_key")
                 or data.get("OPENROUTER_API_KEY")
@@ -78,6 +161,8 @@ class Settings(BaseSettings):
                 or os.getenv("LLM_MODEL")
             )
             if model:
+                if str(model).strip() == "minimax/minimax-m3.1-flash:free":
+                    model = "minimax/minimax-m3.1-flash"
                 data["llm_model"] = model
 
             region = (

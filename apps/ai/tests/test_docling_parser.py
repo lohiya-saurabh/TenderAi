@@ -108,3 +108,79 @@ def test_docling_native_adapter_mapping():
     assert len(parsed.tables) == 1
     assert parsed.tables[0].headers == ["Criteria", "Minimum Turnover"]
     assert parsed.tables[0].rows == [["Roads", "50 Cr"]]
+
+
+def test_docling_parser_running_furniture_stripping():
+    engine = DoclingParserEngine(use_native_if_available=False)
+    page_text = (
+        "IHMCL / NIT / 2026 / 01\n"
+        "Page 1 of 142\n"
+        "SECTION 1: GENERAL INFORMATION\n"
+        "This is the actual operative clause for the project.\n"
+        "- 1 -"
+    )
+    doc = engine.parse_document(
+        document_id="doc_furn_test",
+        file_name="tender.pdf",
+        pages=[{"page_number": 1, "text": page_text}],
+    )
+    block_texts = [b.text for b in doc.blocks]
+    assert not any("Page 1 of 142" in t for t in block_texts)
+    assert not any("IHMCL" in t for t in block_texts)
+    assert not any("- 1 -" in t for t in block_texts)
+    assert any("SECTION 1: GENERAL INFORMATION" in t for t in block_texts)
+
+
+def test_docling_parser_deleted_clause_marking():
+    engine = DoclingParserEngine(use_native_if_available=False)
+    page_text = (
+        "Clause 46: Advance Payment - Deleted.\nContract Data 7.1: Subcontracting is omitted."
+    )
+    doc = engine.parse_document(
+        document_id="doc_del_test",
+        file_name="tender.pdf",
+        pages=[{"page_number": 1, "text": page_text}],
+    )
+    assert any(b.is_deleted for b in doc.blocks)
+
+
+def test_docling_parser_spatial_whitespace_table():
+    engine = DoclingParserEngine(use_native_if_available=False)
+    page_text = (
+        "SECTION 3: ELIGIBILITY CRITERIA\n"
+        "Sl. No.    Qualification Criteria       Threshold Requirement\n"
+        "1          Annual Turnover              Rs. 50 Crores\n"
+        "2          Net Worth                    Rs. 10 Crores\n"
+    )
+    doc = engine.parse_document(
+        document_id="doc_spatial_test",
+        file_name="tender.pdf",
+        pages=[{"page_number": 1, "text": page_text}],
+    )
+    assert len(doc.tables) == 1
+    tbl = doc.tables[0]
+    assert "Annual Turnover" in tbl.rows[0][1]
+    assert tbl.row_key_map.get("1") == (
+        "Qualification Criteria: Annual Turnover | Threshold Requirement: Rs. 50 Crores"
+    )
+
+
+def test_docling_parser_paragraph_coalescing():
+    engine = DoclingParserEngine(use_native_if_available=False)
+    page_text = (
+        "SECTION 2: OBLIGATIONS\n"
+        "The contractor shall main-\n"
+        "tain continuous traffic flow and\n"
+        "deploy certified safety marshals."
+    )
+    doc = engine.parse_document(
+        document_id="doc_coalesce_test",
+        file_name="tender.pdf",
+        pages=[{"page_number": 1, "text": page_text}],
+    )
+    paras = [b for b in doc.blocks if b.type == "paragraph"]
+    assert len(paras) == 1
+    assert (
+        paras[0].text
+        == "The contractor shall maintain continuous traffic flow and deploy certified safety marshals."
+    )

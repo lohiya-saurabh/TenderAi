@@ -10,6 +10,7 @@
 export type CapabilityStatus =
   | 'VERIFIED'
   | 'SOURCE_VERIFIED'
+  | 'UNVERIFIED'
   | 'IMPORTED'
   | 'EXTRACTED'
   | 'EXPIRING_SOON'
