@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import random
 import re
 import time
 from collections.abc import Callable
@@ -129,6 +130,35 @@ def block_provider(base_url: str, duration: float = 60.0) -> None:
     _PROVIDER_BLOCKED_UNTIL[base_url.rstrip("/")] = time.time() + duration
 
 
+def rate_limit_cooldown_seconds(response: Any) -> float:
+    """Seconds to back off after a 429: the provider's Retry-After when given, else 60s."""
+    raw = (getattr(response, "headers", None) or {}).get("retry-after")
+    try:
+        seconds = float(raw)
+    except (TypeError, ValueError):
+        return 60.0
+    return min(max(seconds, 1.0), 60.0)
+
+
+def seconds_until_an_endpoint_frees(endpoints: list[LlmEndpoint]) -> float | None:
+    """
+    Time until the soonest rate-limited endpoint can be tried again, or None when none
+    of them will ever free up (all permanently unavailable, or no endpoints at all).
+    """
+    now = time.time()
+    soonest: float | None = None
+    for ep in endpoints:
+        model_until = max(
+            _MODEL_COOLDOWNS.get(ep.model, 0.0),
+            _MODEL_COOLDOWNS.get(f"{ep.base_url}::{ep.model}", 0.0),
+        )
+        if model_until == float("inf"):
+            continue
+        free_at = max(_PROVIDER_BLOCKED_UNTIL.get(ep.base_url.rstrip("/"), 0.0), model_until, now)
+        soonest = free_at if soonest is None else min(soonest, free_at)
+    return None if soonest is None else soonest - now
+
+
 def _recover_truncated_json(content: str) -> list[dict[str, Any]]:
     """
     Salvages completed candidate JSON objects from an output stream that was
@@ -204,8 +234,10 @@ class OpenAICompatibleLlmClient:
         client: httpx.AsyncClient | None = None,
         endpoints: list[LlmEndpoint] | None = None,
         provider: str = "rotation",
+        rate_limit_max_wait_seconds: float = 180.0,
     ):
         self.api_key = api_key or ""
+        self.rate_limit_max_wait_seconds = rate_limit_max_wait_seconds
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.timeout = timeout
@@ -364,6 +396,26 @@ class OpenAICompatibleLlmClient:
             client=client,
             endpoints=endpoints,
             provider=provider,
+            rate_limit_max_wait_seconds=float(
+                getattr(settings, "llm_rate_limit_max_wait_seconds", 180.0)
+            ),
+        )
+
+    def _all_endpoints(self) -> list[LlmEndpoint]:
+        """Every configured endpoint, whether or not it is currently cooling down."""
+        # No key, no endpoint: an unconfigured client must fail fast (LLMExtractionError),
+        # not send an unauthenticated request.
+        return self.endpoints or (
+            [
+                LlmEndpoint(
+                    provider="custom",
+                    base_url=self.base_url,
+                    api_key=self.api_key,
+                    model=self.model,
+                )
+            ]
+            if self.api_key
+            else []
         )
 
     def _get_candidate_endpoints(self) -> list[LlmEndpoint]:
@@ -379,20 +431,7 @@ class OpenAICompatibleLlmClient:
         for k in expired:
             _MODEL_COOLDOWNS.pop(k, None)
 
-        # No key, no endpoint: an unconfigured client must fail fast (LLMExtractionError),
-        # not send an unauthenticated request.
-        endpoints = self.endpoints or (
-            [
-                LlmEndpoint(
-                    provider="custom",
-                    base_url=self.base_url,
-                    api_key=self.api_key,
-                    model=self.model,
-                )
-            ]
-            if self.api_key
-            else []
-        )
+        endpoints = self._all_endpoints()
 
         active: list[LlmEndpoint] = []
         cooling: list[LlmEndpoint] = []
@@ -606,266 +645,294 @@ class OpenAICompatibleLlmClient:
         if replay.mode() == "replay":
             return parse(replay.load(payload["messages"]))
 
-        endpoints_to_try = self._get_candidate_endpoints()
         last_error: Exception | None = None
         request_started = time.perf_counter()
+        waited = 0.0
 
-        for ep in endpoints_to_try:
-            k = f"{ep.base_url}::{ep.model}"
-            endpoint_url = f"{ep.base_url}/chat/completions"
-            headers = {
-                "Authorization": f"Bearer {ep.api_key}",
-                "Content-Type": "application/json",
-            }
-            if ep.extra_headers:
-                headers.update(ep.extra_headers)
+        # Free tiers rate-limit every provider at once on long tenders. Instead of failing
+        # the page, wait for the soonest endpoint to free up, within a total budget.
+        while True:
+            endpoints_to_try = self._get_candidate_endpoints()
 
-            payload["model"] = ep.model
-            # Structured JSON extraction needs no chain-of-thought: reasoning models otherwise
-            # spend max_tokens on hidden reasoning and return empty content (finish="length").
-            apply_reasoning_controls(payload, ep)
-            if is_provider_blocked(ep.base_url):
-                continue
-            # Rotation budget: never chain slow models past the client timeout; the caller
-            # falls back to deterministic extraction instead.
-            if last_error is not None and time.perf_counter() - request_started > self.timeout:
-                logger.warning(
-                    "[OpenAICompatibleClient] Rotation budget of %.0fs exhausted; skipping remaining endpoints.",
-                    self.timeout,
-                )
-                break
+            for ep in endpoints_to_try:
+                k = f"{ep.base_url}::{ep.model}"
+                endpoint_url = f"{ep.base_url}/chat/completions"
+                headers = {
+                    "Authorization": f"Bearer {ep.api_key}",
+                    "Content-Type": "application/json",
+                }
+                if ep.extra_headers:
+                    headers.update(ep.extra_headers)
 
-            for attempt in range(max_retries + 1):
-                start_time = time.perf_counter()
-                logger.info(
-                    "Dispatching LLM inference request to %s (provider=%s, model=%s, attempt=%d)",
-                    ep.base_url,
-                    ep.provider,
-                    ep.model,
-                    attempt + 1,
-                    extra={
-                        "event": "llm.request.started",
-                        "metadata": {
-                            "provider": ep.provider,
-                            "model": ep.model,
-                            "attempt": attempt + 1,
-                        },
-                    },
-                )
-                try:
-                    client = self._get_client()
-                    if self._custom_client is not None:
-                        response = await client.post(endpoint_url, headers=headers, json=payload)
-                    else:
-                        async with client:
-                            response = await client.post(
-                                endpoint_url, headers=headers, json=payload
-                            )
+                payload["model"] = ep.model
+                # Structured JSON extraction needs no chain-of-thought: reasoning models otherwise
+                # spend max_tokens on hidden reasoning and return empty content (finish="length").
+                apply_reasoning_controls(payload, ep)
+                if is_provider_blocked(ep.base_url):
+                    continue
+                # Rotation budget: never chain slow models past the client timeout; the caller
+                # falls back to deterministic extraction instead.
+                if last_error is not None and time.perf_counter() - request_started > self.timeout:
+                    logger.warning(
+                        "[OpenAICompatibleClient] Rotation budget of %.0fs exhausted; skipping remaining endpoints.",
+                        self.timeout,
+                    )
+                    break
 
-                    duration_ms = round((time.perf_counter() - start_time) * 1000, 1)
-
-                    # HTTP 429: 60-second cooldown on this endpoint, immediately rotate to next provider
-                    if response.status_code == 429:
-                        _MODEL_COOLDOWNS[ep.model] = time.time() + 60.0
-                        _MODEL_COOLDOWNS[k] = time.time() + 60.0
-                        block_provider(ep.base_url)
-                        logger.warning(
-                            "[OpenAICompatibleClient] Endpoint '%s' (%s) rate-limited (429). Locking out the whole provider for 60s and rotating to the next provider...",
-                            ep.model,
-                            ep.provider,
-                            extra={
-                                "event": "llm.request.rate_limited",
-                                "duration_ms": duration_ms,
-                                "model": ep.model,
-                            },
-                        )
-                        break
-
-                    # HTTP 404: Permanent unavailability
-                    if response.status_code == 404:
-                        _MODEL_COOLDOWNS[ep.model] = float("inf")
-                        _MODEL_COOLDOWNS[k] = float("inf")
-                        logger.warning(
-                            "[OpenAICompatibleClient] Endpoint '%s' (%s) returned 404. Marking permanently unavailable and rotating...",
-                            ep.model,
-                            ep.provider,
-                            extra={
-                                "event": "llm.request.model_unavailable",
-                                "duration_ms": duration_ms,
-                                "model": ep.model,
-                            },
-                        )
-                        break
-
-                    # HTTP 401 / 403: Re-raise immediately
-                    if response.status_code in (401, 403):
-                        _MODEL_COOLDOWNS[ep.model] = float("inf")
-                        _MODEL_COOLDOWNS[k] = float("inf")
-                        response.raise_for_status()
-
-                    # HTTP 400 / 402:
-                    if response.status_code in (400, 402):
-                        if response.status_code == 402 and "in-flight" in response.text.lower():
-                            logger.info(
-                                "[OpenAICompatibleClient] Model '%s' hit in-flight concurrency reserve limit. Backing off 1.5s...",
-                                ep.model,
-                            )
-                            if attempt < max_retries:
-                                await asyncio.sleep(1.5 * (attempt + 1))
-                                continue
-                        # A model that cannot run with reasoning disabled never will.
-                        permanent = "reasoning is mandatory" in response.text.lower()
-                        cooldown = 3600.0 if permanent else 300.0
-                        _MODEL_COOLDOWNS[ep.model] = time.time() + cooldown
-                        _MODEL_COOLDOWNS[k] = time.time() + cooldown
-                        logger.warning(
-                            "[OpenAICompatibleClient] Endpoint '%s' (%s) returned HTTP %d: %s. Rotating...",
-                            ep.model,
-                            ep.provider,
-                            response.status_code,
-                            response.text[:200],
-                            extra={
-                                "event": "llm.request.model_unavailable",
-                                "duration_ms": duration_ms,
-                                "model": ep.model,
-                            },
-                        )
-                        break
-
-                    if response.status_code in (500, 502, 503, 504):
-                        response_text = response.text
-                        last_error = httpx.HTTPStatusError(
-                            f"HTTP {response.status_code}: {response_text[:200]}",
-                            request=response.request,
-                            response=response,
-                        )
-                        logger.warning(
-                            "[OpenAICompatibleClient] Transient upstream error %d on %s (%s) attempt %d: %s",
-                            response.status_code,
-                            ep.model,
-                            ep.provider,
-                            attempt + 1,
-                            response_text[:200],
-                            extra={
-                                "event": "llm.request.retry",
-                                "duration_ms": duration_ms,
-                                "error_code": f"HTTP_{response.status_code}",
-                            },
-                        )
-                        if attempt < max_retries:
-                            await asyncio.sleep(0.5 * (2**attempt))
-                            continue
-                        break
-
-                    response.raise_for_status()
-                    data = response.json()
-                    usage = data.get("usage", {})
+                for attempt in range(max_retries + 1):
+                    start_time = time.perf_counter()
                     logger.info(
-                        "LLM extraction completed in %.1fms with provider %s model %s (prompt_tokens=%s, completion_tokens=%s)",
-                        duration_ms,
+                        "Dispatching LLM inference request to %s (provider=%s, model=%s, attempt=%d)",
+                        ep.base_url,
                         ep.provider,
                         ep.model,
-                        usage.get("prompt_tokens"),
-                        usage.get("completion_tokens"),
+                        attempt + 1,
                         extra={
-                            "event": "llm.request.completed",
-                            "duration_ms": duration_ms,
+                            "event": "llm.request.started",
                             "metadata": {
                                 "provider": ep.provider,
-                                "model": data.get("model", ep.model),
-                                "prompt_tokens": usage.get("prompt_tokens"),
-                                "completion_tokens": usage.get("completion_tokens"),
-                                "total_tokens": usage.get("total_tokens"),
+                                "model": ep.model,
                                 "attempt": attempt + 1,
                             },
                         },
                     )
-                    choice = (data.get("choices") or [{}])[0]
-                    content = str((choice.get("message") or {}).get("content") or "").strip()
-                    if not content and choice.get("finish_reason") == "length":
-                        reasoning_tokens = (usage.get("completion_tokens_details") or {}).get(
-                            "reasoning_tokens"
+                    try:
+                        client = self._get_client()
+                        if self._custom_client is not None:
+                            response = await client.post(
+                                endpoint_url, headers=headers, json=payload
+                            )
+                        else:
+                            async with client:
+                                response = await client.post(
+                                    endpoint_url, headers=headers, json=payload
+                                )
+
+                        duration_ms = round((time.perf_counter() - start_time) * 1000, 1)
+
+                        # HTTP 429: cool down for the provider's Retry-After (else 60s) and rotate
+                        if response.status_code == 429:
+                            cooldown = rate_limit_cooldown_seconds(response)
+                            _MODEL_COOLDOWNS[ep.model] = time.time() + cooldown
+                            _MODEL_COOLDOWNS[k] = time.time() + cooldown
+                            block_provider(ep.base_url, cooldown)
+                            logger.warning(
+                                "[OpenAICompatibleClient] Endpoint '%s' (%s) rate-limited (429). Locking out the whole provider for %.0fs and rotating to the next provider...",
+                                ep.model,
+                                ep.provider,
+                                cooldown,
+                                extra={
+                                    "event": "llm.request.rate_limited",
+                                    "duration_ms": duration_ms,
+                                    "model": ep.model,
+                                },
+                            )
+                            break
+
+                        # HTTP 404: Permanent unavailability
+                        if response.status_code == 404:
+                            _MODEL_COOLDOWNS[ep.model] = float("inf")
+                            _MODEL_COOLDOWNS[k] = float("inf")
+                            logger.warning(
+                                "[OpenAICompatibleClient] Endpoint '%s' (%s) returned 404. Marking permanently unavailable and rotating...",
+                                ep.model,
+                                ep.provider,
+                                extra={
+                                    "event": "llm.request.model_unavailable",
+                                    "duration_ms": duration_ms,
+                                    "model": ep.model,
+                                },
+                            )
+                            break
+
+                        # HTTP 401 / 403: Re-raise immediately
+                        if response.status_code in (401, 403):
+                            _MODEL_COOLDOWNS[ep.model] = float("inf")
+                            _MODEL_COOLDOWNS[k] = float("inf")
+                            response.raise_for_status()
+
+                        # HTTP 400 / 402:
+                        if response.status_code in (400, 402):
+                            if response.status_code == 402 and "in-flight" in response.text.lower():
+                                logger.info(
+                                    "[OpenAICompatibleClient] Model '%s' hit in-flight concurrency reserve limit. Backing off 1.5s...",
+                                    ep.model,
+                                )
+                                if attempt < max_retries:
+                                    await asyncio.sleep(1.5 * (attempt + 1))
+                                    continue
+                            # A model that cannot run with reasoning disabled never will.
+                            permanent = "reasoning is mandatory" in response.text.lower()
+                            cooldown = 3600.0 if permanent else 300.0
+                            _MODEL_COOLDOWNS[ep.model] = time.time() + cooldown
+                            _MODEL_COOLDOWNS[k] = time.time() + cooldown
+                            logger.warning(
+                                "[OpenAICompatibleClient] Endpoint '%s' (%s) returned HTTP %d: %s. Rotating...",
+                                ep.model,
+                                ep.provider,
+                                response.status_code,
+                                response.text[:200],
+                                extra={
+                                    "event": "llm.request.model_unavailable",
+                                    "duration_ms": duration_ms,
+                                    "model": ep.model,
+                                },
+                            )
+                            break
+
+                        if response.status_code in (500, 502, 503, 504):
+                            response_text = response.text
+                            last_error = httpx.HTTPStatusError(
+                                f"HTTP {response.status_code}: {response_text[:200]}",
+                                request=response.request,
+                                response=response,
+                            )
+                            logger.warning(
+                                "[OpenAICompatibleClient] Transient upstream error %d on %s (%s) attempt %d: %s",
+                                response.status_code,
+                                ep.model,
+                                ep.provider,
+                                attempt + 1,
+                                response_text[:200],
+                                extra={
+                                    "event": "llm.request.retry",
+                                    "duration_ms": duration_ms,
+                                    "error_code": f"HTTP_{response.status_code}",
+                                },
+                            )
+                            if attempt < max_retries:
+                                await asyncio.sleep(0.5 * (2**attempt))
+                                continue
+                            break
+
+                        response.raise_for_status()
+                        data = response.json()
+                        usage = data.get("usage", {})
+                        logger.info(
+                            "LLM extraction completed in %.1fms with provider %s model %s (prompt_tokens=%s, completion_tokens=%s)",
+                            duration_ms,
+                            ep.provider,
+                            ep.model,
+                            usage.get("prompt_tokens"),
+                            usage.get("completion_tokens"),
+                            extra={
+                                "event": "llm.request.completed",
+                                "duration_ms": duration_ms,
+                                "metadata": {
+                                    "provider": ep.provider,
+                                    "model": data.get("model", ep.model),
+                                    "prompt_tokens": usage.get("prompt_tokens"),
+                                    "completion_tokens": usage.get("completion_tokens"),
+                                    "total_tokens": usage.get("total_tokens"),
+                                    "attempt": attempt + 1,
+                                },
+                            },
                         )
-                        _MODEL_COOLDOWNS[ep.model] = time.time() + 600.0
-                        _MODEL_COOLDOWNS[k] = time.time() + 600.0
-                        last_error = RuntimeError(
-                            f"Model '{ep.model}' exhausted max_tokens={self.max_tokens} "
-                            f"(reasoning_tokens={reasoning_tokens}) with empty output"
-                        )
+                        choice = (data.get("choices") or [{}])[0]
+                        content = str((choice.get("message") or {}).get("content") or "").strip()
+                        if not content and choice.get("finish_reason") == "length":
+                            reasoning_tokens = (usage.get("completion_tokens_details") or {}).get(
+                                "reasoning_tokens"
+                            )
+                            _MODEL_COOLDOWNS[ep.model] = time.time() + 600.0
+                            _MODEL_COOLDOWNS[k] = time.time() + 600.0
+                            last_error = RuntimeError(
+                                f"Model '{ep.model}' exhausted max_tokens={self.max_tokens} "
+                                f"(reasoning_tokens={reasoning_tokens}) with empty output"
+                            )
+                            logger.warning(
+                                "[OpenAICompatibleClient] %s. Cooling the model down for 10 minutes and rotating...",
+                                last_error,
+                                extra={"event": "llm.request.truncated", "model": ep.model},
+                            )
+                            break
+                        # A valid answer may legitimately hold no obligations ([]); only an
+                        # unparseable one rotates to the next model (raised by _parse_response).
+                        result = parse(data)
+                        if replay.mode() == "record":
+                            replay.save(payload["messages"], data)
+                        return result
+
+                    except (httpx.RequestError, httpx.HTTPStatusError) as exc:
+                        duration_ms = round((time.perf_counter() - start_time) * 1000, 1)
+                        last_error = exc
+                        if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code in (
+                            401,
+                            403,
+                        ):
+                            other_providers = [
+                                e for e in endpoints_to_try if e.base_url != ep.base_url
+                            ]
+                            if not other_providers:
+                                raise exc
                         logger.warning(
-                            "[OpenAICompatibleClient] %s. Cooling the model down for 10 minutes and rotating...",
-                            last_error,
-                            extra={"event": "llm.request.truncated", "model": ep.model},
+                            "[OpenAICompatibleClient] Network/HTTP error on %s (%s) attempt %d/%d: %s",
+                            ep.model,
+                            ep.provider,
+                            attempt + 1,
+                            max_retries + 1,
+                            str(exc),
+                            extra={
+                                "event": "llm.request.failed",
+                                "duration_ms": duration_ms,
+                                "error_code": "ERR_LLM_NETWORK",
+                            },
+                        )
+                        if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code in (
+                            400,
+                            401,
+                            402,
+                            403,
+                            404,
+                            429,
+                        ):
+                            break
+                        if attempt < max_retries:
+                            await asyncio.sleep(0.5 * (2**attempt))
+                            continue
+                        break
+                    except Exception as exc:  # noqa: BLE001
+                        duration_ms = round((time.perf_counter() - start_time) * 1000, 1)
+                        last_error = exc
+                        # Unusable output (not JSON, wrong shape): try other models first next time.
+                        _MODEL_COOLDOWNS[ep.model] = time.time() + 300.0
+                        _MODEL_COOLDOWNS[k] = time.time() + 300.0
+                        logger.error(
+                            "[OpenAICompatibleClient] Unhandled error during extraction on %s: %s",
+                            ep.model,
+                            str(exc),
+                            extra={
+                                "event": "llm.request.failed",
+                                "duration_ms": duration_ms,
+                                "error_code": "ERR_LLM_UNHANDLED",
+                            },
                         )
                         break
-                    # A valid answer may legitimately hold no obligations ([]); only an
-                    # unparseable one rotates to the next model (raised by _parse_response).
-                    result = parse(data)
-                    if replay.mode() == "record":
-                        replay.save(payload["messages"], data)
-                    return result
 
-                except (httpx.RequestError, httpx.HTTPStatusError) as exc:
-                    duration_ms = round((time.perf_counter() - start_time) * 1000, 1)
-                    last_error = exc
-                    if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code in (
-                        401,
-                        403,
-                    ):
-                        other_providers = [e for e in endpoints_to_try if e.base_url != ep.base_url]
-                        if not other_providers:
-                            raise exc
-                    logger.warning(
-                        "[OpenAICompatibleClient] Network/HTTP error on %s (%s) attempt %d/%d: %s",
-                        ep.model,
-                        ep.provider,
-                        attempt + 1,
-                        max_retries + 1,
-                        str(exc),
-                        extra={
-                            "event": "llm.request.failed",
-                            "duration_ms": duration_ms,
-                            "error_code": "ERR_LLM_NETWORK",
-                        },
-                    )
-                    if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code in (
-                        400,
-                        401,
-                        402,
-                        403,
-                        404,
-                        429,
-                    ):
-                        break
-                    if attempt < max_retries:
-                        await asyncio.sleep(0.5 * (2**attempt))
-                        continue
-                    break
-                except Exception as exc:  # noqa: BLE001
-                    duration_ms = round((time.perf_counter() - start_time) * 1000, 1)
-                    last_error = exc
-                    # Unusable output (not JSON, wrong shape): try other models first next time.
-                    _MODEL_COOLDOWNS[ep.model] = time.time() + 300.0
-                    _MODEL_COOLDOWNS[k] = time.time() + 300.0
-                    logger.error(
-                        "[OpenAICompatibleClient] Unhandled error during extraction on %s: %s",
-                        ep.model,
-                        str(exc),
-                        extra={
-                            "event": "llm.request.failed",
-                            "duration_ms": duration_ms,
-                            "error_code": "ERR_LLM_UNHANDLED",
-                        },
-                    )
-                    break
-
-        if last_error:
-            raise LLMExtractionError(f"All LLM endpoints failed; last error: {last_error}") from (
-                last_error
+            if last_error:
+                raise LLMExtractionError(
+                    f"All LLM endpoints failed; last error: {last_error}"
+                ) from last_error
+            wait = seconds_until_an_endpoint_frees(self._all_endpoints())
+            budget = self.rate_limit_max_wait_seconds
+            if wait is None or waited + wait > budget:
+                raise LLMExtractionError(
+                    "No LLM endpoint available (none configured, or all providers blocked/cooling"
+                    f" down; waited {waited:.0f}s of a {budget:.0f}s budget)."
+                )
+            pause = wait + random.uniform(
+                0.2, 1.5
+            )  # jitter: parallel windows do not retry in lockstep
+            logger.warning(
+                "[OpenAICompatibleClient] All LLM providers are rate-limited; waiting %.1fs before retrying.",
+                pause,
+                extra={
+                    "event": "llm.request.waiting_for_rate_limit",
+                    "metadata": {"wait_s": pause},
+                },
             )
-        raise LLMExtractionError(
-            "No LLM endpoint available (none configured, or all providers blocked/cooling down)."
-        )
+            await asyncio.sleep(pause)
+            waited += pause
 
     def _parse_response(
         self,

@@ -11,6 +11,7 @@ import type {
 } from '@/modules/bids/application/IJobQueue.js';
 import { DocumentProcessingRuntime } from '@/modules/documents/DocumentProcessingRuntime.js';
 import { DocumentCompletionService } from '@/modules/documents/DocumentCompletionService.js';
+import type { IStorageService } from '@/modules/bids/application/IStorageService.js';
 import type { DocumentExtractionCompletedEvent } from '@tenderpulse/shared-types';
 
 describe('DocumentProcessingRuntime (Option B: Two-Queue Architecture)', () => {
@@ -749,5 +750,135 @@ describe('DocumentProcessingRuntime (Option B: Two-Queue Architecture)', () => {
     expect(doc2Record?.status).toBe('FAILED');
     expect(doc2Record?.lastProcessingError).toBe('Corrupted PDF stream.');
     expect(doc2Record?.processingCompletedAt).toBeInstanceOf(Date);
+  });
+
+  describe('claim-checked completion events (payload too large for SQS)', () => {
+    async function setup() {
+      database = new PGlite();
+      await initDatabase(database, {
+        seedUsers: true,
+        seedFullProfile: true,
+        seedBidsAndCompliance: true,
+      });
+      const db = createDrizzle(database);
+      const [bid] = await db.select().from(schema.bids).limit(1);
+      if (!bid) throw new Error('Test database did not seed a bid.');
+      const documentId = `doc-claimcheck-${Date.now()}`;
+      await db.insert(schema.tenderDocuments).values({
+        id: documentId,
+        bidId: bid.id,
+        organizationId: bid.organizationId,
+        fileName: 'tender.pdf',
+        storagePath: `tenants/${bid.organizationId}/bids/${bid.id}/${documentId}/tender.pdf`,
+        fileSizeBytes: 2048,
+        mimeType: 'application/pdf',
+        documentType: 'NIT',
+        status: 'QUEUED_FOR_EXTRACTION',
+      });
+      const envelope = {
+        jobId: `job-${documentId}`,
+        organizationId: bid.organizationId,
+        bidId: bid.id,
+        documentId,
+        status: 'FAILED',
+        payloadStorageReference: `tenants/${bid.organizationId}/bids/${bid.id}/${documentId}/completion-events/job-${documentId}.json`,
+      };
+      // The error text exists only in the stored payload, so seeing it proves the load.
+      const stored = {
+        ...envelope,
+        payloadStorageReference: undefined,
+        error: 'From the stored payload.',
+        items: [],
+      };
+      const objects = new Map<string, string>([
+        [envelope.payloadStorageReference, JSON.stringify(stored)],
+      ]);
+      const storage = {
+        getObject: vi.fn(async (path: string) => objects.get(path) ?? null),
+        deleteObject: vi.fn(async (path: string) => {
+          objects.delete(path);
+        }),
+      };
+      const deleted: string[] = [];
+      const queue: IJobQueue = {
+        enqueue: async () => {},
+        receiveMessages: async () => [],
+        deleteMessage: async (handle) => {
+          deleted.push(handle);
+        },
+        changeMessageVisibility: async () => {},
+        moveToDeadLetter: async () => {},
+        getDeadLetterMessages: async () => [],
+      };
+      runtime = new DocumentProcessingRuntime(
+        db,
+        queue,
+        queue,
+        undefined,
+        undefined,
+        undefined,
+        storage as unknown as IStorageService,
+      );
+      const documentStatus = async () =>
+        (
+          await db
+            .select({
+              status: schema.tenderDocuments.status,
+              error: schema.tenderDocuments.lastProcessingError,
+            })
+            .from(schema.tenderDocuments)
+            .where(eq(schema.tenderDocuments.id, documentId))
+        )[0];
+      return { envelope, storage, objects, deleted, documentStatus };
+    }
+
+    it('loads the full event from storage, persists it, then cleans up', async () => {
+      const { envelope, storage, objects, deleted, documentStatus } = await setup();
+
+      await runtime!.processCompletionMessage({
+        receiptHandle: 'r1',
+        body: envelope,
+        receiveCount: 1,
+      });
+
+      expect(await documentStatus()).toEqual({
+        status: 'FAILED',
+        error: 'From the stored payload.',
+      });
+      expect(deleted).toEqual(['r1']);
+      expect(storage.deleteObject).toHaveBeenCalledWith(envelope.payloadStorageReference);
+      expect(objects.size).toBe(0);
+    });
+
+    it('refuses a reference outside the tenant prefix and leaves the message for retry', async () => {
+      const { envelope, storage, deleted, documentStatus } = await setup();
+
+      await runtime!.processCompletionMessage({
+        receiptHandle: 'r2',
+        body: { ...envelope, payloadStorageReference: 'tenants/another-org/secret.json' },
+        receiveCount: 1,
+      });
+
+      expect(storage.getObject).not.toHaveBeenCalled();
+      expect(deleted).toEqual([]);
+      expect((await documentStatus())?.status).toBe('QUEUED_FOR_EXTRACTION');
+    });
+
+    it('refuses a stored payload whose identifiers do not match the envelope', async () => {
+      const { envelope, objects, deleted, documentStatus } = await setup();
+      objects.set(
+        envelope.payloadStorageReference,
+        JSON.stringify({ ...envelope, documentId: 'doc-someone-else', error: 'x' }),
+      );
+
+      await runtime!.processCompletionMessage({
+        receiptHandle: 'r3',
+        body: envelope,
+        receiveCount: 1,
+      });
+
+      expect(deleted).toEqual([]);
+      expect((await documentStatus())?.status).toBe('QUEUED_FOR_EXTRACTION');
+    });
   });
 });

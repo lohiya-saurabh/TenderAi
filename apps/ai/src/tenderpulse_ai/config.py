@@ -46,6 +46,8 @@ class Settings(BaseSettings):
     batch_page_window_size: int = 3
     # Page windows extracted in parallel (provider in-flight limits; 402 "in-flight" backs off).
     llm_max_concurrency: int = 3
+    # When every provider is rate-limited, how long one LLM call may wait for one to free up.
+    llm_rate_limit_max_wait_seconds: float = 180.0
     # Extraction is LLM-only. "record" saves raw responses, "replay" serves them offline
     # (tests, benchmarks); see infrastructure/llm/replay.py.
     llm_replay_mode: str = "off"

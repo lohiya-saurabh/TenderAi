@@ -18,6 +18,8 @@ import type { DocumentExtractionCompletedEvent } from '@tenderpulse/shared-types
 import { StructuredLogger } from '@/common/logging/StructuredLogger.js';
 import { LoggingContextHolder } from '@/common/logging/LoggingContext.js';
 import { randomUUID } from 'node:crypto';
+import { STORAGE_TOKEN } from '@/infrastructure/storage/storage.module.js';
+import type { IStorageService } from '@/modules/bids/application/IStorageService.js';
 import { performance } from 'node:perf_hooks';
 
 const POLL_INTERVAL_MS = 1_000;
@@ -61,6 +63,7 @@ export class DocumentProcessingRuntime implements OnModuleInit, OnModuleDestroy 
     completionService?: DocumentCompletionService,
     @Optional() private readonly configService?: ConfigService,
     @Optional() @Inject(DocumentsQueries) queries?: DocumentsQueries,
+    @Optional() @Inject(STORAGE_TOKEN) private readonly storageService?: IStorageService | null,
   ) {
     if (repoOrDb instanceof DocumentsRepository) {
       this.repository = repoOrDb;
@@ -196,6 +199,42 @@ export class DocumentProcessingRuntime implements OnModuleInit, OnModuleDestroy 
   }
 
   /**
+   * Completion events for large documents exceed the SQS message limit (1 MiB), so the
+   * worker stores them in object storage and sends a small envelope with
+   * payloadStorageReference (claim-check pattern). This loads the full event, and only
+   * from the tenant's own storage prefix, with identifiers matching the envelope.
+   */
+  private async resolveCompletionPayload(body: unknown): Promise<{
+    event: Partial<DocumentExtractionCompletedEvent>;
+    claimCheckReference?: string;
+  }> {
+    const envelope = body as Partial<DocumentExtractionCompletedEvent> & {
+      payloadStorageReference?: string;
+    };
+    const reference = envelope.payloadStorageReference;
+    if (!reference) {
+      return { event: envelope };
+    }
+    if (!this.storageService) {
+      throw new Error('Object storage is required to load a claim-checked completion event.');
+    }
+    if (!envelope.organizationId || !reference.startsWith(`tenants/${envelope.organizationId}/`)) {
+      throw new Error(`Claim-check reference ${reference} is outside the tenant's storage prefix.`);
+    }
+    const raw = await this.storageService.getObject(reference);
+    if (raw === null) {
+      throw new Error(`Claim-checked completion payload ${reference} was not found.`);
+    }
+    const event = JSON.parse(raw.toString()) as Partial<DocumentExtractionCompletedEvent>;
+    for (const key of ['jobId', 'organizationId', 'bidId', 'documentId'] as const) {
+      if (event[key] !== envelope[key]) {
+        throw new Error(`Claim-checked payload ${reference} does not match its envelope (${key}).`);
+      }
+    }
+    return { event, claimCheckReference: reference };
+  }
+
+  /**
    * Processes a completion event received from the dedicated Completion Queue.
    * Enforces Single-Writer Principle: delegates transactional write to DocumentCompletionService,
    * then deletes the message from the completion queue upon success.
@@ -204,7 +243,18 @@ export class DocumentProcessingRuntime implements OnModuleInit, OnModuleDestroy 
     message: QueueMessage<unknown>,
   ): Promise<void> {
     const { body, receiptHandle, receiveCount } = message;
-    const event = body as Partial<DocumentExtractionCompletedEvent>;
+    let event: Partial<DocumentExtractionCompletedEvent>;
+    let claimCheckReference: string | undefined;
+    try {
+      ({ event, claimCheckReference } = await this.resolveCompletionPayload(body));
+    } catch (error) {
+      // Not acknowledged: SQS redelivers after the visibility timeout, then dead-letters it.
+      this.logger.error(
+        `Could not load the claim-checked completion payload (attempt #${receiveCount}).`,
+        error,
+      );
+      return;
+    }
 
     const traceId =
       event.traceId ||
@@ -287,6 +337,14 @@ export class DocumentProcessingRuntime implements OnModuleInit, OnModuleDestroy 
 
           // Acknowledge and delete message from completion queue
           await this.completionQueue.deleteMessage(receiptHandle);
+          if (claimCheckReference) {
+            await this.storageService?.deleteObject(claimCheckReference).catch((err: unknown) =>
+              this.logger.warn(
+                `Could not delete claim-checked payload ${claimCheckReference}; it can be removed safely.`,
+                err,
+              ),
+            );
+          }
 
           const durationMs = Math.round((performance.now() - startTime) * 10) / 10;
           this.logger.info(

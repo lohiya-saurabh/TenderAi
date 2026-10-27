@@ -10,6 +10,8 @@ import {
   COMPLETION_QUEUE_TOKEN,
 } from '@/infrastructure/queue/queue.module.js';
 import type { IJobQueue } from '@/modules/bids/application/IJobQueue.js';
+import type { IStorageService } from '@/modules/bids/application/IStorageService.js';
+import { STORAGE_TOKEN } from '@/infrastructure/storage/storage.module.js';
 import { CompletionWebhookController } from '@/modules/documents/CompletionWebhookController.js';
 import { DocumentCompletionService } from '@/modules/documents/DocumentCompletionService.js';
 
@@ -29,6 +31,7 @@ import { DocumentCompletionService } from '@/modules/documents/DocumentCompletio
         completionService: DocumentCompletionService,
         configService: ConfigService,
         queries: DocumentsQueries,
+        storageService: IStorageService | null,
       ) => {
         return new DocumentProcessingRuntime(
           repo,
@@ -37,6 +40,7 @@ import { DocumentCompletionService } from '@/modules/documents/DocumentCompletio
           completionService,
           configService,
           queries,
+          storageService,
         );
       },
       inject: [
@@ -46,6 +50,7 @@ import { DocumentCompletionService } from '@/modules/documents/DocumentCompletio
         DocumentCompletionService,
         ConfigService,
         DocumentsQueries,
+        STORAGE_TOKEN,
       ],
     },
   ],

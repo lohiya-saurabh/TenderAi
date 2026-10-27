@@ -156,12 +156,77 @@ class GcpPubSubCompletionPublisher(CompletionPublisher):
             return False
 
 
+# SQS rejects messages over 1 MiB. Events for long tenders carry every page's chunks and
+# can be several MB, so above this size the full event goes to object storage and the
+# queue message carries only a pointer to it (claim-check pattern).
+CLAIM_CHECK_THRESHOLD_BYTES = 200_000
+
+# Envelope fields kept on the queue message when the payload is claim-checked.
+_ENVELOPE_KEYS = (
+    "jobId",
+    "organizationId",
+    "companyId",
+    "bidId",
+    "documentId",
+    "status",
+    "error",
+    "workflowRunId",
+    "traceId",
+    "correlationId",
+    "timestamp",
+)
+
+
+def claim_check_key(event: DocumentExtractionCompletedEvent) -> str:
+    """Object key under the tenant's own prefix; the API refuses anything outside it."""
+    return (
+        f"tenants/{event.organization_id}/bids/{event.bid_id}/{event.document_id}"
+        f"/completion-events/{event.job_id}.json"
+    )
+
+
 class AwsSqsCompletionPublisher(CompletionPublisher):
     """AWS SQS completion publisher for AWS deployments."""
 
-    def __init__(self, queue_url: str | None = None, region_name: str | None = None):
+    def __init__(
+        self,
+        queue_url: str | None = None,
+        region_name: str | None = None,
+        bucket: str | None = None,
+        claim_check_threshold_bytes: int = CLAIM_CHECK_THRESHOLD_BYTES,
+    ):
         self.queue_url = queue_url or settings.aws_completion_queue_url
         self.region_name = region_name or settings.aws_region or "ap-south-1"
+        self.bucket = bucket or settings.aws_s3_bucket
+        self.claim_check_threshold_bytes = claim_check_threshold_bytes
+
+    def build_message_body(self, event: DocumentExtractionCompletedEvent, s3: Any) -> str:
+        """Returns the SQS body, storing the full event in S3 first when it is too large."""
+        payload = event.to_camel_case_dict()
+        body = json.dumps(payload)
+        size = len(body.encode("utf-8"))
+        if size <= self.claim_check_threshold_bytes:
+            return body
+        key = claim_check_key(event)
+        s3.put_object(
+            Bucket=self.bucket, Key=key, Body=body.encode("utf-8"), ContentType="application/json"
+        )
+        logger.info(
+            "Completion event for doc_id=%s is %d bytes; stored at s3://%s/%s (claim check).",
+            event.document_id,
+            size,
+            self.bucket,
+            key,
+        )
+        envelope = {k: payload.get(k) for k in _ENVELOPE_KEYS}
+        envelope.update(
+            {
+                "payloadStorageReference": key,
+                "payloadSizeBytes": size,
+                "itemsCount": len(event.items),
+            }
+        )
+        return json.dumps(envelope)
 
     async def publish_completion(self, event: DocumentExtractionCompletedEvent) -> bool:
         if not self.queue_url:
@@ -172,11 +237,9 @@ class AwsSqsCompletionPublisher(CompletionPublisher):
             import boto3  # type: ignore
 
             sqs = boto3.client("sqs", region_name=self.region_name)
-            await asyncio.to_thread(
-                sqs.send_message,
-                QueueUrl=self.queue_url,
-                MessageBody=json.dumps(event.to_camel_case_dict()),
-            )
+            s3 = boto3.client("s3", region_name=self.region_name)
+            body = await asyncio.to_thread(self.build_message_body, event, s3)
+            await asyncio.to_thread(sqs.send_message, QueueUrl=self.queue_url, MessageBody=body)
             logger.info("Published completion event to SQS queue %s", self.queue_url)
             return True
         except ImportError as err:

@@ -486,11 +486,12 @@ async def test_openai_compatible_client_rotates_on_429_and_sets_60s_cooldown():
         api_key="test-key",
         model="primary/rate-limited",
         client=mock_client,
+        rate_limit_max_wait_seconds=0,
     )
 
     # A 429 locks out the whole provider (free-tier limits are per key): the same-provider
     # fallback models are skipped instead of producing a sequential 429 storm, and with no
-    # provider left the call fails explicitly.
+    # provider left and no wait budget the call fails explicitly.
     with pytest.raises(LLMExtractionError):
         await client.extract_compliance("sys", "user", max_retries=0)
     assert calls == ["primary/rate-limited"]
