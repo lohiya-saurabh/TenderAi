@@ -7,6 +7,7 @@ from typing import Any
 from langgraph.types import interrupt
 
 from tenderpulse_ai.agent.validation import (
+    EXTRACTION_CATEGORIES,
     clean_whitespace,
     is_dangling_fragment,
     normalize_category,
@@ -485,7 +486,7 @@ def make_llm_extraction_node(ctx: WorkflowNodeContext):
             "no added punctuation); a quote that is not an exact substring of the page is rejected.\n\n"
             "6. OUTPUT FORMAT (compact - output length is the main cost):\n"
             "Return MINIFIED JSON (no indentation, no line breaks) with exactly these keys per item:\n"
-            '{"candidates":[{"block_id":"B1","category":"FINANCIAL|TECHNICAL|STATUTORY|LEGAL|OPERATIONAL|COMMERCIAL|EXECUTION",'
+            '{"candidates":[{"block_id":"B1","category":"' + "|".join(EXTRACTION_CATEGORIES) + '",'
             '"title":"at most 8 words","description":"one plain-language sentence, at most 30 words",'
             '"quote":"exact sentence from the block"}]}\n'
             'Add "execution_rules" ONLY when the clause states a formality, with only the keys that apply: '

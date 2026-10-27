@@ -10,17 +10,102 @@ from typing import Any, TypeVar
 
 import httpx
 
-from tenderpulse_ai.agent.validation import clean_whitespace, normalize_category
+from tenderpulse_ai.agent.validation import (
+    EXTRACTION_CATEGORIES,
+    clean_whitespace,
+    normalize_category,
+)
 from tenderpulse_ai.domain.models import (
     CandidateComplianceItem,
     ExecutionRulesProps,
     ProvenanceProps,
 )
-from tenderpulse_ai.domain.requirement_attributes import parse_attributes
+from tenderpulse_ai.domain.requirement_attributes import (
+    ACTIONS,
+    DEADLINE_ANCHORS,
+    MANDATORY,
+    OBLIGATION_TYPES,
+    PARTIES,
+    STAGES,
+    parse_attributes,
+)
+from tenderpulse_ai.security.sanitizer import UNTRUSTED_DATA_DIRECTIVE, SecretSanitizer
 
 logger = logging.getLogger("tenderpulse_ai.infrastructure.llm")
 
 T = TypeVar("T")
+
+# Providers whose json_schema mode constrains decoding, so an off-list category cannot be
+# generated. Groq checks the schema only after generating and answers HTTP 400 instead, so
+# the other providers keep json_object and rely on the category re-ask.
+STRICT_SCHEMA_PROVIDERS = frozenset({"cerebras"})
+
+
+def _strict_object(properties: dict[str, Any], required: tuple[str, ...] = ()) -> dict[str, Any]:
+    return {
+        "type": "object",
+        "properties": properties,
+        "required": list(required),
+        "additionalProperties": False,
+    }
+
+
+def _enum(values: Any) -> dict[str, Any]:
+    return {"type": "string", "enum": sorted(values)}
+
+
+# The extraction output format of the prompt, as a strict JSON schema (optional keys stay
+# optional, so the model still omits what the quote does not state).
+CANDIDATES_SCHEMA = _strict_object(
+    {
+        "candidates": {
+            "type": "array",
+            "items": _strict_object(
+                {
+                    "block_id": {"type": "string"},
+                    "category": _enum(EXTRACTION_CATEGORIES),
+                    "title": {"type": "string"},
+                    "description": {"type": "string"},
+                    "quote": {"type": "string"},
+                    "execution_rules": _strict_object(
+                        {
+                            "stamp_paper_required": {"type": "boolean"},
+                            "stamp_paper_denomination_inr": {"type": "number"},
+                            "notarization_required": {"type": "boolean"},
+                            "udin_required": {"type": "boolean"},
+                            "apostille_required": {"type": "boolean"},
+                            "client_countersign_required": {"type": "boolean"},
+                            "signing_authority_rank": {"type": "string"},
+                        }
+                    ),
+                    "obligation": _enum(OBLIGATION_TYPES),
+                    "action": _enum(ACTIONS),
+                    "stage": _enum(STAGES),
+                    "parties": {"type": "array", "items": _enum(PARTIES)},
+                    "mandatory": _enum(MANDATORY),
+                    "disqualifying": {"type": "boolean"},
+                    "deadline": _strict_object(
+                        {
+                            "date": {"type": "string"},
+                            "anchor": _enum(DEADLINE_ANCHORS),
+                            "offset_days": {"type": "integer"},
+                        }
+                    ),
+                    "amount": _strict_object(
+                        {
+                            "inr": {"type": "number"},
+                            "percent": {"type": "number"},
+                            "basis": {"type": "string"},
+                        }
+                    ),
+                    "form_ref": {"type": "string"},
+                },
+                required=("block_id", "category", "title", "description", "quote"),
+            ),
+        }
+    },
+    required=("candidates",),
+)
 
 
 class LLMExtractionError(RuntimeError):
@@ -664,12 +749,70 @@ class OpenAICompatibleLlmClient:
         block_map: dict[str, Any] | None = None,
     ) -> list[CandidateComplianceItem]:
         """Structured compliance candidates (block_map resolves source_block_id provenance)."""
-        return await self.complete_structured(
+        off_list: list[dict[str, Any]] = []
+        candidates = await self.complete_structured(
             system_prompt,
             user_prompt,
-            parse=lambda data: self._parse_response(data, block_map=block_map),
+            parse=lambda data: self._parse_response(data, block_map=block_map, off_list=off_list),
             max_retries=max_retries,
+            json_schema=CANDIDATES_SCHEMA,
         )
+        if off_list:
+            candidates += await self._recategorize(off_list, block_map, max_retries)
+        return candidates
+
+    async def _recategorize(
+        self,
+        items: list[dict[str, Any]],
+        block_map: dict[str, Any] | None,
+        max_retries: int,
+    ) -> list[CandidateComplianceItem]:
+        """Re-asks for the category of items the model put outside the taxonomy.
+
+        Dropping them lost real obligations (a model filing an eligibility criterion under
+        "ELIGIBILITY"); mapping them in code would be a guess. Items still off the list
+        after the re-ask, or a failed re-ask, are dropped as before.
+        """
+        logger.info(
+            "[OpenAICompatibleClient] Re-asking the category of %d item(s) outside the taxonomy",
+            len(items),
+        )
+        system_prompt = (
+            'You correct the "category" of tender compliance items. Allowed categories: '
+            + "|".join(EXTRACTION_CATEGORIES)
+            + '. Return {"candidates":[...]} with every listed item, each unchanged except '
+            '"category", which must be the allowed category that fits it best. '
+            + UNTRUSTED_DATA_DIRECTIVE
+        )
+        # The items echo model output, which may echo document text.
+        user_prompt = SecretSanitizer.wrap_untrusted_context(
+            "off_taxonomy_items", json.dumps({"candidates": items}, ensure_ascii=False)
+        )
+        still_off: list[dict[str, Any]] = []
+        try:
+            fixed = await self.complete_structured(
+                system_prompt,
+                user_prompt,
+                parse=lambda data: self._parse_response(
+                    data, block_map=block_map, off_list=still_off
+                ),
+                max_retries=max_retries,
+                json_schema=CANDIDATES_SCHEMA,
+            )
+        except LLMExtractionError as err:
+            logger.warning(
+                "[OpenAICompatibleClient] Category re-ask failed; dropping %d item(s): %s",
+                len(items),
+                err,
+            )
+            return []
+        if still_off:
+            logger.warning(
+                "[OpenAICompatibleClient] Dropping %d item(s) still outside the taxonomy: %s",
+                len(still_off),
+                sorted({str(raw.get("category")) for raw in still_off}),
+            )
+        return fixed
 
     async def complete_structured(
         self,
@@ -677,11 +820,14 @@ class OpenAICompatibleLlmClient:
         user_prompt: str,
         parse: Callable[[dict[str, Any]], T],
         max_retries: int = 1,
+        json_schema: dict[str, Any] | None = None,
     ) -> T:
         """JSON-mode completion with multi-provider rotation on 429 / unavailability.
 
         ``parse`` turns the raw chat-completion response into the result; when it raises
         (empty or invalid output) the next model is tried. Honours LLM_REPLAY_MODE.
+        ``json_schema`` (strict) is sent to providers that enforce it while decoding
+        (STRICT_SCHEMA_PROVIDERS); the others get plain JSON mode.
         Raises LLMExtractionError when no model produced a parseable answer.
         """
         payload: dict[str, Any] = {
@@ -724,6 +870,14 @@ class OpenAICompatibleLlmClient:
                     headers.update(ep.extra_headers)
 
                 payload["model"] = ep.model
+                payload["response_format"] = (
+                    {
+                        "type": "json_schema",
+                        "json_schema": {"name": "output", "strict": True, "schema": json_schema},
+                    }
+                    if json_schema and ep.provider in STRICT_SCHEMA_PROVIDERS
+                    else {"type": "json_object"}
+                )
                 # Structured JSON extraction needs no chain-of-thought: reasoning models otherwise
                 # spend max_tokens on hidden reasoning and return empty content (finish="length").
                 apply_reasoning_controls(payload, ep)
@@ -1011,7 +1165,11 @@ class OpenAICompatibleLlmClient:
         self,
         data: dict[str, Any],
         block_map: dict[str, Any] | None = None,
+        off_list: list[dict[str, Any]] | None = None,
     ) -> list[CandidateComplianceItem]:
+        """Parses candidates; items with an off-taxonomy category are collected in off_list."""
+        if off_list is not None:
+            off_list.clear()  # a retry on another model parses a fresh answer
         choices = data.get("choices", [])
         if not choices:
             raise RuntimeError("[OpenAICompatibleClient] Upstream response contained 0 choices.")
@@ -1058,7 +1216,7 @@ class OpenAICompatibleLlmClient:
         candidates: list[CandidateComplianceItem] = []
         for raw in raw_items:
             try:
-                candidate = self._build_candidate(raw, block_map=block_map)
+                candidate = self._build_candidate(raw, block_map=block_map, off_list=off_list)
                 if candidate:
                     candidates.append(candidate)
             except (KeyError, ValueError, TypeError, AttributeError) as build_err:
@@ -1072,6 +1230,7 @@ class OpenAICompatibleLlmClient:
         self,
         raw: dict[str, Any],
         block_map: dict[str, Any] | None = None,
+        off_list: list[dict[str, Any]] | None = None,
     ) -> CandidateComplianceItem | None:
         raw_title = (
             raw.get("title")
@@ -1089,7 +1248,9 @@ class OpenAICompatibleLlmClient:
         try:
             category = normalize_category(raw_cat)
         except Exception:
-            logger.debug("[OpenAICompatibleClient] Dropping item with unknown category %r", raw_cat)
+            logger.debug("[OpenAICompatibleClient] Item with unknown category %r", raw_cat)
+            if off_list is not None:
+                off_list.append(raw)
             return None
 
         description = clean_whitespace(

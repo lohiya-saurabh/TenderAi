@@ -5,6 +5,17 @@ import re
 # Deterministic validation for agent output. These functions are the trust boundary:
 # nothing leaves the agent unless it passes grounding verification here.
 
+# The categories the extraction prompt offers and the structured-output schema enforces.
+EXTRACTION_CATEGORIES = (
+    "FINANCIAL",
+    "TECHNICAL",
+    "STATUTORY",
+    "LEGAL",
+    "OPERATIONAL",
+    "COMMERCIAL",
+    "EXECUTION",
+)
+
 CANONICAL_CATEGORIES = {
     "FINANCIAL",
     "EXECUTION",
