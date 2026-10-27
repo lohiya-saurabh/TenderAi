@@ -139,3 +139,50 @@ async def test_time_spent_waiting_does_not_eat_the_rotation_budget():
 
     assert len(items) == 1
     assert calls == ["a/model", "b/model", "a/model", "b/model"]
+
+
+async def test_a_timeout_on_one_provider_waits_for_the_rate_limited_others():
+    """Page 42 of a 99-page tender: one provider timed out while the rest were rate-limited."""
+    calls: list[str] = []
+
+    def handler(request: httpx.Request):
+        model = json.loads(request.content)["model"]
+        calls.append(model)
+        if model == "slow/model":
+            raise httpx.ReadTimeout("")  # stringifies to '' like the real timeout
+        if calls.count("fast/model") == 1:
+            return httpx.Response(429, headers={"retry-after": "1"}, json={"error": "slow down"})
+        content = json.dumps(_CANDIDATES)
+        return httpx.Response(200, json={"choices": [{"message": {"content": content}}]})
+
+    endpoints = [
+        LlmEndpoint(provider="f", base_url="https://f.example/v1", api_key="k", model="fast/model"),
+        LlmEndpoint(provider="s", base_url="https://s.example/v1", api_key="k", model="slow/model"),
+    ]
+    client = OpenAICompatibleLlmClient(
+        endpoints=endpoints,
+        client=httpx.AsyncClient(transport=httpx.MockTransport(handler)),
+        rate_limit_max_wait_seconds=10,
+    )
+
+    items = await client.extract_compliance("sys", "user", max_retries=0)
+
+    assert len(items) == 1
+    assert calls == ["fast/model", "slow/model", "fast/model"]
+
+
+async def test_an_outage_with_nothing_rate_limited_still_fails_fast():
+    def handler(request: httpx.Request):
+        raise httpx.ReadTimeout("")
+
+    client = OpenAICompatibleLlmClient(
+        api_key="test-key",
+        model="only/model",
+        client=httpx.AsyncClient(transport=httpx.MockTransport(handler)),
+        rate_limit_max_wait_seconds=60,
+    )
+
+    started = time.monotonic()
+    with pytest.raises(LLMExtractionError, match="ReadTimeout"):
+        await client.extract_compliance("sys", "user", max_retries=0)
+    assert time.monotonic() - started < 5

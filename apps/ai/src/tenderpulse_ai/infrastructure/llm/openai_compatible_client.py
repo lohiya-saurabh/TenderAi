@@ -130,6 +130,22 @@ def block_provider(base_url: str, duration: float = 60.0) -> None:
     _PROVIDER_BLOCKED_UNTIL[base_url.rstrip("/")] = time.time() + duration
 
 
+TRANSIENT_ERROR_COOLDOWN_SECONDS = 30.0
+
+
+def cool_down(ep: LlmEndpoint, seconds: float) -> None:
+    """Cools an endpoint for at least `seconds`, never shortening a longer cooldown."""
+    until = time.time() + seconds
+    for key in (ep.model, f"{ep.base_url}::{ep.model}"):
+        _MODEL_COOLDOWNS[key] = max(_MODEL_COOLDOWNS.get(key, 0.0), until)
+
+
+def describe_error(exc: BaseException) -> str:
+    """Timeouts often stringify to '', which made 'last error:' messages blank."""
+    text = str(exc)
+    return f"{type(exc).__name__}: {text}" if text else type(exc).__name__
+
+
 def rate_limit_cooldown_seconds(response: Any) -> float:
     """Seconds to back off after a 429: the provider's Retry-After when given, else 60s."""
     raw = (getattr(response, "headers", None) or {}).get("retry-after")
@@ -140,14 +156,19 @@ def rate_limit_cooldown_seconds(response: Any) -> float:
     return min(max(seconds, 1.0), 60.0)
 
 
-def seconds_until_an_endpoint_frees(endpoints: list[LlmEndpoint]) -> float | None:
+def seconds_until_an_endpoint_frees(
+    endpoints: list[LlmEndpoint], rate_limited_only: bool = False
+) -> float | None:
     """
     Time until the soonest rate-limited endpoint can be tried again, or None when none
     of them will ever free up (all permanently unavailable, or no endpoints at all).
+    With rate_limited_only, only endpoints whose provider is blocked by a 429 count.
     """
     now = time.time()
     soonest: float | None = None
     for ep in endpoints:
+        if rate_limited_only and not is_provider_blocked(ep.base_url):
+            continue
         model_until = max(
             _MODEL_COOLDOWNS.get(ep.model, 0.0),
             _MODEL_COOLDOWNS.get(f"{ep.base_url}::{ep.model}", 0.0),
@@ -888,10 +909,13 @@ class OpenAICompatibleLlmClient:
                             404,
                             429,
                         ):
+                            cool_down(ep, TRANSIENT_ERROR_COOLDOWN_SECONDS)
                             break
                         if attempt < max_retries:
                             await asyncio.sleep(0.5 * (2**attempt))
                             continue
+                        # Retries spent: rest this endpoint briefly so the others go first.
+                        cool_down(ep, TRANSIENT_ERROR_COOLDOWN_SECONDS)
                         break
                     except Exception as exc:  # noqa: BLE001
                         duration_ms = round((time.perf_counter() - start_time) * 1000, 1)
@@ -911,13 +935,18 @@ class OpenAICompatibleLlmClient:
                         )
                         break
 
-            if last_error:
-                raise LLMExtractionError(
-                    f"All LLM endpoints failed; last error: {last_error}"
-                ) from last_error
-            wait = seconds_until_an_endpoint_frees(self._all_endpoints())
+            # One provider timing out is no reason to fail the page while others are only
+            # rate-limited: keep going while one frees up within the budget. With no
+            # rate-limited provider left (a real outage), fail fast as before.
+            wait = seconds_until_an_endpoint_frees(
+                self._all_endpoints(), rate_limited_only=last_error is not None
+            )
             budget = self.rate_limit_max_wait_seconds
             if wait is None or waited + wait > budget:
+                if last_error:
+                    raise LLMExtractionError(
+                        f"All LLM endpoints failed; last error: {describe_error(last_error)}"
+                    ) from last_error
                 raise LLMExtractionError(
                     "No LLM endpoint available (none configured, or all providers blocked/cooling"
                     f" down; waited {waited:.0f}s of a {budget:.0f}s budget)."
