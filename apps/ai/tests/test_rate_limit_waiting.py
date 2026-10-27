@@ -9,6 +9,7 @@ import pytest
 from tenderpulse_ai.infrastructure.llm.openai_compatible_client import (
     _MODEL_COOLDOWNS,
     _PROVIDER_BLOCKED_UNTIL,
+    _RATE_LIMITED_UNTIL,
     LlmEndpoint,
     LLMExtractionError,
     OpenAICompatibleLlmClient,
@@ -42,9 +43,11 @@ _CANDIDATES = {
 def clean_cooldowns():
     _MODEL_COOLDOWNS.clear()
     _PROVIDER_BLOCKED_UNTIL.clear()
+    _RATE_LIMITED_UNTIL.clear()
     yield
     _MODEL_COOLDOWNS.clear()
     _PROVIDER_BLOCKED_UNTIL.clear()
+    _RATE_LIMITED_UNTIL.clear()
 
 
 @pytest.mark.parametrize(
@@ -217,3 +220,35 @@ async def test_a_hanging_provider_is_not_retried_before_rotating():
     assert len(items) == 1
     assert calls.count("slow/model") == 1  # one timeout, then rotate; not three
     assert calls[-1] == "fast/model"
+
+
+async def test_per_model_providers_rest_only_the_rate_limited_model():
+    """Cerebras/Groq meter per model: a 429 on one must not lock out its siblings."""
+    calls: list[str] = []
+
+    def handler(request: httpx.Request):
+        model = json.loads(request.content)["model"]
+        calls.append(model)
+        if model == "gpt-oss-120b":
+            return httpx.Response(429, headers={"retry-after": "30"}, json={"error": "5 req/min"})
+        content = json.dumps(_CANDIDATES)
+        return httpx.Response(200, json={"choices": [{"message": {"content": content}}]})
+
+    base = "https://api.cerebras.ai/v1"
+    endpoints = [
+        LlmEndpoint(provider="cerebras", base_url=base, api_key="k", model="gpt-oss-120b"),
+        LlmEndpoint(provider="cerebras", base_url=base, api_key="k", model="qwen-3.8-27b"),
+    ]
+    client = OpenAICompatibleLlmClient(
+        endpoints=endpoints,
+        client=httpx.AsyncClient(transport=httpx.MockTransport(handler)),
+        rate_limit_max_wait_seconds=0,
+    )
+
+    started = time.monotonic()
+    items = await client.extract_compliance("sys", "user", max_retries=0)
+
+    assert len(items) == 1
+    assert calls == ["gpt-oss-120b", "qwen-3.8-27b"]  # sibling used at once, no wait
+    assert time.monotonic() - started < 2
+    assert base not in _PROVIDER_BLOCKED_UNTIL

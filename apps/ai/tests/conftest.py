@@ -30,9 +30,13 @@ def pytest_collection_modifyitems(config, items):
 def hermetic_test_isolation(request, monkeypatch):
     """Offline tests never reach a live gateway, whatever keys .env provides: an unconfigured
     StructuredLLMClient fails with LLMExtractionError, and tests inject tests/fakes.FakeLLM."""
-    from tenderpulse_ai.infrastructure.llm.openai_compatible_client import _PROVIDER_BLOCKED_UNTIL
+    from tenderpulse_ai.infrastructure.llm.openai_compatible_client import (
+        _PROVIDER_BLOCKED_UNTIL,
+        _RATE_LIMITED_UNTIL,
+    )
 
     _PROVIDER_BLOCKED_UNTIL.clear()  # provider circuit breaker is process-global
+    _RATE_LIMITED_UNTIL.clear()
     if request.node.get_closest_marker("live"):
         return
     for key in (

@@ -55,12 +55,13 @@ PROVIDER_SPECS: dict[str, dict[str, Any]] = {
     },
     "groq": {
         "base_url": "https://api.groq.com/openai/v1",
-        "models": ["openai/gpt-oss-120b", "qwen/qwen3.8-27b"],
+        "models": ["openai/gpt-oss-120b", "qwen/qwen3.8-27b", "openai/gpt-oss-20b"],
         "extra_headers": {},
     },
     "cerebras": {
         "base_url": "https://api.cerebras.ai/v1",
-        "models": ["gpt-oss-120b", "qwen-3.8-27b"],
+        # qwen first: 450 req/min and 150k tokens/min on the free tier vs 5 req/min for gpt-oss.
+        "models": ["qwen-3.8-27b", "gpt-oss-120b"],
         "extra_headers": {},
     },
     "sambanova": {
@@ -130,6 +131,32 @@ def block_provider(base_url: str, duration: float = 60.0) -> None:
     _PROVIDER_BLOCKED_UNTIL[base_url.rstrip("/")] = time.time() + duration
 
 
+# Groq, Cerebras, Gemini and SambaNova meter their free tiers per model, not per key: on
+# 2026-10-27 their x-ratelimit headers showed e.g. Cerebras qwen-3.8-27b at 450 req/min and
+# 150k tokens/min while gpt-oss-120b on the same key allows 5 req/min. A 429 there rests only
+# that model; locking the whole provider threw away most of the available capacity.
+# OpenRouter's free tier is per key, so it (and unknown "custom" endpoints) keep the lockout.
+PER_MODEL_RATE_LIMIT_PROVIDERS = frozenset({"groq", "cerebras", "gemini", "sambanova"})
+
+# Model-scoped 429 lockouts: "base_url::model" -> unix time it frees up.
+_RATE_LIMITED_UNTIL: dict[str, float] = {}
+
+
+def is_rate_limited(ep: LlmEndpoint) -> bool:
+    return is_provider_blocked(ep.base_url) or time.time() < _RATE_LIMITED_UNTIL.get(
+        f"{ep.base_url}::{ep.model}", 0.0
+    )
+
+
+def mark_rate_limited(ep: LlmEndpoint, seconds: float) -> str:
+    """Records a 429 at the right scope; returns "model" or "provider" for logging."""
+    if ep.provider in PER_MODEL_RATE_LIMIT_PROVIDERS:
+        _RATE_LIMITED_UNTIL[f"{ep.base_url}::{ep.model}"] = time.time() + seconds
+        return "model"
+    block_provider(ep.base_url, seconds)
+    return "provider"
+
+
 TRANSIENT_ERROR_COOLDOWN_SECONDS = 30.0
 
 
@@ -167,7 +194,7 @@ def seconds_until_an_endpoint_frees(
     now = time.time()
     soonest: float | None = None
     for ep in endpoints:
-        if rate_limited_only and not is_provider_blocked(ep.base_url):
+        if rate_limited_only and not is_rate_limited(ep):
             continue
         model_until = max(
             _MODEL_COOLDOWNS.get(ep.model, 0.0),
@@ -175,7 +202,12 @@ def seconds_until_an_endpoint_frees(
         )
         if model_until == float("inf"):
             continue
-        free_at = max(_PROVIDER_BLOCKED_UNTIL.get(ep.base_url.rstrip("/"), 0.0), model_until, now)
+        free_at = max(
+            _PROVIDER_BLOCKED_UNTIL.get(ep.base_url.rstrip("/"), 0.0),
+            _RATE_LIMITED_UNTIL.get(f"{ep.base_url}::{ep.model}", 0.0),
+            model_until,
+            now,
+        )
         soonest = free_at if soonest is None else min(soonest, free_at)
     return None if soonest is None else soonest - now
 
@@ -363,12 +395,13 @@ class OpenAICompatibleLlmClient:
             if s_key:
                 _add_provider_endpoints("sambanova", s_key)
         else:
-            # Option C: Multi-Provider Free Rotation, fastest first
-            # (Groq + Cerebras ~1s, Gemini ~3s, SambaNova often overloaded, then OpenRouter)
-            if getattr(settings, "groq_api_key", None):
-                _add_provider_endpoints("groq", settings.groq_api_key)
+            # Option C: Multi-Provider Free Rotation, highest free-tier capacity first
+            # (Cerebras qwen 150k tok/min, Groq 8k tok/min per model, Gemini ~3s,
+            # SambaNova often overloaded, then OpenRouter)
             if getattr(settings, "cerebras_api_key", None):
                 _add_provider_endpoints("cerebras", settings.cerebras_api_key)
+            if getattr(settings, "groq_api_key", None):
+                _add_provider_endpoints("groq", settings.groq_api_key)
             if getattr(settings, "gemini_api_key", None):
                 _add_provider_endpoints("gemini", settings.gemini_api_key)
             if getattr(settings, "sambanova_api_key", None):
@@ -458,7 +491,7 @@ class OpenAICompatibleLlmClient:
         cooling: list[LlmEndpoint] = []
 
         for ep in endpoints:
-            if is_provider_blocked(ep.base_url):
+            if is_rate_limited(ep):
                 continue
             expiry = _MODEL_COOLDOWNS.get(ep.model) or _MODEL_COOLDOWNS.get(
                 f"{ep.base_url}::{ep.model}"
@@ -518,7 +551,7 @@ class OpenAICompatibleLlmClient:
 
             payload["model"] = ep.model
             apply_reasoning_controls(payload, ep)
-            if is_provider_blocked(ep.base_url):
+            if is_rate_limited(ep):
                 continue
 
             for attempt in range(max_retries + 1):
@@ -536,11 +569,12 @@ class OpenAICompatibleLlmClient:
                     if response.status_code == 429:
                         _MODEL_COOLDOWNS[ep.model] = time.time() + 60.0
                         _MODEL_COOLDOWNS[k] = time.time() + 60.0
-                        block_provider(ep.base_url)
+                        scope = mark_rate_limited(ep, 60.0)
                         logger.warning(
-                            "[OpenAICompatibleClient] Endpoint '%s' (%s) rate-limited (429). Locking out the whole provider for 60s and rotating to the next provider...",
+                            "[OpenAICompatibleClient] Endpoint '%s' (%s) rate-limited (429). Resting this %s for 60s and rotating...",
                             ep.model,
                             ep.provider,
+                            scope,
                         )
                         break
 
@@ -693,7 +727,7 @@ class OpenAICompatibleLlmClient:
                 # Structured JSON extraction needs no chain-of-thought: reasoning models otherwise
                 # spend max_tokens on hidden reasoning and return empty content (finish="length").
                 apply_reasoning_controls(payload, ep)
-                if is_provider_blocked(ep.base_url):
+                if is_rate_limited(ep):
                     continue
                 # Rotation budget: never chain slow models past the client timeout; the caller
                 # falls back to deterministic extraction instead.
@@ -741,11 +775,12 @@ class OpenAICompatibleLlmClient:
                             cooldown = rate_limit_cooldown_seconds(response)
                             _MODEL_COOLDOWNS[ep.model] = time.time() + cooldown
                             _MODEL_COOLDOWNS[k] = time.time() + cooldown
-                            block_provider(ep.base_url, cooldown)
+                            scope = mark_rate_limited(ep, cooldown)
                             logger.warning(
-                                "[OpenAICompatibleClient] Endpoint '%s' (%s) rate-limited (429). Locking out the whole provider for %.0fs and rotating to the next provider...",
+                                "[OpenAICompatibleClient] Endpoint '%s' (%s) rate-limited (429). Resting this %s for %.0fs and rotating...",
                                 ep.model,
                                 ep.provider,
+                                scope,
                                 cooldown,
                                 extra={
                                     "event": "llm.request.rate_limited",
