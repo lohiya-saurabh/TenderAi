@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { ensureOrganizations } from '@/test/support/organizations.js';
 import { PGlite } from '@electric-sql/pglite';
 import { eq } from 'drizzle-orm';
 import { initDatabase } from '@/common/database/database.provider.js';
@@ -64,6 +65,7 @@ describe('GetBidDecisionUseCase — bid/no-bid evaluation pipeline', () => {
     organizationId: string = orgId,
     opts: { deadline?: string | null; location?: string | null } = {},
   ) => {
+    await ensureOrganizations(drizzleDb, orgId, rivalOrgId);
     await drizzleDb.insert(schema.bids).values({
       id,
       organizationId,
@@ -176,6 +178,8 @@ describe('GetBidDecisionUseCase — bid/no-bid evaluation pipeline', () => {
       seedBidsAndCompliance: false,
     });
     drizzleDb = createDrizzle(db);
+
+    await ensureOrganizations(drizzleDb, orgId, rivalOrgId);
 
     await drizzleDb
       .insert(schema.companies)

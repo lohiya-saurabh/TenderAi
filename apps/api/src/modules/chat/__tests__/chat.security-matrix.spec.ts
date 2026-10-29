@@ -66,6 +66,15 @@ describe('ChatService — Parameterized Multi-Tenant Security & Anti-IDOR Matrix
       BIDS[orgId] = bidId;
 
       await drizzleDb
+        .insert(schema.companies)
+        .values({
+          id: `comp_${key.toLowerCase()}_001`,
+          organizationId: orgId,
+          legalName: `${key} Infra`,
+        })
+        .onConflictDoNothing();
+
+      await drizzleDb
         .insert(schema.bids)
         .values({
           id: bidId,
@@ -80,12 +89,42 @@ describe('ChatService — Parameterized Multi-Tenant Security & Anti-IDOR Matrix
 
   // Cross-tenant access test matrix: 3 tenants x 2 cross-target tenants = 6 combinations
   const CROSS_TENANT_PAIRS = [
-    { requesterOrg: TENANTS.ALPHA, requesterUser: USERS.USER_ALPHA, targetOrg: TENANTS.BETA, targetUser: USERS.USER_BETA },
-    { requesterOrg: TENANTS.ALPHA, requesterUser: USERS.USER_ALPHA, targetOrg: TENANTS.GAMMA, targetUser: USERS.USER_GAMMA },
-    { requesterOrg: TENANTS.BETA, requesterUser: USERS.USER_BETA, targetOrg: TENANTS.ALPHA, targetUser: USERS.USER_ALPHA },
-    { requesterOrg: TENANTS.BETA, requesterUser: USERS.USER_BETA, targetOrg: TENANTS.GAMMA, targetUser: USERS.USER_GAMMA },
-    { requesterOrg: TENANTS.GAMMA, requesterUser: USERS.USER_GAMMA, targetOrg: TENANTS.ALPHA, targetUser: USERS.USER_ALPHA },
-    { requesterOrg: TENANTS.GAMMA, requesterUser: USERS.USER_GAMMA, targetOrg: TENANTS.BETA, targetUser: USERS.USER_BETA },
+    {
+      requesterOrg: TENANTS.ALPHA,
+      requesterUser: USERS.USER_ALPHA,
+      targetOrg: TENANTS.BETA,
+      targetUser: USERS.USER_BETA,
+    },
+    {
+      requesterOrg: TENANTS.ALPHA,
+      requesterUser: USERS.USER_ALPHA,
+      targetOrg: TENANTS.GAMMA,
+      targetUser: USERS.USER_GAMMA,
+    },
+    {
+      requesterOrg: TENANTS.BETA,
+      requesterUser: USERS.USER_BETA,
+      targetOrg: TENANTS.ALPHA,
+      targetUser: USERS.USER_ALPHA,
+    },
+    {
+      requesterOrg: TENANTS.BETA,
+      requesterUser: USERS.USER_BETA,
+      targetOrg: TENANTS.GAMMA,
+      targetUser: USERS.USER_GAMMA,
+    },
+    {
+      requesterOrg: TENANTS.GAMMA,
+      requesterUser: USERS.USER_GAMMA,
+      targetOrg: TENANTS.ALPHA,
+      targetUser: USERS.USER_ALPHA,
+    },
+    {
+      requesterOrg: TENANTS.GAMMA,
+      requesterUser: USERS.USER_GAMMA,
+      targetOrg: TENANTS.BETA,
+      targetUser: USERS.USER_BETA,
+    },
   ];
 
   for (const pair of CROSS_TENANT_PAIRS) {
@@ -150,9 +189,9 @@ describe('ChatService — Parameterized Multi-Tenant Security & Anti-IDOR Matrix
         role: 'ADMIN',
       });
 
-      await expect(
-        chatService.listConversations({ bidId: BIDS[pair.targetOrg] }),
-      ).rejects.toThrow(NotFoundError);
+      await expect(chatService.listConversations({ bidId: BIDS[pair.targetOrg] })).rejects.toThrow(
+        NotFoundError,
+      );
     });
   }
 });

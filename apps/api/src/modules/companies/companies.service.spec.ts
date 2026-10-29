@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { ensureOrganizations } from '@/test/support/organizations.js';
 import { PGlite } from '@electric-sql/pglite';
 import { initDatabase } from '@/common/database/database.provider.js';
 import { createDrizzle } from '@/common/database/database.module.js';
@@ -28,6 +29,8 @@ describe('CompaniesService — onboarding preferences', () => {
     drizzleDb = createDrizzle(db);
     profileService = new CompanyProfileService(drizzleDb);
     service = new CompaniesService(drizzleDb, profileService);
+
+    await ensureOrganizations(drizzleDb, orgId, rivalOrgId);
 
     await drizzleDb
       .insert(schema.companies)

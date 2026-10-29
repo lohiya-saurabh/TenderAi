@@ -15,10 +15,12 @@ PostgreSQL 16 is the system of record. Only the NestJS API writes to it; the AI 
 
 ## 2. Migrations
 
-- **Location.** Migrations are TypeScript files in `common/database/migrations/` (`0001_baseline.ts`, `0002_notifications_recipient_fk.ts`, `0003_user_invites.ts`, …), listed in `migrations/index.ts`.
+- **Location.** Migrations are TypeScript files in `common/database/migrations/` (`0001_baseline.ts`, `0002_notifications_recipient_fk.ts`, `0003_user_invites.ts`, `0004_drop_auto_provision_triggers.ts`, …), listed in `migrations/index.ts`.
 - **How they run.** On startup the migrator applies pending migrations in order, each in its own transaction, and records each in `schema_migrations` with a checksum.
 - **Concurrency.** A Postgres advisory lock makes several API instances, such as ECS tasks starting together, wait instead of racing.
 - **Never edit an applied migration.** The checksum check refuses to start if one changed.
+
+**Parents are never invented.** Migration 0004 removed the baseline's auto-provision triggers, which created any missing organization, company, bid, evidence document or user (even ADMIN users with a placeholder password) on insert. An insert with a missing parent now fails on its foreign key; test fixtures create parents explicitly (`src/test/support/organizations.ts`).
 
 To change the schema, edit the Drizzle schema and add the next `NNNN_description.ts` with the matching SQL. Real-Postgres tests (`apps/api/src/test/postgres/`, enabled by `TEST_DATABASE_URL`) cover the driver, migrations, demo seed and outbox claiming.
 

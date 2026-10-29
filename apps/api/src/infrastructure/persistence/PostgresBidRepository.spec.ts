@@ -16,6 +16,10 @@ describe('Infrastructure: PostgresBidRepository Unit & Integration Tests', () =>
   beforeEach(async () => {
     db = new PGlite();
     await initDatabase(db, { seedUsers: true, seedFullProfile: true, seedBidsAndCompliance: true });
+    // The database no longer invents missing parents: the foreign tenant must exist.
+    await db.exec(
+      "INSERT INTO organizations (id, name) VALUES ('org_different_corp_002', 'Different Corp')",
+    );
     eventBus = new InMemoryEventBus();
     repo = new PostgresBidRepository(db, eventBus);
   });

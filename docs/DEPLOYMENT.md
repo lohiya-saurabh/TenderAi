@@ -70,6 +70,8 @@ Stage 7 assumes an AWS role through GitHub OIDC (no static keys), then:
 
 **Branching.** Work lands on `develop`; `main` is only ever a merge from `develop` (see [CONTRIBUTING.md](../CONTRIBUTING.md)).
 
+**Local containers.** `docker compose up` builds the three services, plus Postgres and LocalStack. The API and worker read the same `.env` and `apps/ai/.env` as `npm run dev`; only the in-network addresses (`DATABASE_URL`, `AI_ENGINE_URL`, `API_GATEWAY_URL`) are overridden.
+
 ## 3. Database in AWS
 
 - **Migrations** run on API startup under an advisory lock, so a rolling deploy with several tasks is safe (see [DATABASE.md](DATABASE.md) §2).

@@ -11,6 +11,7 @@
  * 7. 6-state verification lifecycle and immutable verification history
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { ensureOrganizations } from '@/test/support/organizations.js';
 import { PGlite } from '@electric-sql/pglite';
 import { eq } from 'drizzle-orm';
 import crypto from 'node:crypto';
@@ -84,6 +85,7 @@ describe('Company Evidence & Third-Party Verification Layer', () => {
     );
 
     // Seed test companies
+    await ensureOrganizations(db, TEST_ORG_ID, OTHER_ORG_ID);
     await db.insert(schema.companies).values({
       id: TEST_COMPANY_ID,
       organizationId: TEST_ORG_ID,
@@ -96,6 +98,8 @@ describe('Company Evidence & Third-Party Verification Layer', () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     });
+
+    await ensureOrganizations(db, TEST_ORG_ID, OTHER_ORG_ID);
 
     await db.insert(schema.companies).values({
       id: 'comp_foreign_001',
@@ -216,6 +220,7 @@ describe('Company Evidence & Third-Party Verification Layer', () => {
     it('should detect discrepancy when entered company name differs from GSTIN registered name', async () => {
       // Create company with conflicting name
       const conflictingId = 'comp_name_mismatch_001';
+      await ensureOrganizations(db, TEST_ORG_ID, OTHER_ORG_ID);
       await db.insert(schema.companies).values({
         id: conflictingId,
         organizationId: TEST_ORG_ID,

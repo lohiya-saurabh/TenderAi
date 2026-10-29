@@ -18,6 +18,7 @@ import {
 } from './application/evidence-matches.projection.js';
 import {
   buildRiskFindings,
+  type ClauseRiskSignals,
   type StatutoryRiskItem,
   type CommercialRiskItem,
   type RiskFindingsResult,
@@ -150,10 +151,22 @@ export class ComplianceService {
       throw new NotFoundError(`Bid project '${bidId}' not found.`);
     }
 
-    const mappedItems = await this.listItems(bidId);
+    const records = deduplicateComplianceItems(
+      await this.repository.listItemsByBidId(bidId, orgId),
+    );
+    const mappedItems = records.map((row) => mapComplianceRecord(row));
+    const signals = new Map(
+      records.map((row) => [
+        row.id,
+        {
+          attributes: (row.attributes ?? null) as ClauseRiskSignals['attributes'],
+          flags: (row.flags ?? []) as string[],
+        },
+      ]),
+    );
     const decisionRecord = await this.queries.findLatestBidDecision(bidId, orgId);
 
-    return buildRiskFindings(bid.id, bid.tenderNumber, mappedItems, decisionRecord);
+    return buildRiskFindings(bid.id, bid.tenderNumber, mappedItems, decisionRecord, signals);
   }
 
   public async reviewItem(

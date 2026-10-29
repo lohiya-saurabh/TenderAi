@@ -3,6 +3,7 @@
  * Frontend → API Controller/Service → S3 Storage → SQS Job Queue → Ingestion Worker → AI Extraction → PostgreSQL Persistence → SSE Streaming
  */
 import { describe, it, expect, beforeEach } from 'vitest';
+import { ensureOrganizations } from '@/test/support/organizations.js';
 import type { Request, Response } from 'express';
 import { PGlite } from '@electric-sql/pglite';
 import { eq, and } from 'drizzle-orm';
@@ -184,6 +185,7 @@ startxref
     );
 
     // Pre-seed company entities
+    await ensureOrganizations(db, tenantA, tenantB);
     await db
       .insert(schema.companies)
       .values([
@@ -201,6 +203,7 @@ startxref
       .onConflictDoNothing();
 
     // 6. Pre-seed the bid in PostgreSQL and in-memory domain repo
+    await ensureOrganizations(db, tenantA, tenantB);
     await db.insert(schema.bids).values({
       id: testBidId,
       organizationId: tenantA,
