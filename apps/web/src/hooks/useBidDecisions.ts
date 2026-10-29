@@ -22,7 +22,7 @@ export interface BidDecisionsState {
  * pipeline scale and uses only the existing
  * GET /api/v1/bids/:id/bid-decision endpoint; the documented
  * replacement is embedding the decision projection in
- * GET /api/v1/bids (see MissingApiCallout).
+ * GET /api/v1/bids.
  *
  * The effect is keyed on the bid-ID set (not bid object identity)
  * so filtering, sorting, and refetches with an unchanged bid set

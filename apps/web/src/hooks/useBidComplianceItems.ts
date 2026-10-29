@@ -20,7 +20,7 @@ export interface BidComplianceState {
  * Trade-off: this is an N+1 read pattern (one request per active bid). It is
  * acceptable at current pipeline scale and uses only existing endpoints; the
  * documented replacement is a tenant-level aggregation endpoint
- * (GET /api/v1/dashboard/action-items — see MissingApiCallout).
+ * (GET /api/v1/dashboard/action-items).
  *
  * The effect is keyed on the bid-ID set (not bid object identity) so normal
  * re-renders and refetches with an unchanged bid set do not re-fire requests.

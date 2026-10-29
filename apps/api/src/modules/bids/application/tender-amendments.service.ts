@@ -6,7 +6,8 @@ export interface TenderAmendmentItem {
   tenderNumber: string;
   tenderTitle: string;
   tenderingAuthority: string;
-  corrigendumNumber: string;
+  /** The corrigendum's own number; null until it is read from the document. */
+  corrigendumNumber: string | null;
   documentId: string;
   documentName: string;
   publishedAt: string;
@@ -15,17 +16,19 @@ export interface TenderAmendmentItem {
     | 'TECHNICAL_SPEC_CHANGE'
     | 'EMD_AMENDMENT'
     | 'ELIGIBILITY_REVISION'
-    | 'GENERAL_CLARIFICATION';
-  summary: string;
+    | 'GENERAL_CLARIFICATION'
+    | 'UNCLASSIFIED';
+  /** What changed; null until the corrigendum is compared with the tender. */
+  summary: string | null;
   impact: {
-    deadlineChanged: boolean;
+    deadlineChanged: boolean | null;
     previousDeadline: string | null;
     revisedDeadline: string | null;
     daysExtended: number | null;
     affectedRequirementsCount: number;
     requiresReEvaluation: boolean;
   };
-  status: 'PROCESSED' | 'EVALUATED' | 'REQUIRES_CONFIRMATION';
+  status: 'PROCESSED' | 'EVALUATED' | 'REQUIRES_CONFIRMATION' | 'RECEIVED';
 }
 
 export interface TenderAmendmentsResult {
@@ -57,11 +60,8 @@ export function buildTenderAmendments(
   const bidsMap = new Map(allBids.map((b) => [b.id, b]));
   const filteredDocs = bidIdFilter ? corrDocs.filter((d) => d.bidId === bidIdFilter) : corrDocs;
 
-  const amendments: TenderAmendmentItem[] = filteredDocs.map((doc, idx) => {
+  const amendments: TenderAmendmentItem[] = filteredDocs.map((doc) => {
     const parentBid = bidsMap.get(doc.bidId);
-    const corrNum = doc.fileName.toLowerCase().includes('02')
-      ? 'Corrigendum-02'
-      : 'Corrigendum-01';
     const publishedAt =
       doc.uploadedAt instanceof Date ? doc.uploadedAt.toISOString() : String(doc.uploadedAt);
 
@@ -78,41 +78,36 @@ export function buildTenderAmendments(
       }
     });
 
-    const isDeadlineExt =
-      doc.fileName.toLowerCase().includes('date') ||
-      doc.fileName.toLowerCase().includes('ext') ||
-      idx === 0;
-
     return {
       id: `amend-${doc.id}`,
       bidId: doc.bidId,
       tenderNumber: parentBid?.tenderNumber || 'N/A',
       tenderTitle: parentBid?.title || 'Tender Opportunity',
       tenderingAuthority: parentBid?.tenderingAuthority || 'Authority',
-      corrigendumNumber: corrNum,
+      corrigendumNumber: null,
       documentId: doc.id,
       documentName: doc.fileName,
       publishedAt,
-      amendmentType: isDeadlineExt
-        ? ('DEADLINE_EXTENSION' as const)
-        : ('TECHNICAL_SPEC_CHANGE' as const),
-      summary: `Pre-bid queries answered and clarifications issued under ${corrNum} for ${parentBid?.tenderNumber || 'tender'}.`,
+      // Only what is known: a corrigendum document was uploaded, and which clauses it holds.
+      // Its number, type and deadline change are not read from the document yet (Phase 4, A3).
+      amendmentType: 'UNCLASSIFIED' as const,
+      summary: null,
       impact: {
-        deadlineChanged: isDeadlineExt,
+        deadlineChanged: null,
         previousDeadline: parentBid?.submissionDeadline || null,
-        revisedDeadline: parentBid?.submissionDeadline || null,
-        daysExtended: isDeadlineExt ? 10 : null,
-        affectedRequirementsCount: affectedItems.length > 0 ? affectedItems.length : 1,
+        revisedDeadline: null,
+        daysExtended: null,
+        affectedRequirementsCount: affectedItems.length,
         requiresReEvaluation: affectedItems.length > 0,
       },
-      status: 'PROCESSED' as const,
+      status: 'RECEIVED' as const,
     };
   });
 
   return {
     organizationId: orgId,
     totalAmendments: amendments.length,
-    unreadCount: amendments.filter((a) => a.status === 'PROCESSED').length,
+    unreadCount: amendments.length,
     amendments,
   };
 }

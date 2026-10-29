@@ -57,6 +57,14 @@ export class InternalServerError extends HttpError {
   }
 }
 
+/** A dependency (e.g. the AI worker) is unavailable; the caller may retry. */
+export class ServiceUnavailableError extends HttpError {
+  constructor(message: string) {
+    super(503, message);
+    this.name = 'ServiceUnavailableError';
+  }
+}
+
 /** The request is well-formed but breaks a review rule (e.g. confirming without opening the source). */
 export class UnprocessableError extends HttpError {
   constructor(message: string) {

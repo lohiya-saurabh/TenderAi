@@ -431,7 +431,7 @@ export interface TenderAmendmentItem {
   tenderNumber: string;
   tenderTitle: string;
   tenderingAuthority: string;
-  corrigendumNumber: string;
+  corrigendumNumber: string | null;
   documentId: string;
   documentName: string;
   publishedAt: string;
@@ -440,17 +440,18 @@ export interface TenderAmendmentItem {
     | 'TECHNICAL_SPEC_CHANGE'
     | 'EMD_AMENDMENT'
     | 'ELIGIBILITY_REVISION'
-    | 'GENERAL_CLARIFICATION';
-  summary: string;
+    | 'GENERAL_CLARIFICATION'
+    | 'UNCLASSIFIED';
+  summary: string | null;
   impact: {
-    deadlineChanged: boolean;
+    deadlineChanged: boolean | null;
     previousDeadline: string | null;
     revisedDeadline: string | null;
     daysExtended: number | null;
     affectedRequirementsCount: number;
     requiresReEvaluation: boolean;
   };
-  status: 'PROCESSED' | 'EVALUATED' | 'REQUIRES_CONFIRMATION';
+  status: 'PROCESSED' | 'EVALUATED' | 'REQUIRES_CONFIRMATION' | 'RECEIVED';
 }
 
 export interface TenderAmendmentsResponse {

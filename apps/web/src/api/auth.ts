@@ -63,6 +63,13 @@ export function register(data: RegisterRequest): Promise<ApiResult<RegisterRespo
 }
 
 /**
+ * Accept a one-time invite link: sets the member's password and signs them in.
+ */
+export function acceptInvite(token: string, password: string): Promise<ApiResult<LoginResponse>> {
+  return apiPost<LoginResponse>('/api/v1/auth/accept-invite', { token, password });
+}
+
+/**
  * Refresh the access token using the refresh token.
  */
 export function refreshTokens(refreshToken: string): Promise<ApiResult<RefreshResponse>> {

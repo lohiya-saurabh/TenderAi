@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { AuthContext, type AuthContextValue } from '@/auth/AuthContext.js';
 import {
   login as apiLogin,
+  acceptInvite as apiAcceptInvite,
   register as apiRegister,
   logout as apiLogout,
   type AuthUser,
@@ -86,6 +87,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     [],
   );
 
+  // Invite acceptance: same session handling as login
+  const handleAcceptInvite = useCallback(
+    async (token: string, password: string): Promise<{ success: boolean; error?: string }> => {
+      const result = await apiAcceptInvite(token, password);
+      if (!result.ok) {
+        return { success: false, error: result.error.message };
+      }
+      setTokens(result.data.accessToken, result.data.refreshToken);
+      setUser(result.data.user);
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(result.data.user));
+      return { success: true };
+    },
+    [],
+  );
+
   // Registration handler
   const handleRegister = useCallback(
     async (
@@ -148,6 +164,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       isAuthenticated: Boolean(user),
       isLoading,
       login: handleLogin,
+      acceptInvite: handleAcceptInvite,
       register: handleRegister,
       logout: handleLogout,
       hasPermission,
@@ -158,6 +175,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       user,
       isLoading,
       handleLogin,
+      handleAcceptInvite,
       handleRegister,
       handleLogout,
       hasPermission,

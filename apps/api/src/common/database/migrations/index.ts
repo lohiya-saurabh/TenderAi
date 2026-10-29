@@ -6,6 +6,7 @@
  */
 import { migration0001Baseline } from './0001_baseline.js';
 import { migration0002NotificationsRecipientFk } from './0002_notifications_recipient_fk.js';
+import { migration0003UserInvites } from './0003_user_invites.js';
 import type { Migration } from './types.js';
 
 export type { Migration } from './types.js';
@@ -13,4 +14,5 @@ export type { Migration } from './types.js';
 export const MIGRATIONS: readonly Migration[] = [
   migration0001Baseline,
   migration0002NotificationsRecipientFk,
+  migration0003UserInvites,
 ];

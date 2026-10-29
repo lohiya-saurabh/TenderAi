@@ -4,8 +4,8 @@ import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';
 import { Label } from '@/components/ui/label.js';
-import { UserPlus, CheckCircle2, User, Mail } from 'lucide-react';
-import type { TeamMember } from '@/api/teams.js';
+import { UserPlus, User, Mail, Link2 } from 'lucide-react';
+import type { InviteLink, TeamMember } from '@/api/teams.js';
 
 interface TeamSettingsTabProps {
   organizationName?: string;
@@ -16,8 +16,11 @@ interface TeamSettingsTabProps {
   inviteEmail: string;
   inviteRole: string;
   isSubmittingInvite: boolean;
-  inviteSuccess: boolean;
   inviteError: string | null;
+  /** The link just created; shown once, since only its hash is stored. */
+  inviteLink: InviteLink | null;
+  onDismissInviteLink: () => void;
+  onReissueInvite: (memberId: string) => void;
   onSetIsInvitingMember: (val: boolean) => void;
   onSetInviteName: (val: string) => void;
   onSetInviteEmail: (val: string) => void;
@@ -34,8 +37,10 @@ export const TeamSettingsTab: React.FC<TeamSettingsTabProps> = ({
   inviteEmail,
   inviteRole,
   isSubmittingInvite,
-  inviteSuccess,
   inviteError,
+  inviteLink,
+  onDismissInviteLink,
+  onReissueInvite,
   onSetIsInvitingMember,
   onSetInviteName,
   onSetInviteEmail,
@@ -68,11 +73,32 @@ export const TeamSettingsTab: React.FC<TeamSettingsTabProps> = ({
           )}
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Invite Success Feedback */}
-          {inviteSuccess && (
-            <div className="p-3 rounded-lg bg-primary/10 border border-primary/30 text-primary flex items-center gap-2 text-xs font-medium">
-              <CheckCircle2 className="h-4 w-4 shrink-0" />
-              <span>Team member provisioned and saved to PostgreSQL successfully.</span>
+          {/* One-time invite link: shown once, never stored in plain form */}
+          {inviteLink && (
+            <div className="p-3 rounded-lg bg-primary/10 border border-primary/30 space-y-2 text-xs">
+              <div className="flex items-center gap-2 font-medium text-foreground">
+                <Link2 className="h-4 w-4 shrink-0 text-primary" />
+                <span>
+                  Send this link to {inviteLink.name}. It works once and expires on{' '}
+                  {new Date(inviteLink.inviteExpiresAt).toLocaleDateString()}.
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <Input readOnly value={inviteLink.inviteUrl} className="font-mono text-xs" />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => void navigator.clipboard?.writeText(inviteLink.inviteUrl)}
+                >
+                  Copy
+                </Button>
+                <Button type="button" size="sm" variant="ghost" onClick={onDismissInviteLink}>
+                  Done
+                </Button>
+              </div>
+              <p className="text-muted-foreground">
+                Emails are not sent yet, so share it yourself. You won't see this link again.
+              </p>
             </div>
           )}
 
@@ -83,9 +109,7 @@ export const TeamSettingsTab: React.FC<TeamSettingsTabProps> = ({
               className="p-4 rounded-lg bg-muted/40 border border-border space-y-4"
             >
               <div className="flex items-center justify-between">
-                <h4 className="text-xs font-semibold text-foreground">
-                  Provision New Team Member
-                </h4>
+                <h4 className="text-xs font-semibold text-foreground">Provision New Team Member</h4>
                 <Button
                   type="button"
                   variant="ghost"
@@ -178,15 +202,15 @@ export const TeamSettingsTab: React.FC<TeamSettingsTabProps> = ({
                     </div>
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-foreground text-xs">
-                          {member.name}
-                        </span>
-                        <Badge
-                          variant="secondary"
-                          className="text-[10px] uppercase font-semibold"
-                        >
+                        <span className="font-semibold text-foreground text-xs">{member.name}</span>
+                        <Badge variant="secondary" className="text-[10px] uppercase font-semibold">
                           {member.role.replace(/_/g, ' ')}
                         </Badge>
+                        {member.invitePending && (
+                          <Badge variant="outline" className="text-[10px] font-semibold">
+                            Invite pending
+                          </Badge>
+                        )}
                       </div>
                       <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                         <Mail className="h-3 w-3" />
@@ -197,6 +221,15 @@ export const TeamSettingsTab: React.FC<TeamSettingsTabProps> = ({
                   </div>
 
                   <div className="flex items-center gap-1.5 flex-wrap">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs h-7"
+                      onClick={() => onReissueInvite(member.id)}
+                    >
+                      {member.invitePending ? 'New invite link' : 'Reset via invite link'}
+                    </Button>
                     {member.permissions.slice(0, 3).map((p) => (
                       <span
                         key={p}

@@ -10,6 +10,7 @@ import { PricingPage } from '@/pages/PricingPage.js';
 import { SignupPage } from '@/pages/SignupPage.js';
 import { OnboardingPage } from '@/pages/OnboardingPage.js';
 import { LoginPage } from '@/pages/LoginPage.js';
+import { AcceptInvitePage } from '@/pages/AcceptInvitePage.js';
 import { DashboardPage } from '@/pages/DashboardPage.js';
 import { CreateBidPage } from '@/pages/CreateBidPage.js';
 import { BidDetailPage } from '@/pages/BidDetailPage.js';
@@ -38,6 +39,7 @@ export const App: React.FC = () => {
               <Route path="/pricing" element={<PricingPage />} />
               <Route path="/signup" element={<SignupPage />} />
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/accept-invite" element={<AcceptInvitePage />} />
 
               {/* Protected Onboarding Flow */}
               <Route

@@ -228,7 +228,7 @@ With mock storage, the URL points at the API's own `PUT /mock-upload/...` route.
 
 - **Every 1 s** it reads up to **10** outbox rows that are either `PENDING` and due (`next_attempt_at` ≤ now), or `PUBLISHING` with a lease (`locked_at`) older than **5 minutes**. The second case covers an instance that crashed mid-publish.
 - **It claims each row** with a conditional update to `PUBLISHING` plus `locked_at = now`, so only one API instance publishes a given row.
-- **It enqueues the payload** on the ingestion queue and marks the row `PUBLISHED`.
+- **It enqueues the payload** on the ingestion queue, marks the row `PUBLISHED`, and moves the document from `QUEUED_FOR_EXTRACTION` to `PROCESSING`.
 - **On a publish error** it puts the row back to `PENDING`, records the attempt and the error, and sets `next_attempt_at` to now + `min(5 s × 2^(attempts−1), 300 s)`: 5, 10, 20, 40… seconds, capped at 5 minutes.
 
 This loop is independent of the completion consumer. A new upload is published within about a second, even while the consumer is waiting in a 20 s long poll.
@@ -327,7 +327,7 @@ After a successful commit the object is deleted. A failure to delete is logged a
   - `PARSING_PAGES` while queued;
   - `EXTRACTING_COMPLIANCE` while processing;
   - `COMPLETED` (sent as `REVIEW_READY`) or `FAILED` at the end, after which it closes.
-- **The stream stops after 120 polls** (about 2 minutes).
+- **The stream stays open until every document is finished**, up to 15 minutes (900 polls).
 - **The web client** reads it with `fetch` and the Bearer header (`apps/web/src/api/sse.ts`), because `EventSource` cannot send headers and tokens must not go into URLs.
 
 ### 5.10 Reprocessing
@@ -343,7 +343,7 @@ From there the flow is §5.3 onwards. Because persistence is keyed by location, 
 
 ## 6. Status lifecycles
 
-**Tender document** (`tender_documents.status`): `QUEUED_FOR_EXTRACTION` is set at confirm and reprocess. It becomes `COMPLETED` or `FAILED` on completion. `UPLOADED` is the column default for rows created outside the confirm flow. The current flow never writes `PROCESSING`; the progress endpoint still understands it.
+**Tender document** (`tender_documents.status`): `QUEUED_FOR_EXTRACTION` at confirm and reprocess, `PROCESSING` once the outbox publisher hands the job to the worker, then `COMPLETED` or `FAILED` on completion. `UPLOADED` is the column default for rows created outside the confirm flow.
 
 **Bid** (`BidStatus` value object; transitions enforced in the domain):
 
@@ -409,15 +409,15 @@ Mock queues keep messages inside one process. The API's mock and the worker's mo
 
 ## 10. Other flows
 
-| Flow                       | Path                                                                                                                                                    | Notes                                                                                                                                                                          |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Bid decision**           | Web → `POST /bids/:id/bid-decision` → `AiDecisionClient` → worker `POST /api/v1/agent/bid-decision` (timeout `AI_DECISION_TIMEOUT_MS`)                  | The LangGraph decision engine evaluates eligibility deterministically. The model writes only the explanatory memo. The result is stored in `bid_decisions` per profile version |
-| **Evidence extraction**    | `POST /companies/:companyId/evidence/:evidenceId/extract` → `AiEvidenceExtractor` → worker `POST /api/v1/evidence/extract` (`AI_EXTRACTION_TIMEOUT_MS`) | Certificates and financials yield attributes, each with its verbatim quote; chunks are stored in `company_evidence_chunks`                                                     |
-| **Registry verification**  | `POST /companies/:companyId/verification/{gstin,mca,udyam}`, DigiLocker OAuth                                                                           | Ports with live and mock adapters (`*_PROVIDER=mock` locally). Every status change is recorded in `evidence_verification_history`                                              |
-| **Tender chat**            | `POST /chat/messages` → worker `POST /api/v1/chat/query`                                                                                                | Chat graph: intent routing → tool calling → query rewrite → citations → uncertainty check → answer. The tools only see the caller's tenant, company and bid                    |
-| **Amendments**             | `GET /bids/:id/amendments`, `/tenders/amendments`                                                                                                       | The worker's corrigendum diff engine compares original and amended clauses (dates, turnover, debarment, experience, OEM, consortium)                                           |
-| **Deadline notifications** | `POST /notifications/trigger-scan`                                                                                                                      | Creates notifications for active bids with a submission deadline within 7 days. It is triggered, not scheduled                                                                 |
-| **Billing**                | `/billing/*`                                                                                                                                            | Plan catalogue and usage records behind a billing port with a mock adapter; `EntitlementService` enforces plan limits                                                          |
+| Flow                       | Path                                                                                                                                                    | Notes                                                                                                                                                                                                                                                                             |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Bid decision**           | Web → `POST /bids/:id/bid-decision` → `AiDecisionClient` → worker `POST /api/v1/agent/bid-decision` (timeout `AI_DECISION_TIMEOUT_MS`)                  | The LangGraph decision engine evaluates eligibility deterministically, using only thresholds the tender states. An unreachable engine is a 503, never a local substitute. The model writes only the explanatory memo. The result is stored in `bid_decisions` per profile version |
+| **Evidence extraction**    | `POST /companies/:companyId/evidence/:evidenceId/extract` → `AiEvidenceExtractor` → worker `POST /api/v1/evidence/extract` (`AI_EXTRACTION_TIMEOUT_MS`) | Certificates and financials yield attributes, each with its verbatim quote; chunks are stored in `company_evidence_chunks`                                                                                                                                                        |
+| **Registry verification**  | `POST /companies/:companyId/verification/{gstin,mca,udyam}`, DigiLocker OAuth                                                                           | Ports with live and mock adapters (`*_PROVIDER=mock` locally). Every status change is recorded in `evidence_verification_history`                                                                                                                                                 |
+| **Tender chat**            | `POST /chat/messages` → worker `POST /api/v1/chat/query`                                                                                                | Chat graph: intent routing → tool calling → query rewrite → citations → uncertainty check → answer. The tools only see the caller's tenant, company and bid                                                                                                                       |
+| **Amendments**             | `GET /bids/:id/amendments`, `/tenders/amendments`                                                                                                       | The worker's corrigendum diff engine compares original and amended clauses (dates, turnover, debarment, experience, OEM, consortium)                                                                                                                                              |
+| **Deadline notifications** | `POST /notifications/trigger-scan`                                                                                                                      | Creates notifications for active bids with a submission deadline within 7 days. It is triggered, not scheduled                                                                                                                                                                    |
+| **Billing**                | `/billing/*`                                                                                                                                            | Plan catalogue and usage records behind a billing port with a mock adapter; `EntitlementService` enforces plan limits                                                                                                                                                             |
 
 ## 11. Web application
 
@@ -454,12 +454,10 @@ Mock queues keep messages inside one process. The API's mock and the worker's mo
 
 ## 13. Known limitations
 
-| Limitation                                                   | Effect                                                                                                                                         |
-| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| The SSE stream closes after about 2 minutes (120 polls)      | A long tender (a 99-page document takes about 2.5 minutes) can outlive the stream. The client must reconnect or refresh to see the final state |
-| The document status never passes through `PROCESSING`        | Progress shows "queued" until the result lands; there is no per-page progress                                                                  |
-| The deadline scan is triggered by an endpoint, not scheduled | Notifications appear only when something calls `/notifications/trigger-scan`                                                                   |
-| An unhandled error's message is returned to the client       | `AllExceptionsFilter` sends `exception.message` for unexpected errors                                                                          |
-| Mock queues cannot reach the worker                          | Local extraction needs the dev SQS queues                                                                                                      |
+| Limitation                                                   | Effect                                                                       |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| The deadline scan is triggered by an endpoint, not scheduled | Notifications appear only when something calls `/notifications/trigger-scan` |
+| An unhandled error's message is returned to the client       | `AllExceptionsFilter` sends `exception.message` for unexpected errors        |
+| Mock queues cannot reach the worker                          | Local extraction needs the dev SQS queues                                    |
 
 Security and infrastructure gaps are tracked in [SECURITY.md](SECURITY.md) §7 and [DEPLOYMENT.md](DEPLOYMENT.md) §5.

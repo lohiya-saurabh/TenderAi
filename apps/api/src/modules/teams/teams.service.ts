@@ -2,14 +2,17 @@
  * TeamsService — Manages team members and invitations within a Tenant.
  */
 import { Injectable, Inject, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import crypto from 'node:crypto';
 import { PGlite } from '@electric-sql/pglite';
 import bcrypt from 'bcrypt';
 import { type DrizzleDb } from '@/common/database/database.module.js';
-import { BadRequestError } from '@/common/errors/errors.js';
+import { BadRequestError, NotFoundError } from '@/common/errors/errors.js';
 import { TenantContextHolder } from '@/common/security/TenantContext.js';
 import { ROLE_PERMISSIONS, type UserRole } from '@/common/security/permissions.js';
 import { EntitlementService } from '@/modules/billing/entitlement.service.js';
 import { TeamsRepository } from '@/modules/teams/teams.repository.js';
+import type * as schema from '@/common/database/schema.js';
 
 export interface InviteMemberDto {
   email: string;
@@ -26,6 +29,21 @@ export interface TeamMemberView {
   permissions: string[];
   organizationId: string;
   organizationName: string;
+  /** True until the member opens their invite link and sets a password. */
+  invitePending: boolean;
+}
+
+export interface InviteLinkView extends TeamMemberView {
+  /** One-time link shown to the inviting admin once; only its hash is stored. */
+  inviteUrl: string;
+  inviteExpiresAt: string;
+}
+
+const INVITE_TTL_MS = 7 * 24 * 3600 * 1000;
+
+/** sha256 of an invite token: the only form the database ever holds. */
+export function hashInviteToken(token: string): string {
+  return crypto.createHash('sha256').update(token).digest('hex');
 }
 
 @Injectable()
@@ -38,6 +56,7 @@ export class TeamsService {
     @Optional()
     @Inject(EntitlementService)
     private readonly entitlementService?: EntitlementService,
+    @Optional() private readonly configService?: ConfigService,
   ) {
     this.repository =
       repositoryOrDb instanceof TeamsRepository
@@ -62,13 +81,14 @@ export class TeamsService {
       permissions: r.permissions ?? [],
       organizationId: r.organizationId,
       organizationName: r.organizationName,
+      invitePending: Boolean(r.inviteTokenHash),
     }));
   }
 
   /**
    * Invite / provision a new team member into the caller's tenant.
    */
-  public async inviteMember(dto: InviteMemberDto): Promise<TeamMemberView> {
+  public async inviteMember(dto: InviteMemberDto): Promise<InviteLinkView> {
     const orgId = this.requireOrg();
     const callerUserId = TenantContextHolder.get()?.userId;
 
@@ -113,33 +133,77 @@ export class TeamsService {
     const permissions: string[] = normalizedRole === 'ADMIN' ? ['*'] : Array.from(permissionsSet);
 
     const newUserId = `usr_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-    const tempPassword = await bcrypt.hash('TenderPulse@2026', 10);
+    // Nobody knows this password: the member sets their own through the invite link.
+    const unusablePassword = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
+    const invite = this.newInvite();
 
     const created = await this.repository.createUser({
       id: newUserId,
       email: dto.email.toLowerCase().trim(),
       name: dto.name.trim(),
-      password: tempPassword,
+      password: unusablePassword,
       phone: null,
       role: normalizedRole,
       permissions,
       organizationId: orgId,
       organizationName: orgName,
+      inviteTokenHash: invite.tokenHash,
+      inviteExpiresAt: invite.expiresAt,
     });
 
     if (!created) {
       throw new BadRequestError('Failed to provision new team member.');
     }
 
+    return this.toInviteView(created, invite);
+  }
+
+  /**
+   * Issue a fresh invite link for a member who has not accepted yet (the old link stops
+   * working). Also the way back in for accounts made with the retired shared password.
+   */
+  public async reissueInvite(memberId: string): Promise<InviteLinkView> {
+    const orgId = this.requireOrg();
+    const member = await this.repository.findMember(memberId, orgId);
+    if (!member) {
+      throw new NotFoundError(`Team member '${memberId}' not found.`);
+    }
+    const invite = this.newInvite();
+    const updated = await this.repository.setInvite(memberId, orgId, invite);
+    if (!updated) {
+      throw new NotFoundError(`Team member '${memberId}' not found.`);
+    }
+    return this.toInviteView(updated, invite);
+  }
+
+  private newInvite(): { token: string; tokenHash: string; expiresAt: Date } {
+    const token = crypto.randomBytes(32).toString('base64url');
     return {
-      id: created.id,
-      email: created.email,
-      name: created.name,
-      phone: created.phone ?? null,
-      role: created.role,
-      permissions: created.permissions ?? [],
-      organizationId: created.organizationId,
-      organizationName: created.organizationName,
+      token,
+      tokenHash: hashInviteToken(token),
+      expiresAt: new Date(Date.now() + INVITE_TTL_MS),
+    };
+  }
+
+  private toInviteView(
+    user: schema.User,
+    invite: { token: string; expiresAt: Date },
+  ): InviteLinkView {
+    const appBaseUrl = (
+      this.configService?.get<string>('APP_BASE_URL') || 'http://localhost:5173'
+    ).replace(/\/+$/, '');
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      phone: user.phone ?? null,
+      role: user.role,
+      permissions: user.permissions ?? [],
+      organizationId: user.organizationId,
+      organizationName: user.organizationName,
+      invitePending: true,
+      inviteUrl: `${appBaseUrl}/accept-invite?token=${invite.token}`,
+      inviteExpiresAt: invite.expiresAt.toISOString(),
     };
   }
 

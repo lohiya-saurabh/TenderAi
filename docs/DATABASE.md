@@ -15,7 +15,7 @@ PostgreSQL 16 is the system of record. Only the NestJS API writes to it; the AI 
 
 ## 2. Migrations
 
-- **Location.** Migrations are TypeScript files in `common/database/migrations/` (`0001_baseline.ts`, `0002_notifications_recipient_fk.ts`, …), listed in `migrations/index.ts`.
+- **Location.** Migrations are TypeScript files in `common/database/migrations/` (`0001_baseline.ts`, `0002_notifications_recipient_fk.ts`, `0003_user_invites.ts`, …), listed in `migrations/index.ts`.
 - **How they run.** On startup the migrator applies pending migrations in order, each in its own transaction, and records each in `schema_migrations` with a checksum.
 - **Concurrency.** A Postgres advisory lock makes several API instances, such as ECS tasks starting together, wait instead of racing.
 - **Never edit an applied migration.** The checksum check refuses to start if one changed.
@@ -28,13 +28,13 @@ All tenant data carries `organization_id`, and every query filters by it (see [S
 
 **Tenancy and access**
 
-| Table                            | Purpose                                        |
-| -------------------------------- | ---------------------------------------------- |
-| `organizations`                  | Tenant (name, slug, domain, logo)              |
-| `tenant_settings`                | Default company, notification preferences      |
-| `subscriptions`, `usage_records` | Plan tier, billing period, metered usage       |
-| `users`                          | Login (bcrypt password), role, permissions     |
-| `refresh_tokens`                 | SHA-256 token hash, `revoked_at`, `expires_at` |
+| Table                            | Purpose                                                                                                                                |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `organizations`                  | Tenant (name, slug, domain, logo)                                                                                                      |
+| `tenant_settings`                | Default company, notification preferences                                                                                              |
+| `subscriptions`, `usage_records` | Plan tier, billing period, metered usage                                                                                               |
+| `users`                          | Login (bcrypt password), role, permissions; `invite_token_hash` + `invite_expires_at` while a one-time invite is open (migration 0003) |
+| `refresh_tokens`                 | SHA-256 token hash, `revoked_at`, `expires_at`                                                                                         |
 
 **Companies and evidence**
 
@@ -48,12 +48,12 @@ All tenant data carries `organization_id`, and every query filters by it (see [S
 
 **Bids and tenders**
 
-| Table                    | Purpose                                                                                                                                         |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `bids`                   | A tender being bid on: authority, value, deadline, status, requirement counters, `version` for optimistic locking                               |
-| `tender_documents`       | Uploaded files: storage path, status (`QUEUED_FOR_EXTRACTION` → `COMPLETED` / `FAILED`; `UPLOADED` is the column default), attempts, last error |
-| `tender_document_chunks` | 3-tier chunks from the worker: page, section, clause reference, bounding box, `embedding` (JSONB vector plus model tag in `metadata`)           |
-| `bid_decisions`          | Bid-or-no-bid result per profile version: verdict, readiness score, full response                                                               |
+| Table                    | Purpose                                                                                                                                                                                             |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bids`                   | A tender being bid on: authority, value, deadline, status, requirement counters, `version` for optimistic locking                                                                                   |
+| `tender_documents`       | Uploaded files: storage path, status (`QUEUED_FOR_EXTRACTION` → `PROCESSING` when the job is handed to the worker → `COMPLETED` / `FAILED`; `UPLOADED` is the column default), attempts, last error |
+| `tender_document_chunks` | 3-tier chunks from the worker: page, section, clause reference, bounding box, `embedding` (JSONB vector plus model tag in `metadata`)                                                               |
+| `bid_decisions`          | Bid-or-no-bid result per profile version: verdict, readiness score, full response                                                                                                                   |
 
 **Clauses**
 

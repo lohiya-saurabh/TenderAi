@@ -62,6 +62,19 @@ export class AuthController {
   }
 
   @Public()
+  @Post('accept-invite')
+  async acceptInvite(
+    @Body() body: { token?: string; password?: string },
+    @Res({ passthrough: true }) res?: Response,
+  ) {
+    const result = await this.authService.acceptInvite(body?.token, body?.password);
+    if (res) {
+      this.setAuthCookies(res, result.refreshToken, result.accessToken);
+    }
+    return result;
+  }
+
+  @Public()
   @Post('register')
   async register(
     @Body()

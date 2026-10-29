@@ -174,6 +174,13 @@ export class DocumentProcessingRuntime implements OnModuleInit, OnModuleDestroy 
       try {
         await this.ingestionQueue.enqueue(message);
         await this.repository.markOutboxPublished(record.id, new Date());
+        if (message.organizationId) {
+          await this.repository.markDocumentProcessing(
+            record.documentId,
+            message.organizationId,
+            new Date(),
+          );
+        }
 
         this.logger.info(
           'outbox.message.published',

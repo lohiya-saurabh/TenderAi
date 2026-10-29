@@ -8,8 +8,7 @@
  * GET /api/v1/bids). The backend returns the full tenant list with no
  * query parameters, so search, filter, sort, and pagination are
  * computed in client memory. Server-side pagination
- * (GET /api/v1/bids?page=&limit=) is documented as a missing API in
- * MissingApiCallout.
+ * (GET /api/v1/bids?page=&limit=) is the planned replacement.
  *
  * Everything here is pure and unit-tested — including the responsive
  * behavior (breakpoint → visible columns), which is testable as pure

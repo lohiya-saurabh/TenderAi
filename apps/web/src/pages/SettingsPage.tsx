@@ -9,7 +9,13 @@ import {
   type NotificationPreferences,
   type WorkspaceSettings,
 } from '@/api/settings.js';
-import { listTeamMembers, inviteTeamMember, type TeamMember } from '@/api/teams.js';
+import {
+  listTeamMembers,
+  inviteTeamMember,
+  reissueInviteLink,
+  type InviteLink,
+  type TeamMember,
+} from '@/api/teams.js';
 import {
   getSubscription,
   getUsageSummary,
@@ -72,8 +78,8 @@ export const SettingsPage: React.FC = () => {
   const [inviteName, setInviteName] = useState('');
   const [inviteRole, setInviteRole] = useState('BID_MANAGER');
   const [isSubmittingInvite, setIsSubmittingInvite] = useState(false);
-  const [inviteSuccess, setInviteSuccess] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
+  const [inviteLink, setInviteLink] = useState<InviteLink | null>(null);
 
   // New Company form in Company tab
   const [isAddingCompany, setIsAddingCompany] = useState(false);
@@ -186,13 +192,22 @@ export const SettingsPage: React.FC = () => {
 
     if (res.ok) {
       setTeamMembers((prev) => [...prev, res.data]);
-      setInviteSuccess(true);
+      setInviteLink(res.data);
       setInviteEmail('');
       setInviteName('');
       setIsInvitingMember(false);
-      setTimeout(() => setInviteSuccess(false), 3500);
     } else {
       setInviteError(res.error.message || 'Failed to provision team member.');
+    }
+  };
+
+  const handleReissueInvite = async (memberId: string) => {
+    setInviteError(null);
+    const res = await reissueInviteLink(memberId);
+    if (res.ok) {
+      setInviteLink(res.data);
+    } else {
+      setInviteError(res.error.message || 'Could not create a new invite link.');
     }
   };
 
@@ -354,6 +369,9 @@ export const SettingsPage: React.FC = () => {
 
         <TabsContent value="team" className="space-y-6 mt-0">
           <TeamSettingsTab
+            inviteLink={inviteLink}
+            onDismissInviteLink={() => setInviteLink(null)}
+            onReissueInvite={handleReissueInvite}
             organizationName={user?.organizationName}
             teamMembers={teamMembers}
             isTeamLoading={isTeamLoading}
@@ -362,7 +380,6 @@ export const SettingsPage: React.FC = () => {
             inviteEmail={inviteEmail}
             inviteRole={inviteRole}
             isSubmittingInvite={isSubmittingInvite}
-            inviteSuccess={inviteSuccess}
             inviteError={inviteError}
             onSetIsInvitingMember={setIsInvitingMember}
             onSetInviteName={setInviteName}

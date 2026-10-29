@@ -835,7 +835,11 @@ Declaration of Class-I local supplier under Public Procurement Preference to Mak
         expect(first.bidId).toBeDefined();
         expect(first.corrigendumNumber).toBeDefined();
         expect(first.impact).toBeDefined();
-        expect(typeof first.impact.deadlineChanged).toBe('boolean');
+        // Nothing is guessed from the file name: unknown facts stay null.
+        expect(first.corrigendumNumber).toBeNull();
+        expect(first.summary).toBeNull();
+        expect(first.impact.deadlineChanged).toBeNull();
+        expect(first.impact.daysExtended).toBeNull();
       }
     });
   });

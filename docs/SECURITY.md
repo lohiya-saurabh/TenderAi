@@ -8,6 +8,10 @@ Tender documents, bid prices and company financials are commercially sensitive, 
 - **Access tokens** are HS256 JWTs signed with `JWT_SECRET`, valid for 1 hour (`JWT_ACCESS_TTL_SECONDS`). They carry the user id, organization id, role and permissions.
 - **Refresh tokens** are valid for 7 days (`JWT_REFRESH_TTL_SECONDS`). Only their SHA-256 hash is stored (`refresh_tokens.token_hash`). Each refresh rotates the token and revokes the old one; a revoked token is rejected, and logout revokes it.
 - **Guards.** `JwtAuthGuard` protects every route except those marked `@Public()`: auth, the billing plan list, and the local mock storage routes. It reads the token from the `Authorization: Bearer` header, or from an `HttpOnly` `tp_access_token` cookie. A `?token=` query parameter is never read, so tokens stay out of URLs and access logs; the SSE progress stream is read with `fetch` and the header for the same reason.
+- **Invites.**
+  - Inviting a member creates the account with an unusable random password, plus a one-time invite link valid for 7 days. Only the SHA-256 of the link's token is stored.
+  - Accepting the link sets the member's own password and signs them in; it works once.
+  - The temporary password every invitee used to share (`TenderPulse@2026`) is refused at login, so those accounts come back through a fresh link.
 - **Service to service.** The AI worker's routes and the API's `/internal/extraction-completed` callback require `X-Internal-Service-Key` (`INTERNAL_SERVICE_KEY`), checked by `InternalServiceGuard` and `verify_internal_key`.
 
 **Known gap:** the web app keeps the refresh token in `localStorage`. Moving it to an `HttpOnly` cookie (Phase 1.1) is blocked on deciding whether the web app and the API share an origin.

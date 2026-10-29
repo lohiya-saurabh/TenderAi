@@ -15,7 +15,6 @@ import { CompanyReadinessCard } from '@/components/dashboard/CompanyReadinessCar
 import { UpcomingDeadlinesCard } from '@/components/dashboard/UpcomingDeadlinesCard.js';
 import { BidPipelineCard } from '@/components/dashboard/BidPipelineCard.js';
 import { TenderListSection } from '@/components/dashboard/TenderListSection.js';
-import { MissingApiCallout } from '@/components/dashboard/MissingApiCallout.js';
 import { computePipelineStages } from '@/components/dashboard/dashboardData.js';
 
 // Module-level so the reference is stable, and so useApi's AbortSignal
@@ -132,9 +131,6 @@ export const DashboardPage: React.FC = () => {
 
           {/* 6. Company Readiness */}
           {!isLoading && <CompanyReadinessCard />}
-
-          {/* 7. Documented Missing APIs Disclosure */}
-          <MissingApiCallout />
         </>
       )}
     </div>

@@ -11,6 +11,14 @@ import { UnauthorizedError, ConflictError, BadRequestError } from '@/common/erro
 import { TokenService } from '@/common/security/TokenService.js';
 import { ROLE_PERMISSIONS, type UserRole, type Permission } from '@/common/security/permissions.js';
 import { AuthRepository } from '@/modules/auth/auth.repository.js';
+import { hashInviteToken } from '@/modules/teams/teams.service.js';
+import type * as schema from '@/common/database/schema.js';
+
+/**
+ * The temporary password every invited member used to get. Accounts still carrying it
+ * must come back through a fresh invite link, so it is refused outright.
+ */
+const RETIRED_SHARED_INVITE_PASSWORD = 'TenderPulse@2026';
 
 export interface AuthResult {
   accessToken: string;
@@ -57,8 +65,7 @@ export class AuthService {
     @Optional() @Inject(TokenService) tokenService?: TokenService,
     @Optional() configService?: ConfigService,
   ) {
-    this.repository =
-      repoOrDb instanceof AuthRepository ? repoOrDb : new AuthRepository(repoOrDb);
+    this.repository = repoOrDb instanceof AuthRepository ? repoOrDb : new AuthRepository(repoOrDb);
     this.tokenService = tokenService || new TokenService();
     this.dummyBcryptHash = configService?.get<string>('BCRYPT_HASH') ?? '';
   }
@@ -81,7 +88,45 @@ export class AuthService {
     if (!passwordValid) {
       throw new UnauthorizedError('Invalid email or password.');
     }
+    if (candidatePassword === RETIRED_SHARED_INVITE_PASSWORD) {
+      throw new UnauthorizedError(
+        'This temporary invite password is no longer accepted. Ask your workspace admin for a new invite link.',
+      );
+    }
 
+    return this.issueSession(matched);
+  }
+
+  /**
+   * Accept a one-time invite link: set the member's own password, retire the link and
+   * sign them in.
+   */
+  public async acceptInvite(token?: string, password?: string): Promise<AuthResult> {
+    const candidatePassword = String(password || '');
+    if (!token) {
+      throw new BadRequestError('The invite link is missing its token.');
+    }
+    if (candidatePassword.length < 8) {
+      throw new BadRequestError('Password must be at least 8 characters long.');
+    }
+    if (candidatePassword === RETIRED_SHARED_INVITE_PASSWORD) {
+      throw new BadRequestError('Choose a different password.');
+    }
+    const invited = await this.repository.findUserByInviteHash(hashInviteToken(token));
+    if (!invited || !invited.inviteExpiresAt || invited.inviteExpiresAt.getTime() < Date.now()) {
+      throw new UnauthorizedError(
+        'This invite link is invalid or has expired. Ask your workspace admin for a new one.',
+      );
+    }
+    const passwordHash = await bcrypt.hash(candidatePassword, 10);
+    const accepted = await this.repository.acceptInvite(invited.id, passwordHash);
+    if (!accepted) {
+      throw new UnauthorizedError('This invite link has already been used.');
+    }
+    return this.issueSession(accepted);
+  }
+
+  private async issueSession(matched: schema.User): Promise<AuthResult> {
     const rawPermissions: Permission[] =
       typeof matched.permissions === 'string'
         ? JSON.parse(matched.permissions)

@@ -1,11 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
-import { sql } from 'drizzle-orm';
-import {
-  DRIZZLE_TOKEN,
-  type DrizzleDb,
-  createDrizzle,
-} from '@/common/database/database.module.js';
+import { and, eq, isNotNull, sql } from 'drizzle-orm';
+import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '@/common/database/database.module.js';
 import * as schema from '@/common/database/schema.js';
 
 export interface RegisterEntitiesParams {
@@ -47,7 +43,28 @@ export class AuthRepository {
     return user ?? null;
   }
 
-  public async findRefreshTokenByHash(tokenHash: string): Promise<schema.RefreshTokenRecord | null> {
+  public async findUserByInviteHash(inviteTokenHash: string): Promise<schema.User | null> {
+    const [user] = await this.db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.inviteTokenHash, inviteTokenHash))
+      .limit(1);
+    return user ?? null;
+  }
+
+  /** Sets the password and clears the invite, only if the invite is still open. */
+  public async acceptInvite(userId: string, passwordHash: string): Promise<schema.User | null> {
+    const [user] = await this.db
+      .update(schema.users)
+      .set({ password: passwordHash, inviteTokenHash: null, inviteExpiresAt: null })
+      .where(and(eq(schema.users.id, userId), isNotNull(schema.users.inviteTokenHash)))
+      .returning();
+    return user ?? null;
+  }
+
+  public async findRefreshTokenByHash(
+    tokenHash: string,
+  ): Promise<schema.RefreshTokenRecord | null> {
     try {
       const [storedToken] = await this.db
         .select()
@@ -74,10 +91,7 @@ export class AuthRepository {
 
   public async createRefreshToken(tokenRecord: schema.NewRefreshTokenRecord): Promise<void> {
     try {
-      await this.db
-        .insert(schema.refreshTokens)
-        .values(tokenRecord)
-        .onConflictDoNothing();
+      await this.db.insert(schema.refreshTokens).values(tokenRecord).onConflictDoNothing();
     } catch {
       // ignore in test doubles where table is unseeded
     }
@@ -86,15 +100,18 @@ export class AuthRepository {
   public async registerTenant(params: RegisterEntitiesParams): Promise<schema.User> {
     await this.db.insert(schema.organizations).values(params.org).onConflictDoNothing();
 
-    const [createdUser] = await this.db
-      .insert(schema.users)
-      .values(params.user)
-      .returning();
+    const [createdUser] = await this.db.insert(schema.users).values(params.user).returning();
 
     await this.db.insert(schema.tenantSettings).values(params.tenantSettings).onConflictDoNothing();
     await this.db.insert(schema.companies).values(params.company).onConflictDoNothing();
-    await this.db.insert(schema.companyProfileVersions).values(params.profileVersion).onConflictDoNothing();
-    await this.db.insert(schema.companyProfiles).values(params.profilePointer).onConflictDoNothing();
+    await this.db
+      .insert(schema.companyProfileVersions)
+      .values(params.profileVersion)
+      .onConflictDoNothing();
+    await this.db
+      .insert(schema.companyProfiles)
+      .values(params.profilePointer)
+      .onConflictDoNothing();
     await this.db.insert(schema.subscriptions).values(params.subscription).onConflictDoNothing();
 
     return createdUser!;

@@ -916,6 +916,20 @@ export class DocumentsRepository {
       .where(eq(schema.documentProcessingOutbox.id, id));
   }
 
+  /** QUEUED_FOR_EXTRACTION -> PROCESSING once the job is handed to the worker; never regresses. */
+  async markDocumentProcessing(docId: string, orgId: string, startedAt: Date): Promise<void> {
+    await this.db
+      .update(schema.tenderDocuments)
+      .set({ status: 'PROCESSING', processingStartedAt: startedAt })
+      .where(
+        and(
+          eq(schema.tenderDocuments.id, docId),
+          eq(schema.tenderDocuments.organizationId, orgId),
+          eq(schema.tenderDocuments.status, 'QUEUED_FOR_EXTRACTION'),
+        ),
+      );
+  }
+
   async markOutboxFailed(
     id: string,
     attempts: number,

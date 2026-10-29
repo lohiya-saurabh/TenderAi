@@ -1,11 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
-import { eq } from 'drizzle-orm';
-import {
-  DRIZZLE_TOKEN,
-  type DrizzleDb,
-  createDrizzle,
-} from '@/common/database/database.module.js';
+import { and, eq } from 'drizzle-orm';
+import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '@/common/database/database.module.js';
 import * as schema from '@/common/database/schema.js';
 
 @Injectable()
@@ -28,6 +24,8 @@ export class TeamsRepository {
         organizationId: schema.users.organizationId,
         organizationName: schema.users.organizationName,
         password: schema.users.password,
+        inviteTokenHash: schema.users.inviteTokenHash,
+        inviteExpiresAt: schema.users.inviteExpiresAt,
       })
       .from(schema.users)
       .where(eq(schema.users.organizationId, orgId));
@@ -54,11 +52,30 @@ export class TeamsRepository {
   }
 
   public async createUser(newUser: schema.NewUser): Promise<schema.User | null> {
-    const [created] = await this.db
-      .insert(schema.users)
-      .values(newUser)
-      .returning();
+    const [created] = await this.db.insert(schema.users).values(newUser).returning();
 
     return created ?? null;
+  }
+
+  public async findMember(userId: string, orgId: string): Promise<schema.User | null> {
+    const [member] = await this.db
+      .select()
+      .from(schema.users)
+      .where(and(eq(schema.users.id, userId), eq(schema.users.organizationId, orgId)))
+      .limit(1);
+    return member ?? null;
+  }
+
+  public async setInvite(
+    userId: string,
+    orgId: string,
+    invite: { tokenHash: string; expiresAt: Date },
+  ): Promise<schema.User | null> {
+    const [updated] = await this.db
+      .update(schema.users)
+      .set({ inviteTokenHash: invite.tokenHash, inviteExpiresAt: invite.expiresAt })
+      .where(and(eq(schema.users.id, userId), eq(schema.users.organizationId, orgId)))
+      .returning();
+    return updated ?? null;
   }
 }

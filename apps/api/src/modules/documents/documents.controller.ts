@@ -179,7 +179,8 @@ export class DocumentsController {
     let closed = false;
     let pollInterval: NodeJS.Timeout | null = null;
     let pollCount = 0;
-    const maxPolls = 120; // 120s safety limit
+    // Long tenders take several minutes; the stream ends when the documents finish, or at 15 min.
+    const maxPolls = 900;
 
     const check = async () => {
       if (closed) return;

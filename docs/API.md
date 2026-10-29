@@ -6,23 +6,24 @@ Source of truth: the controllers under `apps/api/src/modules/**`. When you add o
 
 ## Auth (public)
 
-| Method | Path             | Notes                                               |
-| ------ | ---------------- | --------------------------------------------------- |
-| POST   | `/auth/register` | Creates the organization and its first user (ADMIN) |
-| POST   | `/auth/login`    | Returns access + refresh token and the user         |
-| POST   | `/auth/refresh`  | Rotates the refresh token (the old one is revoked)  |
-| POST   | `/auth/logout`   | Revokes the refresh token                           |
+| Method | Path                  | Notes                                                                               |
+| ------ | --------------------- | ----------------------------------------------------------------------------------- |
+| POST   | `/auth/register`      | Creates the organization and its first user (ADMIN)                                 |
+| POST   | `/auth/accept-invite` | Sets an invited member's password from their one-time invite link and signs them in |
+| POST   | `/auth/login`         | Returns access + refresh token and the user                                         |
+| POST   | `/auth/refresh`       | Rotates the refresh token (the old one is revoked)                                  |
+| POST   | `/auth/logout`        | Revokes the refresh token                                                           |
 
 ## Bids
 
-| Method      | Path                                                                                                       | Notes                                                                     |
-| ----------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| GET, POST   | `/bids`                                                                                                    | List / create bids                                                        |
-| GET, DELETE | `/bids/:id`                                                                                                | One bid / delete it                                                       |
-| GET, POST   | `/bids/:id/bid-decision`                                                                                   | Read / run the bid-or-no-bid evaluation (AI `/api/v1/agent/bid-decision`) |
-| GET         | `/bids/:id/readiness`, `/review-tasks`, `/evidence-matches`, `/risk-findings`, `/deadlines`, `/amendments` | Derived views of a bid                                                    |
-| GET         | `/tenders/amendments`                                                                                      | Amendments across bids                                                    |
-| GET         | `/bids/:bidId/audit-events`                                                                                | Audit trail                                                               |
+| Method      | Path                                                                                                       | Notes                                                                                                                                                    |
+| ----------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET, POST   | `/bids`                                                                                                    | List / create bids                                                                                                                                       |
+| GET, DELETE | `/bids/:id`                                                                                                | One bid / delete it                                                                                                                                      |
+| GET, POST   | `/bids/:id/bid-decision`                                                                                   | Read / run the bid-or-no-bid evaluation (AI `/api/v1/agent/bid-decision`). Returns 503 when the engine is unreachable; there is no local fallback engine |
+| GET         | `/bids/:id/readiness`, `/review-tasks`, `/evidence-matches`, `/risk-findings`, `/deadlines`, `/amendments` | Derived views of a bid                                                                                                                                   |
+| GET         | `/tenders/amendments`                                                                                      | Amendments across bids                                                                                                                                   |
+| GET         | `/bids/:bidId/audit-events`                                                                                | Audit trail                                                                                                                                              |
 
 ## Documents
 
@@ -65,15 +66,15 @@ Source of truth: the controllers under `apps/api/src/modules/**`. When you add o
 
 ## Workspace
 
-| Method            | Path                                                                                                       | Notes                                 |
-| ----------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------- |
-| POST, GET, DELETE | `/chat/messages`, `/chat/conversations[/:id[/messages]]`                                                   | Tender chat (AI `/api/v1/chat/query`) |
-| GET               | `/dashboard/metrics`                                                                                       | Dashboard numbers                     |
-| GET, PATCH, POST  | `/notifications`, `/notifications/:id/read`, `/notifications/mark-all-read`, `/notifications/trigger-scan` | In-app notifications                  |
-| GET, PATCH        | `/settings/workspace`                                                                                      | Organization settings                 |
-| GET, POST         | `/teams/members`, `/teams/invite`                                                                          | Team management                       |
-| GET, PATCH, POST  | `/users/me`, `/users/change-password`                                                                      | The caller's account                  |
-| GET, POST         | `/billing/plans` (public), `/billing/subscription`, `/billing/usage`, `/billing/change-plan`               | Plans and usage                       |
+| Method            | Path                                                                                                       | Notes                                                                                                                                                                                  |
+| ----------------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST, GET, DELETE | `/chat/messages`, `/chat/conversations[/:id[/messages]]`                                                   | Tender chat (AI `/api/v1/chat/query`)                                                                                                                                                  |
+| GET               | `/dashboard/metrics`                                                                                       | Dashboard numbers                                                                                                                                                                      |
+| GET, PATCH, POST  | `/notifications`, `/notifications/:id/read`, `/notifications/mark-all-read`, `/notifications/trigger-scan` | In-app notifications                                                                                                                                                                   |
+| GET, PATCH        | `/settings/workspace`                                                                                      | Organization settings                                                                                                                                                                  |
+| GET, POST         | `/teams/members`, `/teams/invite`, `/teams/members/:id/invite-link`                                        | Team management. An invite returns a one-time `inviteUrl` (valid 7 days; only its hash is stored, and no email is sent yet). `invite-link` issues a fresh link and retires the old one |
+| GET, PATCH, POST  | `/users/me`, `/users/change-password`                                                                      | The caller's account                                                                                                                                                                   |
+| GET, POST         | `/billing/plans` (public), `/billing/subscription`, `/billing/usage`, `/billing/change-plan`               | Plans and usage                                                                                                                                                                        |
 
 ## Internal
 

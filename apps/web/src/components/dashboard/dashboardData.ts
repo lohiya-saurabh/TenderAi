@@ -6,9 +6,7 @@
  *   - BidSummary[]        from GET /api/v1/bids
  *   - ComplianceItem[]    from GET /api/v1/bids/:id/compliance-items
  *
- * No fabricated data. Anything the backend does not expose yet (company
- * profile, expiring certificates, tender amendments) is documented as a
- * missing API in MissingApiCallout instead of being simulated here.
+ * No fabricated data: anything the backend does not expose is left out, never simulated.
  */
 
 import type { BidSummary } from '@/api/bids.js';

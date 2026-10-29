@@ -12,6 +12,9 @@ export const users = pgTable('users', {
   permissions: jsonb('permissions').notNull().$type<string[]>(),
   organizationId: orgId().references(() => organizations.id, { onDelete: 'cascade' }),
   organizationName: text('organization_name').notNull(),
+  // One-time invite: sha256 of the link's token, cleared when the invite is accepted.
+  inviteTokenHash: text('invite_token_hash').unique(),
+  inviteExpiresAt: tstz('invite_expires_at'),
 });
 
 export type User = typeof users.$inferSelect;
