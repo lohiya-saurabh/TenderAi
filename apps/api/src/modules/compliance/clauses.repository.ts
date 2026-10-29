@@ -18,6 +18,8 @@ export type ClauseUpdate = Partial<
     | 'provenance'
     | 'status'
     | 'reviewStatus'
+    | 'fulfilmentStatus'
+    | 'fulfilmentOwnerId'
     | 'reviewedBy'
     | 'reviewedByName'
     | 'reviewedAt'

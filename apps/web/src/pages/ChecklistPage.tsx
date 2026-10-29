@@ -6,7 +6,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import type { Clause, Coverage, CoverageStatus } from '@tenderpulse/shared-types';
-import { getCoverage, listClauses } from '@/api/clauses.js';
+import { getCoverage, listClauses, updateFulfilment } from '@/api/clauses.js';
 import { getBid } from '@/api/bids.js';
 import { Chip } from '@/components/clauses/ClauseChips.js';
 import {
@@ -261,6 +261,50 @@ export const ChecklistPage: React.FC = () => {
   );
 };
 
+/** Lets the team track preparation per clause; saved with the clause's version (optimistic lock). */
+const FulfilmentPicker: React.FC<{ bidId: string; clause: Clause }> = ({ bidId, clause }) => {
+  const [status, setStatus] = useState(clause.fulfilment.status);
+  const [version, setVersion] = useState(clause.review.version);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const save = async (next: Clause['fulfilment']['status']) => {
+    setSaving(true);
+    setError(null);
+    const res = await updateFulfilment(bidId, clause.id, {
+      expectedVersion: version,
+      status: next,
+    });
+    setSaving(false);
+    if (res.ok) {
+      setStatus(res.data.fulfilment.status);
+      setVersion(res.data.review.version);
+    } else {
+      setError(res.error.message);
+    }
+  };
+  return (
+    <span className="flex flex-col items-start gap-1">
+      <select
+        aria-label={`Preparation status for ${clause.title}`}
+        value={status}
+        disabled={saving}
+        onChange={(e) => void save(e.target.value as Clause['fulfilment']['status'])}
+        className={cn(
+          'h-7 rounded-md border border-input bg-background px-2 text-xs',
+          FULFILMENT_TONE[status] === 'bad' && 'border-destructive text-destructive',
+        )}
+      >
+        {(Object.keys(FULFILMENT_LABEL) as Clause['fulfilment']['status'][]).map((s) => (
+          <option key={s} value={s}>
+            {FULFILMENT_LABEL[s]}
+          </option>
+        ))}
+      </select>
+      {error && <span className="text-xs text-destructive">{error}</span>}
+    </span>
+  );
+};
+
 const ChecklistRow: React.FC<{ bidId: string; clause: Clause }> = ({ bidId, clause: c }) => {
   const attest = attestationChips(c);
   const parties = c.parties.map((p) => PARTY_LABEL[p]).join(' · ');
@@ -297,9 +341,7 @@ const ChecklistRow: React.FC<{ bidId: string; clause: Clause }> = ({ bidId, clau
         {formatDeadline(c.deadline)}
       </span>
       <span className="flex flex-col items-start gap-1">
-        <Chip tone={FULFILMENT_TONE[c.fulfilment.status]}>
-          {FULFILMENT_LABEL[c.fulfilment.status]}
-        </Chip>
+        <FulfilmentPicker bidId={bidId} clause={c} />
         <span className="text-xs text-muted-foreground">
           Clause {REVIEW_LABEL[c.review.status].toLowerCase()}
         </span>

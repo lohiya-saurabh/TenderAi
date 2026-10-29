@@ -63,23 +63,8 @@ export class OneDriveConnector implements DocumentSourceConnector {
       }
     }
 
-    // Mock mode
-    return [
-      {
-        id: 'onedrive_file_ca_networth',
-        name: 'Chartered_Accountant_Networth_Certificate_UDIN.pdf',
-        mimeType: 'application/pdf',
-        sizeBytes: 654000,
-        modifiedTime: '2024-08-10T12:00:00.000Z',
-      },
-      {
-        id: 'onedrive_file_msrdc_work_order',
-        name: 'MSRDC_Expressway_Package_45_Work_Order.pdf',
-        mimeType: 'application/pdf',
-        sizeBytes: 1200300,
-        modifiedTime: '2024-03-01T08:00:00.000Z',
-      },
-    ];
+    // No connection: never invent files.
+    throw new BadRequestError('OneDrive is not connected. Drive import needs an OAuth connection, which is not available yet; upload the file directly.');
   }
 
   public async downloadFile(
@@ -113,15 +98,8 @@ export class OneDriveConnector implements DocumentSourceConnector {
       }
     }
 
-    const content = `%PDF-1.4\n%OneDrive-Imported-Evidence\nFile ID: ${externalFileId}\nImportedAt: ${new Date().toISOString()}\n%%EOF`;
-    const buffer = Buffer.from(content, 'utf-8');
-    const fileName = (authContext?.fileName as string) || `${externalFileId}.pdf`;
-
-    return {
-      buffer,
-      fileName,
-      mimeType: 'application/pdf',
-      sizeBytes: buffer.byteLength,
-    };
+    throw new BadRequestError(
+      'OneDrive is not connected. Drive import needs an OAuth connection, which is not available yet; upload the file directly.',
+    );
   }
 }

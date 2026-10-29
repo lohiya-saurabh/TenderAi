@@ -68,6 +68,16 @@ export class ClausesController {
     return this.service.review(bidId, clauseId, body);
   }
 
+  @Patch('clauses/:clauseId/fulfilment')
+  @RequirePermission(Permissions.BIDS_UPDATE)
+  async updateFulfilment(
+    @Param('bidId') bidId: string,
+    @Param('clauseId') clauseId: string,
+    @Body() body: { expectedVersion?: number; status?: string; ownerId?: string | null },
+  ) {
+    return this.service.updateFulfilment(bidId, clauseId, body);
+  }
+
   @Get('conflicts')
   @RequirePermission(Permissions.BIDS_READ)
   async conflicts(@Param('bidId') bidId: string) {

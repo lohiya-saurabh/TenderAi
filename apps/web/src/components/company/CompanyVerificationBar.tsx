@@ -577,7 +577,7 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
               </Badge>
             </div>
             <p className="text-[11px] mono text-muted-foreground m-0 truncate">
-              Upload local PDFs or sync from Google Drive / 365
+              Upload certificates and financial documents (PDF)
             </p>
             <Button
               variant="outline"

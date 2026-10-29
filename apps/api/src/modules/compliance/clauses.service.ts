@@ -31,6 +31,7 @@ import {
 import { TenantContextHolder } from '@/common/security/TenantContext.js';
 import {
   EMPTY_ATTRIBUTES,
+  FULFILMENT_STATUSES,
   buildFacets,
   isPageTextChunk,
   stripChunkHeading,
@@ -39,6 +40,7 @@ import {
   requiresSourceForConfirm,
   toClause,
 } from './application/clause-model.js';
+import type { FulfilmentStatus } from '@tenderpulse/shared-types';
 import { ClausesRepository, type ClauseUpdate } from './clauses.repository.js';
 
 const RESOLUTIONS: ConflictResolution[] = [
@@ -379,6 +381,51 @@ export class ClausesService {
       );
     }
     await this.refreshBidCounters(bidId, actor.orgId, now);
+    return this.detail(bidId, clauseId);
+  }
+
+  /** Bid-preparation progress for one clause: separate from its review, never derived from it. */
+  async updateFulfilment(
+    bidId: string,
+    clauseId: string,
+    req: { expectedVersion?: number; status?: string; ownerId?: string | null },
+  ): Promise<ClauseDetail> {
+    const actor = this.actor();
+    await this.requireBid(bidId, actor.orgId);
+    const row = await this.repo.findClause(bidId, clauseId, actor.orgId);
+    if (!row) throw new NotFoundError(`Clause '${clauseId}' not found.`);
+    if (!Number.isInteger(req?.expectedVersion)) {
+      throw new BadRequestError('expectedVersion is required.');
+    }
+    const status = String(req.status ?? '');
+    if (!FULFILMENT_STATUSES.includes(status as FulfilmentStatus)) {
+      throw new BadRequestError(`Unknown fulfilment status '${status}'.`);
+    }
+    const now = new Date();
+    const update: ClauseUpdate = {
+      fulfilmentStatus: status,
+      ...(req.ownerId !== undefined ? { fulfilmentOwnerId: req.ownerId || null } : {}),
+    };
+    const ok = await this.repo.updateClause(
+      clauseId,
+      actor.orgId,
+      req.expectedVersion as number,
+      update,
+      this.audit(
+        bidId,
+        clauseId,
+        'CLAUSE_FULFILMENT_UPDATED',
+        actor,
+        { from: row.fulfilmentStatus, to: status, ownerId: update.fulfilmentOwnerId ?? null },
+        now,
+      ),
+      now,
+    );
+    if (!ok) {
+      throw new ConflictError(
+        'This clause was changed by someone else. Reload to see the changes.',
+      );
+    }
     return this.detail(bidId, clauseId);
   }
 

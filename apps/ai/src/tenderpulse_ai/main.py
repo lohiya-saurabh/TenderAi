@@ -22,6 +22,7 @@ from tenderpulse_ai.decision import (
     BidDecisionRequest,
     BidDecisionResponse,
 )
+from tenderpulse_ai.decision.workflow.nodes import rotation_decision_model
 from tenderpulse_ai.domain.evidence_extractor import (
     CompanyEvidenceExtractionRequest,
     CompanyEvidenceExtractionResponse,
@@ -473,7 +474,7 @@ async def process_queue_message(request: QueueProcessingRequest):
 )
 async def analyze_bid_decision(request: BidDecisionRequest):
     """Bid/No-Bid Decision Intelligence Agent: evaluates company profile against tender."""
-    agent = BidDecisionAgent()
+    agent = BidDecisionAgent(model_fn=rotation_decision_model)
     return await agent.evaluate(request)
 
 

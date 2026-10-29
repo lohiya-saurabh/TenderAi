@@ -16,6 +16,15 @@ import type {
 } from '@tenderpulse/shared-types';
 import type { ComplianceItem } from '@/common/database/schema.js';
 
+export const FULFILMENT_STATUSES: FulfilmentStatus[] = [
+  'NOT_STARTED',
+  'IN_PROGRESS',
+  'EVIDENCE_ATTACHED',
+  'DONE',
+  'AT_RISK',
+  'NOT_APPLICABLE',
+];
+
 export const REVIEW_STATUSES: ReviewStatus[] = [
   'UNREVIEWED',
   'NEEDS_REVIEW',

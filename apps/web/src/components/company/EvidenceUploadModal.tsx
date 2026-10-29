@@ -1,14 +1,10 @@
 import React from 'react';
 import { Button } from '@/components/common/Button.js';
 import { Modal } from '@/components/common/Modal.js';
-import {
-  Upload,
-  CloudDownload,
-  AlertTriangle,
-  FileText,
-  X,
-  ShieldCheck,
-} from 'lucide-react';
+import { Upload, CloudDownload, AlertTriangle, FileText, X, ShieldCheck } from 'lucide-react';
+
+/** Google Drive / OneDrive import is off until a real OAuth connection exists. */
+const CLOUD_IMPORT_ENABLED = false;
 
 export interface EvidenceUploadModalProps {
   isOpen: boolean;
@@ -73,7 +69,7 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
           <Button variant="ghost" onClick={onClose} disabled={loading}>
             Cancel
           </Button>
-          {evidenceSource === 'DEVICE' ? (
+          {!CLOUD_IMPORT_ENABLED || evidenceSource === 'DEVICE' ? (
             <Button
               variant="primary"
               onClick={onExecuteDeviceUpload}
@@ -82,11 +78,7 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
               {loading ? 'Uploading & Processing...' : 'Upload Evidence Document'}
             </Button>
           ) : (
-            <Button
-              variant="primary"
-              onClick={onExecuteCloudImport}
-              disabled={loading}
-            >
+            <Button variant="primary" onClick={onExecuteCloudImport} disabled={loading}>
               {loading ? 'Importing...' : 'Import Selected File'}
             </Button>
           )}
@@ -94,39 +86,41 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
       }
     >
       <div className="flex flex-col gap-4 text-xs">
-        {/* Exactly 2 clean segmented tabs: Device vs Cloud */}
-        <div className="flex items-center p-1 bg-muted/60 rounded-lg border border-border gap-1">
-          <button
-            type="button"
-            onClick={() => {
-              setEvidenceSource('DEVICE');
-              setErrorMsg(null);
-            }}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-md font-medium text-xs transition-colors cursor-pointer ${
-              evidenceSource === 'DEVICE'
-                ? 'bg-background text-foreground shadow-xs font-semibold'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Upload size={13} />
-            Upload from Device
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setEvidenceSource('CLOUD');
-              setErrorMsg(null);
-            }}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-md font-medium text-xs transition-colors cursor-pointer ${
-              evidenceSource === 'CLOUD'
-                ? 'bg-background text-foreground shadow-xs font-semibold'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <CloudDownload size={13} />
-            Cloud Storage
-          </button>
-        </div>
+        {/* Drive import needs a real OAuth connection; until then only device upload is offered. */}
+        {CLOUD_IMPORT_ENABLED && (
+          <div className="flex items-center p-1 bg-muted/60 rounded-lg border border-border gap-1">
+            <button
+              type="button"
+              onClick={() => {
+                setEvidenceSource('DEVICE');
+                setErrorMsg(null);
+              }}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-md font-medium text-xs transition-colors cursor-pointer ${
+                evidenceSource === 'DEVICE'
+                  ? 'bg-background text-foreground shadow-xs font-semibold'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Upload size={13} />
+              Upload from Device
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setEvidenceSource('CLOUD');
+                setErrorMsg(null);
+              }}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-md font-medium text-xs transition-colors cursor-pointer ${
+                evidenceSource === 'CLOUD'
+                  ? 'bg-background text-foreground shadow-xs font-semibold'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <CloudDownload size={13} />
+              Cloud Storage
+            </button>
+          </div>
+        )}
 
         {errorMsg && (
           <div className="p-3 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive flex items-center gap-2">
@@ -136,7 +130,7 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
         )}
 
         {/* Cloud Provider Selection (shown only when Cloud Storage tab is selected) */}
-        {evidenceSource === 'CLOUD' && (
+        {CLOUD_IMPORT_ENABLED && evidenceSource === 'CLOUD' && (
           <div className="flex flex-col gap-2.5 p-3 rounded-lg border border-border bg-muted/20">
             <label className="font-semibold block text-xs text-foreground">
               Select Connected Cloud Provider
@@ -179,7 +173,7 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
         )}
 
         {/* Device PDF Dropzone (shown when Device tab is selected) */}
-        {evidenceSource === 'DEVICE' && (
+        {(!CLOUD_IMPORT_ENABLED || evidenceSource === 'DEVICE') && (
           <div>
             {!deviceFile ? (
               <div
@@ -222,9 +216,7 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
                     <FileText size={20} />
                   </div>
                   <div className="min-w-0">
-                    <div className="font-semibold text-foreground truncate">
-                      {deviceFile.name}
-                    </div>
+                    <div className="font-semibold text-foreground truncate">{deviceFile.name}</div>
                     <div className="text-[11px] mono text-muted-foreground">
                       {(deviceFile.size / (1024 * 1024)).toFixed(2)} MB · PDF Document
                     </div>
@@ -256,9 +248,15 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
             onChange={(e) => setEvidenceType(e.target.value)}
             className="w-full p-2 rounded-md border border-border bg-background text-foreground text-xs outline-none focus:ring-1 focus:ring-primary"
           >
-            <option value="AUDITED_BALANCE_SHEET">Audited Balance Sheet / Financial Statement</option>
-            <option value="COMPLETION_CERT">Client Project Completion Certificate / Work Completion</option>
-            <option value="WORK_ORDER">Work Order / Letter of Award (LOA) / Contract Agreement</option>
+            <option value="AUDITED_BALANCE_SHEET">
+              Audited Balance Sheet / Financial Statement
+            </option>
+            <option value="COMPLETION_CERT">
+              Client Project Completion Certificate / Work Completion
+            </option>
+            <option value="WORK_ORDER">
+              Work Order / Letter of Award (LOA) / Contract Agreement
+            </option>
             <option value="ISO_CERT">ISO Quality, Environmental & Safety Certificate</option>
             <option value="GST_REG">GST Registration Certificate (Form REG-06)</option>
             <option value="PAN_CARD">Permanent Account Number (PAN Card)</option>
@@ -281,7 +279,9 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
         <div className="p-2.5 rounded-md bg-muted/40 border border-border text-[11px] text-muted-foreground flex items-center gap-2">
           <ShieldCheck size={16} className="text-primary shrink-0" />
           <span>
-            Document will be cryptographically anchored with SHA-256 and stored in isolated tenant storage. Extracted statutory attributes are automatically indexed for Bid/No-Bid eligibility scoring.
+            Document will be cryptographically anchored with SHA-256 and stored in isolated tenant
+            storage. Extracted statutory attributes are automatically indexed for Bid/No-Bid
+            eligibility scoring.
           </span>
         </div>
       </div>

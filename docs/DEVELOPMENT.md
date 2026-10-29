@@ -60,14 +60,14 @@ Leave `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` unset to use your AWS CLI 
 
 The worker rotates across the free tiers whose keys are set (in `.env` or `apps/ai/.env`; the worker reads both):
 
-| Variable                                      | Provider                                                          |
-| --------------------------------------------- | ----------------------------------------------------------------- |
-| `CEREBRAS_API_KEY`                            | Cerebras (`gpt-oss-120b`)                                         |
-| `GROQ_API_KEY`                                | Groq (`gpt-oss-120b`, `gpt-oss-20b`)                              |
-| `GEMINI_API_KEY`                              | Google Gemini (`gemini-3.5-flash`, `gemini-3.1-flash-lite`)       |
-| `SAMBANOVA_API_KEY`                           | SambaNova (`DeepSeek-V3.2`, `gpt-oss-120b`)                       |
-| `OPENROUTER_API_KEY`                          | OpenRouter; currently commented out, so disabled                  |
-| `LLM_API_KEY` (+ `LLM_BASE_URL`, `LLM_MODEL`) | Single endpoint for tender chat; without it, chat skips the model |
+| Variable                                      | Provider                                                                              |
+| --------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `CEREBRAS_API_KEY`                            | Cerebras (`gpt-oss-120b`)                                                             |
+| `GROQ_API_KEY`                                | Groq (`gpt-oss-120b`, `gpt-oss-20b`)                                                  |
+| `GEMINI_API_KEY`                              | Google Gemini (`gemini-3.5-flash`, `gemini-3.1-flash-lite`)                           |
+| `SAMBANOVA_API_KEY`                           | SambaNova (`DeepSeek-V3.2`, `gpt-oss-120b`)                                           |
+| `OPENROUTER_API_KEY`                          | OpenRouter; currently commented out, so disabled                                      |
+| `LLM_API_KEY` (+ `LLM_BASE_URL`, `LLM_MODEL`) | Optional single endpoint for tender chat; without it, chat uses the provider rotation |
 
 Tuning knobs, with defaults:
 

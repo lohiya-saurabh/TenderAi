@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 import inspect
+import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
@@ -22,17 +23,39 @@ from tenderpulse_ai.infrastructure.embeddings import get_embedder
 from tenderpulse_ai.security.sanitizer import UNTRUSTED_DATA_DIRECTIVE, SecretSanitizer
 from tenderpulse_ai.tools.retrieval import DocumentChunk, ScopedRetrievalTool
 
+logger = logging.getLogger(__name__)
+
 DecisionModelFn = Callable[[str, str], "str | Awaitable[str]"]
 PersistenceSinkFn = Callable[[BidDecisionResponse], "Awaitable[None] | None"]
 
 
 def default_decision_model(system_prompt: str, user_prompt: str) -> str:
-    """Deterministic fallback explainer for test/CI and offline environments."""
-    return (
-        "Evaluation completed deterministically. The company profile has been verified "
-        "against tender eligibility criteria, financial thresholds, past performance, "
-        "certifications, and execution rules."
+    """No model configured (tests, offline): no memo rather than a canned one."""
+    return ""
+
+
+async def rotation_decision_model(system_prompt: str, user_prompt: str) -> str:
+    """Writes the memo through the same multi-provider rotation as extraction.
+
+    The memo only explains the deterministic verdict; if no model answers it is left empty
+    and the verdict, reasons and gaps still stand on their own.
+    """
+    from tenderpulse_ai.config import settings
+    from tenderpulse_ai.infrastructure.llm.openai_compatible_client import (
+        LLMExtractionError,
+        OpenAICompatibleLlmClient,
     )
+
+    client = OpenAICompatibleLlmClient.create_from_settings(settings, timeout=20.0)
+    if not client._all_endpoints():
+        return ""
+    try:
+        return await client.generate_chat_completion(
+            [{"role": "user", "content": user_prompt}], system_prompt=system_prompt
+        )
+    except (LLMExtractionError, RuntimeError) as err:
+        logger.warning("Bid-decision memo not written: %s", err)
+        return ""
 
 
 @dataclass

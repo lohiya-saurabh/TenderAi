@@ -175,18 +175,16 @@ describe('Company Evidence & Third-Party Verification Layer', () => {
       ).rejects.toThrow(NotFoundError);
     });
 
-    it('should import evidence from Google Drive connector', async () => {
-      const imported = await evidenceService.importFromCloudSource(TEST_COMPANY_ID, {
-        provider: 'google-drive',
-        fileId: 'gdrive_file_nhai_completion',
-        fileName: 'NHAI_STRR_Completion.pdf',
-        evidenceType: 'COMPLETION_CERT',
-        issuer: 'National Highways Authority of India',
-      });
-
-      expect(imported.fileName).toBe('NHAI_STRR_Completion.pdf');
-      expect(imported.evidenceType).toBe('COMPLETION_CERT');
-      expect(imported.verificationStatus).toBe('EXTRACTED');
+    it('refuses drive import without a connection instead of inventing files', async () => {
+      await expect(
+        evidenceService.importFromCloudSource(TEST_COMPANY_ID, {
+          provider: 'google-drive',
+          fileId: 'any-file',
+          fileName: 'NHAI_STRR_Completion.pdf',
+          evidenceType: 'COMPLETION_CERT',
+          issuer: 'National Highways Authority of India',
+        }),
+      ).rejects.toThrow(/not connected/);
     });
   });
 

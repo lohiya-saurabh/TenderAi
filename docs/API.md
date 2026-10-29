@@ -40,17 +40,18 @@ Source of truth: the controllers under `apps/api/src/modules/**`. When you add o
 
 ## Clauses (compliance items)
 
-| Method     | Path                                                        | Notes                                                                   |
-| ---------- | ----------------------------------------------------------- | ----------------------------------------------------------------------- |
-| GET        | `/bids/:bidId/clauses`                                      | Clause workspace list (filters, search, facets)                         |
-| GET        | `/bids/:bidId/clauses/:clauseId`                            | One clause with provenance                                              |
-| POST       | `/bids/:bidId/clauses/:clauseId/review`                     | Confirm / correct / reject one clause                                   |
-| POST       | `/bids/:bidId/clauses/bulk-review`                          | Review several clauses                                                  |
-| GET        | `/bids/:bidId/conflicts`                                    | Contradictions between clauses (e.g. two PBG percentages)               |
-| PATCH      | `/bids/:bidId/conflicts/:conflictId`                        | Resolve a conflict                                                      |
-| GET        | `/bids/:bidId/coverage`                                     | Extraction coverage per document (`COMPLETE` / `PARTIAL`, failed pages) |
-| GET        | `/bids/:bidId/summary`                                      | Counts for the bid header                                               |
-| GET, PATCH | `/bids/:bidId/compliance-items[/:itemId]`, `PATCH .../bulk` | Older checklist endpoints, still used by the checklist page             |
+| Method     | Path                                                        | Notes                                                                                                                                                             |
+| ---------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET        | `/bids/:bidId/clauses`                                      | Clause workspace list (filters, search, facets)                                                                                                                   |
+| GET        | `/bids/:bidId/clauses/:clauseId`                            | One clause with provenance                                                                                                                                        |
+| POST       | `/bids/:bidId/clauses/:clauseId/review`                     | Confirm / correct / reject one clause                                                                                                                             |
+| POST       | `/bids/:bidId/clauses/bulk-review`                          | Review several clauses                                                                                                                                            |
+| PATCH      | `/bids/:bidId/clauses/:clauseId/fulfilment`                 | Set a clause's preparation status (`NOT_STARTED` … `DONE`, `AT_RISK`, `NOT_APPLICABLE`) and owner, with `expectedVersion`; audited as `CLAUSE_FULFILMENT_UPDATED` |
+| GET        | `/bids/:bidId/conflicts`                                    | Contradictions between clauses (e.g. two PBG percentages)                                                                                                         |
+| PATCH      | `/bids/:bidId/conflicts/:conflictId`                        | Resolve a conflict                                                                                                                                                |
+| GET        | `/bids/:bidId/coverage`                                     | Extraction coverage per document (`COMPLETE` / `PARTIAL`, failed pages)                                                                                           |
+| GET        | `/bids/:bidId/summary`                                      | Counts for the bid header                                                                                                                                         |
+| GET, PATCH | `/bids/:bidId/compliance-items[/:itemId]`, `PATCH .../bulk` | Older checklist endpoints, still used by the checklist page                                                                                                       |
 
 ## Companies and evidence
 

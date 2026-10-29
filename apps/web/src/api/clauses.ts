@@ -38,6 +38,14 @@ export const bulkReviewClauses = (
 export const listConflicts = (bidId: string): Promise<ApiResult<Conflict[]>> =>
   apiGet(`${base(bidId)}/conflicts`);
 
+/** Bid-preparation progress for one clause (separate from its review). */
+export const updateFulfilment = (
+  bidId: string,
+  clauseId: string,
+  body: { expectedVersion: number; status: string; ownerId?: string | null },
+): Promise<ApiResult<ClauseDetail>> =>
+  apiPatch(`${base(bidId)}/clauses/${encodeURIComponent(clauseId)}/fulfilment`, body);
+
 export const resolveConflict = (
   bidId: string,
   conflictId: string,

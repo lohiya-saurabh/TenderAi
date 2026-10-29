@@ -35,19 +35,25 @@ def get_llm_client() -> Any | None:
     global _llm_client_instance
     from tenderpulse_ai.config import settings
 
-    if not settings.llm_api_key:
-        return None
     if _llm_client_instance is None:
         from tenderpulse_ai.infrastructure.llm.openai_compatible_client import (
             OpenAICompatibleLlmClient,
         )
 
-        _llm_client_instance = OpenAICompatibleLlmClient(
-            api_key=settings.llm_api_key,
-            base_url=settings.llm_base_url,
-            model=settings.llm_model,
-            timeout=12.0,
-        )
+        if settings.llm_api_key:
+            # An explicit single endpoint wins (LLM_API_KEY / LLM_BASE_URL / LLM_MODEL).
+            _llm_client_instance = OpenAICompatibleLlmClient(
+                api_key=settings.llm_api_key,
+                base_url=settings.llm_base_url,
+                model=settings.llm_model,
+                timeout=12.0,
+            )
+        else:
+            # Otherwise the same multi-provider rotation as extraction.
+            rotation = OpenAICompatibleLlmClient.create_from_settings(settings, timeout=12.0)
+            if not rotation._all_endpoints():
+                return None
+            _llm_client_instance = rotation
     return _llm_client_instance
 
 
