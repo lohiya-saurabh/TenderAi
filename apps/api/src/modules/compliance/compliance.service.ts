@@ -26,6 +26,8 @@ import {
 import { ComplianceRepository } from './compliance.repository.js';
 import { ComplianceQueries } from './compliance.queries.js';
 import { mapLegacyStatus } from './application/clause-model.js';
+import { matchClauseEvidence } from './application/clause-evidence-matcher.js';
+import type { CompanyProfilePayload } from '@/modules/company-profile/presentation/dto/CompanyProfilePayload.js';
 
 export interface ReviewComplianceDto {
   status?: DemoComplianceItem['status'];
@@ -137,7 +139,20 @@ export class ComplianceService {
     }
 
     const items = await this.listItems(bidId);
-    return buildEvidenceMatches(bidId, items);
+    const inputs = await this.queries.getEvidenceMatchInputs(bid.companyId, orgId);
+    const ctx = {
+      profile: inputs.payload as CompanyProfilePayload | null,
+      evidenceById: new Map(inputs.evidence.map((e) => [e.id, e])),
+      company: inputs.company,
+      deadline: bid.submissionDeadline ? new Date(bid.submissionDeadline) : null,
+    };
+    // Only clauses that ask for a document are matched; their evidence comes from the profile.
+    const needing = items.flatMap((item) => {
+      const text = `${item.title} ${item.provenance?.verbatimQuote ?? ''}`;
+      const evidence = matchClauseEvidence(text, ctx);
+      return evidence === undefined ? [] : [{ ...item, companyEvidence: evidence }];
+    });
+    return buildEvidenceMatches(bidId, needing);
   }
 
   /**

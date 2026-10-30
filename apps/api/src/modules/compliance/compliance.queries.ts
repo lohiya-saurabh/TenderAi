@@ -87,4 +87,37 @@ export class ComplianceQueries {
       .limit(1);
     return decision ?? null;
   }
+
+  /** Inputs for clause-to-evidence matching: the company, its active profile and evidence. */
+  async getEvidenceMatchInputs(companyId: string, orgId: string) {
+    const [company] = await this.db
+      .select()
+      .from(schema.companies)
+      .where(and(eq(schema.companies.id, companyId), eq(schema.companies.organizationId, orgId)))
+      .limit(1);
+    const [active] = await this.db
+      .select({ payload: schema.companyProfileVersions.payload })
+      .from(schema.companyProfiles)
+      .innerJoin(
+        schema.companyProfileVersions,
+        eq(schema.companyProfileVersions.id, schema.companyProfiles.activeVersionId),
+      )
+      .where(
+        and(
+          eq(schema.companyProfiles.companyId, companyId),
+          eq(schema.companyProfiles.organizationId, orgId),
+        ),
+      )
+      .limit(1);
+    const evidence = await this.db
+      .select()
+      .from(schema.companyEvidenceDocuments)
+      .where(
+        and(
+          eq(schema.companyEvidenceDocuments.companyId, companyId),
+          eq(schema.companyEvidenceDocuments.organizationId, orgId),
+        ),
+      );
+    return { company: company ?? null, payload: active?.payload ?? null, evidence };
+  }
 }
