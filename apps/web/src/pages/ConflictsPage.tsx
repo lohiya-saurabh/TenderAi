@@ -3,6 +3,7 @@
  * shows its own clause text; the AI note is labelled as AI text; the bidder accepts a value,
  * records a corrigendum, or drafts a pre-bid query that cites both clauses.
  */
+import { Page, PageHeader } from '@/components/ui/page.js';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { Conflict, ConflictResolution } from '@tenderpulse/shared-types';
@@ -63,16 +64,11 @@ export const ConflictsPage: React.FC = () => {
   const unresolved = conflicts?.filter((c) => c.resolution === 'UNRESOLVED').length ?? 0;
 
   return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="m-0 text-2xl font-bold">
-          Conflicts · {conflicts?.length ?? 0} · {unresolved} unresolved
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          The tender states different values for the same thing. Accept one with a reason, or ask
-          the authority before the pre-bid query deadline.
-        </p>
-      </div>
+    <Page>
+      <PageHeader
+        title={`Conflicts · ${conflicts?.length ?? 0} · ${unresolved} unresolved`}
+        description="The tender states different values for the same thing. Accept one with a reason, or ask the authority before the pre-bid query deadline."
+      />
       {error && <p className="text-sm text-destructive">{error}</p>}
       {conflicts && conflicts.length === 0 && (
         <p className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
@@ -91,7 +87,7 @@ export const ConflictsPage: React.FC = () => {
           onError={setError}
         />
       ))}
-    </div>
+    </Page>
   );
 };
 

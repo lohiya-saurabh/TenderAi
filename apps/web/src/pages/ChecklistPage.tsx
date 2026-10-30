@@ -3,6 +3,7 @@
  * which pages the AI could and could not read. Status comes from the clause record;
  * fields a clause does not state are shown as not stated, never guessed.
  */
+import { Page, PageHeader } from '@/components/ui/page.js';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import type { Clause, Coverage, CoverageStatus } from '@tenderpulse/shared-types';
@@ -85,39 +86,31 @@ export const ChecklistPage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-[18px]">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="m-0 text-2xl font-bold">
-            Documents to submit
-            {clauses && ` · ${checklist.ready} of ${checklist.total} ready`}
-          </h1>
-          <p className="m-0 mt-1 text-sm text-muted-foreground">
-            Built from document-type clauses, grouped by when they are due. Attestation shows only
-            what the tender asks for.
-          </p>
-        </div>
-        <div className="flex gap-1" role="tablist" aria-label="Checklist views">
-          {(['checklist', 'coverage'] as Tab[]).map((t) => (
-            <button
-              key={t}
-              type="button"
-              role="tab"
-              aria-selected={tab === t}
-              aria-controls={`panel-${t}`}
-              onClick={() => setTab(t)}
-              className={cn(
-                'min-h-9 rounded-lg px-3 text-sm font-medium',
-                tab === t
-                  ? 'bg-foreground text-white dark:bg-white dark:text-foreground'
-                  : 'text-foreground hover:bg-muted dark:text-white/75',
-              )}
-            >
-              {t === 'checklist' ? 'Checklist' : 'Coverage'}
-            </button>
-          ))}
-        </div>
-      </div>
+    <Page>
+      <PageHeader
+        title={`Documents to submit${clauses ? ` · ${checklist.ready} of ${checklist.total} ready` : ''}`}
+        description="Built from document-type clauses, grouped by when they are due. Attestation shows only what the tender asks for."
+        actions={
+          <div className="flex gap-1" role="tablist" aria-label="Checklist views">
+            {(['checklist', 'coverage'] as Tab[]).map((t) => (
+              <button
+                key={t}
+                type="button"
+                role="tab"
+                aria-selected={tab === t}
+                aria-controls={`panel-${t}`}
+                onClick={() => setTab(t)}
+                className={cn(
+                  'min-h-9 rounded-lg px-3 text-sm font-medium',
+                  tab === t ? 'bg-foreground text-background' : 'text-foreground hover:bg-muted',
+                )}
+              >
+                {t === 'checklist' ? 'Checklist' : 'Coverage'}
+              </button>
+            ))}
+          </div>
+        }
+      />
 
       {error && (
         <p role="alert" className="m-0 text-sm text-destructive">
@@ -257,7 +250,7 @@ export const ChecklistPage: React.FC = () => {
           </div>
         </Card>
       )}
-    </div>
+    </Page>
   );
 };
 
@@ -310,10 +303,7 @@ const ChecklistRow: React.FC<{ bidId: string; clause: Clause }> = ({ bidId, clau
   const parties = c.parties.map((p) => PARTY_LABEL[p]).join(' · ');
   return (
     <div
-      className={cn(
-        GRID,
-        'items-start border-b border-border py-2.5 text-sm dark:border-white/10',
-      )}
+      className={cn(GRID, 'items-start border-b border-border py-2.5 text-sm dark:border-white/10')}
       data-testid="checklist-row"
     >
       <span className="flex min-w-0 flex-col items-start gap-1">

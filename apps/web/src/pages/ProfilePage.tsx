@@ -1,17 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { Page, PageHeader } from '@/components/ui/page.js';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/auth/useAuth.js';
 import { getMe, updateMe, changePassword, type UserProfile } from '@/api/users.js';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar.js';
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card.js';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card.js';
 import { Input } from '@/components/ui/input.js';
 import { Label } from '@/components/ui/label.js';
 import { Separator } from '@/components/ui/separator.js';
@@ -161,24 +156,19 @@ export const ProfilePage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 pb-12">
-      {/* 1. Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/80 pb-5">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">User Profile</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-            Manage your personal identity, credentials, and tenant workspace permissions
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+    <Page width="narrow" className="pb-12">
+      <PageHeader
+        title="Your profile"
+        description="Your name, contact details, password and role in this workspace."
+        actions={
           <Link to="/settings">
-            <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+            <Button variant="outline" size="sm" className="gap-1.5">
               <KeyRound className="h-3.5 w-3.5" />
-              Workspace Settings
+              Workspace settings
             </Button>
           </Link>
-        </div>
-      </div>
+        }
+      />
 
       {/* 2. Tenant Workspace Profile Banner */}
       <div className="p-4 sm:p-5 rounded-lg bg-card border border-border/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -189,7 +179,7 @@ export const ProfilePage: React.FC = () => {
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Tenant:
+                Workspace:
               </span>
               <span className="text-base sm:text-lg font-semibold text-foreground tracking-tight">
                 {profile?.organizationName || user?.organizationName || 'Organization Workspace'}
@@ -598,6 +588,6 @@ export const ProfilePage: React.FC = () => {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </Page>
   );
 };

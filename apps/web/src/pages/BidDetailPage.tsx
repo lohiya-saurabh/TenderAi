@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
+import { Page } from '@/components/ui/page.js';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   getBid,
@@ -372,7 +373,7 @@ export const BidDetailPage: React.FC = () => {
   );
 
   return (
-    <div className="flex w-full min-w-0 flex-col gap-5">
+    <Page className="min-w-0">
       {actionError && <ErrorBanner message={actionError} onDismiss={() => setActionError(null)} />}
       {reprocessNotice && (
         <div
@@ -564,6 +565,6 @@ export const BidDetailPage: React.FC = () => {
         companyId={bid?.companyId}
         tenderTitle={bid?.title}
       />
-    </div>
+    </Page>
   );
 };

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { Page, PageHeader } from '@/components/ui/page.js';
 import { useNavigate, Link } from 'react-router-dom';
 import { createBid } from '@/api/bids.js';
 import { useCompany } from '@/context/useCompany.js';
 import { Button } from '@/components/common/Button.js';
 import { ErrorBanner } from '@/components/common/ErrorBanner.js';
-import { Building2, ArrowLeft, ShieldCheck, FileSpreadsheet, Calendar, Hash } from 'lucide-react';
+import { Building2, ArrowLeft, Calendar, Hash } from 'lucide-react';
 
 export const CreateBidPage: React.FC = () => {
   const { companies, selectedCompanyId } = useCompany();
@@ -57,43 +58,20 @@ export const CreateBidPage: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto flex flex-col gap-6">
-      {/* 1. Breadcrumb navigation */}
-      <div className="flex items-center gap-2">
-        <Link
-          to="/bids"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors no-underline"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          Back to Bid Pipeline
-        </Link>
-        <span className="text-muted-foreground/40 text-xs">/</span>
-        <span className="text-xs font-mono font-medium text-muted-foreground uppercase tracking-wider">
-          New Project Workspace
-        </span>
-      </div>
-
-      {/* 2. Header memo */}
-      <div className="border-b border-border pb-4">
-        <div className="flex items-center gap-2.5 mb-1.5">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-2xs font-mono font-bold tracking-wider uppercase bg-primary/10 text-primary border border-primary/20">
-            <FileSpreadsheet className="w-3 h-3" />
-            Tender Intake Protocol
-          </span>
-          <span className="inline-flex items-center gap-1 text-2xs font-mono text-muted-foreground">
-            <ShieldCheck className="w-3 h-3 text-foreground" />
-            Isolated Tenant Workspace
-          </span>
-        </div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          Initialize Tender Dossier
-        </h1>
-        <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-          Create an authoritative procurement workspace. After initialization, you will upload
-          RFP/NIT documents for automated Docling extraction and deterministic eligibility scoring.
-        </p>
-      </div>
-
+    <Page width="narrow">
+      <PageHeader
+        back={
+          <Link
+            to="/bids"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground no-underline hover:text-foreground"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Bids
+          </Link>
+        }
+        title="New bid"
+        description="Enter the tender details, then upload its documents to extract every requirement."
+      />
       {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
 
       {/* 3. Executive Form Card */}
@@ -233,6 +211,6 @@ export const CreateBidPage: React.FC = () => {
           </Button>
         </div>
       </form>
-    </div>
+    </Page>
   );
 };

@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { Page } from '@/components/ui/page.js';
 import { useCompany } from '@/context/useCompany.js';
 import { CompanyProfileHeader } from '@/components/company/CompanyProfileHeader.js';
 import { CapabilityNavTabs } from '@/components/company/CapabilityNavTabs.js';
@@ -340,7 +341,7 @@ export const CompanyProfilePage: React.FC = () => {
   }
 
   return (
-    <div className="w-full flex flex-col gap-6">
+    <Page className="min-w-0">
       {/* Profile Header & Health Summary */}
       <CompanyProfileHeader
         profile={profile}
@@ -376,6 +377,6 @@ export const CompanyProfilePage: React.FC = () => {
           setOpenEvidenceTrigger(Date.now());
         }}
       />
-    </div>
+    </Page>
   );
 };

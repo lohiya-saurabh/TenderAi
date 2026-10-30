@@ -493,9 +493,7 @@ export const LandingPage: React.FC = () => {
             {/* Architecture Visual Box */}
             <div className="p-6 rounded-xl border border-border bg-card/80 space-y-4 font-mono text-xs">
               <div className="flex items-center justify-between border-b border-border pb-3">
-                <span className="text-muted-foreground text-2xs">
-                  SECURITY_ISOLATION_SPEC.md
-                </span>
+                <span className="text-muted-foreground text-2xs">SECURITY_ISOLATION_SPEC.md</span>
                 <Badge
                   variant="outline"
                   className="text-2xs text-foreground border-border bg-muted"
@@ -529,9 +527,7 @@ export const LandingPage: React.FC = () => {
                   <span className="font-semibold text-foreground">AWS Mumbai (ap-south-1)</span>
                 </div>
                 <div className="p-2.5 rounded bg-muted/30 border border-border/60">
-                  <span className="text-muted-foreground block text-2xs">
-                    Regulatory Alignment
-                  </span>
+                  <span className="text-muted-foreground block text-2xs">Regulatory Alignment</span>
                   <span className="font-semibold text-foreground">DPDP Act 2023</span>
                 </div>
               </div>
