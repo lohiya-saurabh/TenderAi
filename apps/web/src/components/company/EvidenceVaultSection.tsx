@@ -40,7 +40,7 @@ export const EvidenceVaultSection: React.FC<EvidenceVaultSectionProps> = ({
             borderRadius: 'var(--radius-md)',
             padding: '0.85rem 1rem',
             fontSize: 'var(--text-xs)',
-            color: 'var(--color-surface-text)',
+            color: 'hsl(var(--foreground))',
             display: 'flex',
             alignItems: 'center',
             gap: '0.5rem',
@@ -115,7 +115,7 @@ export const EvidenceVaultSection: React.FC<EvidenceVaultSectionProps> = ({
                     <strong
                       style={{
                         fontSize: 'var(--text-sm)',
-                        color: 'var(--color-surface-text)',
+                        color: 'hsl(var(--foreground))',
                         fontFamily: 'var(--font-mono)',
                       }}
                     >
@@ -128,7 +128,7 @@ export const EvidenceVaultSection: React.FC<EvidenceVaultSectionProps> = ({
                       display: 'flex',
                       gap: '1.25rem',
                       fontSize: 'var(--text-2xs)',
-                      color: 'var(--color-surface-muted)',
+                      color: 'hsl(var(--muted-foreground))',
                       flexWrap: 'wrap',
                     }}
                   >
@@ -148,7 +148,7 @@ export const EvidenceVaultSection: React.FC<EvidenceVaultSectionProps> = ({
                     </span>
                     <span>
                       Reused across:{' '}
-                      <strong style={{ color: 'var(--color-surface-text)' }}>
+                      <strong style={{ color: 'hsl(var(--foreground))' }}>
                         {doc.linkedCapabilitiesCount} Capabilities
                       </strong>
                     </span>
@@ -156,7 +156,7 @@ export const EvidenceVaultSection: React.FC<EvidenceVaultSectionProps> = ({
                   <div
                     style={{
                       fontSize: 'var(--text-2xs)',
-                      color: 'var(--color-surface-muted)',
+                      color: 'hsl(var(--muted-foreground))',
                       fontFamily: 'var(--font-mono)',
                       marginTop: '0.35rem',
                     }}

@@ -42,8 +42,8 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
   return (
     <div
       style={{
-        backgroundColor: 'var(--color-surface-card)',
-        border: '1px solid var(--color-surface-border)',
+        backgroundColor: 'hsl(var(--card))',
+        border: '1px solid hsl(var(--border))',
         borderRadius: 'var(--radius-lg)',
         padding: '1.5rem',
         display: 'flex',
@@ -75,7 +75,7 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
               style={{
                 fontSize: '1.3rem',
                 fontWeight: 700,
-                color: 'var(--color-surface-text)',
+                color: 'hsl(var(--foreground))',
                 margin: 0,
               }}
             >
@@ -95,7 +95,7 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
               {profile.profileVersion}
             </span>
           </div>
-          <p style={{ fontSize: '0.85rem', color: 'var(--color-surface-muted)', margin: 0 }}>
+          <p style={{ fontSize: '0.85rem', color: 'hsl(var(--muted-foreground))', margin: 0 }}>
             Persistent MSME Capability Repository — Evaluated automatically against every tender
             opportunity.
           </p>
@@ -116,7 +116,7 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
         style={{
           display: 'flex',
           gap: '0.5rem',
-          borderBottom: '1px solid var(--color-surface-border)',
+          borderBottom: '1px solid hsl(var(--border))',
         }}
       >
         {TABS.map((tab) => {
@@ -136,7 +136,7 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
                   ? '2px solid var(--color-primary-500)'
                   : '2px solid transparent',
                 backgroundColor: 'transparent',
-                color: isActive ? 'var(--color-primary-100)' : 'var(--color-surface-muted)',
+                color: isActive ? 'var(--color-primary-100)' : 'hsl(var(--muted-foreground))',
                 fontSize: '0.85rem',
                 fontWeight: isActive ? 600 : 500,
                 cursor: 'pointer',
@@ -162,15 +162,15 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
           <div
             style={{
               padding: '1rem',
-              backgroundColor: 'var(--color-surface-bg)',
+              backgroundColor: 'hsl(var(--background))',
               borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--color-surface-border)',
+              border: '1px solid hsl(var(--border))',
             }}
           >
             <div
               style={{
                 fontSize: '0.75rem',
-                color: 'var(--color-surface-muted)',
+                color: 'hsl(var(--muted-foreground))',
                 marginBottom: '0.25rem',
               }}
             >
@@ -180,7 +180,7 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
               style={{
                 fontSize: '1.05rem',
                 fontWeight: 600,
-                color: 'var(--color-surface-text)',
+                color: 'hsl(var(--foreground))',
                 fontFamily: 'var(--font-mono)',
               }}
             >
@@ -203,15 +203,15 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
           <div
             style={{
               padding: '1rem',
-              backgroundColor: 'var(--color-surface-bg)',
+              backgroundColor: 'hsl(var(--background))',
               borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--color-surface-border)',
+              border: '1px solid hsl(var(--border))',
             }}
           >
             <div
               style={{
                 fontSize: '0.75rem',
-                color: 'var(--color-surface-muted)',
+                color: 'hsl(var(--muted-foreground))',
                 marginBottom: '0.25rem',
               }}
             >
@@ -221,7 +221,7 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
               style={{
                 fontSize: '1.05rem',
                 fontWeight: 600,
-                color: 'var(--color-surface-text)',
+                color: 'hsl(var(--foreground))',
                 fontFamily: 'var(--font-mono)',
               }}
             >
@@ -230,7 +230,7 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
             <div
               style={{
                 fontSize: '0.75rem',
-                color: 'var(--color-surface-muted)',
+                color: 'hsl(var(--muted-foreground))',
                 marginTop: '0.25rem',
               }}
             >
@@ -241,15 +241,15 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
           <div
             style={{
               padding: '1rem',
-              backgroundColor: 'var(--color-surface-bg)',
+              backgroundColor: 'hsl(var(--background))',
               borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--color-surface-border)',
+              border: '1px solid hsl(var(--border))',
             }}
           >
             <div
               style={{
                 fontSize: '0.75rem',
-                color: 'var(--color-surface-muted)',
+                color: 'hsl(var(--muted-foreground))',
                 marginBottom: '0.25rem',
               }}
             >
@@ -283,22 +283,22 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
           <div
             style={{
               padding: '1rem',
-              backgroundColor: 'var(--color-surface-bg)',
+              backgroundColor: 'hsl(var(--background))',
               borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--color-surface-border)',
+              border: '1px solid hsl(var(--border))',
             }}
           >
             <div
               style={{
                 fontSize: '0.75rem',
-                color: 'var(--color-surface-muted)',
+                color: 'hsl(var(--muted-foreground))',
                 marginBottom: '0.25rem',
               }}
             >
               Authorized Signatory & DSC
             </div>
             <div
-              style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--color-surface-text)' }}
+              style={{ fontSize: '0.95rem', fontWeight: 600, color: 'hsl(var(--foreground))' }}
             >
               {profile.authorizedSignatories[0]?.name} (
               {profile.authorizedSignatories[0]?.designation})
@@ -306,7 +306,7 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
             <div
               style={{
                 fontSize: '0.75rem',
-                color: 'var(--color-surface-muted)',
+                color: 'hsl(var(--muted-foreground))',
                 marginTop: '0.25rem',
               }}
             >
@@ -331,9 +331,9 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
                 key={t.financialYear}
                 style={{
                   padding: '1rem',
-                  backgroundColor: 'var(--color-surface-bg)',
+                  backgroundColor: 'hsl(var(--background))',
                   borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--color-surface-border)',
+                  border: '1px solid hsl(var(--border))',
                 }}
               >
                 <div
@@ -348,7 +348,7 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
                     style={{
                       fontSize: '0.85rem',
                       fontWeight: 600,
-                      color: 'var(--color-surface-muted)',
+                      color: 'hsl(var(--muted-foreground))',
                     }}
                   >
                     {t.financialYear}
@@ -370,7 +370,7 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
                   style={{
                     fontSize: '1.25rem',
                     fontWeight: 700,
-                    color: 'var(--color-surface-text)',
+                    color: 'hsl(var(--foreground))',
                     marginBottom: '0.5rem',
                   }}
                 >
@@ -380,7 +380,7 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
                   <div
                     style={{
                       fontSize: '0.75rem',
-                      color: 'var(--color-surface-muted)',
+                      color: 'hsl(var(--muted-foreground))',
                       fontFamily: 'var(--font-mono)',
                     }}
                   >
@@ -391,7 +391,7 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
                   <div
                     style={{
                       fontSize: '0.75rem',
-                      color: 'var(--color-surface-muted)',
+                      color: 'hsl(var(--muted-foreground))',
                       marginTop: '0.25rem',
                       display: 'flex',
                       alignItems: 'center',
@@ -412,7 +412,7 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
               border: '1px solid rgba(234, 88, 12, 0.25)',
               borderRadius: 'var(--radius-md)',
               fontSize: '0.85rem',
-              color: 'var(--color-surface-text)',
+              color: 'hsl(var(--foreground))',
               display: 'flex',
               alignItems: 'flex-start',
               gap: '0.5rem',
@@ -436,9 +436,9 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
               key={exp.id}
               style={{
                 padding: '1rem',
-                backgroundColor: 'var(--color-surface-bg)',
+                backgroundColor: 'hsl(var(--background))',
                 borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--color-surface-border)',
+                border: '1px solid hsl(var(--border))',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'flex-start',
@@ -461,9 +461,9 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
                       fontWeight: 600,
                       padding: '0.15rem 0.5rem',
                       borderRadius: 'var(--radius-sm)',
-                      backgroundColor: 'var(--color-surface-input)',
+                      backgroundColor: 'hsl(var(--input))',
                       color: 'var(--color-primary-100)',
-                      border: '1px solid var(--color-surface-border)',
+                      border: '1px solid hsl(var(--border))',
                     }}
                   >
                     {exp.clientType}
@@ -472,7 +472,7 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
                     style={{
                       fontSize: '0.95rem',
                       fontWeight: 600,
-                      color: 'var(--color-surface-text)',
+                      color: 'hsl(var(--foreground))',
                     }}
                   >
                     {exp.projectTitle}
@@ -481,13 +481,13 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
                 <div
                   style={{
                     fontSize: '0.85rem',
-                    color: 'var(--color-surface-muted)',
+                    color: 'hsl(var(--muted-foreground))',
                     marginBottom: '0.5rem',
                   }}
                 >
                   Client: <strong>{exp.clientName}</strong> • Completed on {exp.completionDate}
                 </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--color-surface-subtle)' }}>
+                <div style={{ fontSize: '0.8rem', color: 'hsl(var(--muted-foreground))' }}>
                   {exp.scopeSummary}
                 </div>
               </div>
@@ -497,7 +497,7 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
                   style={{
                     fontSize: '1.1rem',
                     fontWeight: 700,
-                    color: 'var(--color-surface-text)',
+                    color: 'hsl(var(--foreground))',
                     marginBottom: '0.35rem',
                   }}
                 >
@@ -540,9 +540,9 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
               key={c.id}
               style={{
                 padding: '1rem',
-                backgroundColor: 'var(--color-surface-bg)',
+                backgroundColor: 'hsl(var(--background))',
                 borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--color-surface-border)',
+                border: '1px solid hsl(var(--border))',
               }}
             >
               <div
@@ -557,7 +557,7 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
                   style={{
                     fontSize: '0.95rem',
                     fontWeight: 600,
-                    color: 'var(--color-surface-text)',
+                    color: 'hsl(var(--foreground))',
                   }}
                 >
                   {c.name}
@@ -568,13 +568,13 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
                   Active
                 </span>
               </div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--color-surface-muted)' }}>
+              <div style={{ fontSize: '0.8rem', color: 'hsl(var(--muted-foreground))' }}>
                 Issuer: {c.issuingBody}
               </div>
               <div
                 style={{
                   fontSize: '0.75rem',
-                  color: 'var(--color-surface-subtle)',
+                  color: 'hsl(var(--muted-foreground))',
                   marginTop: '0.5rem',
                 }}
               >
@@ -588,9 +588,9 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
               key={oem.id}
               style={{
                 padding: '1rem',
-                backgroundColor: 'var(--color-surface-bg)',
+                backgroundColor: 'hsl(var(--background))',
                 borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--color-surface-border)',
+                border: '1px solid hsl(var(--border))',
               }}
             >
               <div
@@ -605,7 +605,7 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
                   style={{
                     fontSize: '0.95rem',
                     fontWeight: 600,
-                    color: 'var(--color-surface-text)',
+                    color: 'hsl(var(--foreground))',
                   }}
                 >
                   OEM: {oem.oemName}
@@ -616,13 +616,13 @@ export const CompanyProfileSection: React.FC<CompanyProfileSectionProps> = ({ pr
                   Authorized Partner
                 </span>
               </div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--color-surface-muted)' }}>
+              <div style={{ fontSize: '0.8rem', color: 'hsl(var(--muted-foreground))' }}>
                 Category: {oem.productCategory}
               </div>
               <div
                 style={{
                   fontSize: '0.75rem',
-                  color: 'var(--color-surface-subtle)',
+                  color: 'hsl(var(--muted-foreground))',
                   marginTop: '0.5rem',
                 }}
               >

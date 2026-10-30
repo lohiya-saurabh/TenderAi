@@ -406,7 +406,7 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
                   className="p-4 rounded-lg bg-destructive/10 border border-destructive/30 space-y-3"
                 >
                   <div className="flex items-center gap-2">
-                    <FailIcon size={16} color="var(--color-danger)" className="shrink-0" />
+                    <FailIcon size={16} color="hsl(var(--destructive))" className="shrink-0" />
                     <span className="text-xs font-bold text-destructive uppercase tracking-wider">
                       Hard Disqualifiers ({flatHardDisqualifiers.length})
                     </span>
@@ -532,10 +532,10 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
               display: 'flex',
               alignItems: 'flex-start',
               gap: '0.65rem',
-              padding: 'var(--space-3)',
-              backgroundColor: 'var(--color-surface-card-subtle)',
+              padding: '0.75rem',
+              backgroundColor: 'hsl(var(--muted))',
               borderRadius: 'var(--radius-md)',
-              border: '1px dashed var(--color-surface-border)',
+              border: '1px dashed hsl(var(--border))',
             }}
           >
             <span
@@ -553,7 +553,7 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
                 style={{
                   fontSize: 'var(--text-sm)',
                   fontWeight: 600,
-                  color: 'var(--color-surface-text)',
+                  color: 'hsl(var(--foreground))',
                 }}
               >
                 Recommendation unavailable
@@ -562,7 +562,7 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
                 style={{
                   margin: 0,
                   fontSize: 'var(--text-xs)',
-                  color: 'var(--color-surface-muted)',
+                  color: 'hsl(var(--muted-foreground))',
                   lineHeight: 'var(--leading-normal)',
                 }}
               >
@@ -590,7 +590,7 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
               <Signal
                 label="Flagged for review"
                 value={String(rollup.flagged)}
-                tone={rollup.flagged > 0 ? 'var(--color-danger)' : undefined}
+                tone={rollup.flagged > 0 ? 'hsl(var(--destructive))' : undefined}
               />
               <Signal
                 label="Awaiting human review"
@@ -613,16 +613,16 @@ function Signal({ label, value, tone }: { label: string; value: string; tone?: s
   return (
     <div
       style={{
-        padding: 'var(--space-3)',
-        backgroundColor: 'var(--color-surface-card-subtle)',
+        padding: '0.75rem',
+        backgroundColor: 'hsl(var(--muted))',
         borderRadius: 'var(--radius-md)',
-        border: '1px solid var(--color-surface-border)',
+        border: '1px solid hsl(var(--border))',
       }}
     >
       <div
         style={{
           fontSize: 'var(--text-2xs)',
-          color: 'var(--color-surface-muted)',
+          color: 'hsl(var(--muted-foreground))',
           textTransform: 'uppercase',
           letterSpacing: '0.04em',
         }}
@@ -633,7 +633,7 @@ function Signal({ label, value, tone }: { label: string; value: string; tone?: s
         style={{
           fontSize: 'var(--text-lg)',
           fontWeight: 700,
-          color: tone || 'var(--color-surface-text)',
+          color: tone || 'hsl(var(--foreground))',
           marginTop: '0.2rem',
           lineHeight: 1.2,
         }}

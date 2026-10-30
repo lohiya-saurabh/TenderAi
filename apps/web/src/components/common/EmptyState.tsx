@@ -1,5 +1,7 @@
 import React from 'react';
+import { cn } from '@/lib/utils.js';
 
+/** The one empty state: what is missing, why, and the next step. */
 export interface EmptyStateProps {
   icon?: React.ReactNode;
   title: string;
@@ -18,77 +20,41 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   action,
   secondaryAction,
   compact = false,
-  className = '',
+  className,
   style,
-}) => {
-  return (
-    <div
-      className={`empty-state ${className}`}
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        textAlign: 'center',
-        padding: compact ? 'var(--space-6) var(--space-4)' : 'var(--space-12) var(--space-6)',
-        backgroundColor: 'var(--color-surface-card)',
-        border: '1px dashed var(--color-surface-border)',
-        borderRadius: 'var(--radius-lg)',
-        width: '100%',
-        ...style,
-      }}
+}) => (
+  <div
+    className={cn(
+      'flex w-full flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card text-center',
+      compact ? 'px-4 py-6' : 'px-6 py-12',
+      className,
+    )}
+    style={style}
+  >
+    {icon && (
+      <div
+        className="mb-3 flex items-center justify-center text-muted-foreground [&_svg]:h-8 [&_svg]:w-8"
+        aria-hidden="true"
+      >
+        {icon}
+      </div>
+    )}
+    <h3 className={cn('mb-1.5 font-semibold text-foreground', compact ? 'text-base' : 'text-lg')}>
+      {title}
+    </h3>
+    <p
+      className={cn(
+        'max-w-md text-sm text-muted-foreground',
+        (action || secondaryAction) && 'mb-5',
+      )}
     >
-      {icon && (
-        <div
-          style={{
-            fontSize: compact ? '2rem' : '2.75rem',
-            marginBottom: 'var(--space-3)',
-            color: 'var(--color-primary-400)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-          aria-hidden="true"
-        >
-          {icon}
-        </div>
-      )}
-      <h3
-        style={{
-          fontSize: compact ? 'var(--text-base)' : 'var(--text-lg)',
-          fontWeight: 'var(--font-semibold)' as unknown as number,
-          color: 'var(--color-surface-text)',
-          marginBottom: 'var(--space-1-5)',
-          letterSpacing: '-0.01em',
-        }}
-      >
-        {title}
-      </h3>
-      <p
-        style={{
-          fontSize: 'var(--text-sm)',
-          color: 'var(--color-surface-muted)',
-          maxWidth: '460px',
-          marginBottom: action || secondaryAction ? 'var(--space-5)' : '0',
-          lineHeight: 'var(--leading-normal)',
-        }}
-      >
-        {description}
-      </p>
-      {(action || secondaryAction) && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 'var(--space-3)',
-            flexWrap: 'wrap',
-            justifyContent: 'center',
-          }}
-        >
-          {action}
-          {secondaryAction}
-        </div>
-      )}
-    </div>
-  );
-};
+      {description}
+    </p>
+    {(action || secondaryAction) && (
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        {action}
+        {secondaryAction}
+      </div>
+    )}
+  </div>
+);

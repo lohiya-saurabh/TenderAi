@@ -487,7 +487,7 @@ export const BidDetailPage: React.FC = () => {
             display: 'flex',
             flexDirection: 'column',
             gap: '1rem',
-            color: 'var(--color-surface-text)',
+            color: 'hsl(var(--foreground))',
           }}
         >
           <p style={{ margin: 0 }}>
@@ -498,10 +498,10 @@ export const BidDetailPage: React.FC = () => {
             style={{
               padding: '0.85rem 1rem',
               backgroundColor: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid var(--color-danger)',
+              border: '1px solid hsl(var(--destructive))',
               borderRadius: 'var(--radius-md)',
               fontSize: '0.85rem',
-              color: 'var(--color-danger)',
+              color: 'hsl(var(--destructive))',
             }}
           >
             <strong>Warning:</strong> This operation will permanently delete all uploaded documents
@@ -535,7 +535,7 @@ export const BidDetailPage: React.FC = () => {
             display: 'flex',
             flexDirection: 'column',
             gap: '1rem',
-            color: 'var(--color-surface-text)',
+            color: 'hsl(var(--foreground))',
           }}
         >
           <p style={{ margin: 0 }}>
@@ -545,10 +545,10 @@ export const BidDetailPage: React.FC = () => {
             style={{
               padding: '0.85rem 1rem',
               backgroundColor: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid var(--color-danger)',
+              border: '1px solid hsl(var(--destructive))',
               borderRadius: 'var(--radius-md)',
               fontSize: '0.85rem',
-              color: 'var(--color-danger)',
+              color: 'hsl(var(--destructive))',
             }}
           >
             <strong>Warning:</strong> Removing this document will delete all associated compliance

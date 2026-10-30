@@ -1,52 +1,32 @@
 import React from 'react';
-import { SpinnerIcon } from '@/components/common/Icons.js';
+import { Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils.js';
 
 export interface SpinnerProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
-  color?: string;
   label?: string;
   className?: string;
   style?: React.CSSProperties;
 }
 
+const SIZE = { sm: 'h-4 w-4', md: 'h-5 w-5', lg: 'h-7 w-7', xl: 'h-9 w-9' };
+
 export const Spinner: React.FC<SpinnerProps> = ({
   size = 'md',
-  color = 'var(--color-primary-500)',
-  label = 'Loading...',
-  className = '',
+  label = 'Loading…',
+  className,
   style,
-}) => {
-  const getPixelSize = (): number => {
-    switch (size) {
-      case 'sm':
-        return 16;
-      case 'lg':
-        return 28;
-      case 'xl':
-        return 38;
-      case 'md':
-      default:
-        return 22;
-    }
-  };
-
-  return (
-    <div
-      role="status"
-      aria-label={label}
-      className={`spinner-container ${className}`}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        ...style,
-      }}
-    >
-      <SpinnerIcon size={getPixelSize()} color={color} />
-      <span className="sr-only">{label}</span>
-    </div>
-  );
-};
+}) => (
+  <div
+    role="status"
+    aria-label={label}
+    className={cn('inline-flex items-center justify-center', className)}
+    style={style}
+  >
+    <Loader2 className={cn('animate-spin text-primary', SIZE[size])} aria-hidden="true" />
+    <span className="sr-only">{label}</span>
+  </div>
+);
 
 export interface LoadingStateProps {
   message?: string;
@@ -54,41 +34,20 @@ export interface LoadingStateProps {
   minHeight?: string;
 }
 
+/** The one full-section loading state. */
 export const LoadingState: React.FC<LoadingStateProps> = ({
-  message = 'Loading data...',
+  message = 'Loading…',
   subtext,
   minHeight = '240px',
-}) => {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 'var(--space-8)',
-        minHeight,
-        textAlign: 'center',
-        gap: 'var(--space-3)',
-      }}
-    >
-      <Spinner size="lg" color="var(--color-primary-500)" />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-        <p
-          style={{
-            fontSize: 'var(--text-sm)',
-            fontWeight: 'var(--font-medium)' as unknown as number,
-            color: 'var(--color-surface-text)',
-          }}
-        >
-          {message}
-        </p>
-        {subtext && (
-          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)' }}>
-            {subtext}
-          </p>
-        )}
-      </div>
+}) => (
+  <div
+    className="flex flex-col items-center justify-center gap-3 p-8 text-center"
+    style={{ minHeight }}
+  >
+    <Spinner size="lg" />
+    <div className="flex flex-col gap-1">
+      <p className="text-sm font-medium text-foreground">{message}</p>
+      {subtext && <p className="text-xs text-muted-foreground">{subtext}</p>}
     </div>
-  );
-};
+  </div>
+);

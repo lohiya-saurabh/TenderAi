@@ -45,7 +45,7 @@ export const ReadinessCard: React.FC<ReadinessCardProps> = ({ bid, items }) => {
 
   const barColor =
     pct === null
-      ? 'var(--color-surface-border)'
+      ? 'hsl(var(--border))'
       : pct >= 80
         ? 'var(--color-success)'
         : pct >= 50
@@ -68,13 +68,13 @@ export const ReadinessCard: React.FC<ReadinessCardProps> = ({ bid, items }) => {
         }
       >
         <CardTitle as="h3">Bid Readiness</CardTitle>
-        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)' }}>
+        <p style={{ fontSize: 'var(--text-xs)', color: 'hsl(var(--muted-foreground))' }}>
           Requirement review progress — share of requirements approved
         </p>
       </CardHeader>
 
       <CardContent>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {/* Progress */}
           <div>
             <div
@@ -85,19 +85,19 @@ export const ReadinessCard: React.FC<ReadinessCardProps> = ({ bid, items }) => {
                 fontSize: 'var(--text-xs)',
               }}
             >
-              <span style={{ fontWeight: 600, color: 'var(--color-surface-text)' }}>
+              <span style={{ fontWeight: 600, color: 'hsl(var(--foreground))' }}>
                 {pct === null
                   ? 'No requirements extracted yet'
                   : `${pct}% of requirements approved`}
               </span>
-              <span style={{ color: 'var(--color-surface-muted)' }}>
+              <span style={{ color: 'hsl(var(--muted-foreground))' }}>
                 {readiness.approved}/{readiness.total}
               </span>
             </div>
             <div
               style={{
                 height: '8px',
-                backgroundColor: 'var(--color-surface-border)',
+                backgroundColor: 'hsl(var(--border))',
                 borderRadius: 'var(--radius-full)',
                 overflow: 'hidden',
               }}
@@ -124,7 +124,7 @@ export const ReadinessCard: React.FC<ReadinessCardProps> = ({ bid, items }) => {
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-              gap: 'var(--space-3)',
+              gap: '0.75rem',
             }}
           >
             <DistributionStat label="Ready" count={rollup.ready} status="READY" />
@@ -137,7 +137,7 @@ export const ReadinessCard: React.FC<ReadinessCardProps> = ({ bid, items }) => {
             style={{
               margin: 0,
               fontSize: 'var(--text-2xs)',
-              color: 'var(--color-surface-subtle)',
+              color: 'hsl(var(--muted-foreground))',
               lineHeight: 'var(--leading-normal)',
             }}
           >
@@ -163,10 +163,10 @@ function DistributionStat({
   return (
     <div
       style={{
-        padding: 'var(--space-3)',
-        backgroundColor: 'var(--color-surface-card-subtle)',
+        padding: '0.75rem',
+        backgroundColor: 'hsl(var(--muted))',
         borderRadius: 'var(--radius-md)',
-        border: '1px solid var(--color-surface-border)',
+        border: '1px solid hsl(var(--border))',
         display: 'flex',
         flexDirection: 'column',
         gap: '0.35rem',
@@ -178,13 +178,13 @@ function DistributionStat({
           style={{
             fontSize: 'var(--text-lg)',
             fontWeight: 700,
-            color: 'var(--color-surface-text)',
+            color: 'hsl(var(--foreground))',
             lineHeight: 1,
           }}
         >
           {count}
         </span>
-        <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--color-surface-muted)' }}>
+        <span style={{ fontSize: 'var(--text-2xs)', color: 'hsl(var(--muted-foreground))' }}>
           {label}
         </span>
       </div>

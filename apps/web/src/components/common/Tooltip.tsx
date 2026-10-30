@@ -93,9 +93,9 @@ export const Tooltip: React.FC<TooltipProps> = ({
           style={{
             position: 'absolute',
             zIndex: 'var(--z-index-tooltip, 90)' as unknown as number,
-            backgroundColor: 'var(--color-surface-bg)',
-            color: 'var(--color-surface-text)',
-            border: '1px solid var(--color-surface-border)',
+            backgroundColor: 'hsl(var(--background))',
+            color: 'hsl(var(--foreground))',
+            border: '1px solid hsl(var(--border))',
             borderRadius: 'var(--radius-sm)',
             padding: '0.25rem 0.55rem',
             fontSize: 'var(--text-xs)',

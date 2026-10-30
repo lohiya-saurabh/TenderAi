@@ -29,8 +29,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requir
   if (requiredPermission && !hasPermission(requiredPermission)) {
     return (
       <div style={{ padding: '3rem', textAlign: 'center' }}>
-        <h2 style={{ color: 'var(--color-danger)', marginBottom: '1rem' }}>Access Denied</h2>
-        <p style={{ color: 'var(--color-surface-muted)' }}>
+        <h2 style={{ color: 'hsl(var(--destructive))', marginBottom: '1rem' }}>Access Denied</h2>
+        <p style={{ color: 'hsl(var(--muted-foreground))' }}>
           You do not have the required permission (<code>{requiredPermission}</code>) to view this
           page.
         </p>

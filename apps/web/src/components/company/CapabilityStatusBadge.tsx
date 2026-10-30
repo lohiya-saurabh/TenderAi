@@ -37,16 +37,16 @@ export const CapabilityStatusBadge: React.FC<CapabilityStatusBadgeProps> = ({
           defaultLabel: 'Unverified',
           icon: MissingIcon,
           bg: 'var(--status-na-bg)',
-          color: 'var(--color-surface-muted)',
-          border: '1px dashed var(--color-surface-border)',
+          color: 'hsl(var(--muted-foreground))',
+          border: '1px dashed hsl(var(--border))',
         };
       case 'IMPORTED':
         return {
           defaultLabel: 'Imported',
           icon: PassIcon,
-          bg: 'var(--color-surface-card-subtle)',
-          color: 'var(--color-surface-text)',
-          border: '1px solid var(--color-surface-border)',
+          bg: 'hsl(var(--muted))',
+          color: 'hsl(var(--foreground))',
+          border: '1px solid hsl(var(--border))',
         };
       case 'EXTRACTED':
         return {
@@ -85,8 +85,8 @@ export const CapabilityStatusBadge: React.FC<CapabilityStatusBadgeProps> = ({
           defaultLabel: 'Missing',
           icon: MissingIcon,
           bg: 'var(--status-na-bg)',
-          color: 'var(--color-surface-muted)',
-          border: '1px dashed var(--color-surface-border)',
+          color: 'hsl(var(--muted-foreground))',
+          border: '1px dashed hsl(var(--border))',
         };
       case 'NEEDS_REVIEW':
         return {

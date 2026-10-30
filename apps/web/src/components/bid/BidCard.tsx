@@ -15,8 +15,8 @@ export const BidCard: React.FC<BidCardProps> = ({ bid }) => {
       to={`/bids/${bid.id}`}
       style={{
         display: 'block',
-        backgroundColor: 'var(--color-surface-card)',
-        border: '1px solid var(--color-surface-border)',
+        backgroundColor: 'hsl(var(--card))',
+        border: '1px solid hsl(var(--border))',
         borderRadius: 'var(--radius-lg)',
         padding: '1.5rem',
         transition: 'all var(--transition-fast)',
@@ -29,7 +29,7 @@ export const BidCard: React.FC<BidCardProps> = ({ bid }) => {
         e.currentTarget.style.boxShadow = 'var(--shadow-md)';
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = 'var(--color-surface-border)';
+        e.currentTarget.style.borderColor = 'hsl(var(--border))';
         e.currentTarget.style.transform = 'none';
         e.currentTarget.style.boxShadow = 'none';
       }}
@@ -46,7 +46,7 @@ export const BidCard: React.FC<BidCardProps> = ({ bid }) => {
           style={{
             fontSize: '1.1rem',
             fontWeight: 600,
-            color: 'var(--color-surface-text)',
+            color: 'hsl(var(--foreground))',
             lineHeight: 1.4,
           }}
         >
@@ -58,7 +58,7 @@ export const BidCard: React.FC<BidCardProps> = ({ bid }) => {
       <div
         style={{
           fontSize: '0.85rem',
-          color: 'var(--color-surface-muted)',
+          color: 'hsl(var(--muted-foreground))',
           marginBottom: '1.25rem',
           display: 'flex',
           flexDirection: 'column',
@@ -66,11 +66,11 @@ export const BidCard: React.FC<BidCardProps> = ({ bid }) => {
         }}
       >
         <div>
-          <strong style={{ color: 'var(--color-surface-text)' }}>Tender №:</strong>{' '}
+          <strong style={{ color: 'hsl(var(--foreground))' }}>Tender №:</strong>{' '}
           {bid.tenderNumber}
         </div>
         <div>
-          <strong style={{ color: 'var(--color-surface-text)' }}>Authority:</strong>{' '}
+          <strong style={{ color: 'hsl(var(--foreground))' }}>Authority:</strong>{' '}
           {bid.tenderingAuthority}
         </div>
       </div>
@@ -81,32 +81,32 @@ export const BidCard: React.FC<BidCardProps> = ({ bid }) => {
           gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
           gap: '0.75rem',
           paddingTop: '1rem',
-          borderTop: '1px solid var(--color-surface-border)',
+          borderTop: '1px solid hsl(var(--border))',
           fontSize: '0.8rem',
         }}
       >
         <div>
-          <div style={{ color: 'var(--color-surface-subtle)' }}>Est. Value</div>
-          <div style={{ fontWeight: 600, color: 'var(--color-surface-text)' }}>
+          <div style={{ color: 'hsl(var(--muted-foreground))' }}>Est. Value</div>
+          <div style={{ fontWeight: 600, color: 'hsl(var(--foreground))' }}>
             {bid.estimatedValueRupees != null ? formatCurrency(bid.estimatedValueRupees) : '—'}
           </div>
         </div>
 
         <div>
-          <div style={{ color: 'var(--color-surface-subtle)' }}>Deadline</div>
-          <div style={{ fontWeight: 600, color: 'var(--color-surface-text)' }}>
+          <div style={{ color: 'hsl(var(--muted-foreground))' }}>Deadline</div>
+          <div style={{ fontWeight: 600, color: 'hsl(var(--foreground))' }}>
             {bid.submissionDeadline ? formatDate(bid.submissionDeadline) : '—'}
           </div>
         </div>
 
         <div>
-          <div style={{ color: 'var(--color-surface-subtle)' }}>Requirements</div>
-          <div style={{ fontWeight: 600, color: 'var(--color-surface-text)' }}>
+          <div style={{ color: 'hsl(var(--muted-foreground))' }}>Requirements</div>
+          <div style={{ fontWeight: 600, color: 'hsl(var(--foreground))' }}>
             {bid.totalRequirements != null ? (
               <span>
                 {bid.approvedRequirements || 0}/{bid.totalRequirements}{' '}
                 {bid.flaggedRequirements ? (
-                  <span style={{ color: 'var(--color-danger)' }}>
+                  <span style={{ color: 'hsl(var(--destructive))' }}>
                     ({bid.flaggedRequirements} flagged)
                   </span>
                 ) : null}

@@ -77,7 +77,7 @@ export const AddCapabilityModal: React.FC<AddCapabilityModalProps> = ({
               style={{
                 fontSize: 'var(--text-xs)',
                 fontWeight: 600,
-                color: 'var(--color-surface-text)',
+                color: 'hsl(var(--foreground))',
                 display: 'block',
                 marginBottom: '0.35rem',
               }}
@@ -94,9 +94,9 @@ export const AddCapabilityModal: React.FC<AddCapabilityModalProps> = ({
                 width: '100%',
                 padding: '0.55rem 0.75rem',
                 borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--color-surface-border)',
-                backgroundColor: 'var(--color-surface-input)',
-                color: 'var(--color-surface-text)',
+                border: '1px solid hsl(var(--border))',
+                backgroundColor: 'hsl(var(--input))',
+                color: 'hsl(var(--foreground))',
                 fontSize: 'var(--text-sm)',
                 outline: 'none',
               }}
@@ -108,7 +108,7 @@ export const AddCapabilityModal: React.FC<AddCapabilityModalProps> = ({
               style={{
                 fontSize: 'var(--text-xs)',
                 fontWeight: 600,
-                color: 'var(--color-surface-text)',
+                color: 'hsl(var(--foreground))',
                 display: 'block',
                 marginBottom: '0.35rem',
               }}
@@ -124,9 +124,9 @@ export const AddCapabilityModal: React.FC<AddCapabilityModalProps> = ({
                 width: '100%',
                 padding: '0.55rem 0.75rem',
                 borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--color-surface-border)',
-                backgroundColor: 'var(--color-surface-input)',
-                color: 'var(--color-surface-text)',
+                border: '1px solid hsl(var(--border))',
+                backgroundColor: 'hsl(var(--input))',
+                color: 'hsl(var(--foreground))',
                 fontSize: 'var(--text-sm)',
                 fontFamily: 'var(--font-mono)',
                 outline: 'none',
@@ -139,7 +139,7 @@ export const AddCapabilityModal: React.FC<AddCapabilityModalProps> = ({
               style={{
                 fontSize: 'var(--text-xs)',
                 fontWeight: 600,
-                color: 'var(--color-surface-text)',
+                color: 'hsl(var(--foreground))',
                 display: 'block',
                 marginBottom: '0.35rem',
               }}
@@ -156,9 +156,9 @@ export const AddCapabilityModal: React.FC<AddCapabilityModalProps> = ({
                 width: '100%',
                 padding: '0.55rem 0.75rem',
                 borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--color-surface-border)',
-                backgroundColor: 'var(--color-surface-input)',
-                color: 'var(--color-surface-text)',
+                border: '1px solid hsl(var(--border))',
+                backgroundColor: 'hsl(var(--input))',
+                color: 'hsl(var(--foreground))',
                 fontSize: 'var(--text-sm)',
                 outline: 'none',
               }}

@@ -1,5 +1,7 @@
 import React from 'react';
+import { cn } from '@/lib/utils.js';
 
+/** The one status chip in the app. Tones come from the design tokens; a chip always carries text. */
 export type BadgeVariant =
   'primary' | 'secondary' | 'success' | 'warning' | 'danger' | 'info' | 'neutral';
 
@@ -10,121 +12,42 @@ export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   dot?: boolean;
 }
 
+export const BADGE_TONE: Record<BadgeVariant, string> = {
+  primary: 'bg-primary/10 text-primary border-primary/20',
+  secondary: 'bg-secondary text-secondary-foreground border-border',
+  success: 'bg-success/10 text-success border-success/25',
+  warning: 'bg-warning/10 text-warning border-warning/25',
+  danger: 'bg-destructive/10 text-destructive border-destructive/25',
+  info: 'bg-primary/5 text-foreground border-border',
+  neutral: 'bg-muted text-muted-foreground border-border',
+};
+
+const SIZE = {
+  sm: 'px-1.5 py-0.5 text-2xs gap-1',
+  md: 'px-2 py-0.5 text-xs gap-1.5',
+  lg: 'px-3 py-1 text-sm gap-1.5',
+};
+
 export const Badge: React.FC<BadgeProps> = ({
   children,
   variant = 'neutral',
   size = 'md',
   icon,
   dot = false,
-  className = '',
-  style,
+  className,
   ...props
-}) => {
-  const getVariantStyles = (): { bg: string; color: string; border: string; dotColor: string } => {
-    switch (variant) {
-      case 'primary':
-        return {
-          bg: 'var(--color-surface-card-subtle)',
-          color: 'var(--color-surface-text)',
-          border: 'var(--color-surface-border)',
-          dotColor: 'var(--color-surface-text)',
-        };
-      case 'success':
-        return {
-          bg: 'var(--status-pass-bg)',
-          color: 'var(--status-pass-text)',
-          border: 'var(--status-pass-border)',
-          dotColor: 'var(--status-pass-text)',
-        };
-      case 'warning':
-        return {
-          bg: 'var(--status-amber-bg)',
-          color: 'var(--status-amber-text)',
-          border: 'var(--status-amber-border)',
-          dotColor: '#ea580c',
-        };
-      case 'danger':
-        return {
-          bg: 'var(--status-flag-bg)',
-          color: 'var(--status-flag-text)',
-          border: 'var(--status-flag-border)',
-          dotColor: 'var(--vermilion, #f0441c)',
-        };
-      case 'info':
-        return {
-          bg: 'var(--color-surface-card-subtle)',
-          color: 'var(--color-surface-text)',
-          border: 'var(--color-surface-border)',
-          dotColor: 'var(--color-surface-text)',
-        };
-      case 'secondary':
-        return {
-          bg: 'var(--color-surface-card-hover)',
-          color: 'var(--color-surface-text)',
-          border: 'var(--color-surface-border)',
-          dotColor: 'var(--color-surface-subtle)',
-        };
-      case 'neutral':
-      default:
-        return {
-          bg: 'var(--color-surface-card-subtle)',
-          color: 'var(--color-surface-muted)',
-          border: 'var(--color-surface-border)',
-          dotColor: 'var(--color-surface-subtle)',
-        };
-    }
-  };
-
-  const getSizeStyles = () => {
-    switch (size) {
-      case 'sm':
-        return { padding: '0.15rem 0.45rem', fontSize: 'var(--text-2xs)', dotSize: 6 };
-      case 'lg':
-        return { padding: '0.35rem 0.8rem', fontSize: 'var(--text-sm)', dotSize: 8 };
-      case 'md':
-      default:
-        return { padding: '0.2rem 0.6rem', fontSize: 'var(--text-xs)', dotSize: 7 };
-    }
-  };
-
-  const vStyles = getVariantStyles();
-  const sStyles = getSizeStyles();
-
-  return (
-    <span
-      className={`badge badge-${variant} ${className}`}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '0.375rem',
-        padding: sStyles.padding,
-        fontSize: sStyles.fontSize,
-        fontWeight: 'var(--font-semibold)' as unknown as number,
-        borderRadius: 'var(--radius-full)',
-        backgroundColor: vStyles.bg,
-        color: vStyles.color,
-        border: `1px solid ${vStyles.border}`,
-        whiteSpace: 'nowrap',
-        userSelect: 'none',
-        lineHeight: 1.2,
-        ...style,
-      }}
-      {...props}
-    >
-      {dot && (
-        <span
-          style={{
-            width: sStyles.dotSize,
-            height: sStyles.dotSize,
-            borderRadius: '50%',
-            backgroundColor: vStyles.dotColor,
-            flexShrink: 0,
-          }}
-          aria-hidden="true"
-        />
-      )}
-      {icon}
-      <span>{children}</span>
-    </span>
-  );
-};
+}) => (
+  <span
+    className={cn(
+      'inline-flex select-none items-center whitespace-nowrap rounded-full border font-semibold leading-tight',
+      BADGE_TONE[variant],
+      SIZE[size],
+      className,
+    )}
+    {...props}
+  >
+    {dot && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current" aria-hidden="true" />}
+    {icon}
+    <span>{children}</span>
+  </span>
+);

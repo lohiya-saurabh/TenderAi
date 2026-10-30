@@ -23,7 +23,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
             display: 'flex',
             justifyContent: 'flex-end',
             fontSize: '0.75rem',
-            color: 'var(--color-surface-muted)',
+            color: 'hsl(var(--muted-foreground))',
             marginBottom: '0.25rem',
           }}
         >
@@ -33,10 +33,10 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
       <div
         style={{
           height,
-          backgroundColor: 'var(--color-surface-input)',
+          backgroundColor: 'hsl(var(--input))',
           borderRadius: 'var(--radius-full)',
           overflow: 'hidden',
-          border: '1px solid var(--color-surface-border)',
+          border: '1px solid hsl(var(--border))',
         }}
       >
         <div

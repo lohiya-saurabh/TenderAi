@@ -26,34 +26,34 @@ export const ErrorBanner: React.FC<ErrorBannerProps> = ({
       role="alert"
       className={`error-banner ${className}`}
       style={{
-        backgroundColor: 'var(--color-danger-bg)',
-        border: '1px solid var(--color-danger-border)',
+        backgroundColor: 'hsl(var(--destructive) / 0.08)',
+        border: '1px solid hsl(var(--destructive) / 0.3)',
         borderRadius: 'var(--radius-md)',
         padding: '0.85rem 1.15rem',
         display: 'flex',
         alignItems: 'flex-start',
         justifyContent: 'space-between',
-        gap: 'var(--space-3)',
-        margin: 'var(--space-3) 0',
+        gap: '0.75rem',
+        margin: '0.75rem 0',
         ...style,
       }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', flex: 1 }}>
         <span
           style={{
-            color: 'var(--color-danger)',
+            color: 'hsl(var(--destructive))',
             display: 'inline-flex',
             alignItems: 'center',
             marginTop: '0.15rem',
             flexShrink: 0,
           }}
         >
-          <AlertCircleIcon size={18} color="var(--color-danger)" />
+          <AlertCircleIcon size={18} color="hsl(var(--destructive))" />
         </span>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', flex: 1 }}>
           <span
             style={{
-              color: 'var(--color-surface-text)',
+              color: 'hsl(var(--foreground))',
               fontWeight: 'var(--font-medium)' as unknown as number,
               fontSize: 'var(--text-sm)',
               lineHeight: 'var(--leading-normal)',
@@ -69,7 +69,7 @@ export const ErrorBanner: React.FC<ErrorBannerProps> = ({
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: 'var(--color-surface-muted)',
+                  color: 'hsl(var(--muted-foreground))',
                   fontSize: 'var(--text-2xs)',
                   textDecoration: 'underline',
                   cursor: 'pointer',
@@ -84,13 +84,13 @@ export const ErrorBanner: React.FC<ErrorBannerProps> = ({
                   style={{
                     fontSize: 'var(--text-2xs)',
                     fontFamily: 'var(--font-mono)',
-                    color: 'var(--color-surface-muted)',
-                    backgroundColor: 'var(--color-surface-bg)',
+                    color: 'hsl(var(--muted-foreground))',
+                    backgroundColor: 'hsl(var(--background))',
                     padding: '0.5rem',
                     borderRadius: 'var(--radius-sm)',
                     marginTop: '0.4rem',
                     overflowX: 'auto',
-                    border: '1px solid var(--color-surface-border)',
+                    border: '1px solid hsl(var(--border))',
                   }}
                 >
                   {JSON.stringify(details, null, 2)}
@@ -113,7 +113,7 @@ export const ErrorBanner: React.FC<ErrorBannerProps> = ({
             style={{
               backgroundColor: 'transparent',
               border: 'none',
-              color: 'var(--color-surface-muted)',
+              color: 'hsl(var(--muted-foreground))',
               cursor: 'pointer',
               padding: '0.25rem',
               borderRadius: 'var(--radius-sm)',
@@ -151,11 +151,11 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 'var(--space-8)',
+        padding: '2rem',
         minHeight,
         textAlign: 'center',
-        backgroundColor: 'var(--color-surface-card)',
-        border: '1px solid var(--color-surface-border)',
+        backgroundColor: 'hsl(var(--card))',
+        border: '1px solid hsl(var(--border))',
         borderRadius: 'var(--radius-lg)',
       }}
     >
@@ -164,20 +164,20 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
           width: 48,
           height: 48,
           borderRadius: '50%',
-          backgroundColor: 'var(--color-danger-bg)',
+          backgroundColor: 'hsl(var(--destructive) / 0.08)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          marginBottom: 'var(--space-3)',
+          marginBottom: '0.75rem',
         }}
       >
-        <AlertCircleIcon size={24} color="var(--color-danger)" />
+        <AlertCircleIcon size={24} color="hsl(var(--destructive))" />
       </div>
       <h3
         style={{
           fontSize: 'var(--text-lg)',
           fontWeight: 'var(--font-semibold)' as unknown as number,
-          color: 'var(--color-surface-text)',
+          color: 'hsl(var(--foreground))',
           marginBottom: '0.25rem',
         }}
       >
@@ -186,9 +186,9 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
       <p
         style={{
           fontSize: 'var(--text-sm)',
-          color: 'var(--color-surface-muted)',
+          color: 'hsl(var(--muted-foreground))',
           maxWidth: '420px',
-          marginBottom: onRetry ? 'var(--space-4)' : '0',
+          marginBottom: onRetry ? '1rem' : '0',
           lineHeight: 'var(--leading-normal)',
         }}
       >

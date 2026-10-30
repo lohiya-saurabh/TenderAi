@@ -149,7 +149,7 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
       padding="lg"
       style={{
         border: '1px solid var(--color-primary-500)',
-        backgroundColor: 'var(--color-surface-card)',
+        backgroundColor: 'hsl(var(--card))',
       }}
     >
       {/* Header */}
@@ -178,7 +178,7 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
               style={{
                 fontSize: 'var(--text-base)',
                 fontWeight: 700,
-                color: 'var(--color-surface-text)',
+                color: 'hsl(var(--foreground))',
                 margin: 0,
               }}
             >
@@ -188,7 +188,7 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
                   ? 'Tender Intelligence & Compliance Matrix Ready'
                   : 'Live Tender Extraction Pipeline'}
             </h3>
-            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)' }}>
+            <span style={{ fontSize: 'var(--text-xs)', color: 'hsl(var(--muted-foreground))' }}>
               Document: <strong>{documentName}</strong>
             </span>
           </div>
@@ -236,7 +236,7 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
               marginBottom: '0.4rem',
             }}
           >
-            <span style={{ fontWeight: 600, color: 'var(--color-surface-text)' }}>
+            <span style={{ fontWeight: 600, color: 'hsl(var(--foreground))' }}>
               {lastEvent?.message || activeStepMeta?.activeMessage || 'Processing document...'}
             </span>
             <span
@@ -251,7 +251,7 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
           </div>
           <ProgressBar
             progress={progressPercent}
-            color={isComplete ? 'var(--color-surface-text)' : 'var(--color-primary-500)'}
+            color={isComplete ? 'hsl(var(--foreground))' : 'var(--color-primary-500)'}
             height="8px"
           />
         </div>
@@ -278,13 +278,13 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
                   ? 'rgba(234, 88, 12, 0.08)'
                   : isDone
                     ? 'var(--status-pass-bg)'
-                    : 'var(--color-surface-bg)',
+                    : 'hsl(var(--background))',
                 border: `1px solid ${
                   isCurrent
                     ? 'var(--color-primary-500)'
                     : isDone
                       ? 'var(--status-pass-border)'
-                      : 'var(--color-surface-border)'
+                      : 'hsl(var(--border))'
                 }`,
                 borderRadius: 'var(--radius-md)',
                 padding: '0.75rem 0.85rem',
@@ -301,7 +301,7 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
                   style={{
                     fontSize: 'var(--text-xs)',
                     fontWeight: 700,
-                    color: 'var(--color-surface-text)',
+                    color: 'hsl(var(--foreground))',
                   }}
                 >
                   {step.stepNumber}. {step.label}
@@ -323,7 +323,7 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
                     ? 'var(--color-primary-300)'
                     : isDone
                       ? 'var(--color-success)'
-                      : 'var(--color-surface-muted)',
+                      : 'hsl(var(--muted-foreground))',
                   margin: 0,
                   lineHeight: 1.4,
                 }}
@@ -354,7 +354,7 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
               style={{
                 fontSize: 'var(--text-sm)',
                 fontWeight: 700,
-                color: 'var(--color-danger)',
+                color: 'hsl(var(--destructive))',
                 margin: '0 0 0.35rem',
               }}
             >
@@ -363,7 +363,7 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
             <p
               style={{
                 fontSize: 'var(--text-xs)',
-                color: 'var(--color-surface-text)',
+                color: 'hsl(var(--foreground))',
                 margin: 0,
                 lineHeight: 1.5,
               }}
@@ -375,12 +375,12 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
 
           <div
             style={{
-              backgroundColor: 'var(--color-surface-card)',
+              backgroundColor: 'hsl(var(--card))',
               padding: '0.75rem 1rem',
               borderRadius: 'var(--radius-sm)',
               borderLeft: '3px solid var(--color-success)',
               fontSize: 'var(--text-xs)',
-              color: 'var(--color-surface-text)',
+              color: 'hsl(var(--foreground))',
             }}
           >
             <strong>Data Safety Guarantee:</strong> Your uploaded PDF is securely preserved in
@@ -393,7 +393,7 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
               style={{
                 fontSize: 'var(--text-2xs)',
                 fontWeight: 600,
-                color: 'var(--color-surface-muted)',
+                color: 'hsl(var(--muted-foreground))',
                 textTransform: 'uppercase',
               }}
             >

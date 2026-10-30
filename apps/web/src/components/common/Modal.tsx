@@ -83,8 +83,8 @@ export const Modal: React.FC<ModalProps> = ({
       <div
         className="scale-in"
         style={{
-          backgroundColor: 'var(--color-surface-card)',
-          border: '1px solid var(--color-surface-border)',
+          backgroundColor: 'hsl(var(--card))',
+          border: '1px solid hsl(var(--border))',
           borderRadius: 'var(--radius-xl)',
           width: '100%',
           maxWidth: getMaxWidth(),
@@ -100,7 +100,7 @@ export const Modal: React.FC<ModalProps> = ({
         <div
           style={{
             padding: '1.25rem 1.5rem',
-            borderBottom: '1px solid var(--color-surface-border)',
+            borderBottom: '1px solid hsl(var(--border))',
             display: 'flex',
             alignItems: 'flex-start',
             justifyContent: 'space-between',
@@ -113,7 +113,7 @@ export const Modal: React.FC<ModalProps> = ({
               style={{
                 fontSize: 'var(--text-lg)',
                 fontWeight: 'var(--font-semibold)' as unknown as number,
-                color: 'var(--color-surface-text)',
+                color: 'hsl(var(--foreground))',
                 lineHeight: 'var(--leading-tight)',
               }}
             >
@@ -124,7 +124,7 @@ export const Modal: React.FC<ModalProps> = ({
                 id={descId}
                 style={{
                   fontSize: 'var(--text-xs)',
-                  color: 'var(--color-surface-muted)',
+                  color: 'hsl(var(--muted-foreground))',
                   marginTop: '0.25rem',
                 }}
               >
@@ -138,7 +138,7 @@ export const Modal: React.FC<ModalProps> = ({
             style={{
               background: 'transparent',
               border: 'none',
-              color: 'var(--color-surface-muted)',
+              color: 'hsl(var(--muted-foreground))',
               cursor: 'pointer',
               padding: '0.35rem',
               borderRadius: 'var(--radius-sm)',
@@ -158,7 +158,7 @@ export const Modal: React.FC<ModalProps> = ({
             padding: '1.5rem',
             overflowY: 'auto',
             flex: 1,
-            color: 'var(--color-surface-text)',
+            color: 'hsl(var(--foreground))',
             fontSize: 'var(--text-sm)',
           }}
         >
@@ -170,12 +170,12 @@ export const Modal: React.FC<ModalProps> = ({
           <div
             style={{
               padding: '1rem 1.5rem',
-              borderTop: '1px solid var(--color-surface-border)',
+              borderTop: '1px solid hsl(var(--border))',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'flex-end',
               gap: '0.75rem',
-              backgroundColor: 'var(--color-surface-card-subtle)',
+              backgroundColor: 'hsl(var(--muted))',
             }}
           >
             {footer}
