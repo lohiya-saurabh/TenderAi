@@ -1,15 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useCompany } from '@/context/useCompany.js';
+import { applyEvidenceToProfile, PROFILE_UPDATED_EVENT } from '@/api/companies.js';
 import { Drawer } from '@/components/common/Drawer.js';
 import { Button } from '@/components/common/Button.js';
 import { CapabilityStatusBadge } from '@/components/company/CapabilityStatusBadge.js';
 import type { EvidenceVaultItem } from '@/components/company/companyProfileData.js';
-import {
-  FileText,
-  Download,
-  ExternalLink,
-  Lock,
-  Loader2,
-} from 'lucide-react';
+import { FileText, Download, ExternalLink, Lock, Loader2 } from 'lucide-react';
 
 export interface EvidencePreviewDrawerProps {
   isOpen: boolean;
@@ -32,7 +28,29 @@ export const EvidencePreviewDrawer: React.FC<EvidencePreviewDrawerProps> = ({
   downloadingDocId,
   onDownloadEvidence,
 }) => {
+  const { selectedCompanyId } = useCompany();
+  const [applying, setApplying] = useState(false);
+  const [applyResult, setApplyResult] = useState<{ added: string[]; skipped: string[] } | null>(
+    null,
+  );
+  const [applyError, setApplyError] = useState<string | null>(null);
+
   if (!isOpen) return null;
+
+  const handleApply = async () => {
+    if (!selectedCompanyId || !matchedDoc?.id) return;
+    setApplying(true);
+    setApplyError(null);
+    setApplyResult(null);
+    const res = await applyEvidenceToProfile(selectedCompanyId, matchedDoc.id);
+    setApplying(false);
+    if (res.ok) {
+      setApplyResult({ added: res.data.added, skipped: res.data.skipped });
+      window.dispatchEvent(new Event(PROFILE_UPDATED_EVENT));
+    } else {
+      setApplyError(res.error.message);
+    }
+  };
 
   return (
     <Drawer
@@ -47,6 +65,11 @@ export const EvidencePreviewDrawer: React.FC<EvidencePreviewDrawerProps> = ({
             Close Viewer
           </Button>
           <div className="flex items-center gap-2">
+            {matchedDoc?.id && selectedCompanyId && (
+              <Button variant="secondary" size="sm" onClick={handleApply} isLoading={applying}>
+                Add to profile
+              </Button>
+            )}
             {previewUrl && (
               <Button
                 variant="secondary"
@@ -71,6 +94,21 @@ export const EvidencePreviewDrawer: React.FC<EvidencePreviewDrawerProps> = ({
       }
     >
       <div className="flex flex-col gap-4">
+        {(applyResult || applyError) && (
+          <div className="rounded-lg border border-border bg-card p-3 text-xs space-y-1">
+            {applyError && <p className="text-destructive">{applyError}</p>}
+            {applyResult?.added.map((a) => (
+              <p key={a} className="text-foreground">
+                Added: {a}
+              </p>
+            ))}
+            {applyResult?.skipped.map((s) => (
+              <p key={s} className="text-muted-foreground">
+                Not added: {s}
+              </p>
+            ))}
+          </div>
+        )}
         {/* Metadata Summary Card */}
         <div className="bg-background border border-border rounded-lg p-3.5 flex flex-col gap-2.5 text-xs">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-2">

@@ -88,4 +88,15 @@ export class CompanyProfileController {
     }
     return this.companyProfileService.createProfileVersion(body.name ?? '', body.payload);
   }
+
+  /** Adds what an evidence document states to the profile as a new version. */
+  @Post('evidence/:evidenceId/apply')
+  @HttpCode(201)
+  @RequirePermission(Permissions.COMPANY_PROFILE_MANAGE)
+  async applyEvidence(
+    @Param('evidenceId') evidenceId: string,
+    @Query('companyId') companyId?: string,
+  ) {
+    return this.companyProfileService.applyEvidence(evidenceId, companyId);
+  }
 }

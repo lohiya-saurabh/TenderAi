@@ -6,7 +6,12 @@ import { CompanyProfileView } from '@/components/company/CompanyProfileView.js';
 import { CompanyVerificationBar } from '@/components/company/CompanyVerificationBar.js';
 import { Card, CardContent } from '@/components/ui/card.js';
 import { Building2 } from 'lucide-react';
-import { listCompanyEvidence, getCompanyProfile, type EvidenceDocumentItem } from '@/api/companies.js';
+import {
+  listCompanyEvidence,
+  getCompanyProfile,
+  PROFILE_UPDATED_EVENT,
+  type EvidenceDocumentItem,
+} from '@/api/companies.js';
 import type { CompanyProfileView as ApiCompanyProfileView } from '@/api/companyProfile.js';
 import type {
   CapabilitySectionId,
@@ -28,7 +33,9 @@ export const CompanyProfilePage: React.FC = () => {
   const [evidenceList, setEvidenceList] = useState<EvidenceDocumentItem[]>([]);
   const [apiProfile, setApiProfile] = useState<ApiCompanyProfileView | null>(null);
   const [openEvidenceTrigger, setOpenEvidenceTrigger] = useState(0);
-  const [evidenceSourceDefault, setEvidenceSourceDefault] = useState<'DEVICE' | 'GOOGLE_DRIVE' | 'ONEDRIVE'>('DEVICE');
+  const [evidenceSourceDefault, setEvidenceSourceDefault] = useState<
+    'DEVICE' | 'GOOGLE_DRIVE' | 'ONEDRIVE'
+  >('DEVICE');
 
   const fetchEvidence = useCallback(async () => {
     if (selectedCompany?.id) {
@@ -47,6 +54,13 @@ export const CompanyProfilePage: React.FC = () => {
 
   useEffect(() => {
     fetchEvidence();
+  }, [fetchEvidence]);
+
+  // Evidence applied to the profile from the preview drawer creates a new version.
+  useEffect(() => {
+    const reload = () => void fetchEvidence();
+    window.addEventListener(PROFILE_UPDATED_EVENT, reload);
+    return () => window.removeEventListener(PROFILE_UPDATED_EVENT, reload);
   }, [fetchEvidence]);
 
   const handleRefreshAll = async () => {
@@ -73,7 +87,9 @@ export const CompanyProfilePage: React.FC = () => {
       });
     }
     if (selectedCompany.pan) {
-      const isPanVerified = Boolean(selectedCompany.gstinVerifiedAt || selectedCompany.mcaVerifiedAt);
+      const isPanVerified = Boolean(
+        selectedCompany.gstinVerifiedAt || selectedCompany.mcaVerifiedAt,
+      );
       registrations.push({
         id: 'reg-pan',
         title: 'Permanent Account Number (PAN)',
@@ -82,7 +98,9 @@ export const CompanyProfilePage: React.FC = () => {
         issuingAuthority: 'Income Tax Department of India',
         stateOrJurisdiction: 'Pan-India',
         status: isPanVerified ? 'SOURCE_VERIFIED' : 'UNVERIFIED',
-        verificationNotes: isPanVerified ? 'Verified via Statutory Return Cross-Check' : 'Pending verification',
+        verificationNotes: isPanVerified
+          ? 'Verified via Statutory Return Cross-Check'
+          : 'Pending verification',
       });
     }
     if (selectedCompany.cin) {
@@ -109,7 +127,9 @@ export const CompanyProfilePage: React.FC = () => {
         issuingAuthority: 'Ministry of MSME, Govt of India',
         stateOrJurisdiction: 'India',
         status: isUdyamVerified ? 'SOURCE_VERIFIED' : 'UNVERIFIED',
-        verificationNotes: isUdyamVerified ? 'Verified via MSME National Portal' : 'Pending verification',
+        verificationNotes: isUdyamVerified
+          ? 'Verified via MSME National Portal'
+          : 'Pending verification',
         lastVerifiedAt: selectedCompany.udyamVerifiedAt || undefined,
       });
     }
@@ -176,19 +196,21 @@ export const CompanyProfilePage: React.FC = () => {
       evidenceDocId: e.evidence_document_id,
     }));
 
-    const oemAuthorizations: OemAuthorizationItem[] = (payload?.oem_authorizations ?? []).map((o) => ({
-      id: o.entry_id,
-      title: `${o.oem_name} Authorization`,
-      oemName: o.oem_name,
-      partnerTier: 'Authorized Partner',
-      productCategories: o.product_lines || [],
-      authorizedTerritory: 'National',
-      validFrom: o.valid_from,
-      validUntil: o.valid_to,
-      mafDocName: '',
-      status: 'VERIFIED',
-      evidenceDocId: o.evidence_document_id,
-    }));
+    const oemAuthorizations: OemAuthorizationItem[] = (payload?.oem_authorizations ?? []).map(
+      (o) => ({
+        id: o.entry_id,
+        title: `${o.oem_name} Authorization`,
+        oemName: o.oem_name,
+        partnerTier: 'Authorized Partner',
+        productCategories: o.product_lines || [],
+        authorizedTerritory: 'National',
+        validFrom: o.valid_from,
+        validUntil: o.valid_to,
+        mafDocName: '',
+        status: 'VERIFIED',
+        evidenceDocId: o.evidence_document_id,
+      }),
+    );
 
     const employees: EmployeeItem[] = (payload?.staff ?? []).map((s) => ({
       id: s.entry_id,
@@ -218,7 +240,7 @@ export const CompanyProfilePage: React.FC = () => {
     }));
 
     const solvencyRecords: SolvencyItem[] =
-      (payload?.solvency_records && payload.solvency_records.length > 0)
+      payload?.solvency_records && payload.solvency_records.length > 0
         ? payload.solvency_records.map((s) => ({
             id: s.entry_id,
             title: `${s.bank_name || 'Bank'} Solvency Certificate`,
@@ -267,7 +289,9 @@ export const CompanyProfilePage: React.FC = () => {
         })();
 
     const mcaData = (selectedCompany.mcaVerificationData || {}) as Record<string, unknown>;
-    const cinYearMatch = selectedCompany.cin ? selectedCompany.cin.match(/[A-Za-z]{2}(\d{4})[A-Za-z]{3}/) : null;
+    const cinYearMatch = selectedCompany.cin
+      ? selectedCompany.cin.match(/[A-Za-z]{2}(\d{4})[A-Za-z]{3}/)
+      : null;
     const derivedIncorporation =
       (mcaData.incorporationDate as string) ||
       (mcaData.incorporation_date as string) ||
@@ -280,7 +304,9 @@ export const CompanyProfilePage: React.FC = () => {
       legalEntityName: selectedCompany.legalName,
       cinNumber: selectedCompany.cin || '—',
       incorporationDate: derivedIncorporation,
-      profileVersion: apiProfile?.active ? `v${apiProfile.active.version}.0 (Active)` : 'v1.0 (Clean Baseline)',
+      profileVersion: apiProfile?.active
+        ? `v${apiProfile.active.version}.0 (Active)`
+        : 'v1.0 (Clean Baseline)',
       msmeCategory: selectedCompany.udyamId ? 'SMALL' : 'LARGE ENTERPRISE',
       msmeType: 'CONSTRUCTION_INFRA',
       isBlacklisted: false,

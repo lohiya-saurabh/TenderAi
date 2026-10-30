@@ -10,6 +10,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { type DrizzleDb } from '@/common/database/database.module.js';
 import * as schema from '@/common/database/schema.js';
 import { NotFoundError, BadRequestError } from '@/common/errors/errors.js';
+import { mergeEvidenceIntoProfile } from './application/evidence-to-profile.js';
 import { TenantContextHolder } from '@/common/security/TenantContext.js';
 import {
   type CompanyProfilePayload,
@@ -256,6 +257,38 @@ export class CompanyProfileService {
    * Validation happens here so malformed snapshots never enter
    * the evaluation pipeline.
    */
+  /**
+   * Adds what an evidence document states (turnover per year, a completed project, a
+   * certificate) to the company profile as a new version. Fields the document does not state
+   * are reported in `skipped`, never filled in.
+   */
+  public async applyEvidence(
+    evidenceId: string,
+    companyId?: string,
+  ): Promise<{ version: CompanyProfileVersionView; added: string[]; skipped: string[] }> {
+    const orgId = this.requireOrg();
+    const targetCompId = await this.resolveCompanyId(companyId);
+    const evidence = await this.repository.findEvidenceDocument(evidenceId, targetCompId, orgId);
+    if (!evidence) throw new NotFoundError(`Evidence document '${evidenceId}' not found.`);
+    const profile = await this.getProfile(targetCompId);
+    const company = await this.repository.findCompany(targetCompId, orgId);
+    const base = profile.active?.payload ?? { company_name: company?.legalName ?? '' };
+    const { payload, added, skipped } = mergeEvidenceIntoProfile(base, evidence);
+    if (added.length === 0) {
+      throw new BadRequestError(
+        skipped.length > 0
+          ? `Nothing could be added: ${skipped.join('; ')}.`
+          : 'This document has no extracted turnover, project or certificate to add.',
+      );
+    }
+    const version = await this.createProfileVersion(
+      `Updated from ${evidence.fileName}`,
+      payload,
+      targetCompId,
+    );
+    return { version, added, skipped };
+  }
+
   public async createProfileVersion(
     name: string,
     payload: unknown,
@@ -272,9 +305,7 @@ export class CompanyProfileService {
 
     const nextVer = (await this.repository.getMaxVersion(orgId, targetCompId)) + 1;
     const trimmedName =
-      typeof name === 'string' && name.trim()
-        ? name.trim()
-        : `Profile v${nextVer}`;
+      typeof name === 'string' && name.trim() ? name.trim() : `Profile v${nextVer}`;
 
     // Immutable append-only versioning: never update in place.
     const versionNumber = nextVer;

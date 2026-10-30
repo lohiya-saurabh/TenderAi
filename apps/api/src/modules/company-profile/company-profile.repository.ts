@@ -1,11 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
 import { eq, and, desc, max } from 'drizzle-orm';
-import {
-  DRIZZLE_TOKEN,
-  type DrizzleDb,
-  createDrizzle,
-} from '@/common/database/database.module.js';
+import { DRIZZLE_TOKEN, type DrizzleDb, createDrizzle } from '@/common/database/database.module.js';
 import * as schema from '@/common/database/schema.js';
 
 @Injectable()
@@ -124,6 +120,25 @@ export class CompanyProfileRepository {
         updatedAt: now,
       });
     }
+  }
+
+  public async findEvidenceDocument(
+    evidenceId: string,
+    companyId: string,
+    orgId: string,
+  ): Promise<schema.CompanyEvidenceDocument | null> {
+    const [doc] = await this.db
+      .select()
+      .from(schema.companyEvidenceDocuments)
+      .where(
+        and(
+          eq(schema.companyEvidenceDocuments.id, evidenceId),
+          eq(schema.companyEvidenceDocuments.companyId, companyId),
+          eq(schema.companyEvidenceDocuments.organizationId, orgId),
+        ),
+      )
+      .limit(1);
+    return doc ?? null;
   }
 
   public async getMaxVersion(orgId: string, companyId?: string): Promise<number> {

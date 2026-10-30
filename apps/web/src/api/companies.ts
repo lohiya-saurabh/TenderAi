@@ -123,6 +123,19 @@ export function getCompany(id: string): Promise<ApiResult<CompanyItem>> {
 /**
  * Fetch capability profile and version history for a specific company.
  */
+/** Adds what an evidence document states (turnover, a project, a certificate) to the profile. */
+export function applyEvidenceToProfile(
+  companyId: string,
+  evidenceId: string,
+): Promise<ApiResult<{ version: CompanyProfileVersion; added: string[]; skipped: string[] }>> {
+  return apiPost(
+    `/api/v1/company-profile/evidence/${encodeURIComponent(evidenceId)}/apply?companyId=${encodeURIComponent(companyId)}`,
+  );
+}
+
+/** Fired after the profile gains a version from evidence, so open views can reload it. */
+export const PROFILE_UPDATED_EVENT = 'tenderpulse:profile-updated';
+
 export function getCompanyProfile(companyId: string): Promise<ApiResult<CompanyProfileView>> {
   return apiGet<CompanyProfileView>(`/api/v1/companies/${encodeURIComponent(companyId)}/profile`);
 }
