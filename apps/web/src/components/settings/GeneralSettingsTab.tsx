@@ -32,7 +32,7 @@ export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base font-semibold">Tenant Workspace Configuration</CardTitle>
+          <CardTitle className="text-base font-semibold">Workspace</CardTitle>
           <CardDescription className="text-xs">
             Core workspace properties and tenant-level regional defaults
           </CardDescription>
@@ -48,7 +48,7 @@ export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({
                 className="bg-muted/30 font-medium text-foreground cursor-not-allowed border-border"
               />
               <span className="text-2xs text-muted-foreground">
-                SaaS organization tenant boundary identifier
+                Your organisation's name, set at sign-up
               </span>
             </div>
 

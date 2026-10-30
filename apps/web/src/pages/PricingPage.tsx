@@ -69,7 +69,7 @@ export const PricingPage: React.FC = () => {
                   </td>
                 </tr>
                 <tr>
-                  <td className="p-4 font-medium text-foreground">Team Member Seats (RBAC)</td>
+                  <td className="p-4 font-medium text-foreground">Team member seats</td>
                   <td className="p-4 text-center tabular-nums text-muted-foreground">1</td>
                   <td className="p-4 text-center tabular-nums text-muted-foreground">3</td>
                   <td className="p-4 text-center tabular-nums font-bold text-foreground">10</td>

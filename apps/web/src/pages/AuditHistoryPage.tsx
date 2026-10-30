@@ -1,31 +1,26 @@
 import React, { useCallback } from 'react';
 import { Page, PageHeader } from '@/components/ui/page.js';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import { getBid } from '@/api/bids.js';
+import { useSetBidBreadcrumbTitle } from '@/components/layout/BreadcrumbTitle.js';
 import { listAuditEvents, type AuditEvent } from '@/api/audit.js';
 import { useApi } from '@/hooks/useApi.js';
 import { AuditTimeline } from '@/components/audit/AuditTimeline.js';
 import { ErrorBanner } from '@/components/common/ErrorBanner.js';
 import { Skeleton } from '@/components/ui/skeleton.js';
-import { ArrowLeft } from 'lucide-react';
 
 export const AuditHistoryPage: React.FC = () => {
   const { id = '' } = useParams<{ id: string }>();
 
   const fetchEvents = useCallback((signal: AbortSignal) => listAuditEvents(id, { signal }), [id]);
   const { data: events, isLoading, error, refetch } = useApi<AuditEvent[]>(fetchEvents, [id]);
+  const fetchBid = useCallback((signal: AbortSignal) => getBid(id, { signal }), [id]);
+  const { data: bid } = useApi(fetchBid, [id]);
+  useSetBidBreadcrumbTitle(id, bid?.title ?? null);
 
   return (
     <Page width="narrow">
       <PageHeader
-        back={
-          <Link
-            to={`/bids/${id}`}
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground no-underline hover:text-foreground"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Bid overview
-          </Link>
-        }
         title="Audit trail"
         description="Every upload, extraction, review and status change on this bid, newest first."
       />

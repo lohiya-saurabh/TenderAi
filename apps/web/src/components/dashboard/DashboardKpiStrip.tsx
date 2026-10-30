@@ -107,7 +107,7 @@ export const DashboardKpiStrip: React.FC<DashboardKpiStripProps> = ({ bids }) =>
                 : 'text-warning dark:text-warning'
           }`}
         >
-          {totalFlagged > 0 ? `${totalFlagged} Flags` : isAnyVerified ? 'Verified' : 'Pending'}
+          {totalFlagged > 0 ? `${totalFlagged} flagged` : isAnyVerified ? 'Verified' : 'Pending'}
         </div>
         <div className="text-xs font-medium text-foreground/80 flex items-center gap-1.5 mt-2">
           <span
@@ -165,12 +165,12 @@ export const DashboardKpiStrip: React.FC<DashboardKpiStripProps> = ({ bids }) =>
           }`}
         >
           {urgentDeadlines.length > 0
-            ? `${urgentDeadlines.length} Closing Soon`
+            ? `${urgentDeadlines.length} closing soon`
             : activeBids.length === 0
-              ? 'NO ACTIVE BIDS'
+              ? 'No active bids'
               : evaluatedBidsCount > 0
-                ? `${evaluatedBidsCount} EVALUATED`
-                : 'PENDING EVAL'}
+                ? `${evaluatedBidsCount} evaluated`
+                : 'Not evaluated'}
         </div>
         <div className="text-xs font-medium text-foreground/80 mt-2">
           {urgentDeadlines.length > 0

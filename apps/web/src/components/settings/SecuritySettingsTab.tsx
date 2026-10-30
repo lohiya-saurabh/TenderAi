@@ -10,7 +10,7 @@ export const SecuritySettingsTab: React.FC = () => {
       <Card>
         <CardHeader>
           <CardTitle className="text-base font-semibold">
-            Session Security &amp; Token Architecture
+            Sessions
           </CardTitle>
           <CardDescription className="text-xs">
             Active cryptographic session properties and isolation enforcement

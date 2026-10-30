@@ -52,9 +52,7 @@ export const TeamSettingsTab: React.FC<TeamSettingsTabProps> = ({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <div>
-            <CardTitle className="text-base font-semibold">
-              Tenant Team Members &amp; RBAC
-            </CardTitle>
+            <CardTitle className="text-base font-semibold">Team members and roles</CardTitle>
             <CardDescription className="text-xs">
               Manage users provisioned in {organizationName || 'your workspace'} (
               {teamMembers.length} Members)

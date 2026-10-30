@@ -537,9 +537,7 @@ export const ProfilePage: React.FC = () => {
       {/* 7. Session Security & Compliance Overview */}
       <Card>
         <CardHeader className="pb-4">
-          <CardTitle className="text-base font-semibold">
-            Session Security &amp; Token Architecture
-          </CardTitle>
+          <CardTitle className="text-base font-semibold">Sessions</CardTitle>
           <CardDescription className="text-xs">
             Cryptographic token session and multi-tenant security guarantees
           </CardDescription>

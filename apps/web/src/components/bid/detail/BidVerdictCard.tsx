@@ -200,10 +200,6 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
     'technical',
   );
   const solvencyGate = findReasonText('solvency', 'credit');
-  const emdAmount = bid.estimatedValueRupees
-    ? `₹${((Number(bid.estimatedValueRupees) * 0.01) / 10000000).toFixed(2)} Cr (1% Bank Guarantee)`
-    : 'Not Specified';
-
   const ldRisk = (decision?.commercialRisks || []).find((r) => {
     const s = typeof r === 'string' ? r : JSON.stringify(r);
     return s.toLowerCase().includes('liquidated') || s.toLowerCase().includes('delay');
@@ -213,9 +209,9 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
     <section className="border border-border rounded-lg p-6 bg-card shadow-xs space-y-6 transition-colors">
       <div>
         <div className="text-xs font-semibold mb-2 text-muted-foreground flex items-center justify-between">
-          <span>1. DETERMINISTIC ELIGIBILITY VERDICT</span>
+          <span>Eligibility verdict</span>
           <span className="text-2xs font-bold text-muted-foreground">
-            {decision ? formatDecisionStateText(decision.state) : 'EVALUATION PENDING'}
+            {decision ? formatDecisionStateText(decision.state) : 'Evaluation pending'}
           </span>
         </div>
 
@@ -224,7 +220,7 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
             {scoreNum !== null ? scoreNum : '—'}
           </span>
           <span className="text-xs font-semibold text-muted-foreground">
-            {scoreNum !== null ? '/ 100 Readiness Score' : 'Readiness Score Pending'}
+            {scoreNum !== null ? '/ 100 readiness score' : 'Readiness score pending'}
           </span>
         </div>
 
@@ -242,19 +238,11 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
               {turnoverGate ? turnoverGate.detail : 'Evaluation pending'}
             </span>
             {turnoverGate && (
-              <span className="text-primary dark:text-primary font-bold ml-1.5">
-                {turnoverGate.pass ? '✓ PASS' : '✗ SHORTFALL'}
+              <span
+                className={`ml-1.5 font-semibold ${turnoverGate.pass ? 'text-success' : 'text-destructive'}`}
+              >
+                {turnoverGate.pass ? 'Pass' : 'Shortfall'}
               </span>
-            )}
-          </div>
-        </div>
-
-        <div className="flex justify-between items-center py-0.5">
-          <span className="text-muted-foreground">Earnest Money Deposit (EMD)</span>
-          <div className="text-right">
-            <span className="text-foreground font-semibold">{emdAmount}</span>
-            {bid.estimatedValueRupees && (
-              <span className="text-primary dark:text-primary font-bold ml-1.5">✓ PASS</span>
             )}
           </div>
         </div>
@@ -262,9 +250,7 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
         <div className="flex justify-between items-center py-0.5">
           <span className="text-muted-foreground">Liquidated Damages / Contract Risk</span>
           <span
-            className={
-              ldRisk ? 'text-warning dark:text-warning font-bold' : 'text-foreground '
-            }
+            className={ldRisk ? 'text-warning dark:text-warning font-bold' : 'text-foreground '}
           >
             {ldRisk
               ? typeof ldRisk === 'object' &&
@@ -504,9 +490,7 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
                         )}
                       </div>
                       {note && (
-                        <div className="text-muted-foreground text-2xs leading-relaxed">
-                          {note}
-                        </div>
+                        <div className="text-muted-foreground text-2xs leading-relaxed">{note}</div>
                       )}
                     </div>
                   );

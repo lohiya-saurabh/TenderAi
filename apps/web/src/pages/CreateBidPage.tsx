@@ -5,7 +5,7 @@ import { createBid } from '@/api/bids.js';
 import { useCompany } from '@/context/useCompany.js';
 import { Button } from '@/components/common/Button.js';
 import { ErrorBanner } from '@/components/common/ErrorBanner.js';
-import { Building2, ArrowLeft, Calendar, Hash } from 'lucide-react';
+import { Building2, Calendar, Hash } from 'lucide-react';
 
 export const CreateBidPage: React.FC = () => {
   const { companies, selectedCompanyId } = useCompany();
@@ -60,15 +60,6 @@ export const CreateBidPage: React.FC = () => {
   return (
     <Page width="narrow">
       <PageHeader
-        back={
-          <Link
-            to="/bids"
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground no-underline hover:text-foreground"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Bids
-          </Link>
-        }
         title="New bid"
         description="Enter the tender details, then upload its documents to extract every requirement."
       />
@@ -207,7 +198,7 @@ export const CreateBidPage: React.FC = () => {
             isLoading={isSubmitting}
             className="shadow-sm"
           >
-            Initialize Dossier Workspace →
+            Create bid
           </Button>
         </div>
       </form>

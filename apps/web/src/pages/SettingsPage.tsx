@@ -305,7 +305,7 @@ export const SettingsPage: React.FC = () => {
           </TabsTrigger>
           <TabsTrigger value="team" className="gap-1.5 text-xs">
             <Users className="h-3.5 w-3.5" />
-            <span>Team &amp; RBAC</span>
+            <span>Team</span>
           </TabsTrigger>
           <TabsTrigger value="companies" className="gap-1.5 text-xs">
             <Building2 className="h-3.5 w-3.5" />
