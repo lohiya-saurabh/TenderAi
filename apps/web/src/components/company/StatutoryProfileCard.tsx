@@ -42,13 +42,9 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
               Statutory Business Profile
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Authoritative enterprise credentials verified against MCA, GSTN, MSME, and public
-              procurement registers.
+              Registration details for this company. Use the registry checks above to verify them.
             </p>
           </div>
-          <Badge variant="neutral" size="sm" className="tabular-nums self-start sm:self-auto">
-            Verified Dossier
-          </Badge>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -85,27 +81,37 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
           {/* MSME */}
           <div className="flex flex-col gap-1.5">
             <span className="text-2xs font-semibold text-muted-foreground">
-              MSME Category
+              MSME category
             </span>
             <div className="flex items-center gap-2">
-              <Badge variant="neutral" size="sm" className="tabular-nums">
-                {profile.msmeCategory}
-              </Badge>
-              <span className="text-xs text-muted-foreground">
-                {profile.msmeType.replace(/_/g, ' ')}
-              </span>
+              {profile.msmeCategory ? (
+                <Badge variant="neutral" size="sm">
+                  {profile.msmeCategory}
+                </Badge>
+              ) : (
+                <span className="text-xs italic text-muted-foreground">Not stated</span>
+              )}
+              {profile.msmeType && (
+                <span className="text-xs text-muted-foreground">
+                  {profile.msmeType.replace(/_/g, ' ').toLowerCase()}
+                </span>
+              )}
             </div>
           </div>
 
           {/* Debarment */}
           <div className="flex flex-col gap-1.5">
             <span className="text-2xs font-semibold text-muted-foreground">
-              Statutory Debarment Status
+              Debarment status
             </span>
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-              <Check size={14} className="text-foreground shrink-0" />
-              <span>Clean / Not Debarred</span>
-            </div>
+            {profile.isBlacklisted === null ? (
+              <span className="text-xs italic text-muted-foreground">Not stated</span>
+            ) : (
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                {!profile.isBlacklisted && <Check size={14} className="shrink-0 text-success" />}
+                <span>{profile.isBlacklisted ? 'Debarred' : 'Not debarred'}</span>
+              </div>
+            )}
           </div>
 
           {/* Credit Rating */}

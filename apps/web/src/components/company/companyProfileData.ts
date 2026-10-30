@@ -167,10 +167,13 @@ export interface FullCompanyProfile {
   legalEntityName: string;
   cinNumber: string;
   incorporationDate: string;
-  profileVersion: string;
-  msmeCategory: 'MICRO' | 'SMALL' | 'MEDIUM' | 'LARGE ENTERPRISE';
-  msmeType: 'MANUFACTURING' | 'SERVICES' | 'CONSTRUCTION_INFRA';
-  isBlacklisted: boolean;
+  /** null when no profile version has been published. */
+  profileVersion: string | null;
+  /** null when the company has not stated it. */
+  msmeCategory: 'MICRO' | 'SMALL' | 'MEDIUM' | 'LARGE ENTERPRISE' | null;
+  msmeType: 'MANUFACTURING' | 'SERVICES' | 'CONSTRUCTION_INFRA' | null;
+  /** null when no debarment check has been recorded. */
+  isBlacklisted: boolean | null;
   creditRating?: {
     agency: string;
     rating: string;
@@ -251,7 +254,7 @@ export function computeProfileHealth(profile: FullCompanyProfile): ProfileHealth
     expiredCount,
     missingCount,
     needsReviewCount,
-    isBidReady: healthScorePct >= 75 && expiredCount === 0 && !profile.isBlacklisted,
+    isBidReady: healthScorePct >= 75 && expiredCount === 0 && profile.isBlacklisted !== true,
   };
 }
 

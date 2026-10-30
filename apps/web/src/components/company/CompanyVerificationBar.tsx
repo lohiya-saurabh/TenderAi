@@ -469,8 +469,8 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
             <ShieldCheck size={18} className="text-foreground" />
             <span className="font-bold text-sm text-foreground">Registry checks</span>
           </div>
-          <span className="mono text-xs text-muted-foreground">
-            Authoritative Cross-Verification: IRIS IRP · MCA · Udyam · DigiLocker · Cloud Drive
+          <span className="text-xs text-muted-foreground">
+            IRIS IRP · MCA · Udyam · DigiLocker · cloud drive
           </span>
         </div>
 

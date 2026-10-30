@@ -305,12 +305,11 @@ export const CompanyProfilePage: React.FC = () => {
       legalEntityName: selectedCompany.legalName,
       cinNumber: selectedCompany.cin || '—',
       incorporationDate: derivedIncorporation,
-      profileVersion: apiProfile?.active
-        ? `v${apiProfile.active.version}.0 (Active)`
-        : 'v1.0 (Clean Baseline)',
-      msmeCategory: selectedCompany.udyamId ? 'SMALL' : 'LARGE ENTERPRISE',
-      msmeType: 'CONSTRUCTION_INFRA',
-      isBlacklisted: false,
+      profileVersion: apiProfile?.active ? `Version ${apiProfile.active.version}` : null,
+      // Not captured yet: shown as "Not stated", never guessed.
+      msmeCategory: null,
+      msmeType: null,
+      isBlacklisted: null,
       creditRating,
       registrations,
       certifications,

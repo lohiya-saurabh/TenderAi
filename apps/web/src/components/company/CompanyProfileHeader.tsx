@@ -56,13 +56,11 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          <Badge
-            variant="neutral"
-            size="sm"
-            className="tabular-nums bg-muted/50 border-border text-foreground"
-          >
-            {profile.profileVersion}
-          </Badge>
+          {profile.profileVersion && (
+            <Badge variant="neutral" size="sm">
+              {profile.profileVersion}
+            </Badge>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -85,16 +83,15 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
               <h1 className="text-2xl font-semibold tracking-tight text-foreground m-0">
                 {displayName}
               </h1>
-              <Badge variant="neutral" size="sm" dot>
-                Active Dossier
-              </Badge>
-              <Badge variant="neutral" size="sm" className="tabular-nums">
-                MSME {profile.msmeCategory}
-              </Badge>
-              {!profile.isBlacklisted && (
+              {profile.msmeCategory && (
+                <Badge variant="neutral" size="sm">
+                  MSME {profile.msmeCategory.toLowerCase()}
+                </Badge>
+              )}
+              {profile.isBlacklisted === false && (
                 <Badge variant="neutral" size="sm">
                   <span className="flex items-center gap-1">
-                    <Check className="w-3 h-3 text-foreground" /> Clean Non-Debarment Record
+                    <Check className="w-3 h-3 text-foreground" /> Not debarred
                   </span>
                 </Badge>
               )}
@@ -160,9 +157,9 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
 
           {/* Count Cards */}
           <div className="flex gap-2 flex-wrap sm:col-span-1 md:col-span-2 justify-start md:justify-end">
-            <div className="bg-muted border border-border rounded-lg px-3 py-1.5 text-xs font-mono">
-              <span className="text-foreground font-bold">{health.verifiedCount}</span>{' '}
-              <span className="text-muted-foreground">Verified Credentials</span>
+            <div className="bg-muted border border-border rounded-lg px-3 py-1.5 text-xs">
+              <span className="text-foreground font-semibold tabular-nums">{health.verifiedCount}</span>{' '}
+              <span className="text-muted-foreground">verified credentials</span>
             </div>
 
             {health.expiringSoonCount > 0 && (
