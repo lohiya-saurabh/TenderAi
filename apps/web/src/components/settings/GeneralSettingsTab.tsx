@@ -32,9 +32,7 @@ export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base font-semibold">
-            Tenant Workspace Configuration
-          </CardTitle>
+          <CardTitle className="text-base font-semibold">Tenant Workspace Configuration</CardTitle>
           <CardDescription className="text-xs">
             Core workspace properties and tenant-level regional defaults
           </CardDescription>
@@ -73,8 +71,8 @@ export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({
           <div className="space-y-3">
             <Label className="text-xs font-semibold">Default Active Company Entity</Label>
             <p className="text-xs text-muted-foreground">
-              Select which registered company is automatically selected when you launch new
-              tenders or review dossiers.
+              Select which registered company is automatically selected when you launch new tenders
+              or review dossiers.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
@@ -112,44 +110,15 @@ export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({
               })}
             </div>
           </div>
-
-          <Separator />
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-            <div className="p-3 rounded-lg bg-muted/30 border border-border/60 space-y-1">
-              <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Procurement Standard &amp; Region
-              </span>
-              <p className="font-medium text-foreground">
-                India Public Procurement (GeM / CPPP)
-              </p>
-              <p className="text-2xs text-muted-foreground">
-                INR Currency (₹ Lakhs / Crores)
-              </p>
-            </div>
-
-            <div className="p-3 rounded-lg bg-muted/30 border border-border/60 space-y-1">
-              <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Data Residency &amp; Compliance
-              </span>
-              <p className="font-medium text-foreground">AWS ap-south-1 (Mumbai)</p>
-              <p className="text-2xs text-muted-foreground">
-                DPDP Act 2023 Compliant Storage
-              </p>
-            </div>
-          </div>
         </CardContent>
       </Card>
 
       {/* Appearance & Color Theme */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base font-semibold">
-            Appearance &amp; Visual Theme
-          </CardTitle>
+          <CardTitle className="text-base font-semibold">Appearance &amp; Visual Theme</CardTitle>
           <CardDescription className="text-xs">
-            Select your preferred interface display mode. Saved persistently to tenant
-            preferences.
+            Select your preferred interface display mode. Saved persistently to tenant preferences.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -197,8 +166,8 @@ export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({
                   <span>Crisp Daylight Light</span>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Pure white canvas with ink-black typography and hairline zinc dividers for
-                  daytime audits.
+                  Pure white canvas with ink-black typography and hairline zinc dividers for daytime
+                  audits.
                 </p>
               </div>
               {theme === 'light' && (

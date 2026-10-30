@@ -1,7 +1,10 @@
 import React from 'react';
 import { Button } from '@/components/common/Button.js';
 import { CapabilityStatusBadge } from '@/components/company/CapabilityStatusBadge.js';
-import { type BaseCapabilityItem, getDaysUntilExpiry } from '@/components/company/companyProfileData.js';
+import {
+  type BaseCapabilityItem,
+  getDaysUntilExpiry,
+} from '@/components/company/companyProfileData.js';
 import { AlertTriangle, FileText } from 'lucide-react';
 
 export interface KeyValueField {
@@ -93,8 +96,8 @@ export const CapabilityItemCard: React.FC<CapabilityItemCardProps> = ({
 
       {/* Verification Notes / Alert */}
       {item.verificationNotes && (
-        <div className="text-xs text-warning dark:text-warning bg-warning/60 dark:bg-warning/20 border border-warning/30 dark:border-warning/50 rounded-lg p-2.5 flex items-center gap-2">
-          <AlertTriangle size={14} className="shrink-0 text-warning dark:text-warning" />
+        <div className="text-xs text-warning bg-warning/10 border border-warning/30 rounded-lg p-2.5 flex items-center gap-2">
+          <AlertTriangle size={14} className="shrink-0 text-warning" />
           <span>{item.verificationNotes}</span>
         </div>
       )}

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { Logo } from '@/components/layout/Logo.js';
 
 const linkClass = 'transition-colors hover:text-foreground';
 
@@ -8,12 +9,7 @@ export const PublicFooter: React.FC = () => (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
       <div className="grid grid-cols-1 gap-8 sm:grid-cols-3">
         <div className="space-y-3">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-xs font-bold text-primary-foreground">
-              TP
-            </div>
-            <span className="text-base font-bold tracking-tight text-foreground">TenderPulse</span>
-          </div>
+          <Logo />
           <p className="text-sm leading-relaxed">
             Bid assurance for large works tenders: every requirement, its source page and the proof
             behind it, checked before you submit.

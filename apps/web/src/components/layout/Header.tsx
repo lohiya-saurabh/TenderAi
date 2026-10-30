@@ -8,6 +8,7 @@ import { UserAccountMenu } from '@/components/layout/UserAccountMenu.js';
 import { CompanySelector } from '@/components/layout/CompanySelector.js';
 import { NotificationBell } from '@/components/layout/NotificationBell.js';
 import { useTheme } from '@/context/useTheme.js';
+import { Logo } from '@/components/layout/Logo.js';
 
 const NAV_ITEMS = [
   { to: '/bids', label: 'Bids', permission: PERMISSIONS.BIDS_READ, end: false },
@@ -34,11 +35,8 @@ export const Header: React.FC = () => {
   return (
     <header className="dark sticky top-0 z-40 w-full border-b border-border bg-background text-foreground">
       <div className="min-h-[52px] px-4 sm:px-6 flex flex-wrap items-center gap-x-5 gap-y-1 py-1.5">
-        <NavLink
-          to="/bids"
-          className="font-bold text-base tracking-[-0.01em] text-foreground no-underline"
-        >
-          TenderPulse
+        <NavLink to="/bids" className="no-underline" aria-label="TenderPulse home">
+          <Logo />
         </NavLink>
 
         <nav aria-label="Main" className="flex items-center gap-4 text-sm">

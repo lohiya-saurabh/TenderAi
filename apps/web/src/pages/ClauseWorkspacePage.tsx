@@ -337,7 +337,7 @@ export const ClauseWorkspacePage: React.FC = () => {
   );
 
   return (
-    <div className="flex h-[calc(100vh-5.5rem)] min-h-[560px] flex-col gap-3">
+    <div className="flex flex-col gap-3 lg:h-[calc(100vh-5.5rem)] lg:min-h-[560px]">
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-3">
           <Link
@@ -346,7 +346,7 @@ export const ClauseWorkspacePage: React.FC = () => {
           >
             <ArrowLeft className="h-3.5 w-3.5" /> Bid overview
           </Link>
-          <h1 className="text-lg font-semibold">Clause workspace</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Clause workspace</h1>
           {clauses && (
             <div
               className="flex min-w-[260px] flex-1 items-center gap-2 text-xs text-muted-foreground"
@@ -406,12 +406,12 @@ export const ClauseWorkspacePage: React.FC = () => {
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search clause text, AI summary, refs, forms"
             aria-label="Search clauses"
-            className="h-9 min-w-[220px] flex-1 rounded-md border border-input bg-background px-3 text-sm"
+            className="h-8 min-w-[220px] flex-1 rounded-md border border-input bg-background px-3 text-xs"
           />
           <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
             Group by
             <select
-              className="h-9 rounded-md border border-input bg-background px-2 text-sm text-foreground"
+              className="h-8 rounded-md border border-input bg-background px-2 text-xs text-foreground"
               value={view.group}
               onChange={(e) => update({ group: e.target.value as GroupBy })}
               aria-label="Group by"
@@ -426,7 +426,7 @@ export const ClauseWorkspacePage: React.FC = () => {
           <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
             Density
             <select
-              className="h-9 rounded-md border border-input bg-background px-2 text-sm text-foreground"
+              className="h-8 rounded-md border border-input bg-background px-2 text-xs text-foreground"
               value={view.density}
               onChange={(e) => update({ density: e.target.value as WorkspaceView['density'] })}
               aria-label="Row density"
@@ -435,10 +435,11 @@ export const ClauseWorkspacePage: React.FC = () => {
               <option value="compact">Compact</option>
             </select>
           </label>
-          {selectedId && !view.verify && (
+          {!view.verify && (
             <Button
               variant="outline"
               size="sm"
+              className={selectedId ? undefined : 'lg:hidden'}
               onClick={() => setShowFilters((v) => !v)}
               aria-pressed={showFilters}
             >
@@ -535,21 +536,26 @@ export const ClauseWorkspacePage: React.FC = () => {
 
       <div
         className={cn(
-          'grid min-h-0 flex-1 gap-3',
+          'grid min-h-0 flex-1 grid-cols-1 gap-3',
           view.verify
-            ? 'grid-cols-[300px_minmax(0,1fr)_420px]'
+            ? 'lg:grid-cols-[300px_minmax(0,1fr)_420px]'
             : selectedId
               ? showFilters
-                ? 'grid-cols-[220px_minmax(0,1fr)_minmax(400px,480px)]'
-                : 'grid-cols-[minmax(0,1fr)_minmax(400px,480px)]'
-              : 'grid-cols-[220px_minmax(0,1fr)]',
+                ? 'lg:grid-cols-[220px_minmax(0,1fr)_minmax(400px,480px)]'
+                : 'lg:grid-cols-[minmax(0,1fr)_minmax(400px,480px)]'
+              : 'lg:grid-cols-[220px_minmax(0,1fr)]',
         )}
       >
         {!view.verify && clauses && (!selectedId || showFilters) && (
-          <ClauseFilters clauses={clauses} view={view} onChange={update} />
+          <div className={cn('min-h-0', !showFilters && 'hidden lg:block')}>
+            <ClauseFilters clauses={clauses} view={view} onChange={update} />
+          </div>
         )}
         <section
-          className="min-h-0 overflow-hidden rounded-lg border border-border bg-card"
+          className={cn(
+            'h-[70vh] min-h-0 overflow-hidden rounded-lg border border-border bg-card lg:h-auto',
+            (selectedId || view.verify) && 'hidden lg:block',
+          )}
           aria-label="Clause list"
         >
           {!clauses && !loadError && (
@@ -586,7 +592,7 @@ export const ClauseWorkspacePage: React.FC = () => {
           )}
         </section>
         {view.verify && (
-          <div className="min-h-0">
+          <div className="h-[70vh] min-h-0 lg:h-auto">
             {viewer ?? (
               <div className="flex h-full items-center justify-center rounded-lg border border-border bg-card text-sm text-muted-foreground">
                 Select a clause to see its page.
@@ -594,7 +600,7 @@ export const ClauseWorkspacePage: React.FC = () => {
             )}
           </div>
         )}
-        {(view.verify || selectedId) && <div className="min-h-0">{panel}</div>}
+        {(view.verify || selectedId) && <div className="h-[80vh] min-h-0 lg:h-auto">{panel}</div>}
       </div>
 
       <div aria-live="polite" className="sr-only">

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';
 import { Label } from '@/components/ui/label.js';
 import { ErrorBanner } from '@/components/common/ErrorBanner.js';
-import { Building2, Lock, Mail, User, ShieldCheck, ArrowRight, Sparkles } from 'lucide-react';
+import { Building2, Lock, Mail, User, ArrowRight, Sparkles } from 'lucide-react';
 
 export const SignupPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -230,10 +230,6 @@ export const SignupPage: React.FC = () => {
                 Sign in to workspace
               </Link>
             </p>
-            <div className="flex items-center justify-center gap-1.5 text-2xs text-muted-foreground font-mono">
-              <ShieldCheck className="h-3.5 w-3.5 text-primary" />
-              <span>Isolated Tenant DB &bull; DPDP Act 2023 Compliant</span>
-            </div>
           </div>
         </div>
       </div>
