@@ -37,7 +37,7 @@ export const SecuritySettingsTab: React.FC = () => {
             <div className="p-3.5 rounded-lg bg-muted/30 border border-border space-y-2">
               <div className="flex items-center gap-2 font-semibold text-foreground">
                 <Lock className="h-4 w-4 text-primary" />
-                <span>Fiber-Safe Tenant Isolation</span>
+                <span>Your data is kept separate from every other workspace</span>
               </div>
               <p className="text-muted-foreground leading-relaxed">
                 Every API request executes in an isolated Node.js AsyncLocalStorage fiber with

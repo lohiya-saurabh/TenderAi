@@ -38,7 +38,7 @@ export const CapabilityItemCard: React.FC<CapabilityItemCardProps> = ({
       <div className="flex justify-between items-start flex-wrap gap-2">
         <div className="flex items-center gap-2.5 flex-wrap">
           {typeBadge && (
-            <span className="text-2xs font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-muted text-muted-foreground border border-border">
+            <span className="text-2xs font-bold uppercase tracking-wide px-2 py-0.5 rounded bg-muted text-muted-foreground border border-border">
               {typeBadge}
             </span>
           )}

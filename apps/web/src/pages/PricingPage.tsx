@@ -39,7 +39,7 @@ export const PricingPage: React.FC = () => {
       <section className="py-20 border-b border-border/60 bg-muted/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
           <div className="text-center space-y-2 max-w-2xl mx-auto">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-primary font-mono">
+            <h2 className="text-xs font-bold uppercase tracking-wide text-primary">
               Detailed Comparison
             </h2>
             <p className="text-2xl sm:text-3xl font-extrabold text-foreground">

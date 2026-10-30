@@ -44,7 +44,7 @@ export const DisqualifierItemCard: React.FC<DisqualifierItemCardProps> = ({ rawI
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-destructive tracking-wide">{item.title}</span>
           {item.factor && (
-            <span className="text-2xs font-mono px-1.5 py-0.5 rounded bg-destructive/15 text-destructive font-semibold uppercase">
+            <span className="text-2xs px-1.5 py-0.5 rounded bg-destructive/15 text-destructive font-semibold uppercase">
               {item.factor}
             </span>
           )}

@@ -55,7 +55,7 @@ export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="tenantId">Tenant Organization ID</Label>
+              <Label htmlFor="tenantId">Workspace ID</Label>
               <Input
                 id="tenantId"
                 value={workspaceSettings?.organizationId || organizationId || '—'}
@@ -63,7 +63,7 @@ export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({
                 className="bg-muted/30 font-mono text-xs text-foreground cursor-not-allowed border-border"
               />
               <span className="text-2xs text-muted-foreground">
-                Cryptographically bound to your JWT session token claims
+                Quote this ID when you contact support.
               </span>
             </div>
           </div>

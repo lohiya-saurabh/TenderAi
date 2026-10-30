@@ -126,7 +126,7 @@ export const EvidencePreviewDrawer: React.FC<EvidencePreviewDrawerProps> = ({
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-2xs text-muted-foreground">
             <div>
-              <span className="block text-2xs uppercase font-mono tracking-wider text-muted-foreground/80">
+              <span className="block text-2xs uppercase tracking-wide text-muted-foreground/80">
                 Document Type
               </span>
               <span className="font-medium text-foreground">
@@ -135,7 +135,7 @@ export const EvidencePreviewDrawer: React.FC<EvidencePreviewDrawerProps> = ({
             </div>
             {matchedDoc?.issuer && (
               <div>
-                <span className="block text-2xs uppercase font-mono tracking-wider text-muted-foreground/80">
+                <span className="block text-2xs uppercase tracking-wide text-muted-foreground/80">
                   Issuing Authority
                 </span>
                 <span className="font-medium text-foreground truncate block">
@@ -145,7 +145,7 @@ export const EvidencePreviewDrawer: React.FC<EvidencePreviewDrawerProps> = ({
             )}
             {matchedDoc?.referenceNumber && (
               <div>
-                <span className="block text-2xs uppercase font-mono tracking-wider text-muted-foreground/80">
+                <span className="block text-2xs uppercase tracking-wide text-muted-foreground/80">
                   Reference / Reg №
                 </span>
                 <span className="font-mono font-medium text-foreground">
@@ -155,7 +155,7 @@ export const EvidencePreviewDrawer: React.FC<EvidencePreviewDrawerProps> = ({
             )}
             {(matchedDoc?.validFrom || matchedDoc?.validTo) && (
               <div>
-                <span className="block text-2xs uppercase font-mono tracking-wider text-muted-foreground/80">
+                <span className="block text-2xs uppercase tracking-wide text-muted-foreground/80">
                   Validity Period
                 </span>
                 <span className="font-medium text-foreground">
@@ -166,7 +166,7 @@ export const EvidencePreviewDrawer: React.FC<EvidencePreviewDrawerProps> = ({
             )}
             {matchedDoc?.fileSizeBytes && (
               <div>
-                <span className="block text-2xs uppercase font-mono tracking-wider text-muted-foreground/80">
+                <span className="block text-2xs uppercase tracking-wide text-muted-foreground/80">
                   File Size
                 </span>
                 <span className="font-medium text-foreground">
@@ -178,7 +178,7 @@ export const EvidencePreviewDrawer: React.FC<EvidencePreviewDrawerProps> = ({
             )}
             {matchedDoc?.uploadedAt && (
               <div>
-                <span className="block text-2xs uppercase font-mono tracking-wider text-muted-foreground/80">
+                <span className="block text-2xs uppercase tracking-wide text-muted-foreground/80">
                   Ingestion Timestamp
                 </span>
                 <span className="font-medium text-foreground">
@@ -200,7 +200,7 @@ export const EvidencePreviewDrawer: React.FC<EvidencePreviewDrawerProps> = ({
           {matchedDoc?.extractedAttributes &&
             Object.keys(matchedDoc.extractedAttributes).length > 0 && (
               <div className="pt-2 border-t border-border/50 flex flex-wrap gap-1.5 items-center">
-                <span className="text-2xs uppercase font-mono text-muted-foreground shrink-0 mr-1">
+                <span className="text-2xs uppercase text-muted-foreground shrink-0 mr-1">
                   Extracted:
                 </span>
                 {Object.entries(matchedDoc.extractedAttributes)

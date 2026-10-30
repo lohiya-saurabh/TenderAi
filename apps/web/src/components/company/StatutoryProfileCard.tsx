@@ -54,7 +54,7 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Legal Entity Name */}
           <div className="flex flex-col gap-1.5">
-            <span className="text-2xs font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
               Legal Entity Name
             </span>
             <span className="text-sm font-semibold text-foreground leading-snug">
@@ -64,7 +64,7 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
 
           {/* CIN */}
           <div className="flex flex-col gap-1.5">
-            <span className="text-2xs font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
               CIN / Registration Number
             </span>
             <span className="text-sm font-mono font-semibold text-foreground">
@@ -74,7 +74,7 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
 
           {/* Incorporation Date */}
           <div className="flex flex-col gap-1.5">
-            <span className="text-2xs font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
               Incorporation Date
             </span>
             <span className="text-sm font-semibold text-foreground">
@@ -84,7 +84,7 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
 
           {/* MSME */}
           <div className="flex flex-col gap-1.5">
-            <span className="text-2xs font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
               MSME Category
             </span>
             <div className="flex items-center gap-2">
@@ -99,7 +99,7 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
 
           {/* Debarment */}
           <div className="flex flex-col gap-1.5">
-            <span className="text-2xs font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
               Statutory Debarment Status
             </span>
             <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
@@ -110,7 +110,7 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
 
           {/* Credit Rating */}
           <div className="flex flex-col gap-1.5">
-            <span className="text-2xs font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
               External Credit Rating
             </span>
             {profile.creditRating ? (

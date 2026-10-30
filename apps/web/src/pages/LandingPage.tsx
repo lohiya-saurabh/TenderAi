@@ -229,7 +229,7 @@ export const LandingPage: React.FC = () => {
       <section id="features" className="py-20 border-b border-border/60 bg-muted/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto space-y-3 mb-16">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-primary font-mono">
+            <h2 className="text-xs font-bold uppercase tracking-wide text-primary">
               The Reality of Indian Bidding
             </h2>
             <p className="text-3xl sm:text-4xl font-extrabold text-foreground tracking-tight">
@@ -310,7 +310,7 @@ export const LandingPage: React.FC = () => {
       <section id="workflow" className="py-20 border-b border-border/60">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto space-y-3 mb-16">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-primary font-mono">
+            <h2 className="text-xs font-bold uppercase tracking-wide text-primary">
               Deterministic Bid Workflow
             </h2>
             <p className="text-3xl sm:text-4xl font-extrabold text-foreground tracking-tight">
@@ -575,7 +575,7 @@ export const LandingPage: React.FC = () => {
       <section className="py-20 border-b border-border/60">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
           <div className="text-center space-y-3">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-primary font-mono">
+            <h2 className="text-xs font-bold uppercase tracking-wide text-primary">
               Frequently Asked Questions
             </h2>
             <p className="text-2xl sm:text-3xl font-bold text-foreground">

@@ -71,7 +71,7 @@ export const BillingSettingsTab: React.FC<BillingSettingsTabProps> = ({
           </div>
           <Badge
             variant={subscription?.status === 'ACTIVE' ? 'default' : 'secondary'}
-            className="text-xs uppercase font-mono"
+            className="text-xs uppercase"
           >
             {subscription?.status || 'ACTIVE'}
           </Badge>

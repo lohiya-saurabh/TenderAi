@@ -38,7 +38,7 @@ export const AuditTimeline: React.FC<AuditTimelineProps> = ({ events }) => {
             {/* Header: Event Type + Timestamp */}
             <div className="flex items-center justify-between gap-3 mb-2.5 flex-wrap">
               <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-xs font-mono font-bold tracking-wider uppercase bg-primary/10 text-primary border border-primary/20">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-xs font-bold tracking-wide uppercase bg-primary/10 text-primary border border-primary/20">
                   <ShieldCheck className="w-3 h-3" />
                   {event.eventType}
                 </span>
@@ -67,7 +67,7 @@ export const AuditTimeline: React.FC<AuditTimelineProps> = ({ events }) => {
             {/* Payload Metadata Inspector */}
             {event.payload && Object.keys(event.payload).length > 0 && (
               <div className="mt-2 bg-background/80 border border-border/80 rounded-lg p-3">
-                <div className="flex items-center gap-1.5 text-2xs font-mono uppercase tracking-wider text-muted-foreground mb-1.5">
+                <div className="flex items-center gap-1.5 text-2xs uppercase tracking-wide text-muted-foreground mb-1.5">
                   <Terminal className="w-3 h-3" />
                   Audit Payload Signature
                 </div>

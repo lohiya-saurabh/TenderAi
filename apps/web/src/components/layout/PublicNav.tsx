@@ -21,7 +21,7 @@ export const PublicNav: React.FC = () => {
             <span className="text-base font-bold tracking-tight text-foreground transition-colors">
               TenderPulse<span className="text-vermilion">.ai</span>
             </span>
-            <span className="text-2xs text-muted-foreground uppercase tracking-widest font-mono">
+            <span className="text-2xs text-muted-foreground uppercase tracking-wide">
               Bid Readiness SaaS
             </span>
           </div>

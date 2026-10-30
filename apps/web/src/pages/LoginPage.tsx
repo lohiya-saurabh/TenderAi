@@ -51,7 +51,7 @@ export const LoginPage: React.FC = () => {
           Sign in to TenderPulse AI
         </h1>
         <p className="text-xs text-muted-foreground">
-          Deterministic Bid Evaluation &amp; Compliance Verification Platform
+          Tender reading and bid readiness for Indian contractors
         </p>
       </div>
 
@@ -65,7 +65,6 @@ export const LoginPage: React.FC = () => {
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Back to home</span>
             </Link>
-            <span className="text-2xs font-mono text-muted-foreground">v2.4 Enterprise</span>
           </div>
 
           {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
@@ -136,7 +135,7 @@ export const LoginPage: React.FC = () => {
 
             <div className="flex items-center justify-center gap-1.5 text-2xs text-muted-foreground font-mono">
               <ShieldCheck className="w-3.5 h-3.5 text-foreground" />
-              <span>Protected by Fiber-Safe Tenant Isolation &amp; RBAC</span>
+              <span>Your workspace data is private to your company</span>
             </div>
           </div>
         </div>
