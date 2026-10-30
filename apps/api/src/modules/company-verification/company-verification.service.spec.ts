@@ -10,6 +10,7 @@
  * 6. DigiLocker OAuth2 consent, HMAC-SHA256 state protection, and digital certificate ingestion
  * 7. 6-state verification lifecycle and immutable verification history
  */
+import { AiEvidenceExtractor } from '@/modules/company-verification/application/AiEvidenceExtractor.js';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { ensureOrganizations } from '@/test/support/organizations.js';
 import { PGlite } from '@electric-sql/pglite';
@@ -61,12 +62,30 @@ describe('Company Evidence & Third-Party Verification Layer', () => {
     const oneDrive = new OneDriveConnector();
     const localUpload = new LocalUploadConnector();
 
+    // Tests never reach a real AI worker: the extractor answers with no attributes.
+    const offlineExtractor = new AiEvidenceExtractor({
+      customFetch: (async (_url: string, init: RequestInit) => {
+        const req = JSON.parse(String(init.body)) as Record<string, string>;
+        const body = {
+          evidence_document_id: req.evidence_document_id,
+          organization_id: req.organization_id,
+          company_id: req.company_id,
+          status: 'COMPLETED',
+          extracted_attributes: {},
+          chunks: [
+            { chunk_index: 0, chunk_type: 'FINANCIAL_TURNOVER', content: 'page 1', page_number: 1 },
+          ],
+        };
+        return { ok: true, status: 200, json: async () => body } as Response;
+      }) as unknown as typeof fetch,
+    });
     evidenceService = new CompanyEvidenceService(
       db,
       storageService,
       googleDrive,
       oneDrive,
       localUpload,
+      offlineExtractor,
     );
 
     const gstAdapter = new MockGstVerificationAdapter();

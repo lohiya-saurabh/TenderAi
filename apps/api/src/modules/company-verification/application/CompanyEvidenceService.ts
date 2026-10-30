@@ -410,6 +410,15 @@ export class CompanyEvidenceService {
     try {
       const result = await extractor.extractEvidence(doc, undefined, downloadUrl, bufferText);
 
+      if (result.status === 'FAILED') {
+        const failed = await this.repository.updateEvidenceDocument(doc.id, orgId, {
+          verificationStatus: 'NEEDS_REVIEW',
+          discrepancyNotes: `AI could not read this document: ${result.error ?? 'unknown reason'}`,
+          updatedAt: new Date(),
+        });
+        return failed ?? doc;
+      }
+
       if (result.chunks && result.chunks.length > 0) {
         // Idempotently replace existing chunks for this evidence document
         await this.repository.deleteEvidenceChunks(doc.id, orgId);

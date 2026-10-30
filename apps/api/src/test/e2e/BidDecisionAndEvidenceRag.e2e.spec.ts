@@ -48,7 +48,38 @@ describe('E2E: Bid/No-Bid Decision & Company Evidence Extraction Pipeline', () =
     await db.delete(schema.companyEvidenceDocuments);
 
     storageService = new MockStorageService();
-    evidenceExtractor = new AiEvidenceExtractor();
+    // The AI worker's answers, as it would return them for these two documents.
+    evidenceExtractor = new AiEvidenceExtractor({
+      customFetch: (async (_url: string, init: RequestInit) => {
+        const req = JSON.parse(String(init.body)) as {
+          evidence_document_id: string;
+          organization_id: string;
+          company_id: string;
+          file_name: string;
+          pages: { text: string }[];
+        };
+        const text = req.pages[0]?.text ?? '';
+        const turnover = req.file_name.includes('Turnover');
+        const body = {
+          evidence_document_id: req.evidence_document_id,
+          organization_id: req.organization_id,
+          company_id: req.company_id,
+          status: 'COMPLETED',
+          extracted_attributes: turnover
+            ? { udin: '25089745AAAAAA1234', average_turnover_inr_cr: 281.9 }
+            : { client_name: 'NHAI', contract_value_inr_cr: 215.0 },
+          chunks: [
+            {
+              chunk_index: 0,
+              chunk_type: turnover ? 'FINANCIAL_TURNOVER' : 'PROJECT_EXPERIENCE',
+              content: text,
+              page_number: 1,
+            },
+          ],
+        };
+        return { ok: true, status: 200, json: async () => body } as Response;
+      }) as unknown as typeof fetch,
+    });
     evidenceService = new CompanyEvidenceService(
       db,
       storageService,
