@@ -135,7 +135,7 @@ const Highlighted: React.FC<{ text: string; match: [number, number] | null }> = 
       {text.slice(0, match[0])}
       <mark
         ref={ref}
-        className="rounded bg-warning/20 px-0.5 text-black dark:bg-warning/30"
+        className="rounded bg-warning/20 px-0.5 text-foreground dark:bg-warning/30"
         data-testid="source-highlight"
       >
         {text.slice(match[0], match[1])}

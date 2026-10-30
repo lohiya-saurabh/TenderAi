@@ -149,7 +149,7 @@ export const TenderListSection: React.FC<TenderListSectionProps> = ({
                 className={cn(
                   'text-2xs px-1.5 py-0.5 rounded-full font-semibold',
                   isSelected
-                    ? 'bg-vermilion text-white'
+                    ? 'bg-primary text-primary-foreground'
                     : 'bg-muted text-muted-foreground',
                 )}
               >
@@ -219,7 +219,7 @@ export const TenderListSection: React.FC<TenderListSectionProps> = ({
         <TenderTableSkeleton visibleColumns={visibleColumns} rows={8} />
       ) : bids.length === 0 ? (
         <EmptyState
-          icon={<TendersIcon size={36} color="var(--color-primary-400)" />}
+          icon={<TendersIcon size={36} color="hsl(var(--primary))" />}
           title="No Tender Projects in Pipeline"
           description="Upload your first public tender specifications (NIT / BOQ) to initiate automatic clause extraction, qualification analysis, and bid/no-bid evaluation."
           action={

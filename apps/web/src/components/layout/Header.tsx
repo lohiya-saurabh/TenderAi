@@ -32,11 +32,11 @@ export const Header: React.FC = () => {
   const nextTheme = theme === 'dark' ? 'light' : 'dark';
 
   return (
-    <header className="dark sticky top-0 z-40 w-full bg-foreground text-white">
+    <header className="dark sticky top-0 z-40 w-full border-b border-border bg-background text-foreground">
       <div className="min-h-[52px] px-4 sm:px-6 flex flex-wrap items-center gap-x-5 gap-y-1 py-1.5">
         <NavLink
           to="/bids"
-          className="font-bold text-base tracking-[-0.01em] text-white no-underline"
+          className="font-bold text-base tracking-[-0.01em] text-foreground no-underline"
         >
           TenderPulse
         </NavLink>
@@ -50,7 +50,9 @@ export const Header: React.FC = () => {
               className={({ isActive }) =>
                 cn(
                   'no-underline py-1 transition-colors',
-                  isActive ? 'text-white font-semibold' : 'text-primary hover:text-white',
+                  isActive
+                    ? 'text-foreground font-semibold'
+                    : 'text-muted-foreground hover:text-foreground',
                 )
               }
             >
@@ -63,7 +65,7 @@ export const Header: React.FC = () => {
           <button
             type="button"
             onClick={toggleTheme}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-primary hover:text-white hover:bg-white/10"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"
             aria-label={`Switch to ${nextTheme} theme`}
             title={`Switch to ${nextTheme} theme`}
           >

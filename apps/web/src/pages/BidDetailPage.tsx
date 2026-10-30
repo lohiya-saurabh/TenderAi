@@ -365,7 +365,7 @@ export const BidDetailPage: React.FC = () => {
       </Link>
       <Link
         to={`/bids/${bidId}/clauses`}
-        className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-primary bg-primary px-3.5 text-sm font-semibold text-white no-underline hover:bg-primary"
+        className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-primary bg-primary px-3.5 text-sm font-semibold text-primary-foreground no-underline hover:bg-primary"
       >
         Open clause workspace{summary ? ` (${summary.clauses})` : ''}
       </Link>
@@ -497,7 +497,7 @@ export const BidDetailPage: React.FC = () => {
           <div
             style={{
               padding: '0.85rem 1rem',
-              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              backgroundColor: 'hsl(var(--destructive) / 0.1)',
               border: '1px solid hsl(var(--destructive))',
               borderRadius: 'var(--radius-md)',
               fontSize: '0.85rem',
@@ -544,7 +544,7 @@ export const BidDetailPage: React.FC = () => {
           <div
             style={{
               padding: '0.85rem 1rem',
-              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              backgroundColor: 'hsl(var(--destructive) / 0.1)',
               border: '1px solid hsl(var(--destructive))',
               borderRadius: 'var(--radius-md)',
               fontSize: '0.85rem',

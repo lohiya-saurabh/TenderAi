@@ -24,7 +24,7 @@ export const BidCard: React.FC<BidCardProps> = ({ bid }) => {
         color: 'inherit',
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = 'var(--color-primary-500)';
+        e.currentTarget.style.borderColor = 'hsl(var(--primary))';
         e.currentTarget.style.transform = 'translateY(-2px)';
         e.currentTarget.style.boxShadow = 'var(--shadow-md)';
       }}
@@ -66,8 +66,7 @@ export const BidCard: React.FC<BidCardProps> = ({ bid }) => {
         }}
       >
         <div>
-          <strong style={{ color: 'hsl(var(--foreground))' }}>Tender №:</strong>{' '}
-          {bid.tenderNumber}
+          <strong style={{ color: 'hsl(var(--foreground))' }}>Tender №:</strong> {bid.tenderNumber}
         </div>
         <div>
           <strong style={{ color: 'hsl(var(--foreground))' }}>Authority:</strong>{' '}

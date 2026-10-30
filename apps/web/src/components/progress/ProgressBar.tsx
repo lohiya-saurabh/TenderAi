@@ -9,7 +9,7 @@ export interface ProgressBarProps {
 
 export const ProgressBar: React.FC<ProgressBarProps> = ({
   progress,
-  color = 'var(--color-primary-500)',
+  color = 'hsl(var(--primary))',
   height = '8px',
   showLabel = false,
 }) => {

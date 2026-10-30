@@ -4,14 +4,7 @@ import { Button } from '@/components/common/Button.js';
 import { CapabilityStatusBadge } from '@/components/company/CapabilityStatusBadge.js';
 import { CapabilityEmptyState } from '@/components/company/CapabilityEmptyState.js';
 import type { EvidenceVaultItem } from '@/components/company/companyProfileData.js';
-import {
-  FileText,
-  Lock,
-  Upload,
-  CloudDownload,
-  Download,
-  Eye,
-} from 'lucide-react';
+import { FileText, Lock, Upload, CloudDownload, Download, Eye } from 'lucide-react';
 
 export interface EvidenceVaultSectionProps {
   evidenceVault: EvidenceVaultItem[];
@@ -35,8 +28,8 @@ export const EvidenceVaultSection: React.FC<EvidenceVaultSectionProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div
           style={{
-            backgroundColor: 'rgba(234, 88, 12, 0.08)',
-            border: '1px solid rgba(234, 88, 12, 0.25)',
+            backgroundColor: 'hsl(var(--primary) / 0.08)',
+            border: '1px solid hsl(var(--primary) / 0.25)',
             borderRadius: 'var(--radius-md)',
             padding: '0.85rem 1rem',
             fontSize: 'var(--text-xs)',

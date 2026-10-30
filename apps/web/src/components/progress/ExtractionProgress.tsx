@@ -148,7 +148,7 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
     <Card
       padding="lg"
       style={{
-        border: '1px solid var(--color-primary-500)',
+        border: '1px solid hsl(var(--primary))',
         backgroundColor: 'hsl(var(--card))',
       }}
     >
@@ -205,13 +205,13 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
                 ? 'var(--status-fail-bg)'
                 : isComplete
                   ? 'var(--status-pass-bg)'
-                  : 'rgba(234, 88, 12, 0.08)',
+                  : 'hsl(var(--primary) / 0.08)',
               color: isFailed
                 ? 'var(--status-fail-text)'
                 : isComplete
                   ? 'var(--status-pass-text)'
-                  : '#ea580c',
-              border: `1px solid ${isFailed ? 'var(--status-fail-border)' : isComplete ? 'var(--status-pass-border)' : 'rgba(234, 88, 12, 0.25)'}`,
+                  : 'hsl(var(--primary))',
+              border: `1px solid ${isFailed ? 'var(--status-fail-border)' : isComplete ? 'var(--status-pass-border)' : 'hsl(var(--primary) / 0.25)'}`,
             }}
           >
             {isFailed
@@ -243,7 +243,7 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
               style={{
                 fontFamily: 'var(--font-mono)',
                 fontWeight: 700,
-                color: 'var(--color-primary-500)',
+                color: 'hsl(var(--primary))',
               }}
             >
               {progressPercent}%
@@ -251,7 +251,7 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
           </div>
           <ProgressBar
             progress={progressPercent}
-            color={isComplete ? 'hsl(var(--foreground))' : 'var(--color-primary-500)'}
+            color={isComplete ? 'hsl(var(--foreground))' : 'hsl(var(--primary))'}
             height="8px"
           />
         </div>
@@ -275,13 +275,13 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
               key={step.key}
               style={{
                 backgroundColor: isCurrent
-                  ? 'rgba(234, 88, 12, 0.08)'
+                  ? 'hsl(var(--primary) / 0.08)'
                   : isDone
                     ? 'var(--status-pass-bg)'
                     : 'hsl(var(--background))',
                 border: `1px solid ${
                   isCurrent
-                    ? 'var(--color-primary-500)'
+                    ? 'hsl(var(--primary))'
                     : isDone
                       ? 'var(--status-pass-border)'
                       : 'hsl(var(--border))'
@@ -320,7 +320,7 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
                 style={{
                   fontSize: 'var(--text-2xs)',
                   color: isCurrent
-                    ? 'var(--color-primary-300)'
+                    ? 'hsl(var(--primary))'
                     : isDone
                       ? 'var(--color-success)'
                       : 'hsl(var(--muted-foreground))',
@@ -339,8 +339,8 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
       {isFailed && (
         <div
           style={{
-            backgroundColor: 'rgba(239, 68, 68, 0.06)',
-            border: '1px solid rgba(239, 68, 68, 0.3)',
+            backgroundColor: 'hsl(var(--destructive) / 0.06)',
+            border: '1px solid hsl(var(--destructive) / 0.3)',
             borderRadius: 'var(--radius-md)',
             padding: '1.25rem',
             marginTop: '1rem',

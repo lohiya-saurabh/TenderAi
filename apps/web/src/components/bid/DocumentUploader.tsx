@@ -203,7 +203,7 @@ export const DocumentUploader: React.FC<DocumentUploaderProps> = ({
     <div
       style={{
         backgroundColor: 'hsl(var(--card))',
-        border: '1px solid var(--color-primary-500)',
+        border: '1px solid hsl(var(--primary))',
         borderRadius: 'var(--radius-lg)',
         padding: '1.5rem',
         display: 'flex',
@@ -223,7 +223,9 @@ export const DocumentUploader: React.FC<DocumentUploaderProps> = ({
           >
             Upload Tender Package Document
           </h3>
-          <p style={{ fontSize: 'var(--text-xs)', color: 'hsl(var(--muted-foreground))', margin: 0 }}>
+          <p
+            style={{ fontSize: 'var(--text-xs)', color: 'hsl(var(--muted-foreground))', margin: 0 }}
+          >
             Upload PDF tender notices, technical specs, or BOQ files for automated clause
             extraction.
           </p>
@@ -274,8 +276,8 @@ export const DocumentUploader: React.FC<DocumentUploaderProps> = ({
                 padding: '0.65rem 0.85rem',
                 borderRadius: 'var(--radius-md)',
                 backgroundColor:
-                  docType === dt.value ? 'rgba(234, 88, 12, 0.08)' : 'hsl(var(--background))',
-                border: `1px solid ${docType === dt.value ? 'var(--color-primary-500)' : 'hsl(var(--border))'}`,
+                  docType === dt.value ? 'hsl(var(--primary) / 0.08)' : 'hsl(var(--background))',
+                border: `1px solid ${docType === dt.value ? 'hsl(var(--primary))' : 'hsl(var(--border))'}`,
                 cursor: isUploading ? 'default' : 'pointer',
                 transition: 'all var(--transition-fast)',
               }}
@@ -284,8 +286,7 @@ export const DocumentUploader: React.FC<DocumentUploaderProps> = ({
                 style={{
                   fontSize: 'var(--text-xs)',
                   fontWeight: 700,
-                  color:
-                    docType === dt.value ? 'var(--color-primary-500)' : 'hsl(var(--foreground))',
+                  color: docType === dt.value ? 'hsl(var(--primary))' : 'hsl(var(--foreground))',
                 }}
               >
                 {dt.label}
@@ -311,8 +312,8 @@ export const DocumentUploader: React.FC<DocumentUploaderProps> = ({
         onDrop={handleDrop}
         onClick={() => !isUploading && fileInputRef.current?.click()}
         style={{
-          border: `2px dashed ${isDragOver ? 'var(--color-primary-500)' : 'hsl(var(--border))'}`,
-          backgroundColor: isDragOver ? 'rgba(234, 88, 12, 0.06)' : 'hsl(var(--background))',
+          border: `2px dashed ${isDragOver ? 'hsl(var(--primary))' : 'hsl(var(--border))'}`,
+          backgroundColor: isDragOver ? 'hsl(var(--primary) / 0.06)' : 'hsl(var(--background))',
           borderRadius: 'var(--radius-md)',
           padding: '2rem 1.5rem',
           textAlign: 'center',
@@ -364,7 +365,7 @@ export const DocumentUploader: React.FC<DocumentUploaderProps> = ({
               }}
             >
               Drag & Drop tender PDF here, or{' '}
-              <span style={{ color: 'var(--color-primary-400)' }}>browse files</span>
+              <span style={{ color: 'hsl(var(--primary))' }}>browse files</span>
             </span>
             <span
               style={{
@@ -393,7 +394,7 @@ export const DocumentUploader: React.FC<DocumentUploaderProps> = ({
               style={{
                 fontFamily: 'var(--font-mono)',
                 fontWeight: 700,
-                color: 'var(--color-primary-300)',
+                color: 'hsl(var(--primary))',
               }}
             >
               {uploadProgress}%

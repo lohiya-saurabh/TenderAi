@@ -11,7 +11,7 @@ export type ChipTone =
 const TONE: Record<ChipTone, string> = {
   neutral: 'bg-muted text-foreground border-transparent dark:bg-white/10 dark:text-white/80',
   outline: 'bg-card text-foreground border-primary/40 dark:text-white/85 dark:border-white/25',
-  strong: 'bg-foreground text-white border-transparent dark:bg-white dark:text-foreground',
+  strong: 'bg-foreground text-background border-transparent',
   bad: 'bg-destructive/10 text-destructive border-destructive/40 dark:bg-destructive/10 dark:text-destructive dark:border-destructive/40',
   warn: 'bg-warning/10 text-warning border-warning/40 dark:bg-warning/10 dark:text-warning dark:border-warning/40',
   ok: 'bg-primary/10 text-primary border-transparent dark:bg-primary/15 dark:text-primary',

@@ -50,7 +50,7 @@ export const ReadinessCard: React.FC<ReadinessCardProps> = ({ bid, items }) => {
         ? 'var(--color-success)'
         : pct >= 50
           ? 'var(--color-warning)'
-          : 'var(--color-primary-500)';
+          : 'hsl(var(--primary))';
 
   return (
     <Card variant="default" padding="md">
