@@ -14,7 +14,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requir
 
   if (isLoading) {
     return (
-      <div style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div className="flex flex-col gap-4 p-8">
         <LoadingSkeleton height="40px" width="300px" />
         <LoadingSkeleton height="200px" />
         <LoadingSkeleton height="200px" />
@@ -28,9 +28,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requir
 
   if (requiredPermission && !hasPermission(requiredPermission)) {
     return (
-      <div style={{ padding: '3rem', textAlign: 'center' }}>
-        <h2 style={{ color: 'hsl(var(--destructive))', marginBottom: '1rem' }}>Access Denied</h2>
-        <p style={{ color: 'hsl(var(--muted-foreground))' }}>
+      <div className="p-12 text-center">
+        <h1 className="mb-2 text-2xl font-semibold text-foreground">No access</h1>
+        <p className="text-sm text-muted-foreground">
           You do not have the required permission (<code>{requiredPermission}</code>) to view this
           page.
         </p>

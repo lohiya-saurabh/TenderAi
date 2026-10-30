@@ -135,7 +135,7 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
               className="gap-1.5 text-xs shadow-xs"
             >
               <Plus className="w-3.5 h-3.5" />
-              Add Capability
+              Upload evidence
             </Button>
           </div>
         </div>

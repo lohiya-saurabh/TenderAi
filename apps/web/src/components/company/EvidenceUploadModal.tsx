@@ -59,11 +59,7 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
     <Modal
       isOpen={true}
       onClose={onClose}
-      title={
-        evidenceSource === 'DEVICE'
-          ? 'Upload Evidence from Local Device'
-          : 'Import Evidence from Cloud Storage'
-      }
+      title={evidenceSource === 'DEVICE' ? 'Upload evidence' : 'Import evidence from cloud storage'}
       footer={
         <>
           <Button variant="ghost" onClick={onClose} disabled={loading}>
@@ -75,7 +71,7 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
               onClick={onExecuteDeviceUpload}
               disabled={loading || !deviceFile}
             >
-              {loading ? 'Uploading & Processing...' : 'Upload Evidence Document'}
+              {loading ? 'Uploading…' : 'Upload'}
             </Button>
           ) : (
             <Button variant="primary" onClick={onExecuteCloudImport} disabled={loading}>
@@ -201,9 +197,7 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
                   <div className="p-2.5 rounded-full bg-primary/10 text-primary">
                     <Upload size={20} />
                   </div>
-                  <div className="font-semibold text-foreground">
-                    Click to select PDF or drag and drop here
-                  </div>
+                  <div className="font-semibold text-foreground">Choose a PDF or drop it here</div>
                   <div className="text-2xs text-muted-foreground">
                     Audited Balance Sheets, Completion Certificates, ISO, PAN, GST (Max 50MB PDF)
                   </div>
@@ -240,9 +234,7 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
 
         {/* Evidence Document Classification Dropdown */}
         <div>
-          <label className="font-semibold block mb-1 text-foreground">
-            Document Classification *
-          </label>
+          <label className="font-semibold block mb-1 text-foreground">Document type *</label>
           <select
             value={evidenceType}
             onChange={(e) => setEvidenceType(e.target.value)}
@@ -269,9 +261,7 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
 
         {/* Dynamic Contextual Fields tailored to Document Classification */}
         <div className="p-3.5 rounded-lg border border-border/80 bg-muted/20 flex flex-col gap-3">
-          <div className="text-2xs font-semibold text-muted-foreground">
-            Document Attributes & Metadata
-          </div>
+          <div className="text-2xs font-semibold text-muted-foreground">Document details</div>
           {renderDynamicFields()}
         </div>
 
@@ -279,9 +269,8 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
         <div className="p-2.5 rounded-md bg-muted/40 border border-border text-2xs text-muted-foreground flex items-center gap-2">
           <ShieldCheck size={16} className="text-primary shrink-0" />
           <span>
-            Document will be cryptographically anchored with SHA-256 and stored in isolated tenant
-            storage. Extracted statutory attributes are automatically indexed for Bid/No-Bid
-            eligibility scoring.
+            The document is stored with its SHA-256 hash. Details read from it are used when bids
+            are evaluated against your company profile.
           </span>
         </div>
       </div>

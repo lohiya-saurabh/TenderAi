@@ -300,7 +300,7 @@ export const BidDetailPage: React.FC = () => {
   // -------------------------------------------------------------------------
   if (bidLoading && !bid) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <div className="flex flex-col gap-6">
         <LoadingSkeleton height="40px" />
         <LoadingSkeleton height="140px" />
         <LoadingSkeleton height="220px" />
@@ -314,7 +314,7 @@ export const BidDetailPage: React.FC = () => {
   // -------------------------------------------------------------------------
   if (bidError || !bid) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div className="flex flex-col gap-4">
         <ErrorBanner message={bidError?.message || 'Bid project not found.'} onRetry={refetchBid} />
       </div>
     );
@@ -466,9 +466,9 @@ export const BidDetailPage: React.FC = () => {
       <Modal
         isOpen={showDeleteModal}
         onClose={() => !isDeleting && setShowDeleteModal(false)}
-        title="Delete Tender Project"
+        title="Delete this bid?"
         footer={
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+          <div className="flex justify-end gap-3">
             <Button
               variant="secondary"
               onClick={() => setShowDeleteModal(false)}
@@ -477,35 +477,19 @@ export const BidDetailPage: React.FC = () => {
               Cancel
             </Button>
             <Button variant="danger" onClick={handleDeleteBid} isLoading={isDeleting}>
-              Yes, Delete Permanently
+              Delete bid
             </Button>
           </div>
         }
       >
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1rem',
-            color: 'hsl(var(--foreground))',
-          }}
-        >
-          <p style={{ margin: 0 }}>
+        <div className="flex flex-col gap-4 text-foreground">
+          <p>
             Are you sure you want to delete <strong>{bid.title}</strong> (
             <em>{bid.tenderNumber}</em>)?
           </p>
-          <div
-            style={{
-              padding: '0.85rem 1rem',
-              backgroundColor: 'hsl(var(--destructive) / 0.1)',
-              border: '1px solid hsl(var(--destructive))',
-              borderRadius: 'var(--radius-md)',
-              fontSize: 'var(--text-sm)',
-              color: 'hsl(var(--destructive))',
-            }}
-          >
-            <strong>Warning:</strong> This operation will permanently delete all uploaded documents
-            and extracted compliance requirements.
+          <div className="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3.5 text-sm text-foreground">
+            This permanently deletes the bid, its uploaded documents and every extracted
+            requirement.
           </div>
         </div>
       </Modal>
@@ -514,9 +498,9 @@ export const BidDetailPage: React.FC = () => {
       <Modal
         isOpen={Boolean(docToDelete)}
         onClose={() => !isDeletingDoc && setDocToDelete(null)}
-        title="Remove Tender Document"
+        title="Remove this document?"
         footer={
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+          <div className="flex justify-end gap-3">
             <Button
               variant="secondary"
               onClick={() => setDocToDelete(null)}
@@ -525,34 +509,17 @@ export const BidDetailPage: React.FC = () => {
               Cancel
             </Button>
             <Button variant="danger" onClick={handleDeleteDocument} isLoading={isDeletingDoc}>
-              Yes, Remove Document
+              Remove document
             </Button>
           </div>
         }
       >
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1rem',
-            color: 'hsl(var(--foreground))',
-          }}
-        >
-          <p style={{ margin: 0 }}>
+        <div className="flex flex-col gap-4 text-foreground">
+          <p>
             Are you sure you want to remove <strong>{docToDelete?.fileName}</strong>?
           </p>
-          <div
-            style={{
-              padding: '0.85rem 1rem',
-              backgroundColor: 'hsl(var(--destructive) / 0.1)',
-              border: '1px solid hsl(var(--destructive))',
-              borderRadius: 'var(--radius-md)',
-              fontSize: 'var(--text-sm)',
-              color: 'hsl(var(--destructive))',
-            }}
-          >
-            <strong>Warning:</strong> Removing this document will delete all associated compliance
-            items derived from it.
+          <div className="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3.5 text-sm text-foreground">
+            This also deletes every requirement extracted from this document.
           </div>
         </div>
       </Modal>

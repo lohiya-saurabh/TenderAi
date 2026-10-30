@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { cn } from '@/lib/utils.js';
 
 export interface TooltipProps {
   content: React.ReactNode;
@@ -32,35 +33,12 @@ export const Tooltip: React.FC<TooltipProps> = ({
     setIsVisible(false);
   };
 
-  const getPositionStyles = (): React.CSSProperties => {
-    switch (position) {
-      case 'bottom':
-        return {
-          top: 'calc(100% + 6px)',
-          left: '50%',
-          transform: 'translateX(-50%)',
-        };
-      case 'left':
-        return {
-          top: '50%',
-          right: 'calc(100% + 6px)',
-          transform: 'translateY(-50%)',
-        };
-      case 'right':
-        return {
-          top: '50%',
-          left: 'calc(100% + 6px)',
-          transform: 'translateY(-50%)',
-        };
-      case 'top':
-      default:
-        return {
-          bottom: 'calc(100% + 6px)',
-          left: '50%',
-          transform: 'translateX(-50%)',
-        };
-    }
-  };
+  const positionClass = {
+    top: 'bottom-[calc(100%+6px)] left-1/2 -translate-x-1/2',
+    bottom: 'top-[calc(100%+6px)] left-1/2 -translate-x-1/2',
+    left: 'right-[calc(100%+6px)] top-1/2 -translate-y-1/2',
+    right: 'left-[calc(100%+6px)] top-1/2 -translate-y-1/2',
+  }[position ?? 'top'];
 
   const childWithEvents = React.cloneElement(children, {
     'aria-describedby': isVisible ? tooltipId : undefined,
@@ -83,28 +61,16 @@ export const Tooltip: React.FC<TooltipProps> = ({
   });
 
   return (
-    <span style={{ position: 'relative', display: 'inline-flex' }}>
+    <span className="relative inline-flex">
       {childWithEvents}
       {isVisible && (
         <span
           id={tooltipId}
           role="tooltip"
-          className="scale-in"
-          style={{
-            position: 'absolute',
-            zIndex: 'var(--z-index-tooltip, 90)' as unknown as number,
-            backgroundColor: 'hsl(var(--background))',
-            color: 'hsl(var(--foreground))',
-            border: '1px solid hsl(var(--border))',
-            borderRadius: 'var(--radius-sm)',
-            padding: '0.25rem 0.55rem',
-            fontSize: 'var(--text-xs)',
-            lineHeight: 1.3,
-            whiteSpace: 'nowrap',
-            boxShadow: 'var(--shadow-md)',
-            pointerEvents: 'none',
-            ...getPositionStyles(),
-          }}
+          className={cn(
+            'pointer-events-none absolute z-[90] whitespace-nowrap rounded border border-border bg-background px-2 py-1 text-xs leading-snug text-foreground shadow-md',
+            positionClass,
+          )}
         >
           {content}
         </span>

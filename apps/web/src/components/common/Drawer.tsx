@@ -1,169 +1,28 @@
-import React, { useEffect } from 'react';
-import { CloseIcon } from '@/components/common/Icons.js';
+import React from 'react';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
+import { DialogFrame, type ModalProps } from '@/components/common/Modal.js';
+import { cn } from '@/lib/utils.js';
 
-export interface DrawerProps {
-  isOpen: boolean;
-  onClose: () => void;
-  title: string;
-  description?: string;
-  children: React.ReactNode;
-  footer?: React.ReactNode;
-  width?: string;
-  position?: 'right' | 'left';
+export interface DrawerProps extends ModalProps {
+  /** Tailwind max-width class for the panel. */
+  widthClassName?: string;
 }
 
+/** Right-hand side panel on the same frame as Modal. */
 export const Drawer: React.FC<DrawerProps> = ({
   isOpen,
   onClose,
-  title,
-  description,
-  children,
-  footer,
-  width = '480px',
-  position = 'right',
-}) => {
-  const drawerId = React.useId();
-  const titleId = `drawer-title-${drawerId}`;
-  const descId = `drawer-desc-${drawerId}`;
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
-      }
-    };
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      window.addEventListener('keydown', handleKeyDown);
-    }
-    return () => {
-      document.body.style.overflow = '';
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
-
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={titleId}
-      aria-describedby={description ? descId : undefined}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(15, 23, 42, 0.75)',
-        backdropFilter: 'blur(4px)',
-        display: 'flex',
-        justifyContent: position === 'right' ? 'flex-end' : 'flex-start',
-        zIndex: 'var(--z-index-drawer, 60)' as unknown as number,
-      }}
-      onClick={onClose}
-    >
-      <div
-        className="slide-in-right"
-        style={{
-          backgroundColor: 'hsl(var(--card))',
-          borderLeft: position === 'right' ? '1px solid hsl(var(--border))' : 'none',
-          borderRight: position === 'left' ? '1px solid hsl(var(--border))' : 'none',
-          width: '100%',
-          maxWidth: width,
-          height: '100%',
-          boxShadow: 'var(--shadow-xl)',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div
-          style={{
-            padding: '1.25rem 1.5rem',
-            borderBottom: '1px solid hsl(var(--border))',
-            display: 'flex',
-            alignItems: 'flex-start',
-            justifyContent: 'space-between',
-            gap: '1rem',
-            backgroundColor: 'hsl(var(--card))',
-          }}
-        >
-          <div>
-            <h3
-              id={titleId}
-              style={{
-                fontSize: 'var(--text-lg)',
-                fontWeight: 'var(--font-semibold)' as unknown as number,
-                color: 'hsl(var(--foreground))',
-                lineHeight: 'var(--leading-tight)',
-              }}
-            >
-              {title}
-            </h3>
-            {description && (
-              <p
-                id={descId}
-                style={{
-                  fontSize: 'var(--text-xs)',
-                  color: 'hsl(var(--muted-foreground))',
-                  marginTop: '0.25rem',
-                }}
-              >
-                {description}
-              </p>
-            )}
-          </div>
-          <button
-            onClick={onClose}
-            aria-label="Close drawer"
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'hsl(var(--muted-foreground))',
-              cursor: 'pointer',
-              padding: '0.35rem',
-              borderRadius: 'var(--radius-sm)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'color var(--transition-fast)',
-            }}
-          >
-            <CloseIcon size={18} />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div
-          style={{
-            padding: '1.5rem',
-            overflowY: 'auto',
-            flex: 1,
-            color: 'hsl(var(--foreground))',
-            fontSize: 'var(--text-sm)',
-          }}
-        >
-          {children}
-        </div>
-
-        {/* Footer */}
-        {footer && (
-          <div
-            style={{
-              padding: '1rem 1.5rem',
-              borderTop: '1px solid hsl(var(--border))',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-end',
-              gap: '0.75rem',
-              backgroundColor: 'hsl(var(--muted))',
-            }}
-          >
-            {footer}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
+  widthClassName = 'max-w-[30rem]',
+  ...props
+}) => (
+  <DialogPrimitive.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <DialogFrame
+      onClose={onClose}
+      {...props}
+      className={cn(
+        'inset-y-0 right-0 h-full w-full border-y-0 border-r-0 data-[state=open]:animate-in data-[state=open]:slide-in-from-right',
+        widthClassName,
+      )}
+    />
+  </DialogPrimitive.Root>
+);

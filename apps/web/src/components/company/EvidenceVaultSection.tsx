@@ -24,26 +24,13 @@ export const EvidenceVaultSection: React.FC<EvidenceVaultSectionProps> = ({
   downloadingDocId,
 }) => {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+    <div className="flex flex-col gap-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div
-          style={{
-            backgroundColor: 'hsl(var(--primary) / 0.08)',
-            border: '1px solid hsl(var(--primary) / 0.25)',
-            borderRadius: 'var(--radius-md)',
-            padding: '0.85rem 1rem',
-            fontSize: 'var(--text-xs)',
-            color: 'hsl(var(--foreground))',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            flex: 1,
-          }}
-        >
+        <div className="flex flex-1 items-center gap-2 rounded-md border border-primary/25 bg-primary/10 px-4 py-3.5 text-xs text-foreground">
           <Lock size={16} className="text-primary shrink-0" />
           <div>
-            <strong>Tamper-Proof Evidence Vault</strong>: All source documents are verified with
-            SHA-256 cryptographic hashes and automatically attached to qualifying tender bids.
+            Each document is stored with its SHA-256 hash, so you can show it has not changed since
+            upload.
           </div>
         </div>
 
@@ -83,48 +70,17 @@ export const EvidenceVaultSection: React.FC<EvidenceVaultSectionProps> = ({
           actionIcon="upload"
         />
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <div className="flex flex-col gap-3">
           {evidenceVault.map((doc) => (
             <Card key={doc.id} padding="md">
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                  gap: '0.5rem',
-                }}
-              >
-                <div>
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      marginBottom: '0.25rem',
-                    }}
-                  >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="mb-1 flex flex-wrap items-center gap-2">
                     <FileText size={16} className="text-muted-foreground" />
-                    <strong
-                      style={{
-                        fontSize: 'var(--text-sm)',
-                        color: 'hsl(var(--foreground))',
-                        fontFamily: 'var(--tabular-nums)',
-                      }}
-                    >
-                      {doc.fileName}
-                    </strong>
+                    <strong className="break-all text-sm text-foreground">{doc.fileName}</strong>
                     <CapabilityStatusBadge status={doc.verificationStatus} size="sm" />
                   </div>
-                  <div
-                    style={{
-                      display: 'flex',
-                      gap: '1.25rem',
-                      fontSize: 'var(--text-2xs)',
-                      color: 'hsl(var(--muted-foreground))',
-                      flexWrap: 'wrap',
-                    }}
-                  >
+                  <div className="flex flex-wrap gap-x-5 gap-y-1 text-2xs text-muted-foreground">
                     <span>
                       Type: <strong>{doc.docType}</strong>
                     </span>
@@ -141,24 +97,17 @@ export const EvidenceVaultSection: React.FC<EvidenceVaultSectionProps> = ({
                     </span>
                     <span>
                       Reused across:{' '}
-                      <strong style={{ color: 'hsl(var(--foreground))' }}>
-                        {doc.linkedCapabilitiesCount} Capabilities
+                      <strong className="text-foreground">
+                        {doc.linkedCapabilitiesCount} capabilities
                       </strong>
                     </span>
                   </div>
-                  <div
-                    style={{
-                      fontSize: 'var(--text-2xs)',
-                      color: 'hsl(var(--muted-foreground))',
-                      fontFamily: 'var(--font-mono)',
-                      marginTop: '0.35rem',
-                    }}
-                  >
+                  <div className="mt-1.5 break-all font-mono text-2xs text-muted-foreground">
                     SHA-256: {doc.sha256Hash}
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div className="flex items-center gap-2">
                   <Button
                     variant="secondary"
                     size="sm"
@@ -175,7 +124,7 @@ export const EvidenceVaultSection: React.FC<EvidenceVaultSectionProps> = ({
                     onClick={() => onSelectDocPreview(doc.fileName)}
                     icon={<Eye size={13} />}
                   >
-                    Inspect Document ↗
+                    Preview
                   </Button>
                 </div>
               </div>

@@ -5,7 +5,6 @@ import { StatutoryProfileCard } from '@/components/company/StatutoryProfileCard.
 import { EvidenceVaultSection } from '@/components/company/EvidenceVaultSection.js';
 import { EvidencePreviewDrawer } from '@/components/company/EvidencePreviewDrawer.js';
 import { FinancialsSection } from '@/components/company/FinancialsSection.js';
-import { AddCapabilityModal } from '@/components/company/AddCapabilityModal.js';
 import {
   type FullCompanyProfile,
   type CapabilitySectionId,
@@ -46,7 +45,6 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
   const [filterStatus, setFilterStatus] = useState<CapabilityStatus | 'ALL'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const matchedDoc = profile.evidenceVault.find(
     (d) => d.id === selectedDocPreview || d.fileName === selectedDocPreview,
@@ -227,15 +225,15 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
 
       {/* 2. REGISTRATIONS */}
       {activeSection === 'registrations' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+        <div className="flex flex-col gap-3.5">
           {filteredRegistrations.length === 0 ? (
             <CapabilityEmptyState
               icon={ShieldCheck}
               title="No Statutory Registrations Added"
               description="Add your GSTIN, PAN, CIN, or Udyam registrations to verify your corporate entity and establish eligibility for government tenders."
-              actionLabel="Add Registration"
-              onAction={() => setIsAddModalOpen(true)}
-              actionIcon="plus"
+              actionLabel="Upload evidence"
+              onAction={onUploadEvidence}
+              actionIcon="upload"
             />
           ) : (
             filteredRegistrations.map((reg) => (
@@ -264,7 +262,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
 
       {/* 3. CERTIFICATIONS */}
       {activeSection === 'certifications' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+        <div className="flex flex-col gap-3.5">
           {filteredCertifications.length === 0 ? (
             <CapabilityEmptyState
               icon={Award}
@@ -311,7 +309,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
 
       {/* 5. PAST EXPERIENCE (7-YEAR QUALIFYING PROJECTS) */}
       {activeSection === 'experience' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+        <div className="flex flex-col gap-3.5">
           {filteredExperience.length === 0 ? (
             <CapabilityEmptyState
               icon={FileCheck2}
@@ -340,7 +338,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                   {
                     label: 'Scope & Work Highlights',
                     value: (
-                      <ul style={{ margin: 0, paddingLeft: '1rem' }}>
+                      <ul className="list-disc pl-4">
                         {exp.scopeHighlights.map((s, i) => (
                           <li key={i}>{s}</li>
                         ))}
@@ -356,15 +354,15 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
 
       {/* 6. MAJOR PROJECTS */}
       {activeSection === 'projects' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+        <div className="flex flex-col gap-3.5">
           {profile.projects.length === 0 ? (
             <CapabilityEmptyState
               icon={Briefcase}
               title="No Ongoing Major Projects Recorded"
               description="Add ongoing project contracts to accurately calculate available bid capacity and active commitment commitments."
-              actionLabel="Add Project"
-              onAction={() => setIsAddModalOpen(true)}
-              actionIcon="plus"
+              actionLabel="Upload evidence"
+              onAction={onUploadEvidence}
+              actionIcon="upload"
             />
           ) : (
             profile.projects.map((proj) => (
@@ -392,7 +390,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
 
       {/* 7. OEM RELATIONSHIPS & MAFs */}
       {activeSection === 'oem' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+        <div className="flex flex-col gap-3.5">
           {profile.oemAuthorizations.length === 0 ? (
             <CapabilityEmptyState
               icon={Award}
@@ -424,15 +422,15 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
 
       {/* 8. KEY PERSONNEL & STAFF */}
       {activeSection === 'employees' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+        <div className="flex flex-col gap-3.5">
           {profile.employees.length === 0 ? (
             <CapabilityEmptyState
               icon={Users}
               title="No Key Personnel Recorded"
               description="Add certified project directors, structural engineers, or safety officers to meet tender technical personnel criteria."
-              actionLabel="Add Personnel"
-              onAction={() => setIsAddModalOpen(true)}
-              actionIcon="plus"
+              actionLabel="Upload evidence"
+              onAction={onUploadEvidence}
+              actionIcon="upload"
             />
           ) : (
             profile.employees.map((emp) => (
@@ -463,15 +461,15 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
 
       {/* 9. PLANT & EQUIPMENT */}
       {activeSection === 'equipment' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+        <div className="flex flex-col gap-3.5">
           {profile.equipment.length === 0 ? (
             <CapabilityEmptyState
               icon={Wrench}
               title="No Equipment or Plant Assets Recorded"
               description="Add owned or leased heavy equipment, rotary piling rigs, or automated batching plants to fulfill mobilization conditions."
-              actionLabel="Add Equipment"
-              onAction={() => setIsAddModalOpen(true)}
-              actionIcon="plus"
+              actionLabel="Upload evidence"
+              onAction={onUploadEvidence}
+              actionIcon="upload"
             />
           ) : (
             profile.equipment.map((eq) => (
@@ -495,15 +493,15 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
 
       {/* 10. GEOGRAPHIC COVERAGE */}
       {activeSection === 'geography' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+        <div className="flex flex-col gap-3.5">
           {profile.geographicCoverage.length === 0 ? (
             <CapabilityEmptyState
               icon={MapPin}
               title="No Geographic Facilities Recorded"
               description="Add corporate headquarters, regional offices, or project site offices to verify local presence requirements."
-              actionLabel="Add Facility"
-              onAction={() => setIsAddModalOpen(true)}
-              actionIcon="plus"
+              actionLabel="Upload evidence"
+              onAction={onUploadEvidence}
+              actionIcon="upload"
             />
           ) : (
             profile.geographicCoverage.map((geo) => (
@@ -558,10 +556,6 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
       />
 
       {/* Add Credential Modal */}
-      <AddCapabilityModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-      />
     </div>
   );
 };

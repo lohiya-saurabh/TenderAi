@@ -1,5 +1,6 @@
 import React from 'react';
 import { FileText } from 'lucide-react';
+import { cn } from '@/lib/utils.js';
 import { FailIcon, InfoIcon } from '@/components/common/Icons.js';
 import type { BidDetail } from '@/api/bids.js';
 import type { ComplianceItem } from '@/api/compliance.js';
@@ -511,49 +512,15 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
       ) : (
         /* Factual state: recommendation unavailable due to missing company evidence */
         <>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: '0.65rem',
-              padding: '0.75rem',
-              backgroundColor: 'hsl(var(--muted))',
-              borderRadius: 'var(--radius-md)',
-              border: '1px dashed hsl(var(--border))',
-            }}
-          >
-            <span
-              style={{
-                color: 'var(--color-warning)',
-                flexShrink: 0,
-                marginTop: '0.1rem',
-                display: 'inline-flex',
-              }}
-            >
-              <InfoIcon size={16} />
-            </span>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-              <span
-                style={{
-                  fontSize: 'var(--text-sm)',
-                  fontWeight: 600,
-                  color: 'hsl(var(--foreground))',
-                }}
-              >
+          <div className="flex items-start gap-2.5 rounded-md border border-dashed border-border bg-muted p-3">
+            <InfoIcon size={16} className="mt-0.5 shrink-0 text-warning" />
+            <div className="flex flex-col gap-1">
+              <span className="text-sm font-semibold text-foreground">
                 Recommendation unavailable
               </span>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: 'var(--text-xs)',
-                  color: 'hsl(var(--muted-foreground))',
-                  lineHeight: 'var(--leading-normal)',
-                }}
-              >
-                A trustworthy bid / no-bid recommendation cannot be determined because required
-                company capability information and supporting evidence have not been uploaded for
-                this tender's criteria. The Company Profile API is available, but sufficient factual
-                evidence is required before the deterministic eligibility engine can produce an
+              <p className="text-xs leading-normal text-muted-foreground">
+                A bid / no-bid recommendation needs your company's capabilities and the evidence
+                behind them for this tender's criteria. Add them in the company profile to get an
                 evaluation.
               </p>
             </div>
@@ -574,12 +541,12 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
               <Signal
                 label="Flagged for review"
                 value={String(rollup.flagged)}
-                tone={rollup.flagged > 0 ? 'hsl(var(--destructive))' : undefined}
+                tone={rollup.flagged > 0 ? 'text-destructive' : undefined}
               />
               <Signal
                 label="Awaiting human review"
                 value={String(rollup.reviewNeeded)}
-                tone={rollup.reviewNeeded > 0 ? 'var(--color-warning)' : undefined}
+                tone={rollup.reviewNeeded > 0 ? 'text-warning' : undefined}
               />
               <Signal
                 label="Deadline buffer"
@@ -595,32 +562,13 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
 
 function Signal({ label, value, tone }: { label: string; value: string; tone?: string }) {
   return (
-    <div
-      style={{
-        padding: '0.75rem',
-        backgroundColor: 'hsl(var(--muted))',
-        borderRadius: 'var(--radius-md)',
-        border: '1px solid hsl(var(--border))',
-      }}
-    >
+    <div className="rounded-md border border-border bg-muted p-3">
+      <div className="text-2xs text-muted-foreground">{label}</div>
       <div
-        style={{
-          fontSize: 'var(--text-2xs)',
-          color: 'hsl(var(--muted-foreground))',
-          textTransform: '',
-          letterSpacing: '0.04em',
-        }}
-      >
-        {label}
-      </div>
-      <div
-        style={{
-          fontSize: 'var(--text-lg)',
-          fontWeight: 700,
-          color: tone || 'hsl(var(--foreground))',
-          marginTop: '0.2rem',
-          lineHeight: 1.2,
-        }}
+        className={cn(
+          'mt-1 text-lg font-semibold leading-tight tabular-nums',
+          tone ?? 'text-foreground',
+        )}
       >
         {value}
       </div>

@@ -340,13 +340,18 @@ export const CompanyProfilePage: React.FC = () => {
     );
   }
 
+  const uploadEvidence = () => {
+    setEvidenceSourceDefault('DEVICE');
+    setOpenEvidenceTrigger(Date.now());
+  };
+
   return (
     <Page className="min-w-0">
       {/* Profile Header & Health Summary */}
       <CompanyProfileHeader
         profile={profile}
         onOpenVault={() => setActiveSection('evidence')}
-        onAddCredential={() => setActiveSection('overview')}
+        onAddCredential={uploadEvidence}
       />
 
       {/* Third-Party Verification Hub (IRIS IRP, MCA, Udyam, DigiLocker, Cloud Drive) */}
@@ -368,10 +373,7 @@ export const CompanyProfilePage: React.FC = () => {
       <CompanyProfileView
         profile={profile}
         activeSection={activeSection}
-        onUploadEvidence={() => {
-          setEvidenceSourceDefault('DEVICE');
-          setOpenEvidenceTrigger(Date.now());
-        }}
+        onUploadEvidence={uploadEvidence}
         onImportCloud={() => {
           setEvidenceSourceDefault('GOOGLE_DRIVE');
           setOpenEvidenceTrigger(Date.now());

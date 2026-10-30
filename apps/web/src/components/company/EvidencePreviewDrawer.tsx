@@ -58,7 +58,7 @@ export const EvidencePreviewDrawer: React.FC<EvidencePreviewDrawerProps> = ({
       onClose={onClose}
       title="Evidence Document Verification"
       description={activeDocTitle || undefined}
-      width="780px"
+      widthClassName="max-w-[48.75rem]"
       footer={
         <div className="flex items-center justify-between w-full gap-2">
           <Button variant="ghost" size="sm" onClick={onClose}>

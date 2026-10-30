@@ -122,7 +122,7 @@ export const CapabilityItemCard: React.FC<CapabilityItemCardProps> = ({
             onClick={() => onViewEvidence(item.evidenceDocName!)}
             className="text-xs h-7 px-2"
           >
-            Inspect Document ↗
+            Preview
           </Button>
         )}
       </div>

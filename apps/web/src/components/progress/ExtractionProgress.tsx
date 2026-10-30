@@ -1,6 +1,7 @@
 import React from 'react';
 import { useSSE } from '@/hooks/useSSE.js';
-import { ProgressBar } from '@/components/progress/ProgressBar.js';
+import { Progress } from '@/components/ui/progress.js';
+import { cn } from '@/lib/utils.js';
 import { Button } from '@/components/common/Button.js';
 import { Card } from '@/components/common/Card.js';
 import {
@@ -145,303 +146,126 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
   const activeStepMeta = PIPELINE_STEPS[activeIndex];
 
   return (
-    <Card
-      padding="lg"
-      style={{
-        border: '1px solid hsl(var(--primary))',
-        backgroundColor: 'hsl(var(--card))',
-      }}
-    >
-      {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '1rem',
-          flexWrap: 'wrap',
-          gap: '0.5rem',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            {isFailed ? (
-              <CircleAlert size={22} className="text-destructive" />
-            ) : isComplete ? (
-              <CheckCircle2 size={22} className="text-primary" />
-            ) : (
-              <Loader2 size={22} className="text-primary animate-spin" />
-            )}
-          </div>
-          <div>
-            <h3
-              style={{
-                fontSize: 'var(--text-base)',
-                fontWeight: 700,
-                color: 'hsl(var(--foreground))',
-                margin: 0,
-              }}
-            >
+    <Card padding="lg" className="border-primary">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5">
+          {isFailed ? (
+            <CircleAlert size={22} className="shrink-0 text-destructive" />
+          ) : isComplete ? (
+            <CheckCircle2 size={22} className="shrink-0 text-success" />
+          ) : (
+            <Loader2 size={22} className="shrink-0 animate-spin text-primary" />
+          )}
+          <div className="min-w-0">
+            <h3 className="text-base font-semibold text-foreground">
               {isFailed
-                ? 'Document Extraction Failed'
+                ? 'Extraction failed'
                 : isComplete
-                  ? 'Tender Intelligence & Compliance Matrix Ready'
-                  : 'Live Tender Extraction Pipeline'}
+                  ? 'Requirements extracted'
+                  : 'Extracting requirements'}
             </h3>
-            <span style={{ fontSize: 'var(--text-xs)', color: 'hsl(var(--muted-foreground))' }}>
-              Document: <strong>{documentName}</strong>
-            </span>
+            <p className="break-words text-xs text-muted-foreground">
+              Document: <span className="font-medium text-foreground">{documentName}</span>
+            </p>
           </div>
         </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span
-            style={{
-              fontSize: 'var(--text-2xs)',
-              fontWeight: 600,
-              padding: '0.2rem 0.55rem',
-              borderRadius: 'var(--radius-sm)',
-              backgroundColor: isFailed
-                ? 'var(--status-fail-bg)'
-                : isComplete
-                  ? 'var(--status-pass-bg)'
-                  : 'hsl(var(--primary) / 0.08)',
-              color: isFailed
-                ? 'var(--status-fail-text)'
-                : isComplete
-                  ? 'var(--status-pass-text)'
-                  : 'hsl(var(--primary))',
-              border: `1px solid ${isFailed ? 'var(--status-fail-border)' : isComplete ? 'var(--status-pass-border)' : 'hsl(var(--primary) / 0.25)'}`,
-            }}
-          >
-            {isFailed
-              ? 'Execution Error'
+        <span
+          className={cn(
+            'rounded border px-2 py-0.5 text-2xs font-semibold',
+            isFailed
+              ? 'border-destructive/30 bg-destructive/10 text-destructive'
               : isComplete
-                ? '100% Completed'
-                : isConnected
-                  ? 'Live SSE Stream'
-                  : 'Connecting...'}
-          </span>
-        </div>
+                ? 'border-success/30 bg-success/15 text-success'
+                : 'border-primary/25 bg-primary/10 text-primary',
+          )}
+        >
+          {isFailed ? 'Failed' : isComplete ? 'Complete' : isConnected ? 'Live' : 'Connecting…'}
+        </span>
       </div>
 
-      {/* Progress Bar & Live Contextual Message */}
       {!isFailed && (
-        <div style={{ marginBottom: '1.25rem' }}>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              fontSize: 'var(--text-xs)',
-              marginBottom: '0.4rem',
-            }}
-          >
-            <span style={{ fontWeight: 600, color: 'hsl(var(--foreground))' }}>
-              {lastEvent?.message || activeStepMeta?.activeMessage || 'Processing document...'}
+        <div className="mb-5">
+          <div className="mb-1.5 flex justify-between gap-3 text-xs">
+            <span className="font-medium text-foreground">
+              {lastEvent?.message || activeStepMeta?.activeMessage || 'Processing document…'}
             </span>
-            <span
-              style={{
-                fontFamily: 'var(--tabular-nums)',
-                fontWeight: 700,
-                color: 'hsl(var(--primary))',
-              }}
-            >
-              {progressPercent}%
-            </span>
+            <span className="font-semibold tabular-nums text-primary">{progressPercent}%</span>
           </div>
-          <ProgressBar
-            progress={progressPercent}
-            color={isComplete ? 'hsl(var(--foreground))' : 'hsl(var(--primary))'}
-            height="8px"
+          <Progress
+            value={progressPercent}
+            aria-label="Extraction progress"
+            indicatorColor={isComplete ? 'bg-success' : 'bg-primary'}
           />
         </div>
       )}
 
-      {/* 5-Stage Stepper Grid */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
-          gap: '0.75rem',
-          marginTop: '0.5rem',
-        }}
-      >
+      <ol className="mt-2 grid grid-cols-[repeat(auto-fit,minmax(10.5rem,1fr))] gap-3">
         {PIPELINE_STEPS.map((step, idx) => {
           const isDone = isComplete || activeIndex > idx;
           const isCurrent = !isComplete && !isFailed && activeIndex === idx;
 
           return (
-            <div
+            <li
               key={step.key}
-              style={{
-                backgroundColor: isCurrent
-                  ? 'hsl(var(--primary) / 0.08)'
+              className={cn(
+                'flex flex-col gap-1 rounded-md border px-3.5 py-3 transition-colors',
+                isCurrent
+                  ? 'border-primary bg-primary/10'
                   : isDone
-                    ? 'var(--status-pass-bg)'
-                    : 'hsl(var(--background))',
-                border: `1px solid ${
-                  isCurrent
-                    ? 'hsl(var(--primary))'
-                    : isDone
-                      ? 'var(--status-pass-border)'
-                      : 'hsl(var(--border))'
-                }`,
-                borderRadius: 'var(--radius-md)',
-                padding: '0.75rem 0.85rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.25rem',
-                transition: 'all var(--transition-fast)',
-              }}
+                    ? 'border-success/30 bg-success/10'
+                    : 'border-border bg-background',
+              )}
             >
-              <div
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-              >
-                <span
-                  style={{
-                    fontSize: 'var(--text-xs)',
-                    fontWeight: 700,
-                    color: 'hsl(var(--foreground))',
-                  }}
-                >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-foreground">
                   {step.stepNumber}. {step.label}
                 </span>
-                <span style={{ display: 'flex', alignItems: 'center' }}>
-                  {isDone ? (
-                    <Check size={14} className="text-primary" />
-                  ) : isCurrent ? (
-                    <Loader2 size={14} className="animate-spin text-primary" />
-                  ) : (
-                    <Circle size={10} className="text-muted-foreground/40" />
-                  )}
-                </span>
+                {isDone ? (
+                  <Check size={14} className="shrink-0 text-success" aria-label="Done" />
+                ) : isCurrent ? (
+                  <Loader2 size={14} className="shrink-0 animate-spin text-primary" />
+                ) : (
+                  <Circle size={10} className="shrink-0 text-muted-foreground/40" />
+                )}
               </div>
-              <p
-                style={{
-                  fontSize: 'var(--text-2xs)',
-                  color: isCurrent
-                    ? 'hsl(var(--primary))'
-                    : isDone
-                      ? 'var(--color-success)'
-                      : 'hsl(var(--muted-foreground))',
-                  margin: 0,
-                  lineHeight: 1.4,
-                }}
-              >
+              <p className="text-2xs leading-snug text-muted-foreground">
                 {step.contextualDescription}
               </p>
-            </div>
+            </li>
           );
         })}
-      </div>
+      </ol>
 
-      {/* Actionable Error Card */}
       {isFailed && (
-        <div
-          style={{
-            backgroundColor: 'hsl(var(--destructive) / 0.06)',
-            border: '1px solid hsl(var(--destructive) / 0.3)',
-            borderRadius: 'var(--radius-md)',
-            padding: '1.25rem',
-            marginTop: '1rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.85rem',
-          }}
-        >
+        <div className="mt-4 flex flex-col gap-3 rounded-md border border-destructive/30 bg-destructive/10 p-5">
           <div>
-            <h4
-              style={{
-                fontSize: 'var(--text-sm)',
-                fontWeight: 700,
-                color: 'hsl(var(--destructive))',
-                margin: '0 0 0.35rem',
-              }}
-            >
-              What went wrong?
-            </h4>
-            <p
-              style={{
-                fontSize: 'var(--text-xs)',
-                color: 'hsl(var(--foreground))',
-                margin: 0,
-                lineHeight: 1.5,
-              }}
-            >
-              {sseError ||
-                'The extraction pipeline encountered a timeout while processing multi-column tables and complex formatting.'}
+            <h4 className="mb-1 text-sm font-semibold text-destructive">What went wrong</h4>
+            <p className="text-xs leading-relaxed text-foreground">
+              {sseError || 'The extraction did not finish. No reason was reported.'}
             </p>
           </div>
-
-          <div
-            style={{
-              backgroundColor: 'hsl(var(--card))',
-              padding: '0.75rem 1rem',
-              borderRadius: 'var(--radius-sm)',
-              borderLeft: '3px solid var(--color-success)',
-              fontSize: 'var(--text-xs)',
-              color: 'hsl(var(--foreground))',
-            }}
-          >
-            <strong>Data Safety Guarantee:</strong> Your uploaded PDF is securely preserved in
-            encrypted tenant storage. Existing bid details and previously verified documents are
-            unaffected.
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-            <span
-              style={{
-                fontSize: 'var(--text-2xs)',
-                fontWeight: 600,
-                color: 'hsl(var(--muted-foreground))',
-                textTransform: '',
-              }}
-            >
-              Recommended Next Steps:
-            </span>
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <Button variant="primary" size="sm" onClick={onRetry} icon={<RefreshCw size={14} />}>
-                Retry Extraction
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
-                Re-upload Clean PDF
-              </Button>
-            </div>
+          <p className="text-xs text-foreground">
+            Your uploaded PDF and the bid's existing details are kept.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="primary" size="sm" onClick={onRetry} icon={<RefreshCw size={14} />}>
+              Retry extraction
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+              Upload again
+            </Button>
           </div>
         </div>
       )}
 
-      {/* Completion CTA */}
       {isComplete && (
-        <div
-          style={{
-            marginTop: '1rem',
-            padding: '0.85rem 1rem',
-            backgroundColor: 'var(--status-pass-bg)',
-            border: '1px solid var(--status-pass-border)',
-            borderRadius: 'var(--radius-md)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '0.75rem',
-          }}
-        >
-          <span
-            style={{
-              fontSize: 'var(--text-xs)',
-              color: 'var(--status-pass-text)',
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-            }}
-          >
-            <CheckCircle2 size={16} /> Extraction pipeline successfully grounded requirements and
-            citations into your workspace.
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-success/30 bg-success/10 px-4 py-3.5">
+          <span className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+            <CheckCircle2 size={16} className="shrink-0 text-success" />
+            Requirements and their source pages are ready to review.
           </span>
           <Button variant="primary" size="sm" onClick={onComplete} icon={<ArrowRight size={14} />}>
-            Proceed to Requirement Matrix
+            Review clauses
           </Button>
         </div>
       )}

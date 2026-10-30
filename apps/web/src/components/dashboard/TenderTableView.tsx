@@ -590,7 +590,7 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
       >
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Delete Tender Project</DialogTitle>
+            <DialogTitle>Delete this bid?</DialogTitle>
             <DialogDescription>This action is permanent and cannot be undone.</DialogDescription>
           </DialogHeader>
 
@@ -610,7 +610,7 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
               Cancel
             </Button>
             <Button variant="destructive" onClick={confirmDelete} disabled={isDeleting}>
-              {isDeleting ? 'Deleting…' : 'Yes, Delete Permanently'}
+              {isDeleting ? 'Deleting…' : 'Delete bid'}
             </Button>
           </DialogFooter>
         </DialogContent>

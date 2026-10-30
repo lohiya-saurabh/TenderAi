@@ -6,6 +6,7 @@ import {
   ReviewRequiredIcon,
   HighRiskIcon,
 } from '@/components/common/Icons.js';
+import { Badge, type BadgeVariant } from '@/components/common/Badge.js';
 import type { CapabilityStatus } from '@/components/company/companyProfileData.js';
 
 export interface CapabilityStatusBadgeProps {
@@ -15,132 +16,39 @@ export interface CapabilityStatusBadgeProps {
   showIcon?: boolean;
 }
 
+const CONFIG: Record<
+  CapabilityStatus,
+  { label: string; icon: typeof PassIcon; variant: BadgeVariant }
+> = {
+  VERIFIED: { label: 'Verified', icon: PassIcon, variant: 'success' },
+  SOURCE_VERIFIED: { label: 'Source verified', icon: PassIcon, variant: 'success' },
+  UNVERIFIED: { label: 'Unverified', icon: MissingIcon, variant: 'neutral' },
+  IMPORTED: { label: 'Imported', icon: PassIcon, variant: 'secondary' },
+  EXTRACTED: { label: 'Extracted', icon: ReviewRequiredIcon, variant: 'primary' },
+  EXPIRING_SOON: { label: 'Expiring soon', icon: HighRiskIcon, variant: 'warning' },
+  EXPIRED: { label: 'Expired', icon: FailIcon, variant: 'danger' },
+  REJECTED: { label: 'Rejected', icon: FailIcon, variant: 'danger' },
+  MISSING: { label: 'Missing', icon: MissingIcon, variant: 'neutral' },
+  NEEDS_REVIEW: { label: 'Needs review', icon: ReviewRequiredIcon, variant: 'warning' },
+};
+
+const ICON_SIZE = { sm: 12, md: 14, lg: 16 };
+
 export const CapabilityStatusBadge: React.FC<CapabilityStatusBadgeProps> = ({
   status,
   size = 'md',
   label,
   showIcon = true,
 }) => {
-  const getConfig = () => {
-    switch (status) {
-      case 'VERIFIED':
-      case 'SOURCE_VERIFIED':
-        return {
-          defaultLabel: status === 'SOURCE_VERIFIED' ? 'Source Verified' : 'Verified',
-          icon: PassIcon,
-          bg: 'var(--status-pass-bg)',
-          color: 'var(--status-pass-text)',
-          border: '1px solid var(--status-pass-border)',
-        };
-      case 'UNVERIFIED':
-        return {
-          defaultLabel: 'Unverified',
-          icon: MissingIcon,
-          bg: 'var(--status-na-bg)',
-          color: 'hsl(var(--muted-foreground))',
-          border: '1px dashed hsl(var(--border))',
-        };
-      case 'IMPORTED':
-        return {
-          defaultLabel: 'Imported',
-          icon: PassIcon,
-          bg: 'hsl(var(--muted))',
-          color: 'hsl(var(--foreground))',
-          border: '1px solid hsl(var(--border))',
-        };
-      case 'EXTRACTED':
-        return {
-          defaultLabel: 'Extracted',
-          icon: ReviewRequiredIcon,
-          bg: 'var(--status-review-bg)',
-          color: 'var(--status-review-text)',
-          border: '1px solid var(--status-review-border)',
-        };
-      case 'EXPIRING_SOON':
-        return {
-          defaultLabel: 'Expiring Soon',
-          icon: HighRiskIcon,
-          bg: 'var(--status-flag-bg)',
-          color: 'var(--status-flag-text)',
-          border: '1px solid var(--status-flag-border)',
-        };
-      case 'EXPIRED':
-        return {
-          defaultLabel: 'Expired',
-          icon: FailIcon,
-          bg: 'var(--status-fail-bg)',
-          color: 'var(--status-fail-text)',
-          border: '1px solid var(--status-fail-border)',
-        };
-      case 'REJECTED':
-        return {
-          defaultLabel: 'Rejected',
-          icon: FailIcon,
-          bg: 'var(--status-fail-bg)',
-          color: 'var(--status-fail-text)',
-          border: '1px solid var(--status-fail-border)',
-        };
-      case 'MISSING':
-        return {
-          defaultLabel: 'Missing',
-          icon: MissingIcon,
-          bg: 'var(--status-na-bg)',
-          color: 'hsl(var(--muted-foreground))',
-          border: '1px dashed hsl(var(--border))',
-        };
-      case 'NEEDS_REVIEW':
-        return {
-          defaultLabel: 'Needs Review',
-          icon: ReviewRequiredIcon,
-          bg: 'var(--status-review-bg)',
-          color: 'var(--status-review-text)',
-          border: '1px solid var(--status-review-border)',
-        };
-    }
-  };
-
-  const config = getConfig();
-  const IconComponent = config.icon;
-
-  const fontSizes = {
-    sm: 'var(--text-2xs)',
-    md: 'var(--text-xs)',
-    lg: 'var(--text-sm)',
-  };
-
-  const paddings = {
-    sm: '0.15rem 0.45rem',
-    md: '0.25rem 0.6rem',
-    lg: '0.35rem 0.8rem',
-  };
-
-  const iconSizes = {
-    sm: 12,
-    md: 14,
-    lg: 16,
-  };
-
+  const { label: defaultLabel, icon: Icon, variant } = CONFIG[status];
   return (
-    <span
+    <Badge
       role="status"
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '0.35rem',
-        padding: paddings[size],
-        fontSize: fontSizes[size],
-        fontWeight: 700,
-        borderRadius: 'var(--radius-sm)',
-        backgroundColor: config.bg,
-        color: config.color,
-        border: config.border,
-        whiteSpace: 'nowrap',
-        letterSpacing: '0.02em',
-        textTransform: '',
-      }}
+      variant={variant}
+      size={size}
+      icon={showIcon ? <Icon size={ICON_SIZE[size]} /> : undefined}
     >
-      {showIcon && <IconComponent size={iconSizes[size]} color={config.color} />}
-      <span>{label || config.defaultLabel}</span>
-    </span>
+      {label || defaultLabel}
+    </Badge>
   );
 };
