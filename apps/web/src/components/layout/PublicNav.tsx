@@ -19,10 +19,10 @@ export const PublicNav: React.FC = () => {
           </div>
           <div className="flex flex-col">
             <span className="text-base font-bold tracking-tight text-foreground transition-colors">
-              TenderPulse<span className="text-vermilion">.ai</span>
+              TenderPulse
             </span>
             <span className="text-2xs text-muted-foreground uppercase tracking-wide">
-              Bid Readiness SaaS
+              Bid assurance
             </span>
           </div>
         </Link>
@@ -34,21 +34,21 @@ export const PublicNav: React.FC = () => {
             className="hover:text-foreground transition-colors flex items-center gap-1.5"
           >
             <Layers className="h-3.5 w-3.5" />
-            <span>Platform</span>
+            <span>Why TenderPulse</span>
           </a>
           <a
             href="/#workflow"
             className="hover:text-foreground transition-colors flex items-center gap-1.5"
           >
             <Cpu className="h-3.5 w-3.5" />
-            <span>Workflow</span>
+            <span>How it works</span>
           </a>
           <a
             href="/#security"
             className="hover:text-foreground transition-colors flex items-center gap-1.5"
           >
             <ShieldCheck className="h-3.5 w-3.5" />
-            <span>Enterprise Security</span>
+            <span>Trust</span>
           </a>
           <Link
             to="/pricing"
@@ -75,14 +75,14 @@ export const PublicNav: React.FC = () => {
             ) : (
               <Sun className="h-3.5 w-3.5 text-warning" />
             )}
-            <span className="hidden sm:inline text-xs font-mono font-medium text-foreground">
+            <span className="hidden sm:inline text-xs font-medium text-foreground">
               {theme === 'dark' ? 'Dark' : 'Light'}
             </span>
           </Button>
           {isAuthenticated ? (
             <Link to="/bids">
               <Button size="sm" className="gap-2 text-xs font-semibold shadow-xs">
-                <span>Enter Workspace</span>
+                <span>Open workspace</span>
                 <ArrowRight className="h-3.5 w-3.5" />
               </Button>
             </Link>
@@ -90,12 +90,12 @@ export const PublicNav: React.FC = () => {
             <>
               <Link to="/login">
                 <Button variant="ghost" size="sm" className="text-xs font-medium">
-                  Sign In
+                  Sign in
                 </Button>
               </Link>
               <Link to="/signup">
                 <Button size="sm" className="gap-1.5 text-xs font-semibold shadow-xs">
-                  <span>Start Free</span>
+                  <span>Start free</span>
                   <ArrowRight className="h-3.5 w-3.5" />
                 </Button>
               </Link>
