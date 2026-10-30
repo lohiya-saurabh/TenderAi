@@ -242,7 +242,7 @@ const ClauseRow: React.FC<{
         <span className="flex min-w-0 flex-col gap-1">
           <span className="truncate text-sm font-semibold text-foreground">{c.title}</span>
           {!comfortable && (
-            <span className="truncate text-[11px] text-muted-foreground">
+            <span className="truncate text-2xs text-muted-foreground">
               {REVIEW_LABEL[c.review.status]}
               {c.flags.length ? ` · ${c.flags.map((f) => FLAG_LABEL[f]).join(', ')}` : ''}
             </span>
@@ -274,13 +274,13 @@ const ClauseRow: React.FC<{
           <span className="flex min-w-0 flex-col items-start gap-1">
             <ReviewBadge review={c.review} />
             {(c.review.status === 'UNREVIEWED' || c.review.status === 'NEEDS_REVIEW') && (
-              <span className="truncate text-[11px] text-muted-foreground">
+              <span className="truncate text-2xs text-muted-foreground">
                 {BAND_LABEL[c.aiBand]}
               </span>
             )}
             {due && comfortable && (
               <span
-                className="truncate text-[11px] font-medium tabular-nums text-foreground"
+                className="truncate text-2xs font-medium tabular-nums text-foreground"
                 title="Deadline"
               >
                 Due {due}

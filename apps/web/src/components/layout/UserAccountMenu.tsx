@@ -43,7 +43,7 @@ export const UserAccountMenu: React.FC = () => {
           aria-label="User account menu"
         >
           <Avatar className="h-5 w-5 rounded-full border border-border/50">
-            <AvatarFallback className="text-[10px] font-bold bg-primary text-primary-foreground">
+            <AvatarFallback className="text-2xs font-bold bg-primary text-primary-foreground">
               {initials}
             </AvatarFallback>
           </Avatar>
@@ -63,7 +63,7 @@ export const UserAccountMenu: React.FC = () => {
               </p>
               <Badge
                 variant="secondary"
-                className="text-[10px] font-medium uppercase px-1.5 py-0.5"
+                className="text-2xs font-medium uppercase px-1.5 py-0.5"
               >
                 {user?.role?.replace(/_/g, ' ') || 'User'}
               </Badge>
@@ -73,13 +73,13 @@ export const UserAccountMenu: React.FC = () => {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <div className="px-3 py-2 bg-muted/40 text-xs">
-          <p className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider mb-0.5">
+          <p className="text-2xs uppercase font-semibold text-muted-foreground tracking-wider mb-0.5">
             Organization Tenant
           </p>
           <p className="font-medium text-foreground truncate">
             {user?.organizationName || 'Default Organization'}
           </p>
-          <p className="font-mono text-[10px] text-muted-foreground mt-0.5">
+          <p className="font-mono text-2xs text-muted-foreground mt-0.5">
             ID: {user?.organizationId || '—'}
           </p>
         </div>

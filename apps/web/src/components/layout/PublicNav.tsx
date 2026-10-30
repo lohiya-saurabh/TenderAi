@@ -21,7 +21,7 @@ export const PublicNav: React.FC = () => {
             <span className="text-base font-bold tracking-tight text-foreground transition-colors">
               TenderPulse<span className="text-vermilion">.ai</span>
             </span>
-            <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-mono">
+            <span className="text-2xs text-muted-foreground uppercase tracking-widest font-mono">
               Bid Readiness SaaS
             </span>
           </div>
@@ -71,9 +71,9 @@ export const PublicNav: React.FC = () => {
             title={`Current theme: ${theme === 'dark' ? 'Dark' : 'Light'}. Click to toggle`}
           >
             {theme === 'dark' ? (
-              <Moon className="h-3.5 w-3.5 text-orange-400" />
+              <Moon className="h-3.5 w-3.5 text-warning" />
             ) : (
-              <Sun className="h-3.5 w-3.5 text-amber-500" />
+              <Sun className="h-3.5 w-3.5 text-warning" />
             )}
             <span className="hidden sm:inline text-xs font-mono font-medium text-foreground">
               {theme === 'dark' ? 'Dark' : 'Light'}

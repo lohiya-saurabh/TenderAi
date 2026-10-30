@@ -21,8 +21,8 @@ export const PublicFooter: React.FC = () => {
               Tender Intelligence &amp; Bid Readiness SaaS purpose-built for Indian contractors,
               MSMEs, and public sector vendors.
             </p>
-            <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-mono">
-              <Shield className="h-3.5 w-3.5 text-emerald-500" />
+            <div className="flex items-center gap-2 text-2xs text-muted-foreground font-mono">
+              <Shield className="h-3.5 w-3.5 text-success" />
               <span>DPDP Act 2023 &bull; GeM / CPPP Ready</span>
             </div>
           </div>
@@ -98,19 +98,19 @@ export const PublicFooter: React.FC = () => {
             <div className="space-y-2 text-xs">
               <div className="flex items-start gap-2">
                 <Lock className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
-                <span className="text-[11px] leading-snug">
+                <span className="text-2xs leading-snug">
                   Fiber-Safe Tenant Isolation with strict anti-IDOR filters.
                 </span>
               </div>
               <div className="flex items-start gap-2">
                 <CheckCircle2 className="h-3.5 w-3.5 text-foreground shrink-0 mt-0.5" />
-                <span className="text-[11px] leading-snug">
+                <span className="text-2xs leading-snug">
                   Deterministic audit trail for all human compliance overrides.
                 </span>
               </div>
               <div className="flex items-start gap-2">
                 <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
-                <span className="text-[11px] leading-snug">
+                <span className="text-2xs leading-snug">
                   Data stored securely in AWS Mumbai region.
                 </span>
               </div>

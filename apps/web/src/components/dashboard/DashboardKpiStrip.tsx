@@ -34,7 +34,7 @@ export const DashboardKpiStrip: React.FC<DashboardKpiStripProps> = ({ bids }) =>
       {/* 1. Active Pipeline Count */}
       <div className="p-5 border border-border rounded-lg bg-card shadow-xs transition-colors">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+          <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
             ACTIVE BIDS TRACKED
           </span>
           <span className="text-muted-foreground">
@@ -52,7 +52,7 @@ export const DashboardKpiStrip: React.FC<DashboardKpiStripProps> = ({ bids }) =>
           />
           <span
             className={`mono font-semibold ${
-              evaluatedBidsCount > 0 ? 'text-[#1C3DA8] dark:text-blue-300' : 'text-muted-foreground'
+              evaluatedBidsCount > 0 ? 'text-primary dark:text-primary' : 'text-muted-foreground'
             }`}
           >
             {evaluatedBidsCount} of {activeBids.length || 0} evaluated
@@ -63,10 +63,10 @@ export const DashboardKpiStrip: React.FC<DashboardKpiStripProps> = ({ bids }) =>
       {/* 2. Total Contract Value */}
       <div className="p-5 border border-border rounded-lg bg-card shadow-xs transition-colors">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+          <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
             PIPELINE CONTRACT VALUE
           </span>
-          <span className="text-[#1C3DA8] dark:text-blue-300">
+          <span className="text-primary dark:text-primary">
             <CheckIcon size={15} />
           </span>
         </div>
@@ -87,16 +87,16 @@ export const DashboardKpiStrip: React.FC<DashboardKpiStripProps> = ({ bids }) =>
       {/* 3. Statutory Evidence Status */}
       <div className="p-5 border border-border rounded-lg bg-card shadow-xs transition-colors">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+          <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
             EVIDENCE STATUS
           </span>
           <span
             className={
               totalFlagged > 0
-                ? 'text-[#9F1C1C] dark:text-red-300'
+                ? 'text-destructive dark:text-destructive'
                 : isAnyVerified
-                  ? 'text-[#1C3DA8] dark:text-blue-300'
-                  : 'text-[#8A4200] dark:text-orange-300'
+                  ? 'text-primary dark:text-primary'
+                  : 'text-warning dark:text-warning'
             }
           >
             <AlertCircleIcon size={15} />
@@ -105,10 +105,10 @@ export const DashboardKpiStrip: React.FC<DashboardKpiStripProps> = ({ bids }) =>
         <div
           className={`text-3xl font-bold tracking-tight ${
             totalFlagged > 0
-              ? 'text-[#9F1C1C] dark:text-red-300'
+              ? 'text-destructive dark:text-destructive'
               : isAnyVerified
-                ? 'text-[#1C3DA8] dark:text-blue-300'
-                : 'text-[#8A4200] dark:text-orange-300'
+                ? 'text-primary dark:text-primary'
+                : 'text-warning dark:text-warning'
           }`}
         >
           {totalFlagged > 0 ? `${totalFlagged} Flags` : isAnyVerified ? 'Verified' : 'Pending'}
@@ -116,16 +116,16 @@ export const DashboardKpiStrip: React.FC<DashboardKpiStripProps> = ({ bids }) =>
         <div className="text-xs font-medium text-foreground/80 flex items-center gap-1.5 mt-2">
           <span
             className={`w-1.5 h-1.5 rounded-full ${
-              totalFlagged > 0 ? 'bg-[#9F1C1C]' : isAnyVerified ? 'bg-primary' : 'bg-[#E08A1E]'
+              totalFlagged > 0 ? 'bg-destructive' : isAnyVerified ? 'bg-primary' : 'bg-warning'
             } inline-block`}
           />
           <span
             className={
               totalFlagged > 0
-                ? 'text-[#9F1C1C] dark:text-red-300'
+                ? 'text-destructive dark:text-destructive'
                 : isAnyVerified
-                  ? 'text-[#1C3DA8] dark:text-blue-300 font-medium'
-                  : 'text-[#8A4200] dark:text-orange-300 font-medium'
+                  ? 'text-primary dark:text-primary font-medium'
+                  : 'text-warning dark:text-warning font-medium'
             }
           >
             {totalFlagged > 0
@@ -144,15 +144,15 @@ export const DashboardKpiStrip: React.FC<DashboardKpiStripProps> = ({ bids }) =>
       {/* 4. Submission Deadlines / Recommendation */}
       <div className="p-5 border border-border rounded-lg bg-card shadow-xs transition-colors">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+          <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
             {urgentDeadlines.length > 0 ? 'IMMINENT DEADLINES' : 'PIPELINE HEALTH'}
           </span>
           <span
             className={
               urgentDeadlines.length > 0
-                ? 'text-[#9F1C1C] dark:text-red-300'
+                ? 'text-destructive dark:text-destructive'
                 : evaluatedBidsCount > 0
-                  ? 'text-[#1C3DA8] dark:text-blue-300'
+                  ? 'text-primary dark:text-primary'
                   : 'text-muted-foreground'
             }
           >
@@ -162,9 +162,9 @@ export const DashboardKpiStrip: React.FC<DashboardKpiStripProps> = ({ bids }) =>
         <div
           className={`text-2xl font-bold tracking-tight ${
             urgentDeadlines.length > 0
-              ? 'text-[#9F1C1C] dark:text-red-300'
+              ? 'text-destructive dark:text-destructive'
               : evaluatedBidsCount > 0
-                ? 'text-[#1C3DA8] dark:text-blue-300'
+                ? 'text-primary dark:text-primary'
                 : 'text-muted-foreground'
           }`}
         >

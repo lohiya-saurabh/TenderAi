@@ -89,7 +89,7 @@ export const Breadcrumbs: React.FC = () => {
 
   return (
     <nav aria-label="Breadcrumbs" className="flex items-center">
-      <ol className="flex flex-wrap items-center gap-1.5 list-none p-0 m-0 text-[13px] text-muted-foreground">
+      <ol className="flex flex-wrap items-center gap-1.5 list-none p-0 m-0 text-sm text-muted-foreground">
         {breadcrumbs.map((crumb, idx) => {
           const isLast = idx === breadcrumbs.length - 1;
 

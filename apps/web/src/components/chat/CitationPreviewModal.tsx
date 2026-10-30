@@ -46,15 +46,15 @@ export const CitationPreviewModal: React.FC<CitationPreviewModalProps> = ({
             <div
               className={`p-1.5 rounded-lg shrink-0 ${
                 isTender
-                  ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200 dark:border-blue-900'
-                  : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900'
+                  ? 'bg-primary/10 text-primary dark:bg-primary/60 dark:text-primary border border-primary/30 dark:border-primary/40'
+                  : 'bg-success/10 text-success dark:bg-success/60 dark:text-success border border-success/30 dark:border-success/40'
               }`}
             >
               <FileText className="w-4 h-4" />
             </div>
             <div>
               <div className="text-xs font-semibold text-foreground">Citation Provenance</div>
-              <div className="text-[10px] text-muted-foreground uppercase font-medium tracking-wider">
+              <div className="text-2xs text-muted-foreground uppercase font-medium tracking-wider">
                 {isTender ? 'Tender Document' : 'Company Evidence Vault'}
               </div>
             </div>
@@ -74,13 +74,13 @@ export const CitationPreviewModal: React.FC<CitationPreviewModalProps> = ({
           {/* Document metadata chips */}
           <div className="grid grid-cols-2 gap-2">
             <div className="p-2.5 rounded-lg bg-muted/40 dark:bg-muted/20 border border-border/50">
-              <span className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider block mb-0.5">Source Document</span>
+              <span className="text-2xs text-muted-foreground uppercase font-semibold tracking-wider block mb-0.5">Source Document</span>
               <span className="font-semibold text-foreground truncate block text-xs" title={citation.documentName}>
                 {citation.documentName}
               </span>
             </div>
             <div className="p-2.5 rounded-lg bg-muted/40 dark:bg-muted/20 border border-border/50">
-              <span className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider block mb-0.5">Page & Clause</span>
+              <span className="text-2xs text-muted-foreground uppercase font-semibold tracking-wider block mb-0.5">Page & Clause</span>
               <span className="font-semibold text-foreground block text-xs">
                 Page {citation.pageNumber} {citation.clauseReference ? `• ${citation.clauseReference}` : ''}
               </span>
@@ -90,26 +90,26 @@ export const CitationPreviewModal: React.FC<CitationPreviewModalProps> = ({
           {/* Verbatim quote */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+              <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Verbatim Source Excerpt
               </span>
-              <div className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
+              <div className="flex items-center gap-1 text-2xs text-success dark:text-success font-semibold">
                 <ShieldCheck className="w-3.5 h-3.5" />
                 <span>{confidencePercent}% Grounded</span>
               </div>
             </div>
-            <blockquote className="p-3.5 rounded-lg bg-muted/40 dark:bg-muted/20 border-l-3 border-emerald-600 dark:border-emerald-500 text-xs leading-relaxed italic text-foreground/90 font-serif">
+            <blockquote className="p-3.5 rounded-lg bg-muted/40 dark:bg-muted/20 border-l-3 border-success/60 dark:border-success/60 text-xs leading-relaxed italic text-foreground/90 font-serif">
               "{citation.verbatimQuote}"
             </blockquote>
           </div>
 
           {/* Bounding box highlight snippet when present */}
           {citation.boundingBox && (
-            <div className="p-2.5 rounded-lg bg-muted/40 dark:bg-muted/20 border border-border/50 text-[11px] space-y-1">
-              <span className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider block">
+            <div className="p-2.5 rounded-lg bg-muted/40 dark:bg-muted/20 border border-border/50 text-2xs space-y-1">
+              <span className="text-2xs text-muted-foreground uppercase font-semibold tracking-wider block">
                 Document Viewer Snippet
               </span>
-              <div className="text-muted-foreground flex items-center justify-between text-[11px]">
+              <div className="text-muted-foreground flex items-center justify-between text-2xs">
                 <span>Coordinates: [{String(citation.boundingBox.x ?? 0)}, {String(citation.boundingBox.y ?? 0)}]</span>
                 <span>Size: {String(citation.boundingBox.width ?? 0)} × {String(citation.boundingBox.height ?? 0)}</span>
               </div>
@@ -117,8 +117,8 @@ export const CitationPreviewModal: React.FC<CitationPreviewModalProps> = ({
           )}
 
           {/* Dual-provenance validation note */}
-          <div className="p-2.5 rounded-lg bg-muted/25 dark:bg-muted/15 border border-border/40 text-[11px] text-muted-foreground flex items-center gap-2">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <div className="p-2.5 rounded-lg bg-muted/25 dark:bg-muted/15 border border-border/40 text-2xs text-muted-foreground flex items-center gap-2">
+            <CheckCircle2 className="w-3.5 h-3.5 text-success dark:text-success shrink-0" />
             <span className="leading-normal">
               Verified by exact AST substring match against canonical {isTender ? 'NIT tender specification' : 'statutory certificate'}.
             </span>

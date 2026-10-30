@@ -26,8 +26,8 @@ export const AuditTimeline: React.FC<AuditTimelineProps> = ({ events }) => {
           {/* Timeline Column */}
           <div className="flex flex-col items-center self-stretch shrink-0 pt-4.5">
             {/* Precision Indicator Node */}
-            <div className="w-3.5 h-3.5 rounded-full bg-background border-2 border-orange-600 flex items-center justify-center z-10 shrink-0 transition-transform group-hover:scale-125">
-              <div className="w-1.5 h-1.5 rounded-full bg-orange-600" />
+            <div className="w-3.5 h-3.5 rounded-full bg-background border-2 border-warning/60 flex items-center justify-center z-10 shrink-0 transition-transform group-hover:scale-125">
+              <div className="w-1.5 h-1.5 rounded-full bg-warning" />
             </div>
             {/* Connecting Vertical Track between consecutive events */}
             {idx < events.length - 1 && <div className="w-[2px] bg-border flex-1 mt-2 -mb-6" />}
@@ -42,7 +42,7 @@ export const AuditTimeline: React.FC<AuditTimelineProps> = ({ events }) => {
                   <ShieldCheck className="w-3 h-3" />
                   {event.eventType}
                 </span>
-                <span className="inline-flex items-center gap-1 text-[11px] font-mono text-muted-foreground">
+                <span className="inline-flex items-center gap-1 text-2xs font-mono text-muted-foreground">
                   <Database className="w-3 h-3" />
                   {event.aggregateType}{' '}
                   <span className="text-foreground/80">#{event.aggregateId}</span>
@@ -67,7 +67,7 @@ export const AuditTimeline: React.FC<AuditTimelineProps> = ({ events }) => {
             {/* Payload Metadata Inspector */}
             {event.payload && Object.keys(event.payload).length > 0 && (
               <div className="mt-2 bg-background/80 border border-border/80 rounded-lg p-3">
-                <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5">
+                <div className="flex items-center gap-1.5 text-2xs font-mono uppercase tracking-wider text-muted-foreground mb-1.5">
                   <Terminal className="w-3 h-3" />
                   Audit Payload Signature
                 </div>

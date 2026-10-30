@@ -116,7 +116,7 @@ export const OnboardingPage: React.FC = () => {
               className={`flex items-center gap-1.5 text-xs font-semibold ${step >= 1 ? 'text-primary' : 'text-muted-foreground'}`}
             >
               <span
-                className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${step >= 1 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+                className={`w-5 h-5 rounded-full flex items-center justify-center text-2xs ${step >= 1 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
               >
                 1
               </span>
@@ -127,7 +127,7 @@ export const OnboardingPage: React.FC = () => {
               className={`flex items-center gap-1.5 text-xs font-semibold ${step >= 2 ? 'text-primary' : 'text-muted-foreground'}`}
             >
               <span
-                className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${step >= 2 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+                className={`w-5 h-5 rounded-full flex items-center justify-center text-2xs ${step >= 2 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
               >
                 2
               </span>
@@ -138,7 +138,7 @@ export const OnboardingPage: React.FC = () => {
               className={`flex items-center gap-1.5 text-xs font-semibold ${step >= 3 ? 'text-primary' : 'text-muted-foreground'}`}
             >
               <span
-                className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${step >= 3 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+                className={`w-5 h-5 rounded-full flex items-center justify-center text-2xs ${step >= 3 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
               >
                 3
               </span>
@@ -164,22 +164,22 @@ export const OnboardingPage: React.FC = () => {
               <CardContent className="space-y-5">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                   <div className="p-3 rounded-lg bg-muted/40 border border-border space-y-1">
-                    <span className="text-[10px] text-muted-foreground uppercase font-semibold">
+                    <span className="text-2xs text-muted-foreground uppercase font-semibold">
                       Workspace Name
                     </span>
                     <p className="font-semibold text-foreground">
                       {user?.organizationName || 'My Workspace'}
                     </p>
-                    <p className="text-[10px] text-muted-foreground font-mono">
+                    <p className="text-2xs text-muted-foreground font-mono">
                       Tenant: {user?.organizationId}
                     </p>
                   </div>
                   <div className="p-3 rounded-lg bg-muted/40 border border-border space-y-1">
-                    <span className="text-[10px] text-muted-foreground uppercase font-semibold">
+                    <span className="text-2xs text-muted-foreground uppercase font-semibold">
                       Admin Account
                     </span>
                     <p className="font-semibold text-foreground">{user?.name}</p>
-                    <p className="text-[10px] text-muted-foreground">{user?.email}</p>
+                    <p className="text-2xs text-muted-foreground">{user?.email}</p>
                   </div>
                 </div>
 
@@ -196,7 +196,7 @@ export const OnboardingPage: React.FC = () => {
                           <div>
                             <p className="font-semibold text-xs text-foreground">{c.legalName}</p>
                             {c.gstin && (
-                              <p className="text-[10px] font-mono text-muted-foreground">
+                              <p className="text-2xs font-mono text-muted-foreground">
                                 GSTIN: {c.gstin}
                               </p>
                             )}
@@ -206,12 +206,12 @@ export const OnboardingPage: React.FC = () => {
                           {c.gstinVerifiedAt ? (
                             <Badge
                               variant="default"
-                              className="text-[10px] bg-foreground text-background"
+                              className="text-2xs bg-foreground text-background"
                             >
                               IRIS Verified
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="text-[10px]">
+                            <Badge variant="outline" className="text-2xs">
                               Active Entity
                             </Badge>
                           )}
@@ -230,7 +230,7 @@ export const OnboardingPage: React.FC = () => {
                         Verify Identity via IRIS IRP GSP
                       </span>
                     </div>
-                    <span className="text-[10px] text-muted-foreground">
+                    <span className="text-2xs text-muted-foreground">
                       Auto-imports official name &amp; PAN
                     </span>
                   </div>
@@ -263,14 +263,14 @@ export const OnboardingPage: React.FC = () => {
                   </div>
 
                   {gstinVerifySuccess && (
-                    <div className="text-[11px] text-primary flex items-center gap-1 font-medium">
+                    <div className="text-2xs text-primary flex items-center gap-1 font-medium">
                       <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
                       <span>{gstinVerifySuccess}</span>
                     </div>
                   )}
 
                   {gstinVerifyError && (
-                    <div className="text-[11px] text-red-500">{gstinVerifyError}</div>
+                    <div className="text-2xs text-destructive">{gstinVerifyError}</div>
                   )}
                 </div>
 
@@ -372,7 +372,7 @@ export const OnboardingPage: React.FC = () => {
                     <CheckCircle2 className="h-4 w-4 shrink-0" />
                     <span>Workspace &amp; Company Dossier Initialized</span>
                   </div>
-                  <p className="text-muted-foreground text-[11px] leading-relaxed">
+                  <p className="text-muted-foreground text-2xs leading-relaxed">
                     You can now upload NIT PDFs or evaluate sample tenders to test clause
                     extraction, missing evidence detection, and compliance scoring.
                   </p>
@@ -384,7 +384,7 @@ export const OnboardingPage: React.FC = () => {
                       <FileCheck2 className="h-4 w-4 text-primary" />
                       <span>Create New Bid</span>
                     </div>
-                    <p className="text-muted-foreground text-[11px]">
+                    <p className="text-muted-foreground text-2xs">
                       Upload your tender NIT or GeM bid document to start analysis.
                     </p>
                   </div>
@@ -394,14 +394,14 @@ export const OnboardingPage: React.FC = () => {
                       <Briefcase className="h-4 w-4 text-foreground" />
                       <span>Company Dossier</span>
                     </div>
-                    <p className="text-muted-foreground text-[11px]">
+                    <p className="text-muted-foreground text-2xs">
                       Add CA certificates and past completion proofs anytime in settings.
                     </p>
                   </div>
                 </div>
 
                 {saveError && (
-                  <div className="p-3 rounded-lg border border-red-500/30 bg-red-500/5 text-[11px] text-red-500 space-y-1">
+                  <div className="p-3 rounded-lg border border-destructive/30 bg-destructive/5 text-2xs text-destructive space-y-1">
                     <p>We couldn't save your sector and turnover preferences: {saveError}</p>
                     <button
                       type="button"

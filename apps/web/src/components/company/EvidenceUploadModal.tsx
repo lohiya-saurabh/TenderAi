@@ -204,7 +204,7 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
                   <div className="font-semibold text-foreground">
                     Click to select PDF or drag and drop here
                   </div>
-                  <div className="text-[11px] text-muted-foreground">
+                  <div className="text-2xs text-muted-foreground">
                     Audited Balance Sheets, Completion Certificates, ISO, PAN, GST (Max 50MB PDF)
                   </div>
                 </div>
@@ -217,7 +217,7 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
                   </div>
                   <div className="min-w-0">
                     <div className="font-semibold text-foreground truncate">{deviceFile.name}</div>
-                    <div className="text-[11px] mono text-muted-foreground">
+                    <div className="text-2xs mono text-muted-foreground">
                       {(deviceFile.size / (1024 * 1024)).toFixed(2)} MB · PDF Document
                     </div>
                   </div>
@@ -269,14 +269,14 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
 
         {/* Dynamic Contextual Fields tailored to Document Classification */}
         <div className="p-3.5 rounded-lg border border-border/80 bg-muted/20 flex flex-col gap-3">
-          <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+          <div className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
             Document Attributes & Metadata
           </div>
           {renderDynamicFields()}
         </div>
 
         {/* Cryptographic Hash & Zero-Trust Notice */}
-        <div className="p-2.5 rounded-md bg-muted/40 border border-border text-[11px] text-muted-foreground flex items-center gap-2">
+        <div className="p-2.5 rounded-md bg-muted/40 border border-border text-2xs text-muted-foreground flex items-center gap-2">
           <ShieldCheck size={16} className="text-primary shrink-0" />
           <span>
             Document will be cryptographically anchored with SHA-256 and stored in isolated tenant

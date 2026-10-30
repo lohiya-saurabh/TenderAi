@@ -38,7 +38,7 @@ export const CapabilityItemCard: React.FC<CapabilityItemCardProps> = ({
       <div className="flex justify-between items-start flex-wrap gap-2">
         <div className="flex items-center gap-2.5 flex-wrap">
           {typeBadge && (
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-muted text-muted-foreground border border-border">
+            <span className="text-2xs font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-muted text-muted-foreground border border-border">
               {typeBadge}
             </span>
           )}
@@ -59,7 +59,7 @@ export const CapabilityItemCard: React.FC<CapabilityItemCardProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-3 border-t border-border/70">
         {fields.map((f, idx) => (
           <div key={idx} className="flex flex-col gap-1 min-w-0">
-            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+            <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
               {f.label}
             </span>
             <span
@@ -74,14 +74,14 @@ export const CapabilityItemCard: React.FC<CapabilityItemCardProps> = ({
 
         {expiryDate && (
           <div className="flex flex-col gap-1 min-w-0">
-            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+            <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
               Validity / Expiry
             </span>
             <span className="text-xs font-semibold text-foreground">
               {expiryDate}{' '}
               {daysRemaining !== null && (
                 <span
-                  className={`text-[11px] ${daysRemaining <= 30 ? 'text-orange-600 font-bold' : 'text-muted-foreground'}`}
+                  className={`text-2xs ${daysRemaining <= 30 ? 'text-warning font-bold' : 'text-muted-foreground'}`}
                 >
                   ({daysRemaining > 0 ? `${daysRemaining}d left` : 'Expired'})
                 </span>
@@ -93,8 +93,8 @@ export const CapabilityItemCard: React.FC<CapabilityItemCardProps> = ({
 
       {/* Verification Notes / Alert */}
       {item.verificationNotes && (
-        <div className="text-xs text-orange-700 dark:text-orange-400 bg-orange-50/60 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/50 rounded-lg p-2.5 flex items-center gap-2">
-          <AlertTriangle size={14} className="shrink-0 text-orange-600 dark:text-orange-400" />
+        <div className="text-xs text-warning dark:text-warning bg-warning/60 dark:bg-warning/20 border border-warning/30 dark:border-warning/50 rounded-lg p-2.5 flex items-center gap-2">
+          <AlertTriangle size={14} className="shrink-0 text-warning dark:text-warning" />
           <span>{item.verificationNotes}</span>
         </div>
       )}

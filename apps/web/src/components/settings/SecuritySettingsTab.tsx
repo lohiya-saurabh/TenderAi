@@ -27,7 +27,7 @@ export const SecuritySettingsTab: React.FC = () => {
                 Access is signed using RFC 7519 HMAC-SHA256 tokens with timing-safe signature
                 verification.
               </p>
-              <div className="flex items-center gap-2 pt-1 font-mono text-[10px] text-muted-foreground">
+              <div className="flex items-center gap-2 pt-1 font-mono text-2xs text-muted-foreground">
                 <span>Algorithm: HS256</span>
                 <span>•</span>
                 <span>Status: Active</span>
@@ -43,7 +43,7 @@ export const SecuritySettingsTab: React.FC = () => {
                 Every API request executes in an isolated Node.js AsyncLocalStorage fiber with
                 anti-IDOR filters.
               </p>
-              <div className="flex items-center gap-2 pt-1 font-mono text-[10px] text-muted-foreground">
+              <div className="flex items-center gap-2 pt-1 font-mono text-2xs text-muted-foreground">
                 <span>Context: TenantContextHolder</span>
               </div>
             </div>
@@ -61,11 +61,11 @@ export const SecuritySettingsTab: React.FC = () => {
                   <span className="font-semibold text-foreground">
                     Two-Factor Authentication (2FA)
                   </span>
-                  <Badge variant="outline" className="text-[10px]">
+                  <Badge variant="outline" className="text-2xs">
                     Roadmap
                   </Badge>
                 </div>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-2xs text-muted-foreground">
                   Time-based One-Time Password (TOTP) enforcement for administrative role
                   changes.
                 </p>
@@ -74,11 +74,11 @@ export const SecuritySettingsTab: React.FC = () => {
               <div className="p-3 rounded-lg border border-border/80 bg-muted/20 space-y-1">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold text-foreground">Audit Log Export (SIEM)</span>
-                  <Badge variant="outline" className="text-[10px]">
+                  <Badge variant="outline" className="text-2xs">
                     Roadmap
                   </Badge>
                 </div>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-2xs text-muted-foreground">
                   Stream cryptographic audit event logs directly to external security
                   dashboards.
                 </p>

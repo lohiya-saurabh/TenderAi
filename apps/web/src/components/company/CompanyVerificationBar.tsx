@@ -486,7 +486,7 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
                 {isGstVerified ? 'Verified' : 'Unverified'}
               </Badge>
             </div>
-            <p className="text-[11px] mono text-muted-foreground m-0 truncate">
+            <p className="text-2xs mono text-muted-foreground m-0 truncate">
               {company.gstin
                 ? `ID: ${company.gstin}`
                 : 'Validate legal business name & tax standing'}
@@ -509,7 +509,7 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
                 {isMcaVerified ? 'Verified' : 'Unverified'}
               </Badge>
             </div>
-            <p className="text-[11px] mono text-muted-foreground m-0 truncate">
+            <p className="text-2xs mono text-muted-foreground m-0 truncate">
               {company.cin ? `CIN: ${company.cin}` : 'Cross-check RoC jurisdiction & incorporation'}
             </p>
             <Button
@@ -530,7 +530,7 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
                 {isUdyamVerified ? 'Verified' : 'Unverified'}
               </Badge>
             </div>
-            <p className="text-[11px] mono text-muted-foreground m-0 truncate">
+            <p className="text-2xs mono text-muted-foreground m-0 truncate">
               {company.udyamId
                 ? `Udyam: ${company.udyamId}`
                 : 'Unlock statutory EMD exemption & fee waiver'}
@@ -553,7 +553,7 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
                 {isDigiLockerLinked ? 'Connected' : 'Not Linked'}
               </Badge>
             </div>
-            <p className="text-[11px] mono text-muted-foreground m-0 truncate">
+            <p className="text-2xs mono text-muted-foreground m-0 truncate">
               {isDigiLockerLinked
                 ? 'Pulling official signed certificates'
                 : 'Import digitally signed government docs'}
@@ -576,7 +576,7 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
                 Vault
               </Badge>
             </div>
-            <p className="text-[11px] mono text-muted-foreground m-0 truncate">
+            <p className="text-2xs mono text-muted-foreground m-0 truncate">
               Upload certificates and financial documents (PDF)
             </p>
             <Button

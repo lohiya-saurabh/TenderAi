@@ -54,7 +54,7 @@ export const VerificationActionModals: React.FC<VerificationActionModalsProps> =
           </p>
           <div className="p-3 rounded-md bg-muted/40 border border-border">
             <strong className="text-foreground">Certificates automatically pulled into Evidence Vault:</strong>
-            <ul className="mt-1.5 ml-5 text-muted-foreground text-[11px] list-disc space-y-0.5">
+            <ul className="mt-1.5 ml-5 text-muted-foreground text-2xs list-disc space-y-0.5">
               <li>MCA Certificate of Incorporation (with CIN verification)</li>
               <li>GST Registration Certificate (Form REG-06)</li>
               <li>MSME Udyam Registration Certificate</li>
@@ -127,7 +127,7 @@ export const VerificationActionModals: React.FC<VerificationActionModalsProps> =
                 : 'Discrepancy Detected — Flagged for Review'}
             </div>
             {successResult.discrepancies.map((d, i) => (
-              <p key={i} className="text-amber-600 dark:text-amber-400 my-0.5">
+              <p key={i} className="text-warning dark:text-warning my-0.5">
                 • {d}
               </p>
             ))}
@@ -147,7 +147,7 @@ export const VerificationActionModals: React.FC<VerificationActionModalsProps> =
           />
         </div>
 
-        <div className="text-[11px] text-muted-foreground flex items-center gap-2 flex-wrap">
+        <div className="text-2xs text-muted-foreground flex items-center gap-2 flex-wrap">
           <span>Quick fill:</span>
           {activeModal === 'GSTIN' && (
             <button

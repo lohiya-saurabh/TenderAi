@@ -120,7 +120,7 @@ export const IngestedDocumentsSection: React.FC<IngestedDocumentsSectionProps> =
                       >
                         {doc.fileName}
                       </div>
-                      <div className="text-[11px] text-muted-foreground truncate">
+                      <div className="text-2xs text-muted-foreground truncate">
                         {doc.documentType === 'NIT'
                           ? 'Notice Inviting Tender'
                           : doc.documentType === 'TECHNICAL_SPECS'
@@ -135,11 +135,11 @@ export const IngestedDocumentsSection: React.FC<IngestedDocumentsSectionProps> =
                   </div>
 
                   <span
-                    className={`text-[11px] font-semibold px-2 py-0.5 rounded border shrink-0 ${
+                    className={`text-2xs font-semibold px-2 py-0.5 rounded border shrink-0 ${
                       isCompleted
-                        ? 'bg-primary/10 text-[#1C3DA8] dark:text-blue-300 border-transparent'
+                        ? 'bg-primary/10 text-primary dark:text-primary border-transparent'
                         : isProcessing
-                          ? 'bg-[#FFF1E0] text-[#8A4200] dark:bg-orange-500/10 dark:text-orange-300 border-[#F3C48B] animate-pulse'
+                          ? 'bg-warning/10 text-warning dark:bg-warning/10 dark:text-warning border-warning/40 animate-pulse'
                           : 'bg-muted text-muted-foreground border-border'
                     }`}
                   >
@@ -147,7 +147,7 @@ export const IngestedDocumentsSection: React.FC<IngestedDocumentsSectionProps> =
                   </span>
                 </div>
 
-                <div className="pt-3 border-t border-border flex items-center justify-between text-[11px] ">
+                <div className="pt-3 border-t border-border flex items-center justify-between text-2xs ">
                   <span className="text-muted-foreground">{formatFileSize(doc.fileSizeBytes)}</span>
 
                   <div className="flex items-center gap-2">

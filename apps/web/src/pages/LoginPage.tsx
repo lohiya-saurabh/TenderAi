@@ -65,7 +65,7 @@ export const LoginPage: React.FC = () => {
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Back to home</span>
             </Link>
-            <span className="text-[11px] font-mono text-muted-foreground">v2.4 Enterprise</span>
+            <span className="text-2xs font-mono text-muted-foreground">v2.4 Enterprise</span>
           </div>
 
           {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
@@ -134,7 +134,7 @@ export const LoginPage: React.FC = () => {
               </Link>
             </p>
 
-            <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground font-mono">
+            <div className="flex items-center justify-center gap-1.5 text-2xs text-muted-foreground font-mono">
               <ShieldCheck className="w-3.5 h-3.5 text-foreground" />
               <span>Protected by Fiber-Safe Tenant Isolation &amp; RBAC</span>
             </div>

@@ -374,7 +374,7 @@ export const ClauseWorkspacePage: React.FC = () => {
 
         {unreadPages.length > 0 && (
           <div
-            className="flex flex-wrap items-center gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200"
+            className="flex flex-wrap items-center gap-2 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning dark:text-warning"
             role="status"
             data-testid="coverage-banner"
           >
@@ -387,7 +387,7 @@ export const ClauseWorkspacePage: React.FC = () => {
               <button
                 key={`${u.doc.id}-${u.page}`}
                 type="button"
-                className="min-h-6 rounded border border-amber-600/40 px-2 font-medium"
+                className="min-h-6 rounded border border-warning/40 px-2 font-medium"
                 onClick={() => {
                   setViewerOverride({ documentId: u.doc.id, page: u.page });
                   update({ verify: true });

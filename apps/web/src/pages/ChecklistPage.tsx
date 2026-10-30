@@ -88,11 +88,11 @@ export const ChecklistPage: React.FC = () => {
     <div className="flex flex-col gap-[18px]">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="m-0 text-[22px] font-bold">
+          <h1 className="m-0 text-2xl font-bold">
             Documents to submit
             {clauses && ` · ${checklist.ready} of ${checklist.total} ready`}
           </h1>
-          <p className="m-0 mt-1 text-[13.5px] text-muted-foreground">
+          <p className="m-0 mt-1 text-sm text-muted-foreground">
             Built from document-type clauses, grouped by when they are due. Attestation shows only
             what the tender asks for.
           </p>
@@ -107,10 +107,10 @@ export const ChecklistPage: React.FC = () => {
               aria-controls={`panel-${t}`}
               onClick={() => setTab(t)}
               className={cn(
-                'min-h-9 rounded-lg px-3 text-[13px] font-medium',
+                'min-h-9 rounded-lg px-3 text-sm font-medium',
                 tab === t
-                  ? 'bg-[#16191F] text-white dark:bg-white dark:text-[#16191F]'
-                  : 'text-[#3D4452] hover:bg-muted dark:text-white/75',
+                  ? 'bg-foreground text-white dark:bg-white dark:text-foreground'
+                  : 'text-foreground hover:bg-muted dark:text-white/75',
               )}
             >
               {t === 'checklist' ? 'Checklist' : 'Coverage'}
@@ -130,7 +130,7 @@ export const ChecklistPage: React.FC = () => {
         <Card className="overflow-hidden" testId="checklist">
           <div id="panel-checklist" role="tabpanel" aria-label="Checklist">
             {checklist.total === 0 ? (
-              <p className="m-0 p-5 text-[13px] italic text-muted-foreground">
+              <p className="m-0 p-5 text-sm italic text-muted-foreground">
                 No document-type clauses in the analysed pages.
               </p>
             ) : (
@@ -139,7 +139,7 @@ export const ChecklistPage: React.FC = () => {
                   <div
                     className={cn(
                       GRID,
-                      'border-b border-border py-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground',
+                      'border-b border-border py-2 text-2xs font-semibold uppercase tracking-[0.06em] text-muted-foreground',
                     )}
                   >
                     <span>Document</span>
@@ -151,7 +151,7 @@ export const ChecklistPage: React.FC = () => {
                   </div>
                   {checklist.groups.map((g) => (
                     <div key={g.stage} data-testid="checklist-group">
-                      <div className="border-b border-border bg-[#F1F3F6] px-3.5 py-2 text-[12.5px] dark:bg-white/5">
+                      <div className="border-b border-border bg-primary/10 px-3.5 py-2 text-xs dark:bg-white/5">
                         <strong>{g.label}</strong>{' '}
                         <span className="text-muted-foreground">
                           · {g.ready} of {g.rows.length} ready
@@ -176,11 +176,11 @@ export const ChecklistPage: React.FC = () => {
               <h2 className="m-0 text-base font-bold">Coverage · what the AI read</h2>
               <div className="flex flex-wrap gap-3.5 text-xs text-muted-foreground">
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="inline-block h-3 w-3 rounded-[2px] bg-[#E3E6EB] dark:bg-white/20" />
+                  <span className="inline-block h-3 w-3 rounded-[2px] bg-muted dark:bg-white/20" />
                   Analysed
                 </span>
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="inline-block h-3 w-3 rounded-[2px] bg-[#C62828]" />
+                  <span className="inline-block h-3 w-3 rounded-[2px] bg-destructive" />
                   Not analysed
                 </span>
               </div>
@@ -188,7 +188,7 @@ export const ChecklistPage: React.FC = () => {
 
             {failedPages.length > 0 && (
               <div
-                className="rounded-lg border border-[#EBD27A] bg-[#FFF7D6] px-3 py-2.5 text-[13px] text-[#4A3500] dark:bg-amber-500/10 dark:text-amber-200"
+                className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2.5 text-sm text-warning dark:bg-warning/10 dark:text-warning"
                 data-testid="coverage-warning"
               >
                 TenderPulse could not read {failedPages.length} page
@@ -208,7 +208,7 @@ export const ChecklistPage: React.FC = () => {
             )}
 
             {!coverage || coverage.documents.length === 0 ? (
-              <p className="m-0 text-[13px] italic text-muted-foreground">
+              <p className="m-0 text-sm italic text-muted-foreground">
                 No coverage recorded for this bid.
               </p>
             ) : (
@@ -217,10 +217,10 @@ export const ChecklistPage: React.FC = () => {
                 return (
                   <div
                     key={d.id}
-                    className="flex flex-wrap items-start gap-4 border-t border-[#EEF0F3] pt-2.5 dark:border-white/10"
+                    className="flex flex-wrap items-start gap-4 border-t border-border pt-2.5 dark:border-white/10"
                   >
                     <div className="flex flex-[0_0_260px] flex-col gap-0.5">
-                      <strong className="text-[13px] break-words">{d.name}</strong>
+                      <strong className="text-sm break-words">{d.name}</strong>
                       <span className="text-xs text-muted-foreground">
                         {d.pageCount != null ? `${d.pageCount} pages · ` : ''}
                         {d.failedPages.length > 0
@@ -240,7 +240,7 @@ export const ChecklistPage: React.FC = () => {
                             title={`p.${i + 1}${failed.has(i + 1) ? ' · not analysed' : ''}`}
                             className={cn(
                               'h-3 w-3 rounded-[2px]',
-                              failed.has(i + 1) ? 'bg-[#C62828]' : 'bg-[#E3E6EB] dark:bg-white/20',
+                              failed.has(i + 1) ? 'bg-destructive' : 'bg-muted dark:bg-white/20',
                             )}
                           />
                         ))}
@@ -312,7 +312,7 @@ const ChecklistRow: React.FC<{ bidId: string; clause: Clause }> = ({ bidId, clau
     <div
       className={cn(
         GRID,
-        'items-start border-b border-[#EEF0F3] py-2.5 text-[13px] dark:border-white/10',
+        'items-start border-b border-border py-2.5 text-sm dark:border-white/10',
       )}
       data-testid="checklist-row"
     >

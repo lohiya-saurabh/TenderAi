@@ -199,7 +199,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
 
           {/* Filter Pills */}
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mr-1">
+            <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider mr-1">
               Filter:
             </span>
             {(['ALL', 'VERIFIED', 'EXPIRING_SOON', 'EXPIRED', 'NEEDS_REVIEW'] as const).map(

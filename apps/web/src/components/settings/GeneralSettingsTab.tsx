@@ -49,7 +49,7 @@ export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({
                 disabled
                 className="bg-muted/30 font-medium text-foreground cursor-not-allowed border-border"
               />
-              <span className="text-[10px] text-muted-foreground">
+              <span className="text-2xs text-muted-foreground">
                 SaaS organization tenant boundary identifier
               </span>
             </div>
@@ -62,7 +62,7 @@ export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({
                 disabled
                 className="bg-muted/30 font-mono text-xs text-foreground cursor-not-allowed border-border"
               />
-              <span className="text-[10px] text-muted-foreground">
+              <span className="text-2xs text-muted-foreground">
                 Cryptographically bound to your JWT session token claims
               </span>
             </div>
@@ -97,7 +97,7 @@ export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({
                         <span className="truncate">{company.legalName}</span>
                       </div>
                       {company.gstin && (
-                        <p className="text-[10px] font-mono text-muted-foreground">
+                        <p className="text-2xs font-mono text-muted-foreground">
                           GSTIN: {company.gstin}
                         </p>
                       )}
@@ -117,23 +117,23 @@ export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
             <div className="p-3 rounded-lg bg-muted/30 border border-border/60 space-y-1">
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+              <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Procurement Standard &amp; Region
               </span>
               <p className="font-medium text-foreground">
                 India Public Procurement (GeM / CPPP)
               </p>
-              <p className="text-[10px] text-muted-foreground">
+              <p className="text-2xs text-muted-foreground">
                 INR Currency (₹ Lakhs / Crores)
               </p>
             </div>
 
             <div className="p-3 rounded-lg bg-muted/30 border border-border/60 space-y-1">
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+              <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Data Residency &amp; Compliance
               </span>
               <p className="font-medium text-foreground">AWS ap-south-1 (Mumbai)</p>
-              <p className="text-[10px] text-muted-foreground">
+              <p className="text-2xs text-muted-foreground">
                 DPDP Act 2023 Compliant Storage
               </p>
             </div>
@@ -166,7 +166,7 @@ export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({
             >
               <div className="space-y-1.5 pr-2">
                 <div className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  <Moon className="h-4 w-4 text-orange-400" />
+                  <Moon className="h-4 w-4 text-warning" />
                   <span>Executive Dark (Default)</span>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">
@@ -193,7 +193,7 @@ export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({
             >
               <div className="space-y-1.5 pr-2">
                 <div className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  <Sun className="h-4 w-4 text-amber-500" />
+                  <Sun className="h-4 w-4 text-warning" />
                   <span>Crisp Daylight Light</span>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">

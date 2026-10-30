@@ -152,7 +152,7 @@ export const ClausePanel: React.FC<ClausePanelProps> = ({
             {c.conflicts.map((cf) => (
               <div key={cf.id} className="space-y-2">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-destructive">
+                  <span className="text-2xs font-semibold uppercase tracking-wider text-destructive">
                     Conflict · {cf.attribute}
                   </span>
                   <Chip tone={cf.resolution === 'UNRESOLVED' ? 'bad' : 'ok'}>
@@ -168,7 +168,7 @@ export const ClausePanel: React.FC<ClausePanelProps> = ({
                       className={`space-y-1 rounded-md border p-2 ${v.clauseId === c.id ? 'border-foreground' : 'border-border'}`}
                     >
                       <div className="text-sm font-semibold tabular-nums">{v.display}</div>
-                      <div className="font-mono text-[11px] text-muted-foreground">
+                      <div className="font-mono text-2xs text-muted-foreground">
                         {v.clauseRef ?? 'No clause no.'} · p.{v.page}
                       </div>
                       <div className="font-serif text-xs text-foreground/80">“{v.quote}”</div>
@@ -176,8 +176,8 @@ export const ClausePanel: React.FC<ClausePanelProps> = ({
                   ))}
                 </div>
                 {cf.aiPrecedenceNote && (
-                  <div className="rounded-md bg-violet-500/10 p-2 text-xs">
-                    <div className="text-[10px] font-semibold uppercase tracking-wider text-violet-700 dark:text-violet-300">
+                  <div className="rounded-md bg-primary/10 p-2 text-xs">
+                    <div className="text-2xs font-semibold uppercase tracking-wider text-primary dark:text-primary">
                       AI suggestion — not tender text
                     </div>
                     {cf.aiPrecedenceNote}
@@ -190,7 +190,7 @@ export const ClausePanel: React.FC<ClausePanelProps> = ({
 
         <section aria-label="Source text" className="space-y-2">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
               Source text · verbatim
             </span>
             <Chip tone={quoteMissing ? 'bad' : c.quoteCheck === 'NO_PAGE_TEXT' ? 'neutral' : 'ok'}>
@@ -203,7 +203,7 @@ export const ClausePanel: React.FC<ClausePanelProps> = ({
             </p>
           )}
           <blockquote
-            className={`m-0 rounded-lg border px-[11px] py-[9px] font-serif text-[13.5px] leading-[1.5] text-[#22262E] dark:text-white/85 ${sourceOpened ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-500/10' : 'border-[var(--quote-border)] bg-[var(--quote-bg)]'}`}
+            className={`m-0 rounded-lg border px-[11px] py-[9px] font-serif text-sm leading-[1.5] text-foreground dark:text-white/85 ${sourceOpened ? 'border-warning/60 bg-warning/10 dark:bg-warning/10' : 'border-[var(--quote-border)] bg-[var(--quote-bg)]'}`}
             data-testid="panel-quote"
           >
             {c.quote}
@@ -234,7 +234,7 @@ export const ClausePanel: React.FC<ClausePanelProps> = ({
 
         {c.summary && (
           <section aria-label="AI summary" className="space-y-1">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
               AI summary
             </span>
             <p className="text-sm text-foreground">{c.summary}</p>
@@ -250,7 +250,7 @@ export const ClausePanel: React.FC<ClausePanelProps> = ({
           />
         ) : (
           <section aria-label="Requirement details">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
               Requirement details
             </span>
             {details.length > 0 ? (
@@ -279,7 +279,7 @@ export const ClausePanel: React.FC<ClausePanelProps> = ({
         )}
 
         <section aria-label="Activity" className="space-y-1">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <span className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
             Activity
           </span>
           <ul className="space-y-0.5 text-xs text-muted-foreground">
@@ -357,7 +357,7 @@ export const ClausePanel: React.FC<ClausePanelProps> = ({
             </div>
             {confirmLocked && c.review.status !== 'CONFIRMED' && (
               <p
-                className="text-xs text-orange-700 dark:text-orange-300"
+                className="text-xs text-warning dark:text-warning"
                 data-testid="confirm-hint"
               >
                 Open the source to confirm: this clause{' '}
@@ -454,7 +454,7 @@ const CorrectForm: React.FC<{
   const field = 'h-8 w-full rounded-md border border-input bg-background px-2 text-sm';
   return (
     <section aria-label="Correct the clause" className="space-y-2" data-testid="correct-form">
-      <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <span className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
         Correct the AI reading
       </span>
       <label className="block text-xs">

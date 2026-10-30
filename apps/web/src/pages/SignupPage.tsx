@@ -84,7 +84,7 @@ export const SignupPage: React.FC = () => {
                 <span className="font-semibold text-foreground font-mono">{selectedPlan}</span>
               </div>
             </div>
-            <Link to="/pricing" className="text-[11px] text-primary hover:underline">
+            <Link to="/pricing" className="text-2xs text-primary hover:underline">
               Change Plan
             </Link>
           </div>
@@ -153,7 +153,7 @@ export const SignupPage: React.FC = () => {
             </div>
 
             <div className="pt-2 border-t border-border/60">
-              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+              <p className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
                 Workspace &amp; Company Setup
               </p>
 
@@ -230,7 +230,7 @@ export const SignupPage: React.FC = () => {
                 Sign in to workspace
               </Link>
             </p>
-            <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground font-mono">
+            <div className="flex items-center justify-center gap-1.5 text-2xs text-muted-foreground font-mono">
               <ShieldCheck className="h-3.5 w-3.5 text-primary" />
               <span>Isolated Tenant DB &bull; DPDP Act 2023 Compliant</span>
             </div>

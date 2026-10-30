@@ -79,18 +79,18 @@ export const BillingSettingsTab: React.FC<BillingSettingsTabProps> = ({
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="p-3.5 rounded-lg bg-muted/40 border border-border space-y-1">
-              <span className="text-[10px] text-muted-foreground uppercase font-semibold">
+              <span className="text-2xs text-muted-foreground uppercase font-semibold">
                 Current Tier
               </span>
               <div className="flex items-center gap-2">
                 <span className="text-base font-bold text-foreground">
                   {subscription?.planName || 'Growth Plan'}
                 </span>
-                <Badge variant="outline" className="text-[10px] font-mono">
+                <Badge variant="outline" className="text-2xs font-mono">
                   {subscription?.planTier || 'GROWTH'}
                 </Badge>
               </div>
-              <p className="text-[10px] text-muted-foreground">
+              <p className="text-2xs text-muted-foreground">
                 {subscription?.billingInterval === 'ANNUAL'
                   ? 'Billed Annually'
                   : 'Billed Monthly'}
@@ -98,7 +98,7 @@ export const BillingSettingsTab: React.FC<BillingSettingsTabProps> = ({
             </div>
 
             <div className="p-3.5 rounded-lg bg-muted/40 border border-border space-y-1">
-              <span className="text-[10px] text-muted-foreground uppercase font-semibold">
+              <span className="text-2xs text-muted-foreground uppercase font-semibold">
                 Price / Interval
               </span>
               <p className="text-base font-bold text-foreground">
@@ -106,11 +106,11 @@ export const BillingSettingsTab: React.FC<BillingSettingsTabProps> = ({
                   ? `₹${subscription.priceInr.toLocaleString('en-IN')} / mo`
                   : 'Custom Enterprise'}
               </p>
-              <p className="text-[10px] text-muted-foreground">Provider-Agnostic Invoicing</p>
+              <p className="text-2xs text-muted-foreground">Provider-Agnostic Invoicing</p>
             </div>
 
             <div className="p-3.5 rounded-lg bg-muted/40 border border-border space-y-1">
-              <span className="text-[10px] text-muted-foreground uppercase font-semibold">
+              <span className="text-2xs text-muted-foreground uppercase font-semibold">
                 Billing Period
               </span>
               <p className="text-xs font-mono font-medium text-foreground">
@@ -122,7 +122,7 @@ export const BillingSettingsTab: React.FC<BillingSettingsTabProps> = ({
                   ? new Date(subscription.currentPeriodEnd).toLocaleDateString()
                   : 'Renewal Active'}
               </p>
-              <p className="text-[10px] text-muted-foreground font-medium">
+              <p className="text-2xs text-muted-foreground font-medium">
                 Auto-renewal enabled
               </p>
             </div>
@@ -136,7 +136,7 @@ export const BillingSettingsTab: React.FC<BillingSettingsTabProps> = ({
               <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">
                 Current Monthly Usage &amp; Quotas
               </h4>
-              <span className="text-[10px] text-muted-foreground font-mono">
+              <span className="text-2xs text-muted-foreground font-mono">
                 Billing Cycle: {usage?.periodKey || new Date().toISOString().slice(0, 7)}
               </span>
             </div>
@@ -272,7 +272,7 @@ export const BillingSettingsTab: React.FC<BillingSettingsTabProps> = ({
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-xs text-foreground">{p.name}</span>
                       {isCurrent && (
-                        <Badge variant="default" className="text-[9px]">
+                        <Badge variant="default" className="text-2xs">
                           Current
                         </Badge>
                       )}
@@ -283,13 +283,13 @@ export const BillingSettingsTab: React.FC<BillingSettingsTabProps> = ({
                         ? `₹${p.monthlyPriceInr.toLocaleString('en-IN')}`
                         : 'Custom'}
                       {p.monthlyPriceInr !== null && (
-                        <span className="text-[10px] text-muted-foreground font-normal">
+                        <span className="text-2xs text-muted-foreground font-normal">
                           /mo
                         </span>
                       )}
                     </p>
 
-                    <div className="text-[10px] text-muted-foreground space-y-1 pt-1">
+                    <div className="text-2xs text-muted-foreground space-y-1 pt-1">
                       <p>
                         &bull;{' '}
                         {p.entitlements['companies.max'] >= 9999

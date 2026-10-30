@@ -188,7 +188,7 @@ export const ProfilePage: React.FC = () => {
           </div>
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <span className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Tenant:
               </span>
               <span className="text-base sm:text-lg font-semibold text-foreground tracking-tight">
@@ -196,7 +196,7 @@ export const ProfilePage: React.FC = () => {
               </span>
               <Badge
                 variant="outline"
-                className="text-[10px] font-mono border-primary/30 text-primary bg-primary/5"
+                className="text-2xs font-mono border-primary/30 text-primary bg-primary/5"
               >
                 Multi-Tenant Isolated
               </Badge>
@@ -294,12 +294,12 @@ export const ProfilePage: React.FC = () => {
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <span className="text-base font-semibold text-foreground">{displayName}</span>
-                <Badge variant="secondary" className="text-[10px] uppercase font-semibold">
+                <Badge variant="secondary" className="text-2xs uppercase font-semibold">
                   {displayRole.replace(/_/g, ' ')}
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground">{displayEmail}</p>
-              <p className="text-[10px] text-muted-foreground font-mono">
+              <p className="text-2xs text-muted-foreground font-mono">
                 Avatar initials derived from verified name
               </p>
             </div>
@@ -340,7 +340,7 @@ export const ProfilePage: React.FC = () => {
                   disabled
                   className="bg-muted text-muted-foreground cursor-not-allowed font-mono text-xs"
                 />
-                <span className="text-[10px] text-muted-foreground">
+                <span className="text-2xs text-muted-foreground">
                   Email address is bound to your SaaS tenant authentication identity
                 </span>
               </div>
@@ -368,28 +368,28 @@ export const ProfilePage: React.FC = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
               <div className="p-3 rounded-lg bg-muted/30 border border-border/60 space-y-1">
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Full Name
                 </span>
                 <p className="font-medium text-foreground">{displayName}</p>
               </div>
 
               <div className="p-3 rounded-lg bg-muted/30 border border-border/60 space-y-1">
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Email Address
                 </span>
                 <p className="font-medium text-foreground">{displayEmail}</p>
               </div>
 
               <div className="p-3 rounded-lg bg-muted/30 border border-border/60 space-y-1">
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Phone Number
                 </span>
                 <p className="font-medium text-foreground">{profile?.phone || 'Not provided'}</p>
               </div>
 
               <div className="p-3 rounded-lg bg-muted/30 border border-border/60 space-y-1">
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Assigned Workspace Role
                 </span>
                 <p className="font-medium text-foreground">{displayRole.replace(/_/g, ' ')}</p>
@@ -492,7 +492,7 @@ export const ProfilePage: React.FC = () => {
                 <ShieldCheck className="h-4 w-4 text-foreground" />
                 <span>Password encrypted with bcrypt standard</span>
               </div>
-              <Badge variant="outline" className="text-[10px]">
+              <Badge variant="outline" className="text-2xs">
                 Secure
               </Badge>
             </div>
@@ -511,7 +511,7 @@ export const ProfilePage: React.FC = () => {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
             <div className="p-3 rounded-lg bg-muted/30 border border-border/60 space-y-1">
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+              <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Tenant Workspace
               </span>
               <p className="font-medium text-foreground">
@@ -520,7 +520,7 @@ export const ProfilePage: React.FC = () => {
             </div>
 
             <div className="p-3 rounded-lg bg-muted/30 border border-border/60 space-y-1">
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+              <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Organization Tenant ID
               </span>
               <p className="font-mono text-foreground">
@@ -535,7 +535,7 @@ export const ProfilePage: React.FC = () => {
                 <Layers className="h-3.5 w-3.5 text-primary" />
                 Active Permissions List
               </span>
-              <Badge variant="outline" className="text-[10px] font-mono">
+              <Badge variant="outline" className="text-2xs font-mono">
                 {(profile?.permissions || user?.permissions)?.length || 0} Scopes
               </Badge>
             </div>
@@ -544,7 +544,7 @@ export const ProfilePage: React.FC = () => {
               {(profile?.permissions || user?.permissions)?.map((perm) => (
                 <span
                   key={perm}
-                  className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono bg-primary/10 text-primary border border-primary/20"
+                  className="inline-flex items-center px-2 py-0.5 rounded text-2xs font-mono bg-primary/10 text-primary border border-primary/20"
                 >
                   {perm}
                 </span>
@@ -571,7 +571,7 @@ export const ProfilePage: React.FC = () => {
                 <ShieldCheck className="h-4 w-4" />
                 <span>HMAC-SHA256</span>
               </div>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-2xs text-muted-foreground">
                 Signed cryptographic access token with continuous validity
               </p>
             </div>
@@ -581,7 +581,7 @@ export const ProfilePage: React.FC = () => {
                 <Lock className="h-4 w-4" />
                 <span>Tenant Gated</span>
               </div>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-2xs text-muted-foreground">
                 Fiber-safe anti-IDOR isolation applied on every API query
               </p>
             </div>
@@ -591,7 +591,7 @@ export const ProfilePage: React.FC = () => {
                 <KeyRound className="h-4 w-4 text-muted-foreground" />
                 <span>OCC Protected</span>
               </div>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-2xs text-muted-foreground">
                 Optimistic concurrency control across compliance reviews
               </p>
             </div>

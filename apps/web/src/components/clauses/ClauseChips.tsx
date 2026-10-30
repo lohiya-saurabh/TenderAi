@@ -9,16 +9,16 @@ export type ChipTone =
 // Design tones: confirmed is blue, needs-review orange, bad deep red; red/green never
 // carry meaning on their own.
 const TONE: Record<ChipTone, string> = {
-  neutral: 'bg-[#EEF0F3] text-[#3D4452] border-transparent dark:bg-white/10 dark:text-white/80',
-  outline: 'bg-card text-[#2B313C] border-[#C9D0DA] dark:text-white/85 dark:border-white/25',
-  strong: 'bg-[#16191F] text-white border-transparent dark:bg-white dark:text-[#16191F]',
-  bad: 'bg-[#FDECEC] text-[#9F1C1C] border-[#F4BABA] dark:bg-red-500/10 dark:text-red-300 dark:border-red-500/40',
-  warn: 'bg-[#FFF7D6] text-[#6E4B00] border-[#EBD27A] dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/40',
-  ok: 'bg-[#E6EEFF] text-[#1C3DA8] border-transparent dark:bg-blue-500/15 dark:text-blue-300',
+  neutral: 'bg-muted text-foreground border-transparent dark:bg-white/10 dark:text-white/80',
+  outline: 'bg-card text-foreground border-primary/40 dark:text-white/85 dark:border-white/25',
+  strong: 'bg-foreground text-white border-transparent dark:bg-white dark:text-foreground',
+  bad: 'bg-destructive/10 text-destructive border-destructive/40 dark:bg-destructive/10 dark:text-destructive dark:border-destructive/40',
+  warn: 'bg-warning/10 text-warning border-warning/40 dark:bg-warning/10 dark:text-warning dark:border-warning/40',
+  ok: 'bg-primary/10 text-primary border-transparent dark:bg-primary/15 dark:text-primary',
   review:
-    'bg-[#FFF1E0] text-[#8A4200] border-[#F3C48B] dark:bg-orange-500/10 dark:text-orange-300 dark:border-orange-500/40',
-  amend: 'bg-[#E2F4F1] text-[#0B5F58] border-transparent dark:bg-teal-500/15 dark:text-teal-300',
-  fix: 'bg-[#F1E9FF] text-[#5A2CB0] border-transparent dark:bg-violet-500/15 dark:text-violet-300',
+    'bg-warning/10 text-warning border-warning/40 dark:bg-warning/10 dark:text-warning dark:border-warning/40',
+  amend: 'bg-success/10 text-success border-transparent dark:bg-success/15 dark:text-success',
+  fix: 'bg-primary/10 text-primary border-transparent dark:bg-primary/15 dark:text-primary',
 };
 
 /** Text chip; colour is never the only carrier of meaning. */

@@ -166,7 +166,7 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
             {isFailed ? (
-              <CircleAlert size={22} className="text-red-500" />
+              <CircleAlert size={22} className="text-destructive" />
             ) : isComplete ? (
               <CheckCircle2 size={22} className="text-primary" />
             ) : (

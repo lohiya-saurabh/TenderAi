@@ -104,11 +104,11 @@ export const CompanyReadinessCard: React.FC = () => {
             >
               <Badge
                 variant="outline"
-                className="bg-muted text-foreground border-border text-[11px] font-medium flex items-center gap-1 cursor-pointer"
+                className="bg-muted text-foreground border-border text-2xs font-medium flex items-center gap-1 cursor-pointer"
               >
                 <CheckCircle2 className="h-3 w-3" />v{activeVersion.version} Active
               </Badge>
-              <span className="text-[11px] text-muted-foreground group-hover:text-foreground transition-colors hidden sm:inline font-mono">
+              <span className="text-2xs text-muted-foreground group-hover:text-foreground transition-colors hidden sm:inline font-mono">
                 {activePayload?.company_name}
               </span>
             </Link>
@@ -140,7 +140,7 @@ export const CompanyReadinessCard: React.FC = () => {
               {/* Pillar 1: Registrations */}
               <div className="p-3.5 rounded-lg border border-border/60 bg-muted/20 flex flex-col justify-between">
                 <div className="flex items-center justify-between text-muted-foreground mb-1.5">
-                  <span className="text-[11px] font-medium tracking-wide uppercase">
+                  <span className="text-2xs font-medium tracking-wide uppercase">
                     Registrations
                   </span>
                   <ShieldCheck className="h-4 w-4 text-primary/80" />
@@ -152,7 +152,7 @@ export const CompanyReadinessCard: React.FC = () => {
                       Active
                     </span>
                   </div>
-                  <div className="text-[11px] text-foreground/80 font-medium mt-0.5 flex items-center gap-1">
+                  <div className="text-2xs text-foreground/80 font-medium mt-0.5 flex items-center gap-1">
                     <CheckCircle2 className="h-3 w-3" />
                     GSTIN, PAN, Udyam, GeM
                   </div>
@@ -162,7 +162,7 @@ export const CompanyReadinessCard: React.FC = () => {
               {/* Pillar 2: 3-Year Avg Turnover */}
               <div className="p-3.5 rounded-lg border border-border/60 bg-muted/20 flex flex-col justify-between">
                 <div className="flex items-center justify-between text-muted-foreground mb-1.5">
-                  <span className="text-[11px] font-medium tracking-wide uppercase">
+                  <span className="text-2xs font-medium tracking-wide uppercase">
                     3-Yr Avg Turnover
                   </span>
                   <TrendingUp className="h-4 w-4 text-primary/80" />
@@ -172,7 +172,7 @@ export const CompanyReadinessCard: React.FC = () => {
                     ₹{avgTurnover.toFixed(1)}{' '}
                     <span className="text-xs font-normal text-muted-foreground font-sans">Cr</span>
                   </div>
-                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                  <div className="text-2xs text-muted-foreground mt-0.5">
                     {turnoverRecords.length} FYs CA Audited (UDIN)
                   </div>
                 </div>
@@ -181,7 +181,7 @@ export const CompanyReadinessCard: React.FC = () => {
               {/* Pillar 3: Past Qualifying Works */}
               <div className="p-3.5 rounded-lg border border-border/60 bg-muted/20 flex flex-col justify-between">
                 <div className="flex items-center justify-between text-muted-foreground mb-1.5">
-                  <span className="text-[11px] font-medium tracking-wide uppercase">
+                  <span className="text-2xs font-medium tracking-wide uppercase">
                     7-Yr Experience
                   </span>
                   <FileCheck2 className="h-4 w-4 text-primary/80" />
@@ -193,7 +193,7 @@ export const CompanyReadinessCard: React.FC = () => {
                       Work Orders
                     </span>
                   </div>
-                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                  <div className="text-2xs text-muted-foreground mt-0.5">
                     Max: ₹{largestProject.toFixed(1)} Cr EPC Project
                   </div>
                 </div>
@@ -202,7 +202,7 @@ export const CompanyReadinessCard: React.FC = () => {
               {/* Pillar 4: Certifications & OEMs */}
               <div className="p-3.5 rounded-lg border border-border/60 bg-muted/20 flex flex-col justify-between">
                 <div className="flex items-center justify-between text-muted-foreground mb-1.5">
-                  <span className="text-[11px] font-medium tracking-wide uppercase">
+                  <span className="text-2xs font-medium tracking-wide uppercase">
                     ISO &amp; OEM Authorizations
                   </span>
                   <Award className="h-4 w-4 text-primary/80" />
@@ -214,7 +214,7 @@ export const CompanyReadinessCard: React.FC = () => {
                       Credentials
                     </span>
                   </div>
-                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                  <div className="text-2xs text-muted-foreground mt-0.5">
                     {certCount} ISO/CMMI • {oemCount} OEM MAFs
                   </div>
                 </div>
@@ -223,10 +223,10 @@ export const CompanyReadinessCard: React.FC = () => {
 
             {/* Expiry Warning Callout if urgent */}
             {urgentExpiring.length > 0 && (
-              <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 flex items-start gap-3">
-                <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+              <div className="p-3 rounded-lg border border-warning/30 bg-warning/10 flex items-start gap-3">
+                <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
                 <div className="flex flex-col gap-1 text-xs">
-                  <span className="font-semibold text-amber-200">
+                  <span className="font-semibold text-warning">
                     Certificate Expiry Watch ({urgentExpiring.length} item
                     {urgentExpiring.length > 1 ? 's' : ''})
                   </span>
@@ -234,10 +234,10 @@ export const CompanyReadinessCard: React.FC = () => {
                     {urgentExpiring.map((cert) => (
                       <div
                         key={cert.entryId}
-                        className="flex items-center justify-between gap-2 text-[11px]"
+                        className="flex items-center justify-between gap-2 text-2xs"
                       >
-                        <span className="text-amber-300 font-medium">{cert.name}</span>
-                        <span className="text-amber-400 font-mono">
+                        <span className="text-warning font-medium">{cert.name}</span>
+                        <span className="text-warning font-mono">
                           {cert.isExpired ? 'EXPIRED' : `Expires in ${cert.daysRemaining} days`}
                         </span>
                       </div>
@@ -249,13 +249,13 @@ export const CompanyReadinessCard: React.FC = () => {
 
             {/* Footer Transparency Guarantee */}
             <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-border/40">
-              <span className="flex items-center gap-1.5 text-[11px]">
+              <span className="flex items-center gap-1.5 text-2xs">
                 <Layers className="h-3.5 w-3.5 text-primary/80" />
                 Evaluated deterministically against all incoming tender requirements
               </span>
               <Link
                 to="/company-profile"
-                className="inline-flex items-center gap-1 text-primary hover:text-primary/80 font-medium text-[11px] transition-colors"
+                className="inline-flex items-center gap-1 text-primary hover:text-primary/80 font-medium text-2xs transition-colors"
               >
                 View Full Dossier
                 <ArrowUpRight className="h-3.5 w-3.5" />

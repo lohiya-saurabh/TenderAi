@@ -33,11 +33,11 @@ export const AuditHistoryPage: React.FC = () => {
       {/* 2. Header memo */}
       <div className="border-b border-border pb-4">
         <div className="flex items-center gap-2.5 mb-1.5">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] font-mono font-bold tracking-wider uppercase bg-primary/10 text-primary border border-primary/20">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-2xs font-mono font-bold tracking-wider uppercase bg-primary/10 text-primary border border-primary/20">
             <History className="w-3 h-3" />
             Statutory Audit Trail
           </span>
-          <span className="inline-flex items-center gap-1 text-[11px] font-mono text-muted-foreground">
+          <span className="inline-flex items-center gap-1 text-2xs font-mono text-muted-foreground">
             <ShieldCheck className="w-3 h-3 text-foreground" />
             Append-Only Verification Log
           </span>

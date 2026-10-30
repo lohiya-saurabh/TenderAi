@@ -180,7 +180,7 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
               }`}
             >
               <span>Annual Billing</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-600 dark:text-orange-400 font-mono border border-orange-500/25">
+              <span className="text-2xs px-1.5 py-0.5 rounded bg-warning/15 text-warning dark:text-warning font-mono border border-warning/25">
                 SAVE 20%
               </span>
             </button>
@@ -215,7 +215,7 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
             >
               {isHighlighted && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
-                  <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wider shadow-sm">
+                  <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-primary text-primary-foreground text-2xs font-bold uppercase tracking-wider shadow-sm">
                     <Sparkles className="h-3 w-3" />
                     <span>Most Popular</span>
                   </span>
@@ -224,7 +224,7 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
 
               {isBusiness && !isHighlighted && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-muted border border-border text-foreground text-[10px] font-semibold uppercase tracking-wider">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-muted border border-border text-foreground text-2xs font-semibold uppercase tracking-wider">
                     High Volume
                   </span>
                 </div>
@@ -234,7 +234,7 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
                 <div className="flex items-center justify-between">
                   <Badge
                     variant={isHighlighted ? 'default' : 'outline'}
-                    className="text-[10px] font-mono"
+                    className="text-2xs font-mono"
                   >
                     {plan.tier}
                   </Badge>
@@ -257,15 +257,15 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
                         <span className="text-xs text-muted-foreground font-medium">/ month</span>
                       </div>
                       {isAnnual && price > 0 ? (
-                        <p className="text-[10px] text-muted-foreground font-mono mt-0.5">
+                        <p className="text-2xs text-muted-foreground font-mono mt-0.5">
                           Billed annually (₹{(price * 12).toLocaleString('en-IN')} / yr)
                         </p>
                       ) : price === 0 ? (
-                        <p className="text-[10px] text-muted-foreground font-mono mt-0.5">
+                        <p className="text-2xs text-muted-foreground font-mono mt-0.5">
                           Free forever &bull; No card required
                         </p>
                       ) : (
-                        <p className="text-[10px] text-muted-foreground font-mono mt-0.5">
+                        <p className="text-2xs text-muted-foreground font-mono mt-0.5">
                           Billed monthly
                         </p>
                       )}
@@ -275,7 +275,7 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
                       <span className="text-2xl sm:text-3xl font-extrabold text-foreground">
                         Custom
                       </span>
-                      <p className="text-[10px] text-muted-foreground font-mono mt-0.5">
+                      <p className="text-2xs text-muted-foreground font-mono mt-0.5">
                         Tailored enterprise contract
                       </p>
                     </div>
@@ -291,7 +291,7 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
                       <Building2 className="h-3.5 w-3.5 text-primary shrink-0" />
                       <span>Companies</span>
                     </span>
-                    <span className="font-semibold text-foreground font-mono text-[11px]">
+                    <span className="font-semibold text-foreground font-mono text-2xs">
                       {plan.entitlements['companies.max'] >= 9999
                         ? 'Unlimited'
                         : `${plan.entitlements['companies.max']} ${
@@ -305,7 +305,7 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
                       <Users className="h-3.5 w-3.5 text-primary shrink-0" />
                       <span>Team Seats</span>
                     </span>
-                    <span className="font-semibold text-foreground font-mono text-[11px]">
+                    <span className="font-semibold text-foreground font-mono text-2xs">
                       {plan.entitlements['users.max'] >= 9999
                         ? 'Unlimited'
                         : `${plan.entitlements['users.max']} Users`}
@@ -317,7 +317,7 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
                       <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
                       <span>Analyses / mo</span>
                     </span>
-                    <span className="font-semibold text-foreground font-mono text-[11px]">
+                    <span className="font-semibold text-foreground font-mono text-2xs">
                       {plan.entitlements['tender_analyses.monthly'] >= 9999
                         ? 'Unlimited'
                         : `${plan.entitlements['tender_analyses.monthly']} / mo`}
@@ -329,7 +329,7 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
                       <HardDrive className="h-3.5 w-3.5 text-primary shrink-0" />
                       <span>Evidence Vault</span>
                     </span>
-                    <span className="font-semibold text-foreground font-mono text-[11px]">
+                    <span className="font-semibold text-foreground font-mono text-2xs">
                       {plan.entitlements['evidence_storage.mb'] >= 1024
                         ? `${(plan.entitlements['evidence_storage.mb'] / 1024).toFixed(0)} GB`
                         : `${plan.entitlements['evidence_storage.mb']} MB`}
@@ -339,14 +339,14 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
 
                 {/* Features List */}
                 <div className="space-y-2 pt-3 border-t border-border/60">
-                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  <p className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
                     Key Capabilities
                   </p>
                   <ul className="space-y-1.5 text-xs text-muted-foreground">
                     {plan.features.map((feat, idx) => (
                       <li key={idx} className="flex items-start gap-2">
                         <Check className="h-3.5 w-3.5 text-foreground shrink-0 mt-0.5" />
-                        <span className="text-[11px] leading-snug">{feat}</span>
+                        <span className="text-2xs leading-snug">{feat}</span>
                       </li>
                     ))}
                   </ul>

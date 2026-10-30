@@ -76,11 +76,11 @@ export const CreateBidPage: React.FC = () => {
       {/* 2. Header memo */}
       <div className="border-b border-border pb-4">
         <div className="flex items-center gap-2.5 mb-1.5">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] font-mono font-bold tracking-wider uppercase bg-primary/10 text-primary border border-primary/20">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-2xs font-mono font-bold tracking-wider uppercase bg-primary/10 text-primary border border-primary/20">
             <FileSpreadsheet className="w-3 h-3" />
             Tender Intake Protocol
           </span>
-          <span className="inline-flex items-center gap-1 text-[11px] font-mono text-muted-foreground">
+          <span className="inline-flex items-center gap-1 text-2xs font-mono text-muted-foreground">
             <ShieldCheck className="w-3 h-3 text-foreground" />
             Isolated Tenant Workspace
           </span>
@@ -120,7 +120,7 @@ export const CreateBidPage: React.FC = () => {
               ))}
             </select>
           </div>
-          <span className="text-[11px] text-muted-foreground">
+          <span className="text-2xs text-muted-foreground">
             This tender will be evaluated strictly against this company's pinned capability profile
             and evidence vault.
           </span>
@@ -193,7 +193,7 @@ export const CreateBidPage: React.FC = () => {
                 className="w-full pl-8 pr-3.5 py-2.5 bg-background border border-border rounded-lg font-mono text-sm text-foreground font-semibold placeholder:text-muted-foreground/50 outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
               />
             </div>
-            <span className="text-[11px] text-muted-foreground">
+            <span className="text-2xs text-muted-foreground">
               Total estimated tender value in Indian Rupees. Used for turnover & EMD gates.
             </span>
           </div>
@@ -209,7 +209,7 @@ export const CreateBidPage: React.FC = () => {
               onChange={(e) => setSubmissionDeadline(e.target.value)}
               className="w-full px-3.5 py-2.5 bg-background border border-border rounded-lg font-mono text-sm text-foreground font-medium outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
             />
-            <span className="text-[11px] text-muted-foreground">
+            <span className="text-2xs text-muted-foreground">
               Official bid submission cutoff time for countdown & urgency tracking.
             </span>
           </div>

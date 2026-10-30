@@ -90,7 +90,7 @@ const NOT_EVALUATED_TOOLTIP =
 function NotEvaluatedCell(): React.ReactElement {
   return (
     <Tooltip content={NOT_EVALUATED_TOOLTIP} position="top">
-      <span className="inline-flex items-center gap-1 text-muted-foreground text-[11px] whitespace-nowrap cursor-help">
+      <span className="inline-flex items-center gap-1 text-muted-foreground text-2xs whitespace-nowrap cursor-help">
         <MissingIcon size={12} />
         Not evaluated
       </span>
@@ -219,7 +219,7 @@ function DeadlineCell({ bid, nowMs }: { bid: BidSummary; nowMs: number }) {
     urgency === 'urgent'
       ? 'text-destructive'
       : urgency === 'soon'
-        ? 'text-amber-400'
+        ? 'text-warning'
         : urgency === 'passed'
           ? 'text-muted-foreground'
           : 'text-muted-foreground';
@@ -231,7 +231,7 @@ function DeadlineCell({ bid, nowMs }: { bid: BidSummary; nowMs: number }) {
       </span>
       <span
         className={cn(
-          'text-[10px] font-bold uppercase tracking-wider whitespace-nowrap',
+          'text-2xs font-bold uppercase tracking-wider whitespace-nowrap',
           colorClass,
         )}
       >
@@ -245,19 +245,19 @@ function ReadinessCell({ bid }: { bid: BidSummary }) {
   const { total, approved, pct } = computeReadiness(bid);
 
   if (total === 0) {
-    return <span className="text-[11px] text-muted-foreground">Pending intake</span>;
+    return <span className="text-2xs text-muted-foreground">Pending intake</span>;
   }
 
   const indicatorClass =
     pct !== null && pct >= 80
       ? 'bg-primary'
       : pct !== null && pct >= 50
-        ? 'bg-amber-500'
+        ? 'bg-warning'
         : 'bg-muted-foreground';
 
   return (
     <div className="flex flex-col gap-1 w-24">
-      <div className="flex justify-between text-[10px] font-semibold">
+      <div className="flex justify-between text-2xs font-semibold">
         <span className="text-foreground">{pct}%</span>
         <span className="text-muted-foreground">
           {approved}/{total}
@@ -323,7 +323,7 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
             <span className="text-xs font-semibold text-foreground leading-snug group-hover:text-primary transition-colors line-clamp-2 break-words">
               {bid.title}
             </span>
-            <span className="text-[10px] font-mono text-muted-foreground truncate">
+            <span className="text-2xs font-mono text-muted-foreground truncate">
               № {bid.tenderNumber}
             </span>
           </Link>

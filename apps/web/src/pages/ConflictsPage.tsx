@@ -65,7 +65,7 @@ export const ConflictsPage: React.FC = () => {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="m-0 text-[22px] font-bold">
+        <h1 className="m-0 text-2xl font-bold">
           Conflicts · {conflicts?.length ?? 0} · {unresolved} unresolved
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -158,7 +158,7 @@ const ConflictCard: React.FC<{
                 {v.clauseRef ?? 'No clause no.'} · p.{v.page}
               </Link>
             </div>
-            <blockquote className="m-0 rounded-lg border border-[var(--quote-border)] bg-[var(--quote-bg)] px-[11px] py-[9px] font-serif text-[13.5px] leading-[1.5] text-[#22262E] dark:text-white/85">
+            <blockquote className="m-0 rounded-lg border border-[var(--quote-border)] bg-[var(--quote-bg)] px-[11px] py-[9px] font-serif text-sm leading-[1.5] text-foreground dark:text-white/85">
               {v.quote}
             </blockquote>
             {canReview && open && (
@@ -180,8 +180,8 @@ const ConflictCard: React.FC<{
         ))}
       </div>
       {c.aiPrecedenceNote && (
-        <div className="rounded-md bg-violet-500/10 p-3 text-sm">
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-violet-700 dark:text-violet-300">
+        <div className="rounded-md bg-primary/10 p-3 text-sm">
+          <div className="text-2xs font-semibold uppercase tracking-wider text-primary dark:text-primary">
             AI suggestion — not tender text
           </div>
           {c.aiPrecedenceNote}

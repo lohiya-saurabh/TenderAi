@@ -11,6 +11,10 @@ export default {
       },
     },
     extend: {
+      // One type scale: 2xs (11px) for dense labels, then Tailwind's xs..4xl. No pixel sizes.
+      fontSize: {
+        '2xs': ['0.6875rem', { lineHeight: '1rem' }],
+      },
       colors: {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',

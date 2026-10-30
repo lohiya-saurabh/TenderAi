@@ -27,7 +27,7 @@ export const MarkdownMessage: React.FC<MarkdownMessageProps> = ({ content, onCit
           key={`cit-${match.index}`}
           type="button"
           onClick={() => onCitationClick?.(citNum)}
-          className="inline-flex items-center justify-center align-baseline relative -top-[1px] ml-1 mr-0.5 px-1.5 py-0.2 text-[10px] font-mono font-bold tracking-tight text-emerald-700 bg-emerald-50 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 rounded-sm hover:bg-emerald-100 dark:hover:bg-emerald-900/50 hover:border-emerald-400 dark:hover:border-emerald-600 transition-colors cursor-pointer shadow-2xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-500"
+          className="inline-flex items-center justify-center align-baseline relative -top-[1px] ml-1 mr-0.5 px-1.5 py-0.2 text-2xs font-mono font-bold tracking-tight text-success bg-success/10 dark:bg-success/70 dark:text-success border border-success/30 dark:border-success/40 rounded-sm hover:bg-success/10 dark:hover:bg-success/50 hover:border-success/60 dark:hover:border-success/60 transition-colors cursor-pointer shadow-2xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-success/60"
           title={`View Citation #${citNum}`}
         >
           [{citNum}]
@@ -82,7 +82,7 @@ export const MarkdownMessage: React.FC<MarkdownMessageProps> = ({ content, onCit
       elements.push(
         <div key={`table-${tIndex}`} className="overflow-x-auto my-3 border border-border rounded-md">
           <table className="w-full text-xs text-left border-collapse">
-            <thead className="bg-muted/60 text-muted-foreground uppercase text-[10px] tracking-wider">
+            <thead className="bg-muted/60 text-muted-foreground uppercase text-2xs tracking-wider">
               <tr>
                 {headers.map((h, hIdx) => (
                   <th key={`th-${hIdx}`} className="px-3 py-2 border-b border-border font-medium">
@@ -171,7 +171,7 @@ export const MarkdownMessage: React.FC<MarkdownMessageProps> = ({ content, onCit
     else if (line.startsWith('- ') || line.startsWith('* ')) {
       elements.push(
         <div key={`li-${i}`} className="flex items-start gap-2 my-1 text-xs text-foreground/90 pl-1">
-          <span className="text-primary mt-1 text-[8px] shrink-0">•</span>
+          <span className="text-primary mt-1 text-2xs shrink-0">•</span>
           <span className="leading-relaxed flex-1">{renderFormattedText(line.slice(2))}</span>
         </div>,
       );
@@ -182,7 +182,7 @@ export const MarkdownMessage: React.FC<MarkdownMessageProps> = ({ content, onCit
       if (match) {
         elements.push(
           <div key={`ol-${i}`} className="flex items-start gap-2 my-1 text-xs text-foreground/90 pl-1">
-            <span className="text-primary font-semibold text-[10px] min-w-[14px] shrink-0 mt-0.5">{match[1]}.</span>
+            <span className="text-primary font-semibold text-2xs min-w-[14px] shrink-0 mt-0.5">{match[1]}.</span>
             <span className="leading-relaxed flex-1">{renderFormattedText(match[2] ?? '')}</span>
           </div>,
         );

@@ -216,7 +216,7 @@ export const ChatCopilotDrawer: React.FC<ChatCopilotDrawerProps> = ({
         {/* Drawer Header */}
         <div className="px-4 py-3 border-b border-border bg-card flex items-center justify-between shrink-0 z-10 shadow-xs">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-emerald-600/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-600/20">
+            <div className="w-8 h-8 rounded-lg bg-success/10 text-success dark:text-success flex items-center justify-center border border-success/20">
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
@@ -224,11 +224,11 @@ export const ChatCopilotDrawer: React.FC<ChatCopilotDrawerProps> = ({
                 <span className="text-xs font-semibold text-foreground tracking-wide">
                   Tender AI Copilot
                 </span>
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-2xs font-medium bg-success/10 text-success dark:bg-success/60 dark:text-success border border-success/30 dark:border-success/40">
                   <ShieldCheck className="w-2.5 h-2.5" /> Grounded
                 </span>
               </div>
-              <div className="text-[10px] text-muted-foreground truncate max-w-[260px]">
+              <div className="text-2xs text-muted-foreground truncate max-w-[260px]">
                 {tenderTitle || 'Tender Analysis & Evidence Assistant'}
               </div>
             </div>
@@ -258,12 +258,12 @@ export const ChatCopilotDrawer: React.FC<ChatCopilotDrawerProps> = ({
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.length === 0 && (
             <div className="py-6 text-center space-y-3">
-              <div className="w-12 h-12 mx-auto rounded-full bg-emerald-600/10 text-emerald-600 flex items-center justify-center">
+              <div className="w-12 h-12 mx-auto rounded-full bg-success/10 text-success flex items-center justify-center">
                 <Bot className="w-6 h-6" />
               </div>
               <div className="space-y-1">
                 <h4 className="text-xs font-semibold text-foreground">How can I assist your bid review?</h4>
-                <p className="text-[11px] text-muted-foreground max-w-[320px] mx-auto leading-relaxed">
+                <p className="text-2xs text-muted-foreground max-w-[320px] mx-auto leading-relaxed">
                   Ask questions about EMD requirements, turnover qualifications, execution rules, or past project eligibility.
                 </p>
               </div>
@@ -309,8 +309,8 @@ export const ChatCopilotDrawer: React.FC<ChatCopilotDrawerProps> = ({
                       {/* Structured citations bar */}
                       {msg.citations && msg.citations.length > 0 && (
                         <div className="mt-3 pt-2.5 border-t border-border/50">
-                          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                            <FileText className="w-3 h-3 text-emerald-600 dark:text-emerald-400" /> Grounded Source Citations
+                          <div className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                            <FileText className="w-3 h-3 text-success dark:text-success" /> Grounded Source Citations
                           </div>
                           <div className="flex flex-wrap gap-1.5">
                             {msg.citations.map((c, cIdx) => (
@@ -318,11 +318,11 @@ export const ChatCopilotDrawer: React.FC<ChatCopilotDrawerProps> = ({
                                 key={c.citationId || cIdx}
                                 type="button"
                                 onClick={() => handleCitationSelect(c)}
-                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-background hover:bg-muted/70 border border-border/80 text-[11px] text-foreground transition-all cursor-pointer shadow-2xs group hover:border-emerald-500/50 hover:shadow-xs active:scale-[0.98]"
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-background hover:bg-muted/70 border border-border/80 text-2xs text-foreground transition-all cursor-pointer shadow-2xs group hover:border-success/50 hover:shadow-xs active:scale-[0.98]"
                               >
-                                <span className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono">[{cIdx + 1}]</span>
+                                <span className="font-semibold text-success dark:text-success font-mono">[{cIdx + 1}]</span>
                                 <span className="max-w-[160px] sm:max-w-[190px] truncate font-medium">{c.documentName}</span>
-                                <span className="text-[9px] font-mono px-1 py-0.5 rounded bg-muted/80 text-muted-foreground">p.{c.pageNumber}</span>
+                                <span className="text-2xs font-mono px-1 py-0.5 rounded bg-muted/80 text-muted-foreground">p.{c.pageNumber}</span>
                                 <ChevronRight className="w-2.5 h-2.5 text-muted-foreground group-hover:translate-x-0.5 group-hover:text-foreground transition-all shrink-0" />
                               </button>
                             ))}
@@ -351,13 +351,13 @@ export const ChatCopilotDrawer: React.FC<ChatCopilotDrawerProps> = ({
                 <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                 <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse delay-150" />
                 <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse delay-300" />
-                <span className="text-[11px] text-muted-foreground ml-1">Analyzing tender clauses...</span>
+                <span className="text-2xs text-muted-foreground ml-1">Analyzing tender clauses...</span>
               </div>
             </div>
           )}
 
           {error && (
-            <div className="p-2.5 rounded-lg bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-900 text-xs flex items-center gap-2">
+            <div className="p-2.5 rounded-lg bg-destructive/10 text-destructive dark:bg-destructive/60 dark:text-destructive border border-destructive/30 dark:border-destructive/40 text-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{error}</span>
             </div>
@@ -369,7 +369,7 @@ export const ChatCopilotDrawer: React.FC<ChatCopilotDrawerProps> = ({
         {/* Suggested Followups */}
         {suggestedFollowups.length > 0 && !isLoading && (
           <div className="px-4 py-2.5 border-t border-border/60 bg-muted/20">
-            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+            <div className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
               Suggested Questions
             </div>
             <div className="flex flex-col gap-1.5">
@@ -378,11 +378,11 @@ export const ChatCopilotDrawer: React.FC<ChatCopilotDrawerProps> = ({
                   key={pIdx}
                   type="button"
                   onClick={() => handleSendMessage(prompt)}
-                  className="group flex items-center justify-between gap-2 text-left text-[11px] px-3 py-2 rounded-lg bg-card hover:bg-muted/70 hover:border-emerald-500/40 border border-border/80 text-foreground transition-all cursor-pointer shadow-2xs hover:shadow-xs"
+                  className="group flex items-center justify-between gap-2 text-left text-2xs px-3 py-2 rounded-lg bg-card hover:bg-muted/70 hover:border-success/40 border border-border/80 text-foreground transition-all cursor-pointer shadow-2xs hover:shadow-xs"
                   title={prompt}
                 >
-                  <span className="truncate group-hover:text-emerald-700 dark:group-hover:text-emerald-300 transition-colors font-medium">{prompt}</span>
-                  <ChevronRight className="w-3 h-3 text-muted-foreground/70 group-hover:translate-x-0.5 group-hover:text-emerald-600 transition-all shrink-0" />
+                  <span className="truncate group-hover:text-success dark:group-hover:text-success transition-colors font-medium">{prompt}</span>
+                  <ChevronRight className="w-3 h-3 text-muted-foreground/70 group-hover:translate-x-0.5 group-hover:text-success transition-all shrink-0" />
                 </button>
               ))}
             </div>

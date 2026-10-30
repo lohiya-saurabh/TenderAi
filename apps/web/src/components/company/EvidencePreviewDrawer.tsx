@@ -124,9 +124,9 @@ export const EvidencePreviewDrawer: React.FC<EvidencePreviewDrawerProps> = ({
             />
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-[11px] text-muted-foreground">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-2xs text-muted-foreground">
             <div>
-              <span className="block text-[10px] uppercase font-mono tracking-wider text-muted-foreground/80">
+              <span className="block text-2xs uppercase font-mono tracking-wider text-muted-foreground/80">
                 Document Type
               </span>
               <span className="font-medium text-foreground">
@@ -135,7 +135,7 @@ export const EvidencePreviewDrawer: React.FC<EvidencePreviewDrawerProps> = ({
             </div>
             {matchedDoc?.issuer && (
               <div>
-                <span className="block text-[10px] uppercase font-mono tracking-wider text-muted-foreground/80">
+                <span className="block text-2xs uppercase font-mono tracking-wider text-muted-foreground/80">
                   Issuing Authority
                 </span>
                 <span className="font-medium text-foreground truncate block">
@@ -145,7 +145,7 @@ export const EvidencePreviewDrawer: React.FC<EvidencePreviewDrawerProps> = ({
             )}
             {matchedDoc?.referenceNumber && (
               <div>
-                <span className="block text-[10px] uppercase font-mono tracking-wider text-muted-foreground/80">
+                <span className="block text-2xs uppercase font-mono tracking-wider text-muted-foreground/80">
                   Reference / Reg №
                 </span>
                 <span className="font-mono font-medium text-foreground">
@@ -155,7 +155,7 @@ export const EvidencePreviewDrawer: React.FC<EvidencePreviewDrawerProps> = ({
             )}
             {(matchedDoc?.validFrom || matchedDoc?.validTo) && (
               <div>
-                <span className="block text-[10px] uppercase font-mono tracking-wider text-muted-foreground/80">
+                <span className="block text-2xs uppercase font-mono tracking-wider text-muted-foreground/80">
                   Validity Period
                 </span>
                 <span className="font-medium text-foreground">
@@ -166,7 +166,7 @@ export const EvidencePreviewDrawer: React.FC<EvidencePreviewDrawerProps> = ({
             )}
             {matchedDoc?.fileSizeBytes && (
               <div>
-                <span className="block text-[10px] uppercase font-mono tracking-wider text-muted-foreground/80">
+                <span className="block text-2xs uppercase font-mono tracking-wider text-muted-foreground/80">
                   File Size
                 </span>
                 <span className="font-medium text-foreground">
@@ -178,7 +178,7 @@ export const EvidencePreviewDrawer: React.FC<EvidencePreviewDrawerProps> = ({
             )}
             {matchedDoc?.uploadedAt && (
               <div>
-                <span className="block text-[10px] uppercase font-mono tracking-wider text-muted-foreground/80">
+                <span className="block text-2xs uppercase font-mono tracking-wider text-muted-foreground/80">
                   Ingestion Timestamp
                 </span>
                 <span className="font-medium text-foreground">
@@ -189,7 +189,7 @@ export const EvidencePreviewDrawer: React.FC<EvidencePreviewDrawerProps> = ({
           </div>
 
           {matchedDoc?.sha256Hash && (
-            <div className="pt-2 border-t border-border/50 text-[10px] font-mono text-muted-foreground flex items-center gap-1.5 overflow-hidden">
+            <div className="pt-2 border-t border-border/50 text-2xs font-mono text-muted-foreground flex items-center gap-1.5 overflow-hidden">
               <Lock size={11} className="shrink-0 text-muted-foreground/80" />
               <span className="shrink-0">SHA-256:</span>
               <span className="truncate">{matchedDoc.sha256Hash}</span>
@@ -200,7 +200,7 @@ export const EvidencePreviewDrawer: React.FC<EvidencePreviewDrawerProps> = ({
           {matchedDoc?.extractedAttributes &&
             Object.keys(matchedDoc.extractedAttributes).length > 0 && (
               <div className="pt-2 border-t border-border/50 flex flex-wrap gap-1.5 items-center">
-                <span className="text-[10px] uppercase font-mono text-muted-foreground shrink-0 mr-1">
+                <span className="text-2xs uppercase font-mono text-muted-foreground shrink-0 mr-1">
                   Extracted:
                 </span>
                 {Object.entries(matchedDoc.extractedAttributes)
@@ -209,7 +209,7 @@ export const EvidencePreviewDrawer: React.FC<EvidencePreviewDrawerProps> = ({
                   .map(([k, v]) => (
                     <span
                       key={k}
-                      className="inline-flex items-center px-2 py-0.5 rounded text-[10px] bg-muted/60 text-foreground font-mono"
+                      className="inline-flex items-center px-2 py-0.5 rounded text-2xs bg-muted/60 text-foreground font-mono"
                     >
                       {k}: {typeof v === 'object' ? JSON.stringify(v) : String(v)}
                     </span>
@@ -224,7 +224,7 @@ export const EvidencePreviewDrawer: React.FC<EvidencePreviewDrawerProps> = ({
             <div className="flex flex-col items-center justify-center p-16 gap-3 text-muted-foreground flex-1">
               <Loader2 size={32} className="animate-spin text-foreground" />
               <span className="text-xs font-medium">Loading authentic document stream...</span>
-              <span className="text-[11px] text-muted-foreground/80">
+              <span className="text-2xs text-muted-foreground/80">
                 Resolving cryptographic checksum and digital scan
               </span>
             </div>
@@ -240,7 +240,7 @@ export const EvidencePreviewDrawer: React.FC<EvidencePreviewDrawerProps> = ({
               <span className="text-xs font-semibold text-foreground">
                 Direct in-browser preview unavailable
               </span>
-              <p className="text-[11px] text-muted-foreground text-center max-w-sm">
+              <p className="text-2xs text-muted-foreground text-center max-w-sm">
                 You can still download or open the original verified statutory document securely.
               </p>
               <Button

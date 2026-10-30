@@ -149,7 +149,7 @@ function renderCitationBadges(citationRef: string) {
 
   if (citations.length <= 1) {
     return (
-      <span className="font-mono text-[11px] bg-muted/40 px-1.5 py-0.5 rounded border border-border/50 break-words leading-relaxed inline-block max-w-full">
+      <span className="font-mono text-2xs bg-muted/40 px-1.5 py-0.5 rounded border border-border/50 break-words leading-relaxed inline-block max-w-full">
         {citationRef}
       </span>
     );
@@ -160,7 +160,7 @@ function renderCitationBadges(citationRef: string) {
       {citations.map((cite, idx) => (
         <span
           key={idx}
-          className="font-mono text-[11px] bg-muted/40 px-1.5 py-0.5 rounded border border-border/50 break-words leading-relaxed inline-block"
+          className="font-mono text-2xs bg-muted/40 px-1.5 py-0.5 rounded border border-border/50 break-words leading-relaxed inline-block"
         >
           {cite}
         </span>
@@ -217,7 +217,7 @@ export const CompanyDocumentChecklist: React.FC<CompanyDocumentChecklistProps> =
       <CardHeader className="px-5 py-4 border-b border-border bg-muted/20 flex flex-row items-center justify-between flex-wrap gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <ShieldAlert size={18} className="text-[#8A4200] dark:text-orange-300" />
+            <ShieldAlert size={18} className="text-warning dark:text-warning" />
             <CardTitle className="text-base font-bold text-foreground">
               Company Document Checklist
             </CardTitle>
@@ -266,7 +266,7 @@ export const CompanyDocumentChecklist: React.FC<CompanyDocumentChecklistProps> =
                     {/* Requirement */}
                     <td className="py-3 px-4 min-w-[260px] max-w-[340px]">
                       <div className="flex items-center gap-1.5 mb-1">
-                        <Badge variant="neutral" className="text-[10px] px-1 py-0 uppercase">
+                        <Badge variant="neutral" className="text-2xs px-1 py-0 uppercase">
                           {row.category}
                         </Badge>
                       </div>
@@ -294,12 +294,12 @@ export const CompanyDocumentChecklist: React.FC<CompanyDocumentChecklistProps> =
                           {row.isValid ? 'Uploaded & Valid' : 'Uploaded (Self-Attested)'}
                         </span>
                       ) : row.statusLabel === 'Expired' ? (
-                        <span className="inline-flex items-center gap-1 text-red-500 font-semibold">
+                        <span className="inline-flex items-center gap-1 text-destructive font-semibold">
                           <AlertTriangle size={14} />
                           Expired Certificate
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-[#8A4200] dark:text-orange-300 font-semibold">
+                        <span className="inline-flex items-center gap-1 text-warning dark:text-warning font-semibold">
                           <XCircle size={14} />
                           Missing in Profile
                         </span>

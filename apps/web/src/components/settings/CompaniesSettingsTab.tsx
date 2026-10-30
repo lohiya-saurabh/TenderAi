@@ -141,7 +141,7 @@ export const CompaniesSettingsTab: React.FC<CompaniesSettingsTabProps> = ({
                         {company.legalName}
                       </span>
                       {isSelected && (
-                        <Badge variant="default" className="text-[10px]">
+                        <Badge variant="default" className="text-2xs">
                           Active Context
                         </Badge>
                       )}
@@ -149,7 +149,7 @@ export const CompaniesSettingsTab: React.FC<CompaniesSettingsTabProps> = ({
 
                     <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
                       {company.gstin && (
-                        <span className="font-mono bg-muted/60 px-1.5 py-0.5 rounded text-[11px]">
+                        <span className="font-mono bg-muted/60 px-1.5 py-0.5 rounded text-2xs">
                           GST: {company.gstin}
                         </span>
                       )}
@@ -158,7 +158,7 @@ export const CompaniesSettingsTab: React.FC<CompaniesSettingsTabProps> = ({
                           {company.constitution.replace(/_/g, ' ').toLowerCase()}
                         </span>
                       )}
-                      <span className="font-mono text-[10px]">ID: {company.id}</span>
+                      <span className="font-mono text-2xs">ID: {company.id}</span>
                     </div>
                   </div>
 

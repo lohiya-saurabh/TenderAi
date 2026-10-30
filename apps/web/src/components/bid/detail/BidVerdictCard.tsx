@@ -44,13 +44,13 @@ export const DisqualifierItemCard: React.FC<DisqualifierItemCardProps> = ({ rawI
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-destructive tracking-wide">{item.title}</span>
           {item.factor && (
-            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-destructive/15 text-destructive font-semibold uppercase">
+            <span className="text-2xs font-mono px-1.5 py-0.5 rounded bg-destructive/15 text-destructive font-semibold uppercase">
               {item.factor}
             </span>
           )}
         </div>
         {item.clauseReference && (
-          <span className="inline-flex items-center gap-1 text-[10px] font-mono font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded border border-border/50">
+          <span className="inline-flex items-center gap-1 text-2xs font-mono font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded border border-border/50">
             <FileText size={11} className="text-muted-foreground" />
             {item.clauseReference}
           </span>
@@ -63,7 +63,7 @@ export const DisqualifierItemCard: React.FC<DisqualifierItemCardProps> = ({ rawI
       />
 
       {displayShortfall && (
-        <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-destructive/90 bg-destructive/10 dark:bg-destructive/15 px-2 py-1 rounded border border-destructive/20 font-mono">
+        <div className="mt-0.5 flex items-center gap-1.5 text-2xs text-destructive/90 bg-destructive/10 dark:bg-destructive/15 px-2 py-1 rounded border border-destructive/20 font-mono">
           <span className="font-bold">Shortfall:</span>
           <span>{displayShortfall}</span>
         </div>
@@ -134,10 +134,10 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
 
   const verdictTextColor =
     verdict === 'PURSUE'
-      ? 'text-[#1C3DA8] dark:text-blue-300'
+      ? 'text-primary dark:text-primary'
       : verdict === 'DO_NOT_PURSUE'
-        ? 'text-[#9F1C1C] dark:text-red-300'
-        : 'text-[#8A4200] dark:text-orange-300';
+        ? 'text-destructive dark:text-destructive'
+        : 'text-warning dark:text-warning';
 
   // Summary statement
   const rawFirstReason = decision?.reasons?.[0];
@@ -214,7 +214,7 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
       <div>
         <div className="text-xs font-semibold uppercase tracking-wider mb-2 text-muted-foreground flex items-center justify-between">
           <span>1. DETERMINISTIC ELIGIBILITY VERDICT</span>
-          <span className="text-[11px] font-bold text-muted-foreground">
+          <span className="text-2xs font-bold text-muted-foreground">
             {decision ? formatDecisionStateText(decision.state) : 'EVALUATION PENDING'}
           </span>
         </div>
@@ -242,7 +242,7 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
               {turnoverGate ? turnoverGate.detail : 'Evaluation pending'}
             </span>
             {turnoverGate && (
-              <span className="text-[#1C3DA8] dark:text-blue-300 font-bold ml-1.5">
+              <span className="text-primary dark:text-primary font-bold ml-1.5">
                 {turnoverGate.pass ? '✓ PASS' : '✗ SHORTFALL'}
               </span>
             )}
@@ -254,7 +254,7 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
           <div className="text-right">
             <span className="text-foreground font-semibold">{emdAmount}</span>
             {bid.estimatedValueRupees && (
-              <span className="text-[#1C3DA8] dark:text-blue-300 font-bold ml-1.5">✓ PASS</span>
+              <span className="text-primary dark:text-primary font-bold ml-1.5">✓ PASS</span>
             )}
           </div>
         </div>
@@ -263,7 +263,7 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
           <span className="text-muted-foreground">Liquidated Damages / Contract Risk</span>
           <span
             className={
-              ldRisk ? 'text-[#8A4200] dark:text-orange-300 font-bold' : 'text-foreground '
+              ldRisk ? 'text-warning dark:text-warning font-bold' : 'text-foreground '
             }
           >
             {ldRisk
@@ -282,7 +282,7 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
               {techGate ? techGate.detail : 'Technical capacity check'}
             </span>
             {techGate && (
-              <span className="text-[#1C3DA8] dark:text-blue-300 font-bold ml-1.5">
+              <span className="text-primary dark:text-primary font-bold ml-1.5">
                 {techGate.pass ? '✓ PASS' : '✗ SHORTFALL'}
               </span>
             )}
@@ -294,7 +294,7 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
             <span className="text-muted-foreground">Bank Solvency &amp; Credit Facilities</span>
             <div className="text-right">
               <span className="text-foreground font-semibold">{solvencyGate.detail}</span>
-              <span className="text-[#1C3DA8] dark:text-blue-300 font-bold ml-1.5">✓ PASS</span>
+              <span className="text-primary dark:text-primary font-bold ml-1.5">✓ PASS</span>
             </div>
           </div>
         )}
@@ -427,7 +427,7 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
                 <span className="text-xs font-semibold text-foreground uppercase tracking-wider">
                   Verified Evidence Provenance ({decision.evidenceCitations.length})
                 </span>
-                <span className="text-[10px] text-[#1C3DA8] dark:text-blue-300 font-medium">
+                <span className="text-2xs text-primary dark:text-primary font-medium">
                   Dual-Grounded in Vault
                 </span>
               </div>
@@ -497,14 +497,14 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-semibold text-foreground">{title}</span>
                         {docName && (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono bg-card border border-border text-muted-foreground">
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-2xs font-mono bg-card border border-border text-muted-foreground">
                             📄 {docName}
                             {page ? ` (p. ${page})` : ''}
                           </span>
                         )}
                       </div>
                       {note && (
-                        <div className="text-muted-foreground text-[11px] leading-relaxed">
+                        <div className="text-muted-foreground text-2xs leading-relaxed">
                           {note}
                         </div>
                       )}
@@ -515,7 +515,7 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
             </div>
           )}
 
-          <div className="text-[11px] text-muted-foreground">
+          <div className="text-2xs text-muted-foreground">
             Evaluated {decision.evaluatedFactors ?? 0} eligibility factors on{' '}
             {new Date(decision.evaluatedAt).toLocaleDateString('en-IN', {
               day: '2-digit',

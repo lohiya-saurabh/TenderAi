@@ -54,7 +54,7 @@ export const RefLink: React.FC<{
   <Link
     to={`/bids/${encodeURIComponent(bidId)}/clauses?clause=${encodeURIComponent(clauseId)}`}
     className={cn(
-      'inline-flex items-center whitespace-nowrap rounded-md border border-border bg-[#F1F3F6] px-[7px] py-px font-mono text-[11.5px] text-[#2B313C] no-underline hover:border-primary hover:text-primary dark:bg-white/5 dark:text-white/80',
+      'inline-flex items-center whitespace-nowrap rounded-md border border-border bg-primary/10 px-[7px] py-px font-mono text-2xs text-foreground no-underline hover:border-primary hover:text-primary dark:bg-white/5 dark:text-white/80',
       className,
     )}
   >
@@ -110,10 +110,10 @@ export const BidOverviewHeader: React.FC<{
             {bid.locationState && <Chip tone="neutral">{bid.locationState}</Chip>}
             {hasCorrigendum && <Chip tone="amend">Corrigendum in package</Chip>}
           </div>
-          <h1 id="tender-title" className="m-0 text-[22px] font-bold tracking-[-0.01em]">
+          <h1 id="tender-title" className="m-0 text-2xl font-bold tracking-[-0.01em]">
             {bid.title}
           </h1>
-          <p className="m-0 text-[13px] text-muted-foreground">
+          <p className="m-0 text-sm text-muted-foreground">
             {bid.tenderingAuthority || 'Authority not stated'} · Tender ID{' '}
             <span className="font-mono text-xs">{bid.tenderNumber || NOT_STATED}</span> · {docCount}{' '}
             document{docCount === 1 ? '' : 's'}
@@ -124,7 +124,7 @@ export const BidOverviewHeader: React.FC<{
 
       {summary && total > 0 && (
         <div className="flex flex-col gap-1.5">
-          <div className="flex flex-wrap justify-between gap-3 text-[13px]">
+          <div className="flex flex-wrap justify-between gap-3 text-sm">
             <span>
               <strong className="tabular-nums">
                 {reviewed} of {total}
@@ -141,17 +141,17 @@ export const BidOverviewHeader: React.FC<{
             )}
           </div>
           <div
-            className="flex h-2 overflow-hidden rounded-full bg-[#EEF0F3] dark:bg-white/10"
+            className="flex h-2 overflow-hidden rounded-full bg-muted dark:bg-white/10"
             role="img"
             aria-label={`${reviewed} of ${total} clauses reviewed, ${needs} need review`}
           >
             <div className="bg-primary" style={{ width: pct(reviewed) }} />
-            <div className="bg-[#E08A1E]" style={{ width: pct(needs) }} />
+            <div className="bg-warning" style={{ width: pct(needs) }} />
           </div>
           <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
             <LegendSwatch className="bg-primary">Reviewed</LegendSwatch>
-            <LegendSwatch className="bg-[#E08A1E]">Needs review</LegendSwatch>
-            <LegendSwatch className="border border-[#C9D0DA] bg-[#EEF0F3] dark:bg-white/10">
+            <LegendSwatch className="bg-warning">Needs review</LegendSwatch>
+            <LegendSwatch className="border border-primary/40 bg-muted dark:bg-white/10">
               Unreviewed AI readings
             </LegendSwatch>
           </div>
@@ -217,9 +217,9 @@ export const KeyFacts: React.FC<{ bid: BidDetail; verdict: BidRecommendation | n
         {facts.map((f) => (
           <div
             key={f.k}
-            className="flex flex-wrap items-baseline gap-3 border-t border-[#EEF0F3] py-[9px] dark:border-white/10"
+            className="flex flex-wrap items-baseline gap-3 border-t border-border py-[9px] dark:border-white/10"
           >
-            <dt className="flex-[0_0_200px] text-[13px] font-medium text-[#3D4452] dark:text-white/70">
+            <dt className="flex-[0_0_200px] text-sm font-medium text-foreground dark:text-white/70">
               {f.k}
             </dt>
             <dd
@@ -250,42 +250,42 @@ export const AttentionTiles: React.FC<{ bidId: string; summary: BidClauseSummary
       label: 'Conflicts',
       hint: 'Same item, different values',
       to: ws('view=conflict'),
-      color: 'text-[#9F1C1C] dark:text-red-300',
+      color: 'text-destructive dark:text-destructive',
     },
     {
       n: a.pagesNotAnalysed,
       label: 'Pages not analysed',
       hint: 'Read these pages manually',
       to: ws('verify=1'),
-      color: 'text-[#6E4B00] dark:text-amber-300',
+      color: 'text-warning dark:text-warning',
     },
     {
       n: a.disqualifyingUnreviewed,
       label: 'Disqualifying, unreviewed',
       hint: 'Rejected if missed',
       to: ws('view=dq'),
-      color: 'text-[#8A4200] dark:text-orange-300',
+      color: 'text-warning dark:text-warning',
     },
     {
       n: a.quoteNotFound,
       label: 'Quote not found',
       hint: 'AI quote not in page text',
       to: ws('flag=QUOTE_NOT_FOUND'),
-      color: 'text-[#9F1C1C] dark:text-red-300',
+      color: 'text-destructive dark:text-destructive',
     },
     {
       n: a.needsOutsideParty,
       label: 'Need an outside party',
       hint: 'CA, notary, bank, past client',
       to: ws('view=outside'),
-      color: 'text-[#1C3DA8] dark:text-blue-300',
+      color: 'text-primary dark:text-primary',
     },
     {
       n: summary.review.NEEDS_REVIEW,
       label: 'Marked needs review',
       hint: 'Flagged by your team',
       to: ws('view=needs'),
-      color: 'text-[#8A4200] dark:text-orange-300',
+      color: 'text-warning dark:text-warning',
     },
   ];
 
@@ -310,13 +310,13 @@ export const AttentionTiles: React.FC<{ bidId: string; summary: BidClauseSummary
           >
             <span
               className={cn(
-                'text-[26px] font-bold tabular-nums',
+                'text-2xl font-bold tabular-nums',
                 t.n > 0 ? t.color : 'text-muted-foreground',
               )}
             >
               {t.n}
             </span>
-            <span className="text-[13px] font-semibold">{t.label}</span>
+            <span className="text-sm font-semibold">{t.label}</span>
             <span className="text-xs text-muted-foreground">{t.hint}</span>
           </Link>
         ))}
@@ -334,16 +334,16 @@ export const MoneyAtStake: React.FC<{ bidId: string; summary: BidClauseSummary }
       Money at stake
     </h2>
     {summary.amounts.length === 0 ? (
-      <p className="m-0 text-[13px] italic text-muted-foreground">
+      <p className="m-0 text-sm italic text-muted-foreground">
         No amounts stated in the analysed clauses.
       </p>
     ) : (
       summary.amounts.map((m) => (
         <div
           key={m.clauseId}
-          className="flex items-baseline gap-3 border-t border-[#EEF0F3] py-1.5 dark:border-white/10"
+          className="flex items-baseline gap-3 border-t border-border py-1.5 dark:border-white/10"
         >
-          <span className="flex min-w-0 flex-auto flex-wrap items-baseline gap-2 text-[13px]">
+          <span className="flex min-w-0 flex-auto flex-wrap items-baseline gap-2 text-sm">
             {m.title}
             <RefLink bidId={bidId} clauseId={m.clauseId} clauseRef={m.clauseRef} page={m.page} />
           </span>
@@ -374,7 +374,7 @@ export const DeadlineTimeline: React.FC<{ bidId: string; summary: BidClauseSumma
         </span>
       </div>
       {summary.deadlines.length === 0 ? (
-        <p className="m-0 text-[13px] italic text-muted-foreground">
+        <p className="m-0 text-sm italic text-muted-foreground">
           No deadlines stated in the analysed clauses.
         </p>
       ) : (
@@ -391,12 +391,12 @@ export const DeadlineTimeline: React.FC<{ bidId: string; summary: BidClauseSumma
                     <li key={d.clauseId} className="flex min-w-0 flex-1 flex-col gap-1.5 pr-2.5">
                       <div className="flex items-center" aria-hidden="true">
                         <span className="h-3 w-3 flex-none rounded-full border-2 border-primary bg-card" />
-                        <span className="h-0.5 flex-auto bg-[#C9D0DA] dark:bg-white/20" />
+                        <span className="h-0.5 flex-auto bg-primary dark:bg-white/20" />
                       </div>
                       <span className="text-sm font-bold tabular-nums">
                         {formatDeadline(d.deadline)}
                       </span>
-                      <span className="text-[13px] font-medium">{d.title}</span>
+                      <span className="text-sm font-medium">{d.title}</span>
                       {rel && <span className="text-xs text-muted-foreground">{rel}</span>}
                       <RefLink
                         bidId={bidId}
@@ -412,8 +412,8 @@ export const DeadlineTimeline: React.FC<{ bidId: string; summary: BidClauseSumma
             </div>
           )}
           {relative.length > 0 && (
-            <div className="flex flex-wrap gap-2.5 border-t border-dashed border-[#C9D0DA] pt-3 dark:border-white/20">
-              <span className="self-center text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+            <div className="flex flex-wrap gap-2.5 border-t border-dashed border-primary/40 pt-3 dark:border-white/20">
+              <span className="self-center text-2xs font-semibold uppercase tracking-[0.06em] text-muted-foreground">
                 Relative to an event
               </span>
               {relative.map((d) => (

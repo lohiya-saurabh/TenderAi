@@ -166,8 +166,8 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
             </div>
 
             {health.expiringSoonCount > 0 && (
-              <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg px-3 py-1.5 text-xs font-mono">
-                <span className="text-orange-600 dark:text-orange-400 font-bold">
+              <div className="bg-warning/10 border border-warning/20 rounded-lg px-3 py-1.5 text-xs font-mono">
+                <span className="text-warning dark:text-warning font-bold">
                   {health.expiringSoonCount}
                 </span>{' '}
                 <span className="text-muted-foreground">Expiring Soon</span>

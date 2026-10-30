@@ -43,7 +43,7 @@ export const LandingPage: React.FC = () => {
 
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-foreground leading-[1.1]">
                 Know which tenders you can win —{' '}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-neutral-900 via-orange-600 to-orange-500 dark:from-white dark:via-orange-400 dark:to-orange-500">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-foreground via-warning to-warning dark:from-white dark:via-warning dark:to-warning">
                   before wasting weeks preparing bids.
                 </span>
               </h1>
@@ -87,7 +87,7 @@ export const LandingPage: React.FC = () => {
                   <span>Zero LLM Hallucination Risk</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <Building2 className="h-4 w-4 text-orange-600" />
+                  <Building2 className="h-4 w-4 text-warning" />
                   <span>Multi-Company Entities</span>
                 </div>
               </div>
@@ -100,12 +100,12 @@ export const LandingPage: React.FC = () => {
                 <div className="flex items-start justify-between gap-3 border-b border-border/60 pb-3">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-[10px] font-mono">
+                      <Badge variant="outline" className="text-2xs font-mono">
                         NHAI-RO-DEL-2026-089
                       </Badge>
                       <Badge
                         variant="outline"
-                        className="bg-vermilion text-white border-transparent text-[10px] font-bold"
+                        className="bg-vermilion text-white border-transparent text-2xs font-bold"
                       >
                         BID RECOMMENDED
                       </Badge>
@@ -113,7 +113,7 @@ export const LandingPage: React.FC = () => {
                     <h3 className="text-sm font-bold text-foreground">
                       Construction of 4-Lane Elevated Corridor (Pkg-02)
                     </h3>
-                    <p className="text-[11px] text-muted-foreground font-mono">
+                    <p className="text-2xs text-muted-foreground font-mono">
                       Estimated Value: ₹148.50 Cr &bull; EMD: ₹2.97 Cr
                     </p>
                   </div>
@@ -122,42 +122,42 @@ export const LandingPage: React.FC = () => {
                 {/* Score & Verdict Meter */}
                 <div className="grid grid-cols-3 gap-2.5 p-3 rounded-lg bg-muted/40 border border-border/60 text-center">
                   <div>
-                    <span className="text-[10px] text-muted-foreground uppercase">Fit Score</span>
-                    <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">88.5%</p>
+                    <span className="text-2xs text-muted-foreground uppercase">Fit Score</span>
+                    <p className="text-lg font-bold text-success dark:text-success">88.5%</p>
                   </div>
                   <div>
-                    <span className="text-[10px] text-muted-foreground uppercase">
+                    <span className="text-2xs text-muted-foreground uppercase">
                       Matched Clauses
                     </span>
                     <p className="text-lg font-bold text-foreground">17 / 18</p>
                   </div>
                   <div>
-                    <span className="text-[10px] text-muted-foreground uppercase">Risk Level</span>
-                    <p className="text-lg font-bold text-amber-500">Medium</p>
+                    <span className="text-2xs text-muted-foreground uppercase">Risk Level</span>
+                    <p className="text-lg font-bold text-warning">Medium</p>
                   </div>
                 </div>
 
                 {/* Extracted Critical Clauses list */}
                 <div className="space-y-2 text-xs">
-                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
                     Automated Requirement Matching
                   </span>
 
                   <div className="p-2.5 rounded border border-border bg-muted/30 flex items-start justify-between gap-2">
                     <div className="flex items-start gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                      <CheckCircle2 className="h-4 w-4 text-success shrink-0 mt-0.5" />
                       <div>
-                        <p className="font-medium text-foreground text-[11px]">
+                        <p className="font-medium text-foreground text-2xs">
                           3-Year Average Annual Turnover
                         </p>
-                        <p className="text-[10px] text-muted-foreground">
+                        <p className="text-2xs text-muted-foreground">
                           Required: ₹120 Cr &bull; Verified: ₹164.2 Cr (CA UDIN Valid)
                         </p>
                       </div>
                     </div>
                     <Badge
                       variant="outline"
-                      className="text-[9px] text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30 shrink-0 font-bold"
+                      className="text-2xs text-success dark:text-success bg-success/10 border-success/30 shrink-0 font-bold"
                     >
                       PASS
                     </Badge>
@@ -165,19 +165,19 @@ export const LandingPage: React.FC = () => {
 
                   <div className="p-2.5 rounded border border-border bg-muted/30 flex items-start justify-between gap-2">
                     <div className="flex items-start gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                      <CheckCircle2 className="h-4 w-4 text-success shrink-0 mt-0.5" />
                       <div>
-                        <p className="font-medium text-foreground text-[11px]">
+                        <p className="font-medium text-foreground text-2xs">
                           Similar Highway Completion Proof
                         </p>
-                        <p className="text-[10px] text-muted-foreground">
+                        <p className="text-2xs text-muted-foreground">
                           Required: 1 project &gt; ₹100 Cr &bull; Matched: PWD NH-44 Expressway
                         </p>
                       </div>
                     </div>
                     <Badge
                       variant="outline"
-                      className="text-[9px] text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30 shrink-0 font-bold"
+                      className="text-2xs text-success dark:text-success bg-success/10 border-success/30 shrink-0 font-bold"
                     >
                       PASS
                     </Badge>
@@ -187,17 +187,17 @@ export const LandingPage: React.FC = () => {
                     <div className="flex items-start gap-2">
                       <AlertTriangle className="h-4 w-4 text-vermilion shrink-0 mt-0.5" />
                       <div>
-                        <p className="font-medium text-foreground text-[11px]">
+                        <p className="font-medium text-foreground text-2xs">
                           Liquidated Damages Clause (Sec 14.2)
                         </p>
-                        <p className="text-[10px] text-muted-foreground">
+                        <p className="text-2xs text-muted-foreground">
                           High Risk: Penalty capped at 15% (Exceeds standard 10% ceiling)
                         </p>
                       </div>
                     </div>
                     <Badge
                       variant="outline"
-                      className="text-[9px] text-vermilion border-vermilion/30 bg-vermilion/10 shrink-0 font-bold"
+                      className="text-2xs text-vermilion border-vermilion/30 bg-vermilion/10 shrink-0 font-bold"
                     >
                       REVIEW
                     </Badge>
@@ -206,7 +206,7 @@ export const LandingPage: React.FC = () => {
 
                 {/* Card CTA */}
                 <div className="pt-2 flex items-center justify-between border-t border-border/60">
-                  <span className="text-[11px] text-muted-foreground font-mono">
+                  <span className="text-2xs text-muted-foreground font-mono">
                     Evaluation completed in 1.4s
                   </span>
                   <Link
@@ -260,7 +260,7 @@ export const LandingPage: React.FC = () => {
             {/* Problem 2 */}
             <Card className="bg-card border-border/80">
               <CardContent className="p-6 space-y-3">
-                <div className="w-10 h-10 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-lg bg-warning/10 text-warning flex items-center justify-center">
                   <Layers className="h-5 w-5" />
                 </div>
                 <h3 className="text-base font-bold text-foreground">
@@ -327,7 +327,7 @@ export const LandingPage: React.FC = () => {
             <div className="p-6 rounded-xl border border-border bg-card space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-mono font-bold text-primary">STAGE 01</span>
-                <Badge variant="outline" className="text-[10px]">
+                <Badge variant="outline" className="text-2xs">
                   Ingestion
                 </Badge>
               </div>
@@ -344,7 +344,7 @@ export const LandingPage: React.FC = () => {
             <div className="p-6 rounded-xl border border-border bg-card space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-mono font-bold text-primary">STAGE 02</span>
-                <Badge variant="outline" className="text-[10px]">
+                <Badge variant="outline" className="text-2xs">
                   Evidence
                 </Badge>
               </div>
@@ -359,7 +359,7 @@ export const LandingPage: React.FC = () => {
             <div className="p-6 rounded-xl border border-border bg-card space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-mono font-bold text-primary">STAGE 03</span>
-                <Badge variant="outline" className="text-[10px]">
+                <Badge variant="outline" className="text-2xs">
                   Scoring
                 </Badge>
               </div>
@@ -376,7 +376,7 @@ export const LandingPage: React.FC = () => {
             <div className="p-6 rounded-xl border border-border bg-card space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-mono font-bold text-primary">STAGE 04</span>
-                <Badge variant="outline" className="text-[10px]">
+                <Badge variant="outline" className="text-2xs">
                   Compliance
                 </Badge>
               </div>
@@ -393,7 +393,7 @@ export const LandingPage: React.FC = () => {
             <div className="p-6 rounded-xl border border-border bg-card space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-mono font-bold text-primary">STAGE 05</span>
-                <Badge variant="outline" className="text-[10px]">
+                <Badge variant="outline" className="text-2xs">
                   Human Review
                 </Badge>
               </div>
@@ -408,7 +408,7 @@ export const LandingPage: React.FC = () => {
             <div className="p-6 rounded-xl border border-border bg-card space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-mono font-bold text-primary">STAGE 06</span>
-                <Badge variant="outline" className="text-[10px]">
+                <Badge variant="outline" className="text-2xs">
                   Submission
                 </Badge>
               </div>
@@ -493,22 +493,22 @@ export const LandingPage: React.FC = () => {
             {/* Architecture Visual Box */}
             <div className="p-6 rounded-xl border border-border bg-card/80 space-y-4 font-mono text-xs">
               <div className="flex items-center justify-between border-b border-border pb-3">
-                <span className="text-muted-foreground text-[11px]">
+                <span className="text-muted-foreground text-2xs">
                   SECURITY_ISOLATION_SPEC.md
                 </span>
                 <Badge
                   variant="outline"
-                  className="text-[10px] text-foreground border-border bg-muted"
+                  className="text-2xs text-foreground border-border bg-muted"
                 >
                   ENFORCED
                 </Badge>
               </div>
 
-              <div className="space-y-2 text-[11px] text-muted-foreground bg-muted/40 p-4 rounded-lg">
+              <div className="space-y-2 text-2xs text-muted-foreground bg-muted/40 p-4 rounded-lg">
                 <p className="text-foreground font-semibold">
                   {'// 1 Tenant -> N Users | 1 Tenant -> N Companies'}
                 </p>
-                <p className="text-orange-600 dark:text-orange-400 font-mono">
+                <p className="text-warning dark:text-warning font-mono">
                   {'TenantContextHolder.run({ organizationId }, async () => {'}
                 </p>
                 <p className="pl-4 text-foreground">const bids = await db.query(</p>
@@ -520,16 +520,16 @@ export const LandingPage: React.FC = () => {
                 <p className="pl-4 text-muted-foreground">
                   {'// Automatic anti-IDOR rejection on company mismatch'}
                 </p>
-                <p className="text-orange-600 dark:text-orange-400 font-mono">{'}'});</p>
+                <p className="text-warning dark:text-warning font-mono">{'}'});</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 pt-2 text-[11px]">
+              <div className="grid grid-cols-2 gap-3 pt-2 text-2xs">
                 <div className="p-2.5 rounded bg-muted/30 border border-border/60">
-                  <span className="text-muted-foreground block text-[10px]">Data Residency</span>
+                  <span className="text-muted-foreground block text-2xs">Data Residency</span>
                   <span className="font-semibold text-foreground">AWS Mumbai (ap-south-1)</span>
                 </div>
                 <div className="p-2.5 rounded bg-muted/30 border border-border/60">
-                  <span className="text-muted-foreground block text-[10px]">
+                  <span className="text-muted-foreground block text-2xs">
                     Regulatory Alignment
                   </span>
                   <span className="font-semibold text-foreground">DPDP Act 2023</span>

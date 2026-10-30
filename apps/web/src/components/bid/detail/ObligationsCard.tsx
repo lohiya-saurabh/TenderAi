@@ -78,14 +78,14 @@ function ObligationGrid({ summary }: { summary: ObligationsSummary }) {
           ranks.join(', ')
         ) : (
           <div className="flex flex-col gap-1.5">
-            <span className="text-[11px] text-muted-foreground font-medium">
+            <span className="text-2xs text-muted-foreground font-medium">
               {ranks.length} designated roles across clauses:
             </span>
             <div className="flex flex-wrap gap-1">
               {ranks.slice(0, 3).map((rank) => (
                 <span
                   key={rank}
-                  className="inline-block px-1.5 py-0.5 rounded bg-muted/70 text-[10px] font-medium text-foreground truncate max-w-[200px]"
+                  className="inline-block px-1.5 py-0.5 rounded bg-muted/70 text-2xs font-medium text-foreground truncate max-w-[200px]"
                   title={rank}
                 >
                   {rank}
@@ -93,7 +93,7 @@ function ObligationGrid({ summary }: { summary: ObligationsSummary }) {
               ))}
               {ranks.length > 3 && (
                 <span
-                  className="inline-block px-1.5 py-0.5 rounded bg-muted/40 text-[10px] text-muted-foreground font-medium"
+                  className="inline-block px-1.5 py-0.5 rounded bg-muted/40 text-2xs text-muted-foreground font-medium"
                   title={ranks.slice(3).join(', ')}
                 >
                   +{ranks.length - 3} more
@@ -131,11 +131,11 @@ function ObligationGrid({ summary }: { summary: ObligationsSummary }) {
               {obligation.label}
             </span>
             {obligation.active ? (
-              <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400 bg-orange-500/10 px-1.5 py-0.5 rounded shrink-0">
+              <span className="text-2xs font-bold text-warning dark:text-warning bg-warning/10 px-1.5 py-0.5 rounded shrink-0">
                 REQUIRED
               </span>
             ) : (
-              <span className="text-[10px] text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded shrink-0">
+              <span className="text-2xs text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded shrink-0">
                 OPTIONAL
               </span>
             )}

@@ -320,7 +320,7 @@ export const BidDetailPage: React.FC = () => {
   }
 
   const actionButton =
-    'inline-flex items-center gap-1.5 min-h-10 rounded-lg border border-[#C9D0DA] bg-card px-3.5 text-[13px] font-semibold text-foreground no-underline hover:border-primary dark:border-white/20';
+    'inline-flex items-center gap-1.5 min-h-10 rounded-lg border border-primary/40 bg-card px-3.5 text-sm font-semibold text-foreground no-underline hover:border-primary dark:border-white/20';
 
   const headerActions = (
     <>
@@ -364,7 +364,7 @@ export const BidDetailPage: React.FC = () => {
       </Link>
       <Link
         to={`/bids/${bidId}/clauses`}
-        className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-primary bg-primary px-3.5 text-[13px] font-semibold text-white no-underline hover:bg-[#1A3698]"
+        className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-primary bg-primary px-3.5 text-sm font-semibold text-white no-underline hover:bg-primary"
       >
         Open clause workspace{summary ? ` (${summary.clauses})` : ''}
       </Link>

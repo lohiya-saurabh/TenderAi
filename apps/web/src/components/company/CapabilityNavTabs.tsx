@@ -137,11 +137,11 @@ export const CapabilityNavTabs: React.FC<CapabilityNavTabsProps> = ({
             />
             <span>{tab.label}</span>
             <span
-              className={`inline-flex items-center gap-1 text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded-full border ${
+              className={`inline-flex items-center gap-1 text-2xs font-mono font-semibold px-1.5 py-0.5 rounded-full border ${
                 isActive
                   ? 'bg-primary text-primary-foreground border-primary'
                   : warn
-                    ? 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/40 dark:text-orange-400 dark:border-orange-800'
+                    ? 'bg-warning/10 text-warning border-warning/30 dark:bg-warning/40 dark:text-warning dark:border-warning/40'
                     : 'bg-muted text-muted-foreground border-border'
               }`}
             >
@@ -149,7 +149,7 @@ export const CapabilityNavTabs: React.FC<CapabilityNavTabsProps> = ({
               {warn && (
                 <AlertTriangle
                   size={10}
-                  className="text-orange-600 dark:text-orange-400 shrink-0"
+                  className="text-warning dark:text-warning shrink-0"
                 />
               )}
             </span>

@@ -203,16 +203,16 @@ export const TeamSettingsTab: React.FC<TeamSettingsTabProps> = ({
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-foreground text-xs">{member.name}</span>
-                        <Badge variant="secondary" className="text-[10px] uppercase font-semibold">
+                        <Badge variant="secondary" className="text-2xs uppercase font-semibold">
                           {member.role.replace(/_/g, ' ')}
                         </Badge>
                         {member.invitePending && (
-                          <Badge variant="outline" className="text-[10px] font-semibold">
+                          <Badge variant="outline" className="text-2xs font-semibold">
                             Invite pending
                           </Badge>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                      <div className="flex items-center gap-2 text-2xs text-muted-foreground">
                         <Mail className="h-3 w-3" />
                         <span>{member.email}</span>
                         {member.phone && <span>• {member.phone}</span>}
@@ -233,13 +233,13 @@ export const TeamSettingsTab: React.FC<TeamSettingsTabProps> = ({
                     {member.permissions.slice(0, 3).map((p) => (
                       <span
                         key={p}
-                        className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border"
+                        className="text-2xs font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border"
                       >
                         {p}
                       </span>
                     ))}
                     {member.permissions.length > 3 && (
-                      <span className="text-[10px] font-mono text-muted-foreground">
+                      <span className="text-2xs font-mono text-muted-foreground">
                         +{member.permissions.length - 3}
                       </span>
                     )}

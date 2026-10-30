@@ -91,7 +91,7 @@ export const SourceViewer: React.FC<SourceViewerProps> = ({
       </div>
       {unread && (
         <p
-          className="border-b border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-[11px] text-amber-800 dark:text-amber-300"
+          className="border-b border-warning/30 bg-warning/10 px-3 py-1.5 text-2xs text-warning dark:text-warning"
           data-testid="page-not-analysed"
         >
           Not analysed: the AI could not read this page, so requirements on it are missing from the
@@ -99,7 +99,7 @@ export const SourceViewer: React.FC<SourceViewerProps> = ({
         </p>
       )}
       {page === clausePage && data && quote && (
-        <p className="border-b border-border px-3 py-1.5 text-[11px] text-muted-foreground">
+        <p className="border-b border-border px-3 py-1.5 text-2xs text-muted-foreground">
           {match
             ? 'Quote highlighted in the stored text of this page. Exact position on the PDF is not available yet.'
             : 'The quote was not found in the stored text of this page. Read the page and check the clause manually.'}
@@ -135,7 +135,7 @@ const Highlighted: React.FC<{ text: string; match: [number, number] | null }> = 
       {text.slice(0, match[0])}
       <mark
         ref={ref}
-        className="rounded bg-yellow-200 px-0.5 text-black dark:bg-yellow-300"
+        className="rounded bg-warning/20 px-0.5 text-black dark:bg-warning/30"
         data-testid="source-highlight"
       >
         {text.slice(match[0], match[1])}

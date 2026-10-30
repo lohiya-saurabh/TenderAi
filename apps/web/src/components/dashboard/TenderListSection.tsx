@@ -147,7 +147,7 @@ export const TenderListSection: React.FC<TenderListSectionProps> = ({
               <span>{tab.label}</span>
               <span
                 className={cn(
-                  'text-[10px] px-1.5 py-0.5 rounded-full font-semibold',
+                  'text-2xs px-1.5 py-0.5 rounded-full font-semibold',
                   isSelected
                     ? 'bg-vermilion text-white'
                     : 'bg-muted text-muted-foreground',
@@ -188,7 +188,7 @@ export const TenderListSection: React.FC<TenderListSectionProps> = ({
         </div>
 
         {activeFilterDescriptions.length > 0 && (
-          <span className="text-[11px] text-muted-foreground">
+          <span className="text-2xs text-muted-foreground">
             {activeFilterDescriptions.join(', ')}
           </span>
         )}

@@ -282,9 +282,9 @@ export const SettingsPage: React.FC = () => {
             title={`Current theme: ${theme === 'dark' ? 'Dark' : 'Light'}. Click to switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
           >
             {theme === 'dark' ? (
-              <Moon className="h-3.5 w-3.5 text-orange-400" />
+              <Moon className="h-3.5 w-3.5 text-warning" />
             ) : (
-              <Sun className="h-3.5 w-3.5 text-amber-500" />
+              <Sun className="h-3.5 w-3.5 text-warning" />
             )}
             <span className="hidden sm:inline text-xs font-mono font-medium text-foreground">
               {theme === 'dark' ? 'Dark' : 'Light'}
