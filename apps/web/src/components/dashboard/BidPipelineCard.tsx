@@ -54,7 +54,7 @@ export const BidPipelineCard: React.FC<BidPipelineCardProps> = ({
                   isSelected
                     ? 'bg-accent text-accent-foreground border-primary shadow-xs ring-1 ring-primary/20'
                     : 'bg-card/60 border-border hover:bg-accent/40',
-                  isEmpty && 'opacity-50',
+                  isEmpty && !isSelected && 'border-dashed bg-transparent',
                 )}
               >
                 <div className="flex items-center justify-between">
