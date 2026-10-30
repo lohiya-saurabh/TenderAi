@@ -500,7 +500,7 @@ export const BidDetailPage: React.FC = () => {
               backgroundColor: 'hsl(var(--destructive) / 0.1)',
               border: '1px solid hsl(var(--destructive))',
               borderRadius: 'var(--radius-md)',
-              fontSize: '0.85rem',
+              fontSize: 'var(--text-sm)',
               color: 'hsl(var(--destructive))',
             }}
           >
@@ -547,7 +547,7 @@ export const BidDetailPage: React.FC = () => {
               backgroundColor: 'hsl(var(--destructive) / 0.1)',
               border: '1px solid hsl(var(--destructive))',
               borderRadius: 'var(--radius-md)',
-              fontSize: '0.85rem',
+              fontSize: 'var(--text-sm)',
               color: 'hsl(var(--destructive))',
             }}
           >

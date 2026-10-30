@@ -52,7 +52,7 @@ export const SecuritySettingsTab: React.FC = () => {
           <Separator />
 
           <div className="space-y-3">
-            <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">
+            <h4 className="text-xs font-semibold text-foreground">
               Upcoming Security Roadmap
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">

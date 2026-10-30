@@ -132,7 +132,7 @@ export const ChecklistPage: React.FC = () => {
                   <div
                     className={cn(
                       GRID,
-                      'border-b border-border py-2 text-2xs font-semibold uppercase tracking-[0.06em] text-muted-foreground',
+                      'border-b border-border py-2 text-2xs font-semibold text-muted-foreground',
                     )}
                   >
                     <span>Document</span>
@@ -166,7 +166,7 @@ export const ChecklistPage: React.FC = () => {
         <Card className="flex flex-col gap-3.5 px-5 py-[18px]" testId="coverage">
           <div id="panel-coverage" role="tabpanel" aria-label="Coverage" className="contents">
             <div className="flex flex-wrap items-baseline justify-between gap-3">
-              <h2 className="m-0 text-base font-bold">Coverage · what the AI read</h2>
+              <h2 className="m-0 text-base font-semibold">Coverage · what the AI read</h2>
               <div className="flex flex-wrap gap-3.5 text-xs text-muted-foreground">
                 <span className="inline-flex items-center gap-1.5">
                   <span className="inline-block h-3 w-3 rounded-[2px] bg-muted dark:bg-white/20" />

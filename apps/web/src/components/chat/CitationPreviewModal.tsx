@@ -54,7 +54,7 @@ export const CitationPreviewModal: React.FC<CitationPreviewModalProps> = ({
             </div>
             <div>
               <div className="text-xs font-semibold text-foreground">Citation Provenance</div>
-              <div className="text-2xs text-muted-foreground uppercase font-medium tracking-wider">
+              <div className="text-2xs text-muted-foreground font-medium">
                 {isTender ? 'Tender Document' : 'Company Evidence Vault'}
               </div>
             </div>
@@ -74,13 +74,13 @@ export const CitationPreviewModal: React.FC<CitationPreviewModalProps> = ({
           {/* Document metadata chips */}
           <div className="grid grid-cols-2 gap-2">
             <div className="p-2.5 rounded-lg bg-muted/40 dark:bg-muted/20 border border-border/50">
-              <span className="text-2xs text-muted-foreground uppercase font-semibold tracking-wider block mb-0.5">Source Document</span>
+              <span className="text-2xs text-muted-foreground font-semibold block mb-0.5">Source Document</span>
               <span className="font-semibold text-foreground truncate block text-xs" title={citation.documentName}>
                 {citation.documentName}
               </span>
             </div>
             <div className="p-2.5 rounded-lg bg-muted/40 dark:bg-muted/20 border border-border/50">
-              <span className="text-2xs text-muted-foreground uppercase font-semibold tracking-wider block mb-0.5">Page & Clause</span>
+              <span className="text-2xs text-muted-foreground font-semibold block mb-0.5">Page & Clause</span>
               <span className="font-semibold text-foreground block text-xs">
                 Page {citation.pageNumber} {citation.clauseReference ? `• ${citation.clauseReference}` : ''}
               </span>
@@ -90,7 +90,7 @@ export const CitationPreviewModal: React.FC<CitationPreviewModalProps> = ({
           {/* Verbatim quote */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
+              <span className="text-2xs font-semibold text-muted-foreground">
                 Verbatim Source Excerpt
               </span>
               <div className="flex items-center gap-1 text-2xs text-success dark:text-success font-semibold">
@@ -106,7 +106,7 @@ export const CitationPreviewModal: React.FC<CitationPreviewModalProps> = ({
           {/* Bounding box highlight snippet when present */}
           {citation.boundingBox && (
             <div className="p-2.5 rounded-lg bg-muted/40 dark:bg-muted/20 border border-border/50 text-2xs space-y-1">
-              <span className="text-2xs text-muted-foreground uppercase font-semibold tracking-wider block">
+              <span className="text-2xs text-muted-foreground font-semibold block">
                 Document Viewer Snippet
               </span>
               <div className="text-muted-foreground flex items-center justify-between text-2xs">

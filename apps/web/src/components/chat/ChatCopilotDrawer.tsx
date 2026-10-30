@@ -309,7 +309,7 @@ export const ChatCopilotDrawer: React.FC<ChatCopilotDrawerProps> = ({
                       {/* Structured citations bar */}
                       {msg.citations && msg.citations.length > 0 && (
                         <div className="mt-3 pt-2.5 border-t border-border/50">
-                          <div className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                          <div className="text-2xs font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
                             <FileText className="w-3 h-3 text-success dark:text-success" /> Grounded Source Citations
                           </div>
                           <div className="flex flex-wrap gap-1.5">
@@ -320,7 +320,7 @@ export const ChatCopilotDrawer: React.FC<ChatCopilotDrawerProps> = ({
                                 onClick={() => handleCitationSelect(c)}
                                 className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-background hover:bg-muted/70 border border-border/80 text-2xs text-foreground transition-all cursor-pointer shadow-2xs group hover:border-success/50 hover:shadow-xs active:scale-[0.98]"
                               >
-                                <span className="font-semibold text-success dark:text-success font-mono">[{cIdx + 1}]</span>
+                                <span className="font-semibold text-success dark:text-success tabular-nums">[{cIdx + 1}]</span>
                                 <span className="max-w-[160px] sm:max-w-[190px] truncate font-medium">{c.documentName}</span>
                                 <span className="text-2xs font-mono px-1 py-0.5 rounded bg-muted/80 text-muted-foreground">p.{c.pageNumber}</span>
                                 <ChevronRight className="w-2.5 h-2.5 text-muted-foreground group-hover:translate-x-0.5 group-hover:text-foreground transition-all shrink-0" />
@@ -369,7 +369,7 @@ export const ChatCopilotDrawer: React.FC<ChatCopilotDrawerProps> = ({
         {/* Suggested Followups */}
         {suggestedFollowups.length > 0 && !isLoading && (
           <div className="px-4 py-2.5 border-t border-border/60 bg-muted/20">
-            <div className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+            <div className="text-2xs font-semibold text-muted-foreground mb-2">
               Suggested Questions
             </div>
             <div className="flex flex-col gap-1.5">

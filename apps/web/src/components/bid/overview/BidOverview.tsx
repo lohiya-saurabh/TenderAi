@@ -110,7 +110,7 @@ export const BidOverviewHeader: React.FC<{
             {bid.locationState && <Chip tone="neutral">{bid.locationState}</Chip>}
             {hasCorrigendum && <Chip tone="amend">Corrigendum in package</Chip>}
           </div>
-          <h1 id="tender-title" className="m-0 text-2xl font-bold tracking-[-0.01em]">
+          <h1 id="tender-title" className="m-0 text-2xl font-semibold tracking-[-0.01em]">
             {bid.title}
           </h1>
           <p className="m-0 text-sm text-muted-foreground">
@@ -208,7 +208,7 @@ export const KeyFacts: React.FC<{ bid: BidDetail; verdict: BidRecommendation | n
       labelledBy="facts-h"
     >
       <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <h2 id="facts-h" className="m-0 text-base font-bold">
+        <h2 id="facts-h" className="m-0 text-base font-semibold">
           Key facts
         </h2>
         <span className="text-xs text-muted-foreground">Entered when the bid was set up</span>
@@ -226,7 +226,7 @@ export const KeyFacts: React.FC<{ bid: BidDetail; verdict: BidRecommendation | n
               className={cn(
                 'm-0 min-w-0 flex-[1_1_260px] tabular-nums',
                 f.notStated && 'italic text-muted-foreground',
-                f.mono && !f.notStated && 'font-mono text-xs',
+                f.mono && !f.notStated && 'tabular-nums text-xs',
               )}
             >
               {f.v}
@@ -292,7 +292,7 @@ export const AttentionTiles: React.FC<{ bidId: string; summary: BidClauseSummary
   return (
     <Card className="flex flex-col gap-3 px-5 py-[18px]" labelledBy="att-h" testId="clause-entry">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="att-h" className="m-0 text-base font-bold">
+        <h2 id="att-h" className="m-0 text-base font-semibold">
           Needs your attention
         </h2>
         <span className="text-xs text-muted-foreground">
@@ -330,7 +330,7 @@ export const MoneyAtStake: React.FC<{ bidId: string; summary: BidClauseSummary }
   summary,
 }) => (
   <Card className="flex flex-col gap-2.5 px-5 py-[18px]" labelledBy="money-h">
-    <h2 id="money-h" className="m-0 text-base font-bold">
+    <h2 id="money-h" className="m-0 text-base font-semibold">
       Money at stake
     </h2>
     {summary.amounts.length === 0 ? (
@@ -366,7 +366,7 @@ export const DeadlineTimeline: React.FC<{ bidId: string; summary: BidClauseSumma
   return (
     <Card className="flex flex-col gap-3.5 px-5 py-[18px]" labelledBy="dl-h">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <h2 id="dl-h" className="m-0 text-base font-bold">
+        <h2 id="dl-h" className="m-0 text-base font-semibold">
           Deadlines
         </h2>
         <span className="text-xs text-muted-foreground">
@@ -413,7 +413,7 @@ export const DeadlineTimeline: React.FC<{ bidId: string; summary: BidClauseSumma
           )}
           {relative.length > 0 && (
             <div className="flex flex-wrap gap-2.5 border-t border-dashed border-primary/40 pt-3 dark:border-white/20">
-              <span className="self-center text-2xs font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+              <span className="self-center text-2xs font-semibold text-muted-foreground">
                 Relative to an event
               </span>
               {relative.map((d) => (

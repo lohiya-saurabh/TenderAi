@@ -136,7 +136,7 @@ export const CapabilityStatusBadge: React.FC<CapabilityStatusBadgeProps> = ({
         border: config.border,
         whiteSpace: 'nowrap',
         letterSpacing: '0.02em',
-        textTransform: 'uppercase',
+        textTransform: '',
       }}
     >
       {showIcon && <IconComponent size={iconSizes[size]} color={config.color} />}

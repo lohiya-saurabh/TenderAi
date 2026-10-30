@@ -114,7 +114,7 @@ export const TenderListSection: React.FC<TenderListSectionProps> = ({
     <div id="tender-list" className="flex flex-col gap-3 scroll-mt-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-foreground tracking-tight">Tender List</h2>
+          <h2 className="text-base font-semibold text-foreground tracking-tight">Tender List</h2>
           <p className="text-xs text-muted-foreground">
             Search, filter, and sort every tender tracked within your organization tenant
           </p>

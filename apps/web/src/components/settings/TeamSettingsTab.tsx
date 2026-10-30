@@ -203,7 +203,7 @@ export const TeamSettingsTab: React.FC<TeamSettingsTabProps> = ({
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-foreground text-xs">{member.name}</span>
-                        <Badge variant="secondary" className="text-2xs uppercase font-semibold">
+                        <Badge variant="secondary" className="text-2xs font-semibold">
                           {member.role.replace(/_/g, ' ')}
                         </Badge>
                         {member.invitePending && (
@@ -239,7 +239,7 @@ export const TeamSettingsTab: React.FC<TeamSettingsTabProps> = ({
                       </span>
                     ))}
                     {member.permissions.length > 3 && (
-                      <span className="text-2xs font-mono text-muted-foreground">
+                      <span className="text-2xs tabular-nums text-muted-foreground">
                         +{member.permissions.length - 3}
                       </span>
                     )}

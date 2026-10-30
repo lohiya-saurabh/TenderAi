@@ -38,7 +38,7 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
       <div className="bg-card border border-border rounded-xl p-6 sm:p-7 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-5 border-b border-border/80 mb-6">
           <div>
-            <h2 className="text-base font-bold text-foreground font-heading">
+            <h2 className="text-base font-semibold text-foreground font-heading">
               Statutory Business Profile
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
@@ -46,7 +46,7 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
               procurement registers.
             </p>
           </div>
-          <Badge variant="neutral" size="sm" className="font-mono self-start sm:self-auto">
+          <Badge variant="neutral" size="sm" className="tabular-nums self-start sm:self-auto">
             Verified Dossier
           </Badge>
         </div>
@@ -54,7 +54,7 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Legal Entity Name */}
           <div className="flex flex-col gap-1.5">
-            <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <span className="text-2xs font-semibold text-muted-foreground">
               Legal Entity Name
             </span>
             <span className="text-sm font-semibold text-foreground leading-snug">
@@ -64,7 +64,7 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
 
           {/* CIN */}
           <div className="flex flex-col gap-1.5">
-            <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <span className="text-2xs font-semibold text-muted-foreground">
               CIN / Registration Number
             </span>
             <span className="text-sm font-mono font-semibold text-foreground">
@@ -74,7 +74,7 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
 
           {/* Incorporation Date */}
           <div className="flex flex-col gap-1.5">
-            <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <span className="text-2xs font-semibold text-muted-foreground">
               Incorporation Date
             </span>
             <span className="text-sm font-semibold text-foreground">
@@ -84,11 +84,11 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
 
           {/* MSME */}
           <div className="flex flex-col gap-1.5">
-            <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <span className="text-2xs font-semibold text-muted-foreground">
               MSME Category
             </span>
             <div className="flex items-center gap-2">
-              <Badge variant="neutral" size="sm" className="font-mono">
+              <Badge variant="neutral" size="sm" className="tabular-nums">
                 {profile.msmeCategory}
               </Badge>
               <span className="text-xs text-muted-foreground">
@@ -99,7 +99,7 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
 
           {/* Debarment */}
           <div className="flex flex-col gap-1.5">
-            <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <span className="text-2xs font-semibold text-muted-foreground">
               Statutory Debarment Status
             </span>
             <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
@@ -110,7 +110,7 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
 
           {/* Credit Rating */}
           <div className="flex flex-col gap-1.5">
-            <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <span className="text-2xs font-semibold text-muted-foreground">
               External Credit Rating
             </span>
             {profile.creditRating ? (

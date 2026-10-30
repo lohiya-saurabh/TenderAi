@@ -81,7 +81,7 @@ export const CreateBidPage: React.FC = () => {
       >
         {/* Company Entity Scoping */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+          <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
             <Building2 className="w-3.5 h-3.5 text-primary" />
             Bidding Entity <span className="text-destructive">*</span>
           </label>
@@ -106,7 +106,7 @@ export const CreateBidPage: React.FC = () => {
 
         {/* Project Title */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+          <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
             Tender Project Title <span className="text-destructive">*</span>
           </label>
           <input
@@ -122,7 +122,7 @@ export const CreateBidPage: React.FC = () => {
         {/* Two-Column Grid: Tender Number & Authority */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+            <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
               <Hash className="w-3.5 h-3.5 text-muted-foreground" />
               NIT / Tender Ref Number <span className="text-destructive">*</span>
             </label>
@@ -137,7 +137,7 @@ export const CreateBidPage: React.FC = () => {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+            <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
               Tendering Authority / PSU <span className="text-destructive">*</span>
             </label>
             <input
@@ -154,11 +154,11 @@ export const CreateBidPage: React.FC = () => {
         {/* Two-Column Grid: Estimated Value & Submission Deadline */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+            <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
               Estimated Contract Value (INR)
             </label>
             <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-sm text-muted-foreground font-semibold">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 tabular-nums text-sm text-muted-foreground font-semibold">
                 ₹
               </span>
               <input
@@ -177,7 +177,7 @@ export const CreateBidPage: React.FC = () => {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+            <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
               Submission Deadline
             </label>

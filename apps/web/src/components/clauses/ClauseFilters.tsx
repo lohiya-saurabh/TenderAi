@@ -98,9 +98,7 @@ export const ClauseFilters: React.FC<{
         if (options.length === 0) return null;
         return (
           <fieldset key={facet.key} className="border-t border-border py-2">
-            <legend className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {facet.title}
-            </legend>
+            <legend className="text-2xs font-semibold text-muted-foreground">{facet.title}</legend>
             {options.map(([value, label]) => (
               <label key={value} className="flex min-h-7 cursor-pointer items-center gap-2">
                 <input

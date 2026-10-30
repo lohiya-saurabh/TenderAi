@@ -162,7 +162,7 @@ function SortableHeader({
       <TableHead
         className={cn(
           align === 'right' && 'text-right',
-          'text-xs font-semibold uppercase tracking-wider',
+          'text-xs font-semibold',
           COLUMN_MIN_WIDTHS[columnKey],
         )}
         style={{ width: COLUMN_WIDTHS[columnKey] }}
@@ -178,7 +178,7 @@ function SortableHeader({
     <TableHead
       className={cn(
         align === 'right' && 'text-right',
-        'text-xs font-semibold uppercase tracking-wider',
+        'text-xs font-semibold',
         COLUMN_MIN_WIDTHS[columnKey],
       )}
       style={{ width: COLUMN_WIDTHS[columnKey] }}
@@ -226,12 +226,12 @@ function DeadlineCell({ bid, nowMs }: { bid: BidSummary; nowMs: number }) {
 
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="font-mono text-xs font-medium whitespace-nowrap text-foreground">
+      <span className="tabular-nums text-xs font-medium whitespace-nowrap text-foreground">
         {formatDate(bid.submissionDeadline!)}
       </span>
       <span
         className={cn(
-          'text-2xs font-bold uppercase tracking-wider whitespace-nowrap',
+          'text-2xs font-bold whitespace-nowrap',
           colorClass,
         )}
       >
@@ -339,7 +339,7 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
         );
       case 'value':
         return (
-          <span className="font-mono text-xs font-semibold text-foreground whitespace-nowrap tabular-nums">
+          <span className="tabular-nums text-xs font-semibold text-foreground whitespace-nowrap tabular-nums">
             {bid.estimatedValueRupees ? formatCurrency(bid.estimatedValueRupees) : '—'}
           </span>
         );
@@ -442,7 +442,7 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
                 <TableHead
                   style={{ width: COLUMN_WIDTHS.fit }}
                   className={cn(
-                    'text-xs font-semibold uppercase tracking-wider',
+                    'text-xs font-semibold',
                     COLUMN_MIN_WIDTHS.fit,
                   )}
                 >
@@ -453,7 +453,7 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
                 <TableHead
                   style={{ width: COLUMN_WIDTHS.recommendation }}
                   className={cn(
-                    'text-xs font-semibold uppercase tracking-wider',
+                    'text-xs font-semibold',
                     COLUMN_MIN_WIDTHS.recommendation,
                   )}
                 >
@@ -479,7 +479,7 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
               <TableHead
                 style={{ width: COLUMN_WIDTHS.actions }}
                 className={cn(
-                  'text-right text-xs font-semibold uppercase tracking-wider',
+                  'text-right text-xs font-semibold',
                   COLUMN_MIN_WIDTHS.actions,
                 )}
               >

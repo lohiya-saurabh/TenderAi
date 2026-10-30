@@ -269,7 +269,7 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
 
         {/* Dynamic Contextual Fields tailored to Document Classification */}
         <div className="p-3.5 rounded-lg border border-border/80 bg-muted/20 flex flex-col gap-3">
-          <div className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <div className="text-2xs font-semibold text-muted-foreground">
             Document Attributes & Metadata
           </div>
           {renderDynamicFields()}

@@ -109,7 +109,7 @@ export const EvidenceVaultSection: React.FC<EvidenceVaultSectionProps> = ({
                       style={{
                         fontSize: 'var(--text-sm)',
                         color: 'hsl(var(--foreground))',
-                        fontFamily: 'var(--font-mono)',
+                        fontFamily: 'var(--tabular-nums)',
                       }}
                     >
                       {doc.fileName}

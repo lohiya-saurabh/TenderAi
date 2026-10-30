@@ -63,7 +63,7 @@ export const UserAccountMenu: React.FC = () => {
               </p>
               <Badge
                 variant="secondary"
-                className="text-2xs font-medium uppercase px-1.5 py-0.5"
+                className="text-2xs font-medium px-1.5 py-0.5"
               >
                 {user?.role?.replace(/_/g, ' ') || 'User'}
               </Badge>
@@ -73,7 +73,7 @@ export const UserAccountMenu: React.FC = () => {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <div className="px-3 py-2 bg-muted/40 text-xs">
-          <p className="text-2xs uppercase font-semibold text-muted-foreground tracking-wider mb-0.5">
+          <p className="text-2xs font-semibold text-muted-foreground mb-0.5">
             Organization Tenant
           </p>
           <p className="font-medium text-foreground truncate">

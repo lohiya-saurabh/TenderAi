@@ -73,7 +73,7 @@ export const UpcomingDeadlinesCard: React.FC<UpcomingDeadlinesCardProps> = ({ bi
                     <div className="text-2xs text-muted-foreground flex items-center gap-1.5 truncate">
                       <span>{bid.tenderingAuthority}</span>
                       <span>•</span>
-                      <span className="font-mono font-medium text-foreground">
+                      <span className="tabular-nums font-medium text-foreground">
                         {bid.estimatedValueRupees
                           ? formatCurrency(bid.estimatedValueRupees)
                           : 'Value TBD'}
@@ -85,7 +85,7 @@ export const UpcomingDeadlinesCard: React.FC<UpcomingDeadlinesCardProps> = ({ bi
                     <div className="text-right">
                       <div
                         className={cn(
-                          'text-2xs font-bold uppercase tracking-wider',
+                          'text-2xs font-bold',
                           isPassed
                             ? 'text-muted-foreground'
                             : isUrgent
@@ -101,7 +101,7 @@ export const UpcomingDeadlinesCard: React.FC<UpcomingDeadlinesCardProps> = ({ bi
                             ? '1 day left'
                             : `${bid.daysLeft} days left`}
                       </div>
-                      <div className="font-mono text-2xs text-muted-foreground">
+                      <div className="tabular-nums text-2xs text-muted-foreground">
                         {formatDate(bid.submissionDeadline!)}
                       </div>
                     </div>

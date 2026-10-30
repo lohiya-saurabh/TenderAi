@@ -47,7 +47,7 @@ export const LoginPage: React.FC = () => {
             TP
           </div>
         </Link>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
           Sign in to TenderPulse AI
         </h1>
         <p className="text-xs text-muted-foreground">
@@ -71,10 +71,7 @@ export const LoginPage: React.FC = () => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <Label
-                htmlFor="email"
-                className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-              >
+              <Label htmlFor="email" className="text-xs font-semibold text-muted-foreground">
                 Email Address
               </Label>
               <div className="relative">
@@ -93,10 +90,7 @@ export const LoginPage: React.FC = () => {
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label
-                  htmlFor="password"
-                  className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-                >
+                <Label htmlFor="password" className="text-xs font-semibold text-muted-foreground">
                   Password
                 </Label>
               </div>

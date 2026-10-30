@@ -70,7 +70,7 @@ export const CompanySelector: React.FC = () => {
         </div>
 
         <div className="flex flex-col items-start min-w-0">
-          <span className="text-2xs uppercase tracking-wider text-muted-foreground font-semibold leading-none">
+          <span className="text-2xs text-muted-foreground font-semibold leading-none">
             Active Company
           </span>
           <span className="font-semibold text-xs text-foreground max-w-[150px] sm:max-w-[200px] md:max-w-[240px] truncate leading-tight mt-0.5">
@@ -92,9 +92,7 @@ export const CompanySelector: React.FC = () => {
           {/* Header */}
           <div className="px-3 py-2 border-b border-border/80 flex items-center justify-between">
             <div>
-              <div className="text-2xs font-bold text-foreground uppercase tracking-wider">
-                Tenant Companies
-              </div>
+              <div className="text-2xs font-bold text-foreground">Tenant Companies</div>
               <div className="text-2xs text-muted-foreground mt-0.5">
                 Bids, profiles &amp; AI evaluations are scoped per company
               </div>

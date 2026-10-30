@@ -392,7 +392,7 @@ export const DocumentUploader: React.FC<DocumentUploaderProps> = ({
             </span>
             <span
               style={{
-                fontFamily: 'var(--font-mono)',
+                fontFamily: 'var(--tabular-nums)',
                 fontWeight: 700,
                 color: 'hsl(var(--primary))',
               }}

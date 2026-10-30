@@ -45,9 +45,9 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
             <Zap className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-sm font-bold text-foreground">
+            <p className="text-sm font-semibold text-foreground">
               Maintain your company information once and reuse it across tenders.
-            </h2>
+            </p>
             <p className="text-xs text-muted-foreground mt-0.5">
               All verified registrations, CA UDIN financials, and past experience are automatically
               matched for every new tender.
@@ -59,7 +59,7 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
           <Badge
             variant="neutral"
             size="sm"
-            className="font-mono bg-muted/50 border-border text-foreground"
+            className="tabular-nums bg-muted/50 border-border text-foreground"
           >
             {profile.profileVersion}
           </Badge>
@@ -82,13 +82,13 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
           <div>
             <div className="flex items-center gap-2.5 flex-wrap mb-1.5">
               <Building2 className="w-6 h-6 text-foreground" />
-              <h1 className="text-xl font-bold tracking-tight text-foreground m-0">
+              <h1 className="text-2xl font-semibold tracking-tight text-foreground m-0">
                 {displayName}
               </h1>
               <Badge variant="neutral" size="sm" dot>
                 Active Dossier
               </Badge>
-              <Badge variant="neutral" size="sm" className="font-mono">
+              <Badge variant="neutral" size="sm" className="tabular-nums">
                 MSME {profile.msmeCategory}
               </Badge>
               {!profile.isBlacklisted && (
@@ -146,7 +146,7 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
           <div>
             <div className="flex justify-between text-xs mb-1.5">
               <span className="font-semibold text-foreground">Tender Readiness Health</span>
-              <strong className="font-mono text-foreground font-bold">
+              <strong className="tabular-nums text-foreground font-bold">
                 {health.healthScorePct}%
               </strong>
             </div>

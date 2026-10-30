@@ -218,7 +218,7 @@ export const CompanyDocumentChecklist: React.FC<CompanyDocumentChecklistProps> =
         <div>
           <div className="flex items-center gap-2">
             <ShieldAlert size={18} className="text-warning dark:text-warning" />
-            <CardTitle className="text-base font-bold text-foreground">
+            <CardTitle className="text-base font-semibold text-foreground">
               Company Document Checklist
             </CardTitle>
             <Badge variant="warning" className="text-xs">
@@ -266,7 +266,7 @@ export const CompanyDocumentChecklist: React.FC<CompanyDocumentChecklistProps> =
                     {/* Requirement */}
                     <td className="py-3 px-4 min-w-[260px] max-w-[340px]">
                       <div className="flex items-center gap-1.5 mb-1">
-                        <Badge variant="neutral" className="text-2xs px-1 py-0 uppercase">
+                        <Badge variant="neutral" className="text-2xs px-1 py-0">
                           {row.category}
                         </Badge>
                       </div>

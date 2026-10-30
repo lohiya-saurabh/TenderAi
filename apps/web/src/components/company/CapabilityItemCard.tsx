@@ -41,11 +41,11 @@ export const CapabilityItemCard: React.FC<CapabilityItemCardProps> = ({
       <div className="flex justify-between items-start flex-wrap gap-2">
         <div className="flex items-center gap-2.5 flex-wrap">
           {typeBadge && (
-            <span className="text-2xs font-bold uppercase tracking-wide px-2 py-0.5 rounded bg-muted text-muted-foreground border border-border">
+            <span className="text-2xs font-bold px-2 py-0.5 rounded bg-muted text-muted-foreground border border-border">
               {typeBadge}
             </span>
           )}
-          <h3 className="text-sm font-bold text-foreground m-0">{item.title}</h3>
+          <h3 className="text-sm font-semibold text-foreground m-0">{item.title}</h3>
         </div>
 
         <div className="flex items-center gap-2">
@@ -62,13 +62,11 @@ export const CapabilityItemCard: React.FC<CapabilityItemCardProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-3 border-t border-border/70">
         {fields.map((f, idx) => (
           <div key={idx} className="flex flex-col gap-1 min-w-0">
-            <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
-              {f.label}
-            </span>
+            <span className="text-2xs font-semibold text-muted-foreground">{f.label}</span>
             <span
               className={`text-xs ${
                 f.highlight ? 'font-bold text-foreground' : 'font-medium text-foreground'
-              } ${f.isMono ? 'font-mono' : ''} truncate break-words`}
+              } ${f.isMono ? 'tabular-nums' : ''} truncate break-words`}
             >
               {f.value}
             </span>
@@ -77,9 +75,7 @@ export const CapabilityItemCard: React.FC<CapabilityItemCardProps> = ({
 
         {expiryDate && (
           <div className="flex flex-col gap-1 min-w-0">
-            <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Validity / Expiry
-            </span>
+            <span className="text-2xs font-semibold text-muted-foreground">Validity / Expiry</span>
             <span className="text-xs font-semibold text-foreground">
               {expiryDate}{' '}
               {daysRemaining !== null && (
@@ -109,7 +105,7 @@ export const CapabilityItemCard: React.FC<CapabilityItemCardProps> = ({
             <FileText size={13} className="shrink-0 text-muted-foreground" />
             <span>
               Linked Evidence:{' '}
-              <strong className="text-foreground font-mono font-medium">
+              <strong className="text-foreground tabular-nums font-medium">
                 {item.evidenceDocName}
               </strong>
               {item.evidenceDocSize && ` (${item.evidenceDocSize})`}

@@ -150,7 +150,7 @@ const SectionTitle: React.FC<{ eyebrow: string; title: string; lead?: string }> 
 }) => (
   <div className="mx-auto mb-12 max-w-2xl space-y-3 text-center">
     <p className="text-xs font-semibold text-primary">{eyebrow}</p>
-    <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">{title}</h2>
+    <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{title}</h2>
     {lead && <p className="text-sm text-muted-foreground sm:text-base">{lead}</p>}
   </div>
 );
@@ -165,7 +165,7 @@ export const LandingPage: React.FC = () => (
           <p className="text-xs font-semibold text-primary">
             Bid assurance for large works tenders
           </p>
-          <h1 className="text-3xl font-bold leading-tight tracking-tight text-foreground sm:text-5xl">
+          <h1 className="text-3xl font-semibold leading-tight tracking-tight text-foreground sm:text-5xl">
             Catch every disqualifying clause before you submit.
           </h1>
           <p className="max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
@@ -267,7 +267,7 @@ export const LandingPage: React.FC = () => (
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-2 lg:items-center">
         <div className="space-y-4">
           <ShieldCheck className="h-6 w-6 text-primary" />
-          <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
             Built so you can trust what it shows
           </h2>
           <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">
@@ -322,7 +322,7 @@ export const LandingPage: React.FC = () => (
     <Section>
       <div className="mx-auto max-w-2xl space-y-5 text-center">
         <Users className="mx-auto h-6 w-6 text-primary" />
-        <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+        <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
           Put your next tender through it before you submit
         </h2>
         <Button asChild size="lg" className="gap-2">

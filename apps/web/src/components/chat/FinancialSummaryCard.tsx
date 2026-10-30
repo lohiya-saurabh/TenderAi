@@ -55,7 +55,7 @@ export const FinancialSummaryCard: React.FC<FinancialSummaryCardProps> = ({ summ
           <span className="leading-snug">{summary.metricName}</span>
         </div>
         <span
-          className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded text-2xs font-bold uppercase tracking-wider border ${styles.badge}`}
+          className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded text-2xs font-bold border ${styles.badge}`}
         >
           {summary.verdict}
         </span>
@@ -63,12 +63,12 @@ export const FinancialSummaryCard: React.FC<FinancialSummaryCardProps> = ({ summ
 
       <div className="grid grid-cols-2 gap-2 text-xs">
         <div className="p-2.5 rounded-md bg-muted/40 dark:bg-muted/20 border border-border/50">
-          <div className="text-2xs text-muted-foreground uppercase font-semibold tracking-wider">Required</div>
-          <div className="font-mono font-semibold text-foreground text-xs mt-1 tracking-tight">{summary.requiredValue}</div>
+          <div className="text-2xs text-muted-foreground font-semibold">Required</div>
+          <div className="tabular-nums font-semibold text-foreground text-xs mt-1 tracking-tight">{summary.requiredValue}</div>
         </div>
         <div className="p-2.5 rounded-md bg-muted/40 dark:bg-muted/20 border border-border/50">
-          <div className="text-2xs text-muted-foreground uppercase font-semibold tracking-wider">Actual Filed</div>
-          <div className="font-mono font-semibold text-foreground text-xs mt-1 tracking-tight">{summary.actualValue}</div>
+          <div className="text-2xs text-muted-foreground font-semibold">Actual Filed</div>
+          <div className="tabular-nums font-semibold text-foreground text-xs mt-1 tracking-tight">{summary.actualValue}</div>
         </div>
       </div>
 

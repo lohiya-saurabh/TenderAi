@@ -42,7 +42,9 @@ export const AcceptInvitePage: React.FC = () => {
     <div className="min-h-screen bg-background text-foreground flex flex-col justify-center py-12 px-4">
       <div className="mx-auto w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
-          <h1 className="text-2xl font-bold tracking-tight">Join your team on TenderPulse AI</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Join your team on TenderPulse AI
+          </h1>
           <p className="text-sm text-muted-foreground">
             Choose a password to finish setting up your account.
           </p>

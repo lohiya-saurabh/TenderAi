@@ -24,7 +24,7 @@ export const FinancialsSection: React.FC<FinancialsSectionProps> = ({
     <div className="flex flex-col gap-6">
       {/* 1. Audited Turnover Statements */}
       <div>
-        <h3 className="text-sm font-bold text-foreground mb-3">
+        <h3 className="text-sm font-semibold text-foreground mb-3">
           Audited Annual Financial Statements (with ICAI UDIN)
         </h3>
         {turnoverRecords.length === 0 ? (
@@ -79,7 +79,7 @@ export const FinancialsSection: React.FC<FinancialsSectionProps> = ({
 
       {/* 2. Bank Solvency Certificates */}
       <div>
-        <h3 className="text-sm font-bold text-foreground mb-3">
+        <h3 className="text-sm font-semibold text-foreground mb-3">
           Bank Working Capital &amp; Solvency Certificates
         </h3>
         {solvencyRecords.length === 0 ? (

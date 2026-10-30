@@ -62,7 +62,7 @@ export const CardTitle: React.FC<CardTitleProps> = ({
   ...props
 }) => (
   <Component
-    className={cn('text-lg font-semibold leading-tight tracking-tight', className)}
+    className={cn('text-base font-semibold leading-tight tracking-tight', className)}
     {...props}
   />
 );

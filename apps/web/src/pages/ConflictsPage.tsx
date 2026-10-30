@@ -177,7 +177,7 @@ const ConflictCard: React.FC<{
       </div>
       {c.aiPrecedenceNote && (
         <div className="rounded-md bg-primary/10 p-3 text-sm">
-          <div className="text-2xs font-semibold uppercase tracking-wider text-primary dark:text-primary">
+          <div className="text-2xs font-semibold text-primary dark:text-primary">
             AI suggestion — not tender text
           </div>
           {c.aiPrecedenceNote}

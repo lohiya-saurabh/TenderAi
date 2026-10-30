@@ -103,7 +103,7 @@ export const OnboardingPage: React.FC = () => {
           <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-primary text-primary-foreground font-bold text-base mb-2 shadow-xs">
             TP
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
             Welcome to TenderPulse AI, {user?.name?.split(' ')[0] || 'Partner'}
           </h1>
           <p className="text-xs text-muted-foreground">
@@ -153,7 +153,7 @@ export const OnboardingPage: React.FC = () => {
           {step === 1 && (
             <>
               <CardHeader>
-                <CardTitle className="text-base font-bold">
+                <CardTitle className="text-base font-semibold">
                   Step 1: Workspace &amp; Tenant Boundary
                 </CardTitle>
                 <CardDescription className="text-xs">
@@ -164,7 +164,7 @@ export const OnboardingPage: React.FC = () => {
               <CardContent className="space-y-5">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                   <div className="p-3 rounded-lg bg-muted/40 border border-border space-y-1">
-                    <span className="text-2xs text-muted-foreground uppercase font-semibold">
+                    <span className="text-2xs text-muted-foreground font-semibold">
                       Workspace Name
                     </span>
                     <p className="font-semibold text-foreground">
@@ -175,7 +175,7 @@ export const OnboardingPage: React.FC = () => {
                     </p>
                   </div>
                   <div className="p-3 rounded-lg bg-muted/40 border border-border space-y-1">
-                    <span className="text-2xs text-muted-foreground uppercase font-semibold">
+                    <span className="text-2xs text-muted-foreground font-semibold">
                       Admin Account
                     </span>
                     <p className="font-semibold text-foreground">{user?.name}</p>
@@ -288,7 +288,7 @@ export const OnboardingPage: React.FC = () => {
           {step === 2 && (
             <>
               <CardHeader>
-                <CardTitle className="text-base font-bold">
+                <CardTitle className="text-base font-semibold">
                   Step 2: Core Sectors &amp; Financial Turnover
                 </CardTitle>
                 <CardDescription className="text-xs">
@@ -359,7 +359,7 @@ export const OnboardingPage: React.FC = () => {
           {step === 3 && (
             <>
               <CardHeader>
-                <CardTitle className="text-base font-bold">
+                <CardTitle className="text-base font-semibold">
                   Step 3: Setup Complete &amp; Ready
                 </CardTitle>
                 <CardDescription className="text-xs">

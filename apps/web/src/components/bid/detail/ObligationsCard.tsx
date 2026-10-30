@@ -21,7 +21,7 @@ export const ObligationsCard: React.FC<ObligationsCardProps> = ({ items }) => {
   // card and workspace; this card only lists the execution formalities the tender states.
   return (
     <section className="space-y-4">
-      <h2 className="text-base font-bold tracking-tight text-foreground">
+      <h2 className="text-base font-semibold tracking-tight text-foreground">
         3. Execution formalities stated in the tender
       </h2>
       <div className="border border-border rounded-xl p-5 sm:p-6 bg-card shadow-xs transition-colors">

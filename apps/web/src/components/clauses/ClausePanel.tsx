@@ -152,7 +152,7 @@ export const ClausePanel: React.FC<ClausePanelProps> = ({
             {c.conflicts.map((cf) => (
               <div key={cf.id} className="space-y-2">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-2xs font-semibold uppercase tracking-wider text-destructive">
+                  <span className="text-2xs font-semibold text-destructive">
                     Conflict · {cf.attribute}
                   </span>
                   <Chip tone={cf.resolution === 'UNRESOLVED' ? 'bad' : 'ok'}>
@@ -177,7 +177,7 @@ export const ClausePanel: React.FC<ClausePanelProps> = ({
                 </div>
                 {cf.aiPrecedenceNote && (
                   <div className="rounded-md bg-primary/10 p-2 text-xs">
-                    <div className="text-2xs font-semibold uppercase tracking-wider text-primary dark:text-primary">
+                    <div className="text-2xs font-semibold text-primary dark:text-primary">
                       AI suggestion — not tender text
                     </div>
                     {cf.aiPrecedenceNote}
@@ -190,7 +190,7 @@ export const ClausePanel: React.FC<ClausePanelProps> = ({
 
         <section aria-label="Source text" className="space-y-2">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="text-2xs font-semibold text-muted-foreground">
               Source text · verbatim
             </span>
             <Chip tone={quoteMissing ? 'bad' : c.quoteCheck === 'NO_PAGE_TEXT' ? 'neutral' : 'ok'}>
@@ -234,7 +234,7 @@ export const ClausePanel: React.FC<ClausePanelProps> = ({
 
         {c.summary && (
           <section aria-label="AI summary" className="space-y-1">
-            <span className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="text-2xs font-semibold text-muted-foreground">
               AI summary
             </span>
             <p className="text-sm text-foreground">{c.summary}</p>
@@ -250,7 +250,7 @@ export const ClausePanel: React.FC<ClausePanelProps> = ({
           />
         ) : (
           <section aria-label="Requirement details">
-            <span className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="text-2xs font-semibold text-muted-foreground">
               Requirement details
             </span>
             {details.length > 0 ? (
@@ -279,7 +279,7 @@ export const ClausePanel: React.FC<ClausePanelProps> = ({
         )}
 
         <section aria-label="Activity" className="space-y-1">
-          <span className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <span className="text-2xs font-semibold text-muted-foreground">
             Activity
           </span>
           <ul className="space-y-0.5 text-xs text-muted-foreground">
@@ -454,7 +454,7 @@ const CorrectForm: React.FC<{
   const field = 'h-8 w-full rounded-md border border-input bg-background px-2 text-sm';
   return (
     <section aria-label="Correct the clause" className="space-y-2" data-testid="correct-form">
-      <span className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <span className="text-2xs font-semibold text-muted-foreground">
         Correct the AI reading
       </span>
       <label className="block text-xs">

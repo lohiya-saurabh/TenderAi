@@ -241,7 +241,7 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
             </span>
             <span
               style={{
-                fontFamily: 'var(--font-mono)',
+                fontFamily: 'var(--tabular-nums)',
                 fontWeight: 700,
                 color: 'hsl(var(--primary))',
               }}
@@ -394,7 +394,7 @@ export const ExtractionProgress: React.FC<ExtractionProgressProps> = ({
                 fontSize: 'var(--text-2xs)',
                 fontWeight: 600,
                 color: 'hsl(var(--muted-foreground))',
-                textTransform: 'uppercase',
+                textTransform: '',
               }}
             >
               Recommended Next Steps:

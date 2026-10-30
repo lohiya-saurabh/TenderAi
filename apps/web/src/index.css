@@ -160,7 +160,7 @@
     --space-12: 3rem;
     --space-16: 4rem;
 
-    --text-2xs: 0.65rem;
+    --text-2xs: 0.6875rem;
     --text-xs: 0.75rem;
     --text-sm: 0.875rem;
     --text-base: 1rem;
@@ -390,6 +390,17 @@ body {
     Roboto,
     sans-serif;
   margin: 0;
+}
+
+/* Form controls are 14px unless a class says otherwise (toolbars use text-xs). In the base
+   layer so utility classes win; Tailwind's reset otherwise makes them inherit any size. */
+@layer base {
+  input:not([type='checkbox']):not([type='radio']),
+  select,
+  textarea {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
 }
 
 /* Ensure inputs and textareas strictly adhere to current color theme and autofill */

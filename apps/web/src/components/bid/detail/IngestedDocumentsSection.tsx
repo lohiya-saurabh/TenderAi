@@ -35,7 +35,7 @@ export const IngestedDocumentsSection: React.FC<IngestedDocumentsSectionProps> =
       {/* Section Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-base font-bold tracking-tight text-foreground">
+          <h2 className="text-base font-semibold tracking-tight text-foreground">
             2. Ingested Tender Documents
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5">

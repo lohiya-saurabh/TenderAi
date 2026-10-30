@@ -60,7 +60,7 @@ export const BidPipelineCard: React.FC<BidPipelineCardProps> = ({
                 <div className="flex items-center justify-between">
                   <span
                     className={cn(
-                      'text-2xs font-semibold uppercase tracking-wider',
+                      'text-2xs font-semibold',
                       isSelected ? 'text-primary' : 'text-muted-foreground',
                     )}
                   >

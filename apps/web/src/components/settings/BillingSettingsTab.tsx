@@ -71,7 +71,7 @@ export const BillingSettingsTab: React.FC<BillingSettingsTabProps> = ({
           </div>
           <Badge
             variant={subscription?.status === 'ACTIVE' ? 'default' : 'secondary'}
-            className="text-xs uppercase"
+            className="text-xs"
           >
             {subscription?.status || 'ACTIVE'}
           </Badge>
@@ -79,7 +79,7 @@ export const BillingSettingsTab: React.FC<BillingSettingsTabProps> = ({
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="p-3.5 rounded-lg bg-muted/40 border border-border space-y-1">
-              <span className="text-2xs text-muted-foreground uppercase font-semibold">
+              <span className="text-2xs text-muted-foreground font-semibold">
                 Current Tier
               </span>
               <div className="flex items-center gap-2">
@@ -98,7 +98,7 @@ export const BillingSettingsTab: React.FC<BillingSettingsTabProps> = ({
             </div>
 
             <div className="p-3.5 rounded-lg bg-muted/40 border border-border space-y-1">
-              <span className="text-2xs text-muted-foreground uppercase font-semibold">
+              <span className="text-2xs text-muted-foreground font-semibold">
                 Price / Interval
               </span>
               <p className="text-base font-bold text-foreground">
@@ -110,7 +110,7 @@ export const BillingSettingsTab: React.FC<BillingSettingsTabProps> = ({
             </div>
 
             <div className="p-3.5 rounded-lg bg-muted/40 border border-border space-y-1">
-              <span className="text-2xs text-muted-foreground uppercase font-semibold">
+              <span className="text-2xs text-muted-foreground font-semibold">
                 Billing Period
               </span>
               <p className="text-xs font-mono font-medium text-foreground">
@@ -133,7 +133,7 @@ export const BillingSettingsTab: React.FC<BillingSettingsTabProps> = ({
           {/* Usage & Quota Meters */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">
+              <h4 className="text-xs font-semibold text-foreground">
                 Current Monthly Usage &amp; Quotas
               </h4>
               <span className="text-2xs text-muted-foreground font-mono">

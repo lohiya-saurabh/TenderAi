@@ -22,7 +22,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
           style={{
             display: 'flex',
             justifyContent: 'flex-end',
-            fontSize: '0.75rem',
+            fontSize: 'var(--text-xs)',
             color: 'hsl(var(--muted-foreground))',
             marginBottom: '0.25rem',
           }}

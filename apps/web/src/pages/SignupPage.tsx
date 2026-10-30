@@ -65,7 +65,7 @@ export const SignupPage: React.FC = () => {
             TP
           </div>
         </Link>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
           Create your TenderPulse workspace
         </h1>
         <p className="text-xs text-muted-foreground">
@@ -81,7 +81,7 @@ export const SignupPage: React.FC = () => {
               <Sparkles className="h-4 w-4 text-primary shrink-0" />
               <div className="text-xs">
                 <span className="text-muted-foreground">Selected Tier: </span>
-                <span className="font-semibold text-foreground font-mono">{selectedPlan}</span>
+                <span className="font-semibold text-foreground tabular-nums">{selectedPlan}</span>
               </div>
             </div>
             <Link to="/pricing" className="text-2xs text-primary hover:underline">
@@ -153,7 +153,7 @@ export const SignupPage: React.FC = () => {
             </div>
 
             <div className="pt-2 border-t border-border/60">
-              <p className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+              <p className="text-2xs font-semibold text-muted-foreground mb-3">
                 Workspace &amp; Company Setup
               </p>
 

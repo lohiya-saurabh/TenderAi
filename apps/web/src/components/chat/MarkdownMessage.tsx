@@ -82,7 +82,7 @@ export const MarkdownMessage: React.FC<MarkdownMessageProps> = ({ content, onCit
       elements.push(
         <div key={`table-${tIndex}`} className="overflow-x-auto my-3 border border-border rounded-md">
           <table className="w-full text-xs text-left border-collapse">
-            <thead className="bg-muted/60 text-muted-foreground uppercase text-2xs tracking-wider">
+            <thead className="bg-muted/60 text-muted-foreground text-2xs">
               <tr>
                 {headers.map((h, hIdx) => (
                   <th key={`th-${hIdx}`} className="px-3 py-2 border-b border-border font-medium">
@@ -145,13 +145,13 @@ export const MarkdownMessage: React.FC<MarkdownMessageProps> = ({ content, onCit
       );
     } else if (line.startsWith('## ')) {
       elements.push(
-        <h2 key={`h2-${i}`} className="text-base font-bold text-foreground mt-3.5 mb-2">
+        <h2 key={`h2-${i}`} className="text-base font-semibold text-foreground mt-3.5 mb-2">
           {renderFormattedText(line.slice(3))}
         </h2>,
       );
     } else if (line.startsWith('# ')) {
       elements.push(
-        <h1 key={`h1-${i}`} className="text-lg font-extrabold text-foreground mt-4 mb-2">
+        <h1 key={`h1-${i}`} className="text-lg font-semibold text-foreground mt-4 mb-2">
           {renderFormattedText(line.slice(2))}
         </h1>,
       );

@@ -44,7 +44,7 @@ export const DisqualifierItemCard: React.FC<DisqualifierItemCardProps> = ({ rawI
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-destructive tracking-wide">{item.title}</span>
           {item.factor && (
-            <span className="text-2xs px-1.5 py-0.5 rounded bg-destructive/15 text-destructive font-semibold uppercase">
+            <span className="text-2xs px-1.5 py-0.5 rounded bg-destructive/15 text-destructive font-semibold">
               {item.factor}
             </span>
           )}
@@ -212,7 +212,7 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
   return (
     <section className="border border-border rounded-lg p-6 bg-card shadow-xs space-y-6 transition-colors">
       <div>
-        <div className="text-xs font-semibold uppercase tracking-wider mb-2 text-muted-foreground flex items-center justify-between">
+        <div className="text-xs font-semibold mb-2 text-muted-foreground flex items-center justify-between">
           <span>1. DETERMINISTIC ELIGIBILITY VERDICT</span>
           <span className="text-2xs font-bold text-muted-foreground">
             {decision ? formatDecisionStateText(decision.state) : 'EVALUATION PENDING'}
@@ -346,7 +346,7 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
             if (displayReasons.length === 0) return null;
             return (
               <div className="space-y-1.5">
-                <div className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                <div className="text-xs font-semibold text-foreground">
                   {decision.verdict === 'DO_NOT_PURSUE'
                     ? 'Disqualifying Factors & Shortfalls'
                     : decision.verdict === 'PURSUE'
@@ -374,7 +374,7 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
             decision.commercialRisks.length > 0 &&
             decision.verdict !== 'DO_NOT_PURSUE' && (
               <div className="space-y-1.5">
-                <div className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                <div className="text-xs font-semibold text-foreground">
                   Commercial &amp; Contractual Risks
                 </div>
                 <ul className="list-disc pl-5 space-y-1 text-xs text-muted-foreground">
@@ -407,7 +407,7 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
                 >
                   <div className="flex items-center gap-2">
                     <FailIcon size={16} color="hsl(var(--destructive))" className="shrink-0" />
-                    <span className="text-xs font-bold text-destructive uppercase tracking-wider">
+                    <span className="text-xs font-bold text-destructive">
                       Hard Disqualifiers ({flatHardDisqualifiers.length})
                     </span>
                   </div>
@@ -424,7 +424,7 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
           {decision.evidenceCitations && decision.evidenceCitations.length > 0 && (
             <div className="space-y-2 pt-2 border-t border-border/50">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                <span className="text-xs font-semibold text-foreground">
                   Verified Evidence Provenance ({decision.evidenceCitations.length})
                 </span>
                 <span className="text-2xs text-primary dark:text-primary font-medium">
@@ -582,7 +582,7 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
 
           {/* Signals available today */}
           <div className="mt-3">
-            <div className="text-xs font-semibold text-foreground uppercase tracking-wider mb-2">
+            <div className="text-xs font-semibold text-foreground mb-2">
               Signals available today
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -623,7 +623,7 @@ function Signal({ label, value, tone }: { label: string; value: string; tone?: s
         style={{
           fontSize: 'var(--text-2xs)',
           color: 'hsl(var(--muted-foreground))',
-          textTransform: 'uppercase',
+          textTransform: '',
           letterSpacing: '0.04em',
         }}
       >

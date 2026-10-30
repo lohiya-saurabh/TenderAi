@@ -34,9 +34,7 @@ export const DashboardKpiStrip: React.FC<DashboardKpiStripProps> = ({ bids }) =>
       {/* 1. Active Pipeline Count */}
       <div className="p-5 border border-border rounded-lg bg-card shadow-xs transition-colors">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
-            ACTIVE BIDS TRACKED
-          </span>
+          <span className="text-2xs font-semibold text-muted-foreground">ACTIVE BIDS TRACKED</span>
           <span className="text-muted-foreground">
             <TendersIcon size={15} />
           </span>
@@ -63,7 +61,7 @@ export const DashboardKpiStrip: React.FC<DashboardKpiStripProps> = ({ bids }) =>
       {/* 2. Total Contract Value */}
       <div className="p-5 border border-border rounded-lg bg-card shadow-xs transition-colors">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <span className="text-2xs font-semibold text-muted-foreground">
             PIPELINE CONTRACT VALUE
           </span>
           <span className="text-primary dark:text-primary">
@@ -87,9 +85,7 @@ export const DashboardKpiStrip: React.FC<DashboardKpiStripProps> = ({ bids }) =>
       {/* 3. Statutory Evidence Status */}
       <div className="p-5 border border-border rounded-lg bg-card shadow-xs transition-colors">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
-            EVIDENCE STATUS
-          </span>
+          <span className="text-2xs font-semibold text-muted-foreground">EVIDENCE STATUS</span>
           <span
             className={
               totalFlagged > 0
@@ -144,7 +140,7 @@ export const DashboardKpiStrip: React.FC<DashboardKpiStripProps> = ({ bids }) =>
       {/* 4. Submission Deadlines / Recommendation */}
       <div className="p-5 border border-border rounded-lg bg-card shadow-xs transition-colors">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <span className="text-2xs font-semibold text-muted-foreground">
             {urgentDeadlines.length > 0 ? 'IMMINENT DEADLINES' : 'PIPELINE HEALTH'}
           </span>
           <span

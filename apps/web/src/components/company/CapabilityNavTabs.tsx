@@ -137,7 +137,7 @@ export const CapabilityNavTabs: React.FC<CapabilityNavTabsProps> = ({
             />
             <span>{tab.label}</span>
             <span
-              className={`inline-flex items-center gap-1 text-2xs font-mono font-semibold px-1.5 py-0.5 rounded-full border ${
+              className={`inline-flex items-center gap-1 text-2xs tabular-nums font-semibold px-1.5 py-0.5 rounded-full border ${
                 isActive
                   ? 'bg-primary text-primary-foreground border-primary'
                   : warn

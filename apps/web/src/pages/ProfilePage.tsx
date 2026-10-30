@@ -178,15 +178,13 @@ export const ProfilePage: React.FC = () => {
           </div>
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Workspace:
-              </span>
+              <span className="text-2xs font-semibold text-muted-foreground">Workspace:</span>
               <span className="text-base sm:text-lg font-semibold text-foreground tracking-tight">
                 {profile?.organizationName || user?.organizationName || 'Organization Workspace'}
               </span>
               <Badge
                 variant="outline"
-                className="text-2xs font-mono border-primary/30 text-primary bg-primary/5"
+                className="text-2xs tabular-nums border-primary/30 text-primary bg-primary/5"
               >
                 Multi-Tenant Isolated
               </Badge>
@@ -284,12 +282,12 @@ export const ProfilePage: React.FC = () => {
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <span className="text-base font-semibold text-foreground">{displayName}</span>
-                <Badge variant="secondary" className="text-2xs uppercase font-semibold">
+                <Badge variant="secondary" className="text-2xs font-semibold">
                   {displayRole.replace(/_/g, ' ')}
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground">{displayEmail}</p>
-              <p className="text-2xs text-muted-foreground font-mono">
+              <p className="text-2xs text-muted-foreground tabular-nums">
                 Avatar initials derived from verified name
               </p>
             </div>
@@ -358,28 +356,22 @@ export const ProfilePage: React.FC = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
               <div className="p-3 rounded-lg bg-muted/30 border border-border/60 space-y-1">
-                <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  Full Name
-                </span>
+                <span className="text-2xs font-semibold text-muted-foreground">Full Name</span>
                 <p className="font-medium text-foreground">{displayName}</p>
               </div>
 
               <div className="p-3 rounded-lg bg-muted/30 border border-border/60 space-y-1">
-                <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  Email Address
-                </span>
+                <span className="text-2xs font-semibold text-muted-foreground">Email Address</span>
                 <p className="font-medium text-foreground">{displayEmail}</p>
               </div>
 
               <div className="p-3 rounded-lg bg-muted/30 border border-border/60 space-y-1">
-                <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  Phone Number
-                </span>
+                <span className="text-2xs font-semibold text-muted-foreground">Phone Number</span>
                 <p className="font-medium text-foreground">{profile?.phone || 'Not provided'}</p>
               </div>
 
               <div className="p-3 rounded-lg bg-muted/30 border border-border/60 space-y-1">
-                <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
+                <span className="text-2xs font-semibold text-muted-foreground">
                   Assigned Workspace Role
                 </span>
                 <p className="font-medium text-foreground">{displayRole.replace(/_/g, ' ')}</p>
@@ -501,16 +493,14 @@ export const ProfilePage: React.FC = () => {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
             <div className="p-3 rounded-lg bg-muted/30 border border-border/60 space-y-1">
-              <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Tenant Workspace
-              </span>
+              <span className="text-2xs font-semibold text-muted-foreground">Tenant Workspace</span>
               <p className="font-medium text-foreground">
                 {profile?.organizationName || user?.organizationName || 'Default Workspace'}
               </p>
             </div>
 
             <div className="p-3 rounded-lg bg-muted/30 border border-border/60 space-y-1">
-              <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
+              <span className="text-2xs font-semibold text-muted-foreground">
                 Organization Tenant ID
               </span>
               <p className="font-mono text-foreground">
@@ -525,7 +515,7 @@ export const ProfilePage: React.FC = () => {
                 <Layers className="h-3.5 w-3.5 text-primary" />
                 Active Permissions List
               </span>
-              <Badge variant="outline" className="text-2xs font-mono">
+              <Badge variant="outline" className="text-2xs tabular-nums">
                 {(profile?.permissions || user?.permissions)?.length || 0} Scopes
               </Badge>
             </div>
