@@ -211,20 +211,28 @@ test.describe.serial('clause workspace', () => {
     expect(await page.locator('[data-testid^="clause-row-"]').count()).toBeLessThan(60);
   });
 
-  test('U12 accessibility: no serious violations', async ({ page }) => {
+  test('U12 accessibility: no serious violations, light and dark', async ({ page }) => {
     const scan = async (label: string) => {
       const results = await new AxeBuilder({ page }).include('main').analyze();
       const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
       expect(serious.map((v) => `${label}: ${v.id} ${v.nodes[0]?.target}`)).toEqual([]);
     };
-    await openWorkspace(page);
-    await scan('workspace');
-    await row(page, 'Non-blacklisting affidavit').getByRole('button').click();
-    await expect(page.getByTestId('clause-panel')).toBeVisible();
-    await scan('panel');
-    await navigate(page, `/bids/${bidId}/conflicts`);
-    await expect(page.getByTestId('conflict-card').first()).toBeVisible();
-    await scan('conflicts');
+    for (const theme of ['light', 'dark']) {
+      await openWorkspace(page);
+      if (theme === 'dark') {
+        await page.getByRole('button', { name: 'Switch to dark theme' }).click();
+        await expect(page.locator('html')).toHaveClass(/\bdark\b/);
+        // Colour transitions would otherwise be measured half-way.
+        await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)));
+      }
+      await scan(`${theme} workspace`);
+      await row(page, 'Non-blacklisting affidavit').getByRole('button').click();
+      await expect(page.getByTestId('clause-panel')).toBeVisible();
+      await scan(`${theme} panel`);
+      await navigate(page, `/bids/${bidId}/conflicts`);
+      await expect(page.getByTestId('conflict-card').first()).toBeVisible();
+      await scan(`${theme} conflicts`);
+    }
   });
 
   test('U13 read-only users see the clauses but no review actions', async ({ page }) => {

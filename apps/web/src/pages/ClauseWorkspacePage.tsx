@@ -83,11 +83,14 @@ export const ClauseWorkspacePage: React.FC = () => {
   const [search, setSearch] = useState(view.q);
   const [showFilters, setShowFilters] = useState(false);
 
+  // Patch the live URL, not this render's params: two quick changes (a tab, then Group by)
+  // would otherwise overwrite each other before React re-renders.
   const update = useCallback(
     (patch: Partial<WorkspaceView>) => {
-      setParams(serializeView({ ...parseView(params), ...patch }), { replace: true });
+      const current = parseView(new URLSearchParams(window.location.search));
+      setParams(serializeView({ ...current, ...patch }), { replace: true });
     },
-    [params, setParams],
+    [setParams],
   );
 
   const load = useCallback(async () => {
