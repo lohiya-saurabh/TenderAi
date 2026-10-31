@@ -16,12 +16,16 @@
 
 Checked and correct: extraction is LLM-only (no rule or regex producer); quotes are never filled from block text; strict schema for Cerebras and one category re-ask (`_recategorize`); failed windows set `extraction_error` and are listed in `failed_pages` and `coverage`; all windows failing raises `LLMExtractionError`; `LLM_MAX_CONCURRENCY` semaphore around each window; 429 scope per model (Groq, Cerebras, Gemini, SambaNova) or per provider (OpenRouter), bounded wait `LLM_RATE_LIMIT_MAX_WAIT_SECONDS`; evidence extraction returns `status=FAILED` with the reason; no tender-specific phrases or figures in extraction code.
 
-## Still open
+## Follow-up (same day)
 
-- `asyncio.gather` over windows (`extraction/orchestrator.py:249`) has no `return_exceptions`: a window that raises something other than `LLMExtractionError` fails the document while the other windows keep calling models.
-- Chat (`chat/workflow.py`) answers from a template when no model replies, and its "not found" text cites general CPWD/NHAI practice. Chat is outside Invariant 5 but the wording should be reviewed.
-- `GET /bids/:id/bid-decision` answers 404 for unevaluated bids by contract, which logs a console error on every bid overview.
-- The tender PDFs live in the main checkout's root `data/`, but tests and the benchmark read `apps/ai/data` (a link is needed in a worktree).
+| Was open                                                                                              | Resolution                                                                                                                                                                                            |
+| ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `asyncio.gather` over windows: a non-LLM error in one window failed the document                      | Each window catches its own error and is reported in `failed_pages` (`orchestrator.py` `_process_window`); test `test_a_window_crashing_on_a_bug_fails_only_its_own_pages`                            |
+| Chat "not found" template and prompt cited general CPWD/NHAI practice and a real company's file names | Template block removed; the prompt forbids presenting general practice or another tender's terms as this tender's                                                                                     |
+| `GET /bids/:id/bid-decision` 404 logged a console error for unevaluated bids                          | 204 with no body; the web client maps it to `null`                                                                                                                                                    |
+| Tests and the benchmark read `apps/ai/data`; the PDFs live in the repository root `data/`             | `benchmark.DEFAULT_DOCS_DIR` points at the root; tests use it and skip when the PDFs are absent                                                                                                       |
+| Playwright U9 flaky after U6                                                                          | Real bug: J/K stepped from the last render's selection, so a second key before React re-rendered moved from the old clause. `step` now reads the live URL, like `update`; the test waits for each key |
+| Pyrefly `unreachable` in `docling_parser._is_valid_continuing_table_row`                              | A stray `return False` made the last rule dead since the parser was written; the dead tail and two no-op rules were removed, behaviour unchanged                                                      |
 
 ## Gates
 

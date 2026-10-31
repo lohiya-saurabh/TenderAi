@@ -109,7 +109,7 @@ Run the gates that match what you touched. CI runs all of them.
 # AI worker (from apps/ai)
 uv run ruff check src tests && uv run ruff format --check src tests
 uv run pytest -m unit        # ~20 s, no PDFs, no network
-uv run pytest                # adds realdoc tests over data/procurement-evidence PDFs
+uv run pytest                # adds realdoc tests over the PDFs in the repository root's data/procurement-evidence (not in git; skipped when absent)
 uv run python -m tenderpulse_ai.evaluation.benchmark --docs 02,04 --compare last
 
 # Packages and apps
@@ -122,6 +122,7 @@ npm test -w @tenderpulse/web
 
 # Browser tests: clause workspace U1–U14 (U12 runs axe in light and dark, U14 flags chips over 12px and uppercase labels), on their own API, fresh demo DB and Vite
 npx playwright test
+E2E_API_PORT=3002 E2E_WEB_PORT=5175 npx playwright test   # when dev servers hold 3000/5173
 ```
 
 Notes:

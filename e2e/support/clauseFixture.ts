@@ -7,7 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { APIRequestContext, Page } from '@playwright/test';
 
-export const API = 'http://localhost:3000/api/v1';
+export const API = `http://localhost:${process.env.E2E_API_PORT ?? 3000}/api/v1`;
 /** Generated per run in playwright.config.ts and passed to the test API. */
 const INTERNAL_KEY = process.env.E2E_INTERNAL_KEY ?? '';
 const here = path.dirname(fileURLToPath(import.meta.url));

@@ -12,6 +12,7 @@ from tenderpulse_ai.domain.docling_parser import (
 )
 from tenderpulse_ai.domain.models import DoclingBlock, VerifiedComplianceItem
 from tenderpulse_ai.domain.structure_builder import ClauseTracker, DocumentStructureBuilder
+from tenderpulse_ai.evaluation.benchmark import DEFAULT_DOCS_DIR
 from tenderpulse_ai.extraction.clause_references import (
     attribute_positional_clause_refs,
 )
@@ -179,9 +180,9 @@ def test_positional_attribution_replaces_regex_guess():
 # Layout-aware page text, OCR, merge integrity, clause keywords, ingestion mode
 # ------------------------------------------------------------------------------
 
-_NHAI_02 = "data/procurement-evidence/01_Tender_Documents/02_NHAI_Greenfield_Exp_1450Cr_NIT.pdf"
-_NHAI_01 = "data/procurement-evidence/01_Tender_Documents/01_NHAI_HAM_850Cr_NIT.pdf"
-_SCANNED = "data/procurement-evidence/01_Tender_Documents/08_NHAI_ATMS_Tolling_180Cr_NIT.pdf"
+_NHAI_02 = str(DEFAULT_DOCS_DIR / "02_NHAI_Greenfield_Exp_1450Cr_NIT.pdf")
+_NHAI_01 = str(DEFAULT_DOCS_DIR / "01_NHAI_HAM_850Cr_NIT.pdf")
+_SCANNED = str(DEFAULT_DOCS_DIR / "08_NHAI_ATMS_Tolling_180Cr_NIT.pdf")
 
 
 def test_ruled_table_rendered_row_by_row_and_joined_across_page_break():

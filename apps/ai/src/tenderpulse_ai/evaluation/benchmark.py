@@ -24,7 +24,8 @@ from pathlib import Path
 from typing import Any
 
 APP_DIR = Path(__file__).resolve().parents[3]
-DEFAULT_DOCS_DIR = APP_DIR / "data" / "procurement-evidence" / "01_Tender_Documents"
+# The tender PDFs are not in git; they live in the repository root's data/ folder.
+DEFAULT_DOCS_DIR = APP_DIR.parents[1] / "data" / "procurement-evidence" / "01_Tender_Documents"
 BENCH_DIR = APP_DIR / ".bench"
 PAGE_CACHE_DIR = APP_DIR / ".cache" / "pages"
 

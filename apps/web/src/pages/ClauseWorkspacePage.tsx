@@ -144,11 +144,14 @@ export const ClauseWorkspacePage: React.FC = () => {
   const step = useCallback(
     (delta: number) => {
       if (order.length === 0) return;
-      const i = selectedId ? order.indexOf(selectedId) : -1;
+      // Step from the live URL like `update`: a second key before React re-renders
+      // must move from the clause the first key selected.
+      const current = parseView(new URLSearchParams(window.location.search)).clause;
+      const i = current ? order.indexOf(current) : -1;
       const next = i < 0 ? 0 : Math.min(order.length - 1, Math.max(0, i + delta));
       select(order[next]!);
     },
-    [order, selectedId, select],
+    [order, select],
   );
 
   const markOpened = useCallback((id: string) => {

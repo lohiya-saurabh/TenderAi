@@ -306,3 +306,30 @@ async def test_no_invented_defaults_and_conflicts_link_real_clauses():
         "failedPages": [],
         "status": "COMPLETE",
     }
+
+
+@pytest.mark.asyncio
+async def test_a_window_crashing_on_a_bug_fails_only_its_own_pages(monkeypatch):
+    """A non-LLM error in one window is reported for its pages; the others still return."""
+    from tenderpulse_ai.workflow import graph as graph_module
+
+    monkeypatch.setattr(settings, "batch_page_window_size", 1)
+    build = graph_module.build_compliance_workflow_graph
+
+    class _Graph:
+        def __init__(self, inner):
+            self.inner = inner
+
+        async def ainvoke(self, state, config=None):
+            if state["page_number"] == 2:
+                raise ValueError("bug in a node")
+            return await self.inner.ainvoke(state, config=config)
+
+    monkeypatch.setattr(
+        graph_module, "build_compliance_workflow_graph", lambda ctx: _Graph(build(ctx))
+    )
+    response = await ProductionExtractionPipeline(fake_llm_client(quoting_llm)).execute(
+        _request([PAGE, "2.1 The Contractor shall maintain insurance for the works."])
+    )
+    assert response.failed_pages == [2]
+    assert response.items

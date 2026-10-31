@@ -1473,13 +1473,6 @@ def _synthesize_deterministic_template(
                 lines.append(
                     f'I reviewed the ingested tender documents and company vault credentials for **"{query}"**, but could not locate a matching clause or certificate in the current project files.'
                 )
-                lines.append("\n**Standard Procurement Practice & Context:**")
-                lines.append(
-                    "- In standard government and infrastructure tenders (e.g., NHAI, CPWD, MoRTH), this subject is typically governed by the General Conditions of Contract (GCC) or Special Conditions of Contract (SCC)."
-                )
-                lines.append(
-                    "- If omitted from the Notice Inviting Tender (NIT) or RFP volume, model standard bidding document (SBD) guidelines usually apply."
-                )
                 lines.append("\n**Recommended Next Steps:**")
                 lines.append(
                     "- Submit a formal Pre-Bid Query during the tender clarification window requesting official clarification from the tendering authority."
@@ -1547,10 +1540,10 @@ async def response_synthesis_node(state: ChatWorkflowState) -> dict[str, Any]:
             "The citations and retrieved evidence arrive in a separate message, numbered [^1], [^2], ...\n\n"
             "Instructions:\n"
             "- When referencing documents, credentials, or clauses from the retrieved evidence, cite them using markdown footnotes like [^1], [^2], corresponding precisely to the citation numbers above.\n"
-            "- When referencing documents or certificates from the retrieved evidence, cite their exact file names (e.g. Tata_Projects_GST_Registration.pdf, Audited_Balance_Sheet_and_CA_Certificate_FY25.pdf).\n"
+            "- When referencing documents or certificates from the retrieved evidence, cite their exact file names as given in the evidence.\n"
             "- When discussing statutory execution rules, explicitly mention **Stamp Paper** and **Notarized** requirements where applicable.\n"
             "- If requested information (e.g. tender clauses, turnover, or credentials) is NOT present in the retrieved evidence, answer conversationally like an experienced bidding consultant: "
-            "explain clearly that the specific clause or record was not identified in the uploaded tender documents, summarize standard Indian procurement practice for this item (e.g. CPWD / NHAI norms), "
+            "explain clearly that the specific clause or record was not identified in the uploaded tender documents; do not state general practice or another tender's terms as if they applied to this tender, "
             "and advise practical next steps such as submitting a formal pre-bid query or inspecting GCC / corrigenda.\n"
             "Be genuinely helpful, conversational, and direct.\n\n" + UNTRUSTED_DATA_DIRECTIVE
         )

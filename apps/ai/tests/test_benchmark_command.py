@@ -5,7 +5,7 @@ from fakes import use_fake_llm
 
 from tenderpulse_ai.evaluation import benchmark
 
-DOCS = "data/procurement-evidence/01_Tender_Documents"
+DOCS = str(benchmark.DEFAULT_DOCS_DIR)
 
 
 @pytest.mark.asyncio
@@ -13,6 +13,8 @@ async def test_benchmark_snapshot_and_comparison(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(benchmark, "BENCH_DIR", tmp_path / "bench")
     monkeypatch.setattr(benchmark, "PAGE_CACHE_DIR", tmp_path / "pages")
     use_fake_llm(monkeypatch)
+    if not list(benchmark.DEFAULT_DOCS_DIR.glob("02_*.pdf")):
+        pytest.skip("tender PDFs not present (repository data/ folder)")
 
     assert await benchmark.main(["--docs", "02", "--dir", DOCS, "--compare", ""]) == 0
     assert await benchmark.main(["--docs", "02", "--dir", DOCS, "--compare", "last"]) == 0

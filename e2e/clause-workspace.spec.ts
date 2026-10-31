@@ -156,14 +156,18 @@ test.describe.serial('clause workspace', () => {
   test('U9 keyboard review: J/K move, A confirms a spot-check, row stays visible, shortcuts can be off', async ({ page }) => {
     await openWorkspace(page);
     await row(page, 'Bid validity').getByRole('button').click();
+    await expect(page).toHaveURL(/clause=/);
+    const clauseOf = () => new URL(page.url()).searchParams.get('clause');
+    const start = clauseOf();
     await page.locator('body').click({ position: { x: 5, y: 5 } });
+    // Each key must land before the next one: J/K move from the current selection.
     await page.keyboard.press('k');
-    await expect(page).toHaveURL(new RegExp(`clause=`));
-    const afterK = new URL(page.url()).searchParams.get('clause');
+    await expect.poll(clauseOf).not.toBe(start);
     await page.keyboard.press('j');
-    const afterJ = new URL(page.url()).searchParams.get('clause');
-    expect(afterJ).not.toBe(afterK);
-    await expect(page.getByTestId('clause-panel')).toContainText('Bid validity');
+    await expect.poll(clauseOf).toBe(start);
+    await expect(page.getByTestId('clause-panel').getByRole('heading', { level: 2 })).toHaveText(
+      /Bid validity/,
+    );
     await page.keyboard.press('a');
     await expect(page.getByTestId('clause-panel')).toContainText(`Confirmed · ${MANAGER}`);
 

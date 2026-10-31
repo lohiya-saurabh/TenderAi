@@ -1,13 +1,24 @@
 /**
  * BidsController — NestJS controller for bid project endpoints with RBAC guards.
  */
-import { Controller, Get, Post, Delete, Param, Query, Body, HttpCode, Inject } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Param,
+  Query,
+  Body,
+  HttpCode,
+  Inject,
+  Res,
+} from '@nestjs/common';
+import type { Response } from 'express';
 import { BidsService, type ListBidsQuery } from '@/modules/bids/bids.service.js';
 import { ComplianceService } from '@/modules/compliance/compliance.service.js';
 import { GetBidDecisionUseCase } from '@/modules/bids/application/GetBidDecisionUseCase.js';
 import { RequirePermission } from '@/common/security/decorators/permissions.decorator.js';
 import { Permissions } from '@/common/security/permissions.js';
-import { NotFoundError } from '@/common/errors/errors.js';
 
 @Controller('api/v1/bids')
 export class BidsController {
@@ -69,16 +80,16 @@ export class BidsController {
 
   /**
    * Latest persisted decision for this bid.
-   * Returns 404 when the bid has never been evaluated.
+   * Returns 204 (no body) when the bid has never been evaluated.
    */
   @Get(':id/bid-decision')
   @RequirePermission(Permissions.BIDS_READ)
-  async getBidDecision(@Param('id') id: string) {
+  async getBidDecision(@Param('id') id: string, @Res({ passthrough: true }) res?: Response) {
     const decision = await this.bidDecisionUseCase.getLatestDecision(id);
     if (!decision) {
-      throw new NotFoundError(
-        `No bid decision has been evaluated for bid '${id}' yet. POST /api/v1/bids/${id}/bid-decision to run the evaluation.`,
-      );
+      // Not evaluated yet is a normal state, not an error: no body.
+      res?.status(204);
+      return undefined;
     }
     return this.toDecisionWire(decision);
   }

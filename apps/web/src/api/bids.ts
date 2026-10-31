@@ -207,8 +207,7 @@ export type BidDecisionState = 'AI_PROPOSED' | 'UNDER_REVIEW' | 'CONFIRMED' | 'O
  * The verdict is computed deterministically against the pinned
  * Company Capability Profile — the AI engine cannot alter it.
  * `readinessScore` is 0.0–1.0. A bid with no evaluated decision
- * returns 404 (Not Found), which is the expected "not evaluated"
- * state, not an error.
+ * returns 204, which `getBidDecision` turns into `null`.
  */
 export interface BidDecisionSummary {
   decisionId: string;
@@ -230,10 +229,11 @@ export interface BidDecisionSummary {
 
 /**
  * Latest persisted bid/no-bid decision for a tender.
- * Requires BIDS_READ. 404 when the tender has never been evaluated.
+ * Requires BIDS_READ. `null` when the tender has never been evaluated.
  */
-export function getBidDecision(bidId: string): Promise<ApiResult<BidDecisionSummary>> {
-  return apiGet<BidDecisionSummary>(`/api/v1/bids/${bidId}/bid-decision`);
+export async function getBidDecision(bidId: string): Promise<ApiResult<BidDecisionSummary | null>> {
+  const res = await apiGet<BidDecisionSummary | undefined>(`/api/v1/bids/${bidId}/bid-decision`);
+  return res.ok ? { ok: true, data: res.data ?? null } : res;
 }
 
 /**

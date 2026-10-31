@@ -157,22 +157,8 @@ def _is_valid_continuing_table_row(
     if len(spatial_cols) == len(active_table.headers):
         if not re.search(r"\b(shall|must|is required to|will be|hereby)\b", line, re.IGNORECASE):
             return True
-    # 3. If line starts with major heading marker
-    if re.match(
-        r"^(PART\s+[I|V|X]+|SECTION\s+\d+|ARTICLE\s+\d+|CLAUSE\s+\d+|\d+\.\d+(?:\.\d+)*[.)]?\s+[A-Za-z]|Note\b)",
-        line,
-        re.IGNORECASE,
-    ):
-        return False
-    # 4. If first cell is long prose with stop words, it's not a table
-    if len(spatial_cols[0]) > 40 and re.search(
-        r"\b(this|that|with|from|where|which)\b", spatial_cols[0], re.IGNORECASE
-    ):
-        return False
+    # Anything else (headings, prose, a short last row) is not a continuation row.
     return False
-    if line.strip().endswith(".") and len(spatial_cols) != len(active_table.headers):
-        return False
-    return len(spatial_cols) >= 2
 
 
 try:

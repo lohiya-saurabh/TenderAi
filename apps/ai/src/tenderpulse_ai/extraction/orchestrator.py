@@ -146,7 +146,7 @@ class ProductionExtractionPipeline:
         # Process page windows through LangGraph compliance workflow (bounded concurrency to respect gateway in-flight limits)
         sem = asyncio.Semaphore(max(1, settings.llm_max_concurrency))
 
-        async def _process_window(window: list[NormalizedPage]) -> dict[str, Any]:
+        async def _run_window(window: list[NormalizedPage]) -> dict[str, Any]:
             async with sem:
                 retrieval_tool = ScopedRetrievalTool(embedder=get_embedder())
                 page_text_tool = PageTextTool()
@@ -239,6 +239,22 @@ class ProductionExtractionPipeline:
                 config: Any = {"configurable": {"thread_id": thread_id}}
                 final_state = await graph.ainvoke(initial_state, config=config)
                 return final_state
+
+        async def _process_window(window: list[NormalizedPage]) -> dict[str, Any]:
+            # One broken window fails its own pages, not the document (and not while the
+            # other windows are still calling models).
+            try:
+                return await _run_window(window)
+            except Exception as exc:  # noqa: BLE001 - reported as a failed window
+                logger.exception(
+                    "Page window %s of doc %s failed",
+                    [p.page_number for p in window],
+                    request.document_id,
+                )
+                return {
+                    "extraction_error": f"{type(exc).__name__}: {exc}",
+                    "human_review_required": True,
+                }
 
         page_results = await asyncio.gather(*(_process_window(w) for w in page_windows))
         failed_pages: list[int] = []

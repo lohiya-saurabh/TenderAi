@@ -61,13 +61,8 @@ export function useBidDecisions(bids: BidSummary[] | null): BidDecisionsState {
       const decisionsByBid: Record<string, BidDecisionSummary> = {};
       const failedBidIds: string[] = [];
       for (const { bidId, result } of entries) {
-        if (result.ok) {
-          decisionsByBid[bidId] = result.data;
-        } else if (result.error.status !== 404) {
-          // 404 = no decision evaluated yet (expected); anything
-          // else is a genuine failure worth surfacing.
-          failedBidIds.push(bidId);
-        }
+        if (!result.ok) failedBidIds.push(bidId);
+        else if (result.data) decisionsByBid[bidId] = result.data;
       }
       setState({ decisionsByBid, isLoading: false, failedBidIds });
     });
