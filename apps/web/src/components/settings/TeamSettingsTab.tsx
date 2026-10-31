@@ -66,7 +66,7 @@ export const TeamSettingsTab: React.FC<TeamSettingsTabProps> = ({
               className="gap-1.5 text-xs"
             >
               <UserPlus className="h-3.5 w-3.5" />
-              Invite Member
+              Invite member
             </Button>
           )}
         </CardHeader>
@@ -107,7 +107,7 @@ export const TeamSettingsTab: React.FC<TeamSettingsTabProps> = ({
               className="p-4 rounded-lg bg-muted/40 border border-border space-y-4"
             >
               <div className="flex items-center justify-between">
-                <h4 className="text-xs font-semibold text-foreground">Provision New Team Member</h4>
+                <h4 className="text-xs font-semibold text-foreground">Provision new team member</h4>
                 <Button
                   type="button"
                   variant="ghost"
@@ -127,7 +127,7 @@ export const TeamSettingsTab: React.FC<TeamSettingsTabProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="memberName">Full Name *</Label>
+                  <Label htmlFor="memberName">Full name *</Label>
                   <Input
                     id="memberName"
                     value={inviteName}
@@ -139,7 +139,7 @@ export const TeamSettingsTab: React.FC<TeamSettingsTabProps> = ({
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="memberEmail">Email Address *</Label>
+                  <Label htmlFor="memberEmail">Email address *</Label>
                   <Input
                     id="memberEmail"
                     type="email"
@@ -151,7 +151,7 @@ export const TeamSettingsTab: React.FC<TeamSettingsTabProps> = ({
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="memberRole">Assigned Role *</Label>
+                  <Label htmlFor="memberRole">Assigned role *</Label>
                   <select
                     id="memberRole"
                     value={inviteRole}
@@ -159,10 +159,10 @@ export const TeamSettingsTab: React.FC<TeamSettingsTabProps> = ({
                     disabled={isSubmittingInvite}
                     className="w-full h-9 px-3 rounded-md border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                   >
-                    <option value="BID_MANAGER">Bid Manager</option>
-                    <option value="LEGAL_COUNSEL">Legal Counsel</option>
-                    <option value="FINANCIAL_CONTROLLER">Financial Controller</option>
-                    <option value="TECHNICAL_LEAD">Technical Lead</option>
+                    <option value="BID_MANAGER">Bid manager</option>
+                    <option value="LEGAL_COUNSEL">Legal counsel</option>
+                    <option value="FINANCIAL_CONTROLLER">Financial controller</option>
+                    <option value="TECHNICAL_LEAD">Technical lead</option>
                     <option value="VIEWER">Viewer</option>
                     <option value="ADMIN">Admin</option>
                   </select>
@@ -176,7 +176,7 @@ export const TeamSettingsTab: React.FC<TeamSettingsTabProps> = ({
                   size="sm"
                   disabled={isSubmittingInvite || !inviteEmail.trim() || !inviteName.trim()}
                 >
-                  {isSubmittingInvite ? 'Provisioning...' : 'Add Team Member'}
+                  {isSubmittingInvite ? 'Inviting…' : 'Invite member'}
                 </Button>
               </div>
             </form>

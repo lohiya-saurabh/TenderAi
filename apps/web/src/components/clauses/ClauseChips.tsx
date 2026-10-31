@@ -9,8 +9,8 @@ export type ChipTone =
 // Design tones: confirmed is blue, needs-review orange, bad deep red; red/green never
 // carry meaning on their own.
 const TONE: Record<ChipTone, string> = {
-  neutral: 'bg-muted text-foreground border-transparent dark:bg-white/10 dark:text-white/80',
-  outline: 'bg-card text-foreground border-primary/40 dark:text-white/85 dark:border-white/25',
+  neutral: 'bg-muted text-foreground border-transparent',
+  outline: 'bg-card text-foreground border-primary/40',
   strong: 'bg-foreground text-background border-transparent',
   bad: 'bg-destructive/10 text-destructive border-destructive/40 dark:bg-destructive/10 dark:text-destructive dark:border-destructive/40',
   warn: 'bg-warning/10 text-warning border-warning/40 dark:bg-warning/10 dark:text-warning dark:border-warning/40',

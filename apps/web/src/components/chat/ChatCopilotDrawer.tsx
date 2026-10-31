@@ -222,7 +222,7 @@ export const ChatCopilotDrawer: React.FC<ChatCopilotDrawerProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-semibold text-foreground tracking-wide">
-                  Tender AI Copilot
+                  Tender AI copilot
                 </span>
                 <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-2xs font-medium bg-success/10 text-success dark:bg-success/60 dark:text-success border border-success/30 dark:border-success/40">
                   <ShieldCheck className="w-2.5 h-2.5" /> Grounded
@@ -239,7 +239,7 @@ export const ChatCopilotDrawer: React.FC<ChatCopilotDrawerProps> = ({
               type="button"
               onClick={handleNewChat}
               className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-              title="Start New Conversation"
+              title="Start new conversation"
             >
               <PlusCircle className="w-4 h-4" />
             </button>
@@ -247,7 +247,7 @@ export const ChatCopilotDrawer: React.FC<ChatCopilotDrawerProps> = ({
               type="button"
               onClick={onClose}
               className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-              title="Close Copilot"
+              title="Close copilot"
             >
               <X className="w-4 h-4" />
             </button>
@@ -310,7 +310,7 @@ export const ChatCopilotDrawer: React.FC<ChatCopilotDrawerProps> = ({
                       {msg.citations && msg.citations.length > 0 && (
                         <div className="mt-3 pt-2.5 border-t border-border/50">
                           <div className="text-2xs font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
-                            <FileText className="w-3 h-3 text-success dark:text-success" /> Grounded Source Citations
+                            <FileText className="w-3 h-3 text-success dark:text-success" /> Grounded source citations
                           </div>
                           <div className="flex flex-wrap gap-1.5">
                             {msg.citations.map((c, cIdx) => (
@@ -370,7 +370,7 @@ export const ChatCopilotDrawer: React.FC<ChatCopilotDrawerProps> = ({
         {suggestedFollowups.length > 0 && !isLoading && (
           <div className="px-4 py-2.5 border-t border-border/60 bg-muted/20">
             <div className="text-2xs font-semibold text-muted-foreground mb-2">
-              Suggested Questions
+              Suggested questions
             </div>
             <div className="flex flex-col gap-1.5">
               {suggestedFollowups.slice(0, 3).map((prompt, pIdx) => (

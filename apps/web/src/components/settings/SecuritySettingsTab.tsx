@@ -21,16 +21,16 @@ export const SecuritySettingsTab: React.FC = () => {
             <div className="p-3.5 rounded-lg bg-muted/30 border border-border space-y-2">
               <div className="flex items-center gap-2 font-semibold text-foreground">
                 <ShieldCheck className="h-4 w-4 text-foreground" />
-                <span>Cryptographic Token Session</span>
+                <span>Cryptographic token session</span>
               </div>
               <p className="text-muted-foreground leading-relaxed">
                 Access is signed using RFC 7519 HMAC-SHA256 tokens with timing-safe signature
                 verification.
               </p>
-              <div className="flex items-center gap-2 pt-1 font-mono text-2xs text-muted-foreground">
+              <div className="flex items-center gap-2 pt-1 text-2xs text-muted-foreground">
                 <span>Algorithm: HS256</span>
                 <span>•</span>
-                <span>Status: Active</span>
+                <span>Status: active</span>
               </div>
             </div>
 
@@ -43,7 +43,7 @@ export const SecuritySettingsTab: React.FC = () => {
                 Every API request executes in an isolated Node.js AsyncLocalStorage fiber with
                 anti-IDOR filters.
               </p>
-              <div className="flex items-center gap-2 pt-1 font-mono text-2xs text-muted-foreground">
+              <div className="flex items-center gap-2 pt-1 text-2xs text-muted-foreground">
                 <span>Context: TenantContextHolder</span>
               </div>
             </div>
@@ -53,13 +53,13 @@ export const SecuritySettingsTab: React.FC = () => {
 
           <div className="space-y-3">
             <h4 className="text-xs font-semibold text-foreground">
-              Upcoming Security Roadmap
+              Upcoming security roadmap
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div className="p-3 rounded-lg border border-border/80 bg-muted/20 space-y-1">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold text-foreground">
-                    Two-Factor Authentication (2FA)
+                    Two-factor authentication (2FA)
                   </span>
                   <Badge variant="outline" className="text-2xs">
                     Roadmap
@@ -73,7 +73,7 @@ export const SecuritySettingsTab: React.FC = () => {
 
               <div className="p-3 rounded-lg border border-border/80 bg-muted/20 space-y-1">
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-foreground">Audit Log Export (SIEM)</span>
+                  <span className="font-semibold text-foreground">Audit log export (SIEM)</span>
                   <Badge variant="outline" className="text-2xs">
                     Roadmap
                   </Badge>

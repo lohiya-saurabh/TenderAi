@@ -13,6 +13,7 @@ import type { BidSummary } from '@/api/bids.js';
 import type { ComplianceItem } from '@/api/compliance.js';
 import { formatDate } from '@/utils/formatDate.js';
 import { computeReadiness, computeRiskLevel } from '@/utils/readiness.js';
+import { enumLabel } from '@/lib/utils.js';
 
 // Re-exported for dashboard consumers (single source of truth lives in utils/)
 export { computeReadiness, computeRiskLevel };
@@ -58,7 +59,7 @@ export function computePipelineStages(bids: BidSummary[]): PipelineStage[] {
     const flagged = stageBids.reduce((sum, b) => sum + (b.flaggedRequirements || 0), 0);
     return {
       status,
-      label: status.replace(/_/g, ' '),
+      label: enumLabel(status),
       description: PIPELINE_STAGE_DESCRIPTIONS[status],
       count: stageBids.length,
       totalRequirements: total,

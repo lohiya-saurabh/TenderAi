@@ -40,7 +40,7 @@ export const FinancialSummaryCard: React.FC<FinancialSummaryCardProps> = ({ summ
         return {
           icon: <AlertTriangle className="w-4 h-4 text-warning dark:text-warning shrink-0" />,
           badge: 'bg-warning/10 text-warning border-warning/30 dark:bg-warning/70 dark:text-warning dark:border-warning/40',
-          title: 'Review Required',
+          title: 'Review required',
         };
     }
   };
@@ -67,7 +67,7 @@ export const FinancialSummaryCard: React.FC<FinancialSummaryCardProps> = ({ summ
           <div className="tabular-nums font-semibold text-foreground text-xs mt-1 tracking-tight">{summary.requiredValue}</div>
         </div>
         <div className="p-2.5 rounded-md bg-muted/40 dark:bg-muted/20 border border-border/50">
-          <div className="text-2xs text-muted-foreground font-semibold">Actual Filed</div>
+          <div className="text-2xs text-muted-foreground font-semibold">Actual filed</div>
           <div className="tabular-nums font-semibold text-foreground text-xs mt-1 tracking-tight">{summary.actualValue}</div>
         </div>
       </div>

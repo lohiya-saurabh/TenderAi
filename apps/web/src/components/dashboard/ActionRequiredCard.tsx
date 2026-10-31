@@ -16,6 +16,7 @@ import {
 } from '@/components/common/Icons.js';
 import { buildActionItems, type ActionItem, type ActionItemType } from '@/components/dashboard/dashboardData.js';
 import { cn } from '@/lib/utils.js';
+import { enumLabel } from '@/lib/utils.js';
 
 export interface ActionRequiredCardProps {
   bids: BidSummary[];
@@ -77,13 +78,13 @@ export const ActionRequiredCard: React.FC<ActionRequiredCardProps> = ({
     <Card className="shadow-xs">
       <CardHeader className="flex flex-row items-center justify-between pb-3">
         <div>
-          <CardTitle className="text-base font-semibold">Action Required</CardTitle>
+          <CardTitle className="text-base font-semibold">Action required</CardTitle>
           <p className="text-xs text-muted-foreground mt-0.5">
             Flagged clauses, reviews, in-flight extraction, and imminent deadlines
           </p>
         </div>
         <Badge variant={actionItems.length > 0 ? 'warning' : 'success'} className="font-medium">
-          {actionItems.length} {actionItems.length === 1 ? 'Action' : 'Actions'}
+          {actionItems.length} {actionItems.length === 1 ? 'action' : 'actions'}
         </Badge>
       </CardHeader>
 
@@ -100,7 +101,7 @@ export const ActionRequiredCard: React.FC<ActionRequiredCardProps> = ({
               <CheckIcon size={16} />
             </span>
             <div>
-              <div className="text-sm font-semibold text-foreground">No Urgent Blockers</div>
+              <div className="text-sm font-semibold text-foreground">No urgent blockers</div>
               <div className="text-xs text-muted-foreground">
                 All active tenders are on schedule with zero unreviewed critical flags.
               </div>
@@ -138,7 +139,7 @@ export const ActionRequiredCard: React.FC<ActionRequiredCardProps> = ({
                             variant={CATEGORY_BADGE_VARIANT[item.category]}
                             className="text-2xs px-1.5 py-0"
                           >
-                            {item.category}
+                            {enumLabel(item.category)}
                           </Badge>
                         )}
                         <span className="text-2xs font-mono text-muted-foreground">

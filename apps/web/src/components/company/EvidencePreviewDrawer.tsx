@@ -6,6 +6,7 @@ import { Button } from '@/components/common/Button.js';
 import { CapabilityStatusBadge } from '@/components/company/CapabilityStatusBadge.js';
 import type { EvidenceVaultItem } from '@/components/company/companyProfileData.js';
 import { FileText, Download, ExternalLink, Lock, Loader2 } from 'lucide-react';
+import { enumLabel } from '@/lib/utils.js';
 
 export interface EvidencePreviewDrawerProps {
   isOpen: boolean;
@@ -56,13 +57,13 @@ export const EvidencePreviewDrawer: React.FC<EvidencePreviewDrawerProps> = ({
     <Drawer
       isOpen={true}
       onClose={onClose}
-      title="Evidence Document Verification"
+      title="Evidence document verification"
       description={activeDocTitle || undefined}
       widthClassName="max-w-[48.75rem]"
       footer={
         <div className="flex items-center justify-between w-full gap-2">
           <Button variant="ghost" size="sm" onClick={onClose}>
-            Close Viewer
+            Close viewer
           </Button>
           <div className="flex items-center gap-2">
             {matchedDoc?.id && selectedCompanyId && (
@@ -77,7 +78,7 @@ export const EvidencePreviewDrawer: React.FC<EvidencePreviewDrawerProps> = ({
                 onClick={() => window.open(previewUrl, '_blank')}
                 icon={<ExternalLink size={13} />}
               >
-                Open in New Tab
+                Open in new tab
               </Button>
             )}
             <Button
@@ -87,7 +88,7 @@ export const EvidencePreviewDrawer: React.FC<EvidencePreviewDrawerProps> = ({
               isLoading={downloadingDocId === (matchedDoc?.id || activeDocTitle)}
               icon={<Download size={13} />}
             >
-              Download Original PDF
+              Download original PDF
             </Button>
           </div>
         </div>
@@ -126,14 +127,14 @@ export const EvidencePreviewDrawer: React.FC<EvidencePreviewDrawerProps> = ({
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-2xs text-muted-foreground">
             <div>
-              <span className="block text-2xs text-muted-foreground/80">Document Type</span>
+              <span className="block text-2xs text-muted-foreground/80">Document type</span>
               <span className="font-medium text-foreground">
                 {matchedDoc?.docType || 'Statutory Evidence'}
               </span>
             </div>
             {matchedDoc?.issuer && (
               <div>
-                <span className="block text-2xs text-muted-foreground/80">Issuing Authority</span>
+                <span className="block text-2xs text-muted-foreground/80">Issuing authority</span>
                 <span className="font-medium text-foreground truncate block">
                   {matchedDoc.issuer}
                 </span>
@@ -141,7 +142,7 @@ export const EvidencePreviewDrawer: React.FC<EvidencePreviewDrawerProps> = ({
             )}
             {matchedDoc?.referenceNumber && (
               <div>
-                <span className="block text-2xs text-muted-foreground/80">Reference / Reg №</span>
+                <span className="block text-2xs text-muted-foreground/80">Reference / reg №</span>
                 <span className="font-mono font-medium text-foreground">
                   {matchedDoc.referenceNumber}
                 </span>
@@ -149,7 +150,7 @@ export const EvidencePreviewDrawer: React.FC<EvidencePreviewDrawerProps> = ({
             )}
             {(matchedDoc?.validFrom || matchedDoc?.validTo) && (
               <div>
-                <span className="block text-2xs text-muted-foreground/80">Validity Period</span>
+                <span className="block text-2xs text-muted-foreground/80">Validity period</span>
                 <span className="font-medium text-foreground">
                   {matchedDoc.validFrom ? `${matchedDoc.validFrom} to ` : ''}
                   {matchedDoc.validTo || 'Permanent / Ongoing'}
@@ -158,7 +159,7 @@ export const EvidencePreviewDrawer: React.FC<EvidencePreviewDrawerProps> = ({
             )}
             {matchedDoc?.fileSizeBytes && (
               <div>
-                <span className="block text-2xs text-muted-foreground/80">File Size</span>
+                <span className="block text-2xs text-muted-foreground/80">File size</span>
                 <span className="font-medium text-foreground">
                   {matchedDoc.fileSizeBytes < 1024 * 1024
                     ? `${(matchedDoc.fileSizeBytes / 1024).toFixed(1)} KB`
@@ -168,7 +169,7 @@ export const EvidencePreviewDrawer: React.FC<EvidencePreviewDrawerProps> = ({
             )}
             {matchedDoc?.uploadedAt && (
               <div>
-                <span className="block text-2xs text-muted-foreground/80">Ingestion Timestamp</span>
+                <span className="block text-2xs text-muted-foreground/80">Ingestion timestamp</span>
                 <span className="font-medium text-foreground">
                   {new Date(matchedDoc.uploadedAt).toLocaleDateString()}
                 </span>
@@ -190,14 +191,16 @@ export const EvidencePreviewDrawer: React.FC<EvidencePreviewDrawerProps> = ({
               <div className="pt-2 border-t border-border/50 flex flex-wrap gap-1.5 items-center">
                 <span className="text-2xs text-muted-foreground shrink-0 mr-1">Extracted:</span>
                 {Object.entries(matchedDoc.extractedAttributes)
-                  .filter(([, v]) => v !== null && v !== undefined && v !== '')
+                  .filter(
+                    ([, v]) => v !== null && v !== undefined && v !== '' && typeof v !== 'object',
+                  )
                   .slice(0, 6)
                   .map(([k, v]) => (
                     <span
                       key={k}
-                      className="inline-flex items-center px-2 py-0.5 rounded text-2xs bg-muted/60 text-foreground font-mono"
+                      className="inline-flex items-center px-2 py-0.5 rounded text-2xs bg-muted/60 text-foreground"
                     >
-                      {k}: {typeof v === 'object' ? JSON.stringify(v) : String(v)}
+                      {enumLabel(k)}: {String(v)}
                     </span>
                   ))}
               </div>
@@ -235,7 +238,7 @@ export const EvidencePreviewDrawer: React.FC<EvidencePreviewDrawerProps> = ({
                 onClick={() => onDownloadEvidence(matchedDoc || activeDocTitle || '')}
                 icon={<Download size={13} />}
               >
-                Download Document
+                Download document
               </Button>
             </div>
           )}

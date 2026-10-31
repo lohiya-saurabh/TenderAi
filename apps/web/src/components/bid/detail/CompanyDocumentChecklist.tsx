@@ -13,6 +13,7 @@ import {
   ShieldAlert,
   ArrowRight,
 } from 'lucide-react';
+import { enumLabel } from '@/lib/utils.js';
 
 export interface CompanyDocumentChecklistProps {
   complianceItems: ComplianceItem[];
@@ -219,7 +220,7 @@ export const CompanyDocumentChecklist: React.FC<CompanyDocumentChecklistProps> =
           <div className="flex items-center gap-2">
             <ShieldAlert size={18} className="text-warning dark:text-warning" />
             <CardTitle className="text-base font-semibold text-foreground">
-              Company Document Checklist
+              Company document checklist
             </CardTitle>
             <Badge variant="warning" className="text-xs">
               {missingCount} missing for this tender
@@ -234,7 +235,7 @@ export const CompanyDocumentChecklist: React.FC<CompanyDocumentChecklistProps> =
         <Link to="/company-profile">
           <Button variant="primary" size="sm" className="gap-1.5">
             <ExternalLink size={13} />
-            <span>Upload in Company Profile</span>
+            <span>Upload in company profile</span>
           </Button>
         </Link>
       </CardHeader>
@@ -249,15 +250,15 @@ export const CompanyDocumentChecklist: React.FC<CompanyDocumentChecklistProps> =
             <table className="w-full text-left text-xs border-collapse min-w-[1050px]">
               <thead>
                 <tr className="border-b border-border bg-muted/30 text-muted-foreground font-semibold">
-                  <th className="py-2.5 px-4 min-w-[260px] max-w-[340px]">Tender Requirement</th>
+                  <th className="py-2.5 px-4 min-w-[260px] max-w-[340px]">Tender requirement</th>
                   <th className="py-2.5 px-4 min-w-[200px] max-w-[260px]">
-                    Required Evidence Type
+                    Required evidence type
                   </th>
-                  <th className="py-2.5 px-4 min-w-[160px] whitespace-nowrap">Evidence Status</th>
+                  <th className="py-2.5 px-4 min-w-[160px] whitespace-nowrap">Evidence status</th>
                   <th className="py-2.5 px-4 min-w-[200px] max-w-[280px]">
-                    Execution &amp; Validity Rules
+                    Execution &amp; validity rules
                   </th>
-                  <th className="py-2.5 px-4 min-w-[220px] max-w-[320px]">Source Citation</th>
+                  <th className="py-2.5 px-4 min-w-[220px] max-w-[320px]">Source citation</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60">
@@ -267,7 +268,7 @@ export const CompanyDocumentChecklist: React.FC<CompanyDocumentChecklistProps> =
                     <td className="py-3 px-4 min-w-[260px] max-w-[340px]">
                       <div className="flex items-center gap-1.5 mb-1">
                         <Badge variant="neutral" className="text-2xs px-1 py-0">
-                          {row.category}
+                          {enumLabel(row.category)}
                         </Badge>
                       </div>
                       <p
@@ -296,12 +297,12 @@ export const CompanyDocumentChecklist: React.FC<CompanyDocumentChecklistProps> =
                       ) : row.statusLabel === 'Expired' ? (
                         <span className="inline-flex items-center gap-1 text-destructive font-semibold">
                           <AlertTriangle size={14} />
-                          Expired Certificate
+                          Expired certificate
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-warning dark:text-warning font-semibold">
                           <XCircle size={14} />
-                          Missing in Profile
+                          Missing in profile
                         </span>
                       )}
                     </td>

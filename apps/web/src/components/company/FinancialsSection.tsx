@@ -25,14 +25,14 @@ export const FinancialsSection: React.FC<FinancialsSectionProps> = ({
       {/* 1. Audited Turnover Statements */}
       <div>
         <h3 className="text-sm font-semibold text-foreground mb-3">
-          Audited Annual Financial Statements (with ICAI UDIN)
+          Audited annual financial statements (with ICAI UDIN)
         </h3>
         {turnoverRecords.length === 0 ? (
           <CapabilityEmptyState
             icon={TrendingUp}
-            title="No Audited Turnover Statements Recorded"
+            title="No audited turnover statements recorded"
             description="Upload CA-certified balance sheets and ICAI UDIN turnover certificates to establish 3-year average turnover thresholds for tender qualification."
-            actionLabel="Upload Turnover Document"
+            actionLabel="Upload turnover document"
             onAction={onUploadEvidence}
             actionIcon="upload"
           />
@@ -46,18 +46,18 @@ export const FinancialsSection: React.FC<FinancialsSectionProps> = ({
                 onViewEvidence={(doc) => onSelectDocPreview(doc)}
                 fields={[
                   {
-                    label: 'Audited Annual Turnover',
-                    value: `₹${to.turnoverInrCrores.toFixed(2)} Crores`,
+                    label: 'Audited annual turnover',
+                    value: `₹${to.turnoverInrCrores.toFixed(2)} Cr`,
                     highlight: true,
                   },
                   {
-                    label: 'Computed Net Worth',
-                    value: `₹${to.netWorthInrCrores.toFixed(2)} Crores`,
+                    label: 'Computed net worth',
+                    value: `₹${to.netWorthInrCrores.toFixed(2)} Cr`,
                   },
                   {
-                    label: 'Profit After Tax (PAT)',
+                    label: 'Profit after tax (PAT)',
                     value: to.profitAfterTaxCrores
-                      ? `₹${to.profitAfterTaxCrores.toFixed(2)} Crores`
+                      ? `₹${to.profitAfterTaxCrores.toFixed(2)} Cr`
                       : 'N/A',
                   },
                   {
@@ -67,7 +67,7 @@ export const FinancialsSection: React.FC<FinancialsSectionProps> = ({
                     highlight: true,
                   },
                   {
-                    label: 'Chartered Accountant Firm',
+                    label: 'Chartered accountant firm',
                     value: `${to.caFirmName} (Mem #${to.caMembershipNo})`,
                   },
                 ]}
@@ -80,14 +80,14 @@ export const FinancialsSection: React.FC<FinancialsSectionProps> = ({
       {/* 2. Bank Solvency Certificates */}
       <div>
         <h3 className="text-sm font-semibold text-foreground mb-3">
-          Bank Working Capital &amp; Solvency Certificates
+          Bank working capital &amp; solvency certificates
         </h3>
         {solvencyRecords.length === 0 ? (
           <CapabilityEmptyState
             icon={Building}
-            title="No Bank Solvency Certificates Recorded"
+            title="No bank solvency certificates recorded"
             description="Upload bank working capital or solvency certificates to satisfy financial capacity and bank guarantee requirements."
-            actionLabel="Upload Solvency Document"
+            actionLabel="Upload solvency document"
             onAction={onUploadEvidence}
             actionIcon="upload"
           />
@@ -102,13 +102,13 @@ export const FinancialsSection: React.FC<FinancialsSectionProps> = ({
                 onViewEvidence={(doc) => onSelectDocPreview(doc)}
                 fields={[
                   {
-                    label: 'Solvency Certificate Limit',
-                    value: `₹${solv.solvencyLimitInrCrores.toFixed(2)} Crores`,
+                    label: 'Solvency certificate limit',
+                    value: `₹${solv.solvencyLimitInrCrores.toFixed(2)} Cr`,
                     highlight: true,
                   },
-                  { label: 'Issuing Bank & Branch', value: solv.bankName },
-                  { label: 'Account Reference', value: solv.accountNumberMasked, isMono: true },
-                  { label: 'Sanction Date', value: solv.sanctionDate },
+                  { label: 'Issuing bank & branch', value: solv.bankName },
+                  { label: 'Account reference', value: solv.accountNumberMasked, isMono: true },
+                  { label: 'Sanction date', value: solv.sanctionDate },
                 ]}
               />
             ))}

@@ -32,14 +32,12 @@ export const UpcomingDeadlinesCard: React.FC<UpcomingDeadlinesCardProps> = ({ bi
         <div>
           <div className="flex items-center gap-2">
             <WarningIcon size={16} className="text-warning" />
-            <CardTitle className="text-base font-semibold">Upcoming Tender Deadlines</CardTitle>
+            <CardTitle className="text-base font-semibold">Upcoming tender deadlines</CardTitle>
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Submission closing dates ordered chronologically for bidding operations
-          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">Submission dates, soonest first</p>
         </div>
         <Badge variant="secondary" className="font-medium">
-          {datedBids.length} Scheduled
+          {datedBids.length} scheduled
         </Badge>
       </CardHeader>
 

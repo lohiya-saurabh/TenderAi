@@ -74,7 +74,7 @@ export const CreateBidPage: React.FC = () => {
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
             <Building2 className="w-3.5 h-3.5 text-primary" />
-            Bidding Entity <span className="text-destructive">*</span>
+            Bidding entity <span className="text-destructive">*</span>
           </label>
           <div className="relative">
             <select
@@ -98,7 +98,7 @@ export const CreateBidPage: React.FC = () => {
         {/* Project Title */}
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-            Tender Project Title <span className="text-destructive">*</span>
+            Tender project title <span className="text-destructive">*</span>
           </label>
           <input
             type="text"
@@ -115,7 +115,7 @@ export const CreateBidPage: React.FC = () => {
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
               <Hash className="w-3.5 h-3.5 text-muted-foreground" />
-              NIT / Tender Ref Number <span className="text-destructive">*</span>
+              NIT / tender ref number <span className="text-destructive">*</span>
             </label>
             <input
               type="text"
@@ -129,7 +129,7 @@ export const CreateBidPage: React.FC = () => {
 
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-              Tendering Authority / PSU <span className="text-destructive">*</span>
+              Tendering authority / PSU <span className="text-destructive">*</span>
             </label>
             <input
               type="text"
@@ -146,7 +146,7 @@ export const CreateBidPage: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-              Estimated Contract Value (INR)
+              Estimated contract value (INR)
             </label>
             <div className="relative">
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 tabular-nums text-sm text-muted-foreground font-semibold">
@@ -170,7 +170,7 @@ export const CreateBidPage: React.FC = () => {
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
-              Submission Deadline
+              Submission deadline
             </label>
             <input
               type="datetime-local"

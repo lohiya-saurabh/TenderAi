@@ -94,7 +94,7 @@ export const CompanyReadinessCard: React.FC = () => {
           <div className="flex items-center gap-2">
             <Building2 className="h-4 w-4 text-primary" />
             <CardTitle className="text-base font-semibold tracking-tight text-foreground">
-              Company Capability Profile
+              Company capability profile
             </CardTitle>
           </div>
           {activeVersion && (
@@ -184,7 +184,7 @@ export const CompanyReadinessCard: React.FC = () => {
                   <div className="text-lg font-bold text-foreground tabular-nums">
                     {experienceList.length}{' '}
                     <span className="text-xs font-normal text-muted-foreground font-sans">
-                      Work Orders
+                      Work orders
                     </span>
                   </div>
                   <div className="text-2xs text-muted-foreground mt-0.5">
@@ -249,7 +249,7 @@ export const CompanyReadinessCard: React.FC = () => {
                 to="/company-profile"
                 className="inline-flex items-center gap-1 text-primary hover:text-primary/80 font-medium text-2xs transition-colors"
               >
-                View Full Dossier
+                View full dossier
                 <ArrowUpRight className="h-3.5 w-3.5" />
               </Link>
             </div>

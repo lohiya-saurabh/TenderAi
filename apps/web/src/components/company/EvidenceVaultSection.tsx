@@ -43,7 +43,7 @@ export const EvidenceVaultSection: React.FC<EvidenceVaultSectionProps> = ({
                 onClick={onUploadEvidence}
                 icon={<Upload size={13} />}
               >
-                Upload Document
+                Upload document
               </Button>
             )}
             {onImportCloud && (
@@ -63,9 +63,9 @@ export const EvidenceVaultSection: React.FC<EvidenceVaultSectionProps> = ({
       {evidenceVault.length === 0 ? (
         <CapabilityEmptyState
           icon={FileText}
-          title="No Evidence Documents Yet"
+          title="No evidence documents yet"
           description="Upload your audited financials, completion certificates, work orders, or ISO certifications from your device or cloud storage to qualify for tender eligibility scoring."
-          actionLabel="Upload Document from Device"
+          actionLabel="Upload document from device"
           onAction={onUploadEvidence}
           actionIcon="upload"
         />

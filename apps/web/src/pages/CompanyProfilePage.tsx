@@ -77,7 +77,7 @@ export const CompanyProfilePage: React.FC = () => {
       const isGstVerified = Boolean(selectedCompany.gstinVerifiedAt);
       registrations.push({
         id: 'reg-gstin',
-        title: 'Goods & Services Tax (GSTIN)',
+        title: 'Goods & services tax (GSTIN)',
         regType: 'GSTIN',
         regNumber: selectedCompany.gstin,
         issuingAuthority: 'Goods & Services Tax Network (GSTN)',
@@ -93,7 +93,7 @@ export const CompanyProfilePage: React.FC = () => {
       );
       registrations.push({
         id: 'reg-pan',
-        title: 'Permanent Account Number (PAN)',
+        title: 'Permanent account number (PAN)',
         regType: 'PAN',
         regNumber: selectedCompany.pan,
         issuingAuthority: 'Income Tax Department of India',
@@ -330,7 +330,7 @@ export const CompanyProfilePage: React.FC = () => {
       <Card className="p-8 text-center border-dashed border-border/80">
         <CardContent className="flex flex-col items-center gap-2">
           <Building2 className="h-8 w-8 text-muted-foreground" />
-          <h3 className="font-semibold text-foreground">No Company Selected</h3>
+          <h3 className="font-semibold text-foreground">No company selected</h3>
           <p className="text-xs text-muted-foreground">
             Please select or register a company entity to view its capability profile.
           </p>

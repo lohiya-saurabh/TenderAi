@@ -68,7 +68,7 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
             className="gap-1.5 text-xs"
           >
             <RefreshCw className="w-3.5 h-3.5" />
-            Publish Version
+            Publish version
           </Button>
         </div>
       </div>
@@ -97,23 +97,23 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
               )}
             </div>
 
-            <div className="flex gap-4 text-xs text-muted-foreground flex-wrap font-mono mt-2">
+            <div className="flex gap-4 text-xs text-muted-foreground flex-wrap mt-2">
               <div>
-                <strong className="text-foreground">GSTIN:</strong>{' '}
-                <span className="text-foreground font-semibold">{displayGstin}</span>
+                <span>GSTIN</span>{' '}
+                <span className="font-mono font-medium text-foreground">{displayGstin}</span>
               </div>
               <div>
-                <strong className="text-foreground">CIN:</strong>{' '}
-                <span className="text-foreground font-semibold">{profile.cinNumber}</span>
+                <span>CIN</span>{' '}
+                <span className="font-mono font-medium text-foreground">{profile.cinNumber}</span>
               </div>
               <div>
-                <strong className="text-foreground">Incorporated:</strong>{' '}
-                <span>{profile.incorporationDate}</span>
+                <span>Incorporated</span>{' '}
+                <span className="text-foreground">{profile.incorporationDate}</span>
               </div>
               <div>
-                <strong className="text-foreground">Credit Rating:</strong>{' '}
-                <span className="text-foreground font-semibold">
-                  {profile.creditRating?.rating ?? 'Not Rated / Pending'}
+                <span>Credit rating</span>{' '}
+                <span className="text-foreground">
+                  {profile.creditRating?.rating ?? 'Not stated'}
                 </span>
               </div>
             </div>
@@ -142,7 +142,7 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
           {/* Health Score Gauge */}
           <div>
             <div className="flex justify-between text-xs mb-1.5">
-              <span className="font-semibold text-foreground">Tender Readiness Health</span>
+              <span className="font-semibold text-foreground">Tender readiness health</span>
               <strong className="tabular-nums text-foreground font-bold">
                 {health.healthScorePct}%
               </strong>
@@ -163,16 +163,16 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
             </div>
 
             {health.expiringSoonCount > 0 && (
-              <div className="bg-warning/10 border border-warning/20 rounded-lg px-3 py-1.5 text-xs font-mono">
+              <div className="bg-warning/10 border border-warning/20 rounded-lg px-3 py-1.5 text-xs tabular-nums">
                 <span className="text-warning dark:text-warning font-bold">
                   {health.expiringSoonCount}
                 </span>{' '}
-                <span className="text-muted-foreground">Expiring Soon</span>
+                <span className="text-muted-foreground">Expiring soon</span>
               </div>
             )}
 
             {health.expiredCount > 0 && (
-              <div className="bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-1.5 text-xs font-mono">
+              <div className="bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-1.5 text-xs tabular-nums">
                 <span className="text-destructive font-bold">{health.expiredCount}</span>{' '}
                 <span className="text-muted-foreground">Expired</span>
               </div>
@@ -186,7 +186,7 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
         <Modal
           isOpen={true}
           onClose={() => setIsPublishModalOpen(false)}
-          title="Publish New Immutable Profile Snapshot"
+          title="Publish new immutable profile snapshot"
           footer={
             <>
               <Button variant="ghost" onClick={() => setIsPublishModalOpen(false)}>
@@ -210,7 +210,7 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
                   Publishing creates a permanent cryptographic snapshot of all verified credentials,
                   CA UDIN statements, and registrations.
                 </p>
-                <div className="bg-background p-3 rounded-lg border border-border text-xs text-muted-foreground font-mono space-y-1">
+                <div className="bg-background p-3 rounded-lg border border-border text-xs text-muted-foreground space-y-1">
                   <div>• Active bids will retain their pinned versions.</div>
                   <div>• New bid evaluations will automatically utilize this new snapshot.</div>
                   <div>

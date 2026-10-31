@@ -484,7 +484,7 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
                 {isGstVerified ? 'Verified' : 'Unverified'}
               </Badge>
             </div>
-            <p className="text-2xs mono text-muted-foreground m-0 truncate">
+            <p className="text-2xs text-muted-foreground m-0 truncate">
               {company.gstin
                 ? `ID: ${company.gstin}`
                 : 'Validate legal business name & tax standing'}
@@ -502,12 +502,12 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
           {/* 2. MCA CIN */}
           <div className="p-4 rounded-lg border border-border bg-card shadow-2xs flex flex-col justify-between gap-3 hover:border-border-strong transition-colors">
             <div className="flex justify-between items-center">
-              <span className="text-xs font-bold text-foreground">MCA Master Data</span>
+              <span className="text-xs font-bold text-foreground">MCA master data</span>
               <Badge variant={isMcaVerified ? 'success' : 'neutral'} size="sm">
                 {isMcaVerified ? 'Verified' : 'Unverified'}
               </Badge>
             </div>
-            <p className="text-2xs mono text-muted-foreground m-0 truncate">
+            <p className="text-2xs text-muted-foreground m-0 truncate">
               {company.cin ? `CIN: ${company.cin}` : 'Cross-check RoC jurisdiction & incorporation'}
             </p>
             <Button
@@ -528,7 +528,7 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
                 {isUdyamVerified ? 'Verified' : 'Unverified'}
               </Badge>
             </div>
-            <p className="text-2xs mono text-muted-foreground m-0 truncate">
+            <p className="text-2xs text-muted-foreground m-0 truncate">
               {company.udyamId
                 ? `Udyam: ${company.udyamId}`
                 : 'Unlock statutory EMD exemption & fee waiver'}
@@ -551,7 +551,7 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
                 {isDigiLockerLinked ? 'Connected' : 'Not Linked'}
               </Badge>
             </div>
-            <p className="text-2xs mono text-muted-foreground m-0 truncate">
+            <p className="text-2xs text-muted-foreground m-0 truncate">
               {isDigiLockerLinked
                 ? 'Pulling official signed certificates'
                 : 'Import digitally signed government docs'}
@@ -569,12 +569,12 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
           {/* 5. Company Evidence Documents */}
           <div className="p-4 rounded-lg border border-border bg-card shadow-2xs flex flex-col justify-between gap-3 hover:border-border-strong transition-colors">
             <div className="flex justify-between items-center">
-              <span className="text-xs font-bold text-foreground">Evidence Documents</span>
+              <span className="text-xs font-bold text-foreground">Evidence documents</span>
               <Badge variant="primary" size="sm">
                 Vault
               </Badge>
             </div>
-            <p className="text-2xs mono text-muted-foreground m-0 truncate">
+            <p className="text-2xs text-muted-foreground m-0 truncate">
               Upload certificates and financial documents (PDF)
             </p>
             <Button
@@ -584,7 +584,7 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
               className="self-start mt-auto text-xs h-7 border-border hover:border-foreground/30"
               icon={<Upload size={13} />}
             >
-              Upload Evidence
+              Upload evidence
             </Button>
           </div>
         </div>

@@ -31,16 +31,16 @@ export interface TenderListSectionProps {
 }
 
 const STATUS_TABS = [
-  { key: 'ALL', label: 'All Tenders' },
+  { key: 'ALL', label: 'All tenders' },
   { key: 'DRAFT', label: 'Draft' },
   { key: 'ANALYZING', label: 'Analyzing' },
-  { key: 'REVIEW_READY', label: 'Review Ready' },
+  { key: 'REVIEW_READY', label: 'Review ready' },
   { key: 'SUBMITTED', label: 'Submitted' },
   { key: 'ARCHIVED', label: 'Archived' },
 ] as const;
 
 const RISK_FILTER_OPTIONS: Array<{ value: RiskFilter; label: string }> = [
-  { value: 'ALL', label: 'All Risk Levels' },
+  { value: 'ALL', label: 'All risk levels' },
   { value: 'LOW', label: 'Low' },
   { value: 'HIGH', label: 'High' },
   { value: 'CRITICAL', label: 'Critical' },
@@ -114,7 +114,7 @@ export const TenderListSection: React.FC<TenderListSectionProps> = ({
     <div id="tender-list" className="flex flex-col gap-3 scroll-mt-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-base font-semibold text-foreground tracking-tight">Tender List</h2>
+          <h2 className="text-base font-semibold text-foreground tracking-tight">Tender list</h2>
           <p className="text-xs text-muted-foreground">
             Search, filter, and sort every tender tracked within your organization tenant
           </p>
@@ -220,14 +220,14 @@ export const TenderListSection: React.FC<TenderListSectionProps> = ({
       ) : bids.length === 0 ? (
         <EmptyState
           icon={<TendersIcon size={36} color="hsl(var(--primary))" />}
-          title="No Tender Projects in Pipeline"
+          title="No tender projects in pipeline"
           description="Upload your first public tender specifications (NIT / BOQ) to initiate automatic clause extraction, qualification analysis, and bid/no-bid evaluation."
           action={
             canCreateBid ? (
               <Link to="/bids/new" className="no-underline">
                 <Button variant="default" size="sm" className="gap-1.5">
                   <PlusCircleIcon size={15} />
-                  Create First Bid Project
+                  Create first bid project
                 </Button>
               </Link>
             ) : undefined
@@ -235,7 +235,7 @@ export const TenderListSection: React.FC<TenderListSectionProps> = ({
         />
       ) : filteredBids.length === 0 ? (
         <EmptyState
-          title="No Tenders Match Criteria"
+          title="No tenders match criteria"
           description={
             activeFilterDescriptions.length > 0
               ? `Zero tenders matched the current filters (${activeFilterDescriptions.join(', ')}).`
@@ -251,7 +251,7 @@ export const TenderListSection: React.FC<TenderListSectionProps> = ({
                 onStatusChange('ALL');
               }}
             >
-              Clear All Filters
+              Clear all filters
             </Button>
           }
         />

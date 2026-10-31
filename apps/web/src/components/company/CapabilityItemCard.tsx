@@ -75,7 +75,7 @@ export const CapabilityItemCard: React.FC<CapabilityItemCardProps> = ({
 
         {expiryDate && (
           <div className="flex flex-col gap-1 min-w-0">
-            <span className="text-2xs font-semibold text-muted-foreground">Validity / Expiry</span>
+            <span className="text-2xs font-semibold text-muted-foreground">Validity / expiry</span>
             <span className="text-xs font-semibold text-foreground">
               {expiryDate}{' '}
               {daysRemaining !== null && (

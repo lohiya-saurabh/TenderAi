@@ -26,7 +26,7 @@ export const BidPipelineCard: React.FC<BidPipelineCardProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <TendersIcon size={16} className="text-primary" />
-            <CardTitle className="text-base font-semibold">Bid Pipeline</CardTitle>
+            <CardTitle className="text-base font-semibold">Bid pipeline</CardTitle>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
             Workflow stage distribution — select a stage to filter the tender list

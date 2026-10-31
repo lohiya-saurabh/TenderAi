@@ -321,7 +321,7 @@ export const BidDetailPage: React.FC = () => {
   }
 
   const actionButton =
-    'inline-flex items-center gap-1.5 min-h-10 rounded-lg border border-primary/40 bg-card px-3.5 text-sm font-semibold text-foreground no-underline hover:border-primary dark:border-white/20';
+    'inline-flex items-center gap-1.5 min-h-10 rounded-lg border border-primary/40 bg-card px-3.5 text-sm font-semibold text-foreground no-underline hover:border-primary';
 
   const headerActions = (
     <>

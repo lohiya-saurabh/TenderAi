@@ -64,7 +64,7 @@ export const BillingSettingsTab: React.FC<BillingSettingsTabProps> = ({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <div>
-            <CardTitle className="text-base font-semibold">Active Subscription Plan</CardTitle>
+            <CardTitle className="text-base font-semibold">Active subscription plan</CardTitle>
             <CardDescription className="text-xs">
               Current tier, billing interval, and entitlement boundaries
             </CardDescription>
@@ -80,13 +80,13 @@ export const BillingSettingsTab: React.FC<BillingSettingsTabProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="p-3.5 rounded-lg bg-muted/40 border border-border space-y-1">
               <span className="text-2xs text-muted-foreground font-semibold">
-                Current Tier
+                Current tier
               </span>
               <div className="flex items-center gap-2">
                 <span className="text-base font-bold text-foreground">
                   {subscription?.planName || 'Growth Plan'}
                 </span>
-                <Badge variant="outline" className="text-2xs font-mono">
+                <Badge variant="outline" className="text-2xs">
                   {subscription?.planTier || 'GROWTH'}
                 </Badge>
               </div>
@@ -99,21 +99,21 @@ export const BillingSettingsTab: React.FC<BillingSettingsTabProps> = ({
 
             <div className="p-3.5 rounded-lg bg-muted/40 border border-border space-y-1">
               <span className="text-2xs text-muted-foreground font-semibold">
-                Price / Interval
+                Price / interval
               </span>
               <p className="text-base font-bold text-foreground">
                 {subscription?.priceInr !== null && subscription?.priceInr !== undefined
                   ? `₹${subscription.priceInr.toLocaleString('en-IN')} / mo`
                   : 'Custom Enterprise'}
               </p>
-              <p className="text-2xs text-muted-foreground">Provider-Agnostic Invoicing</p>
+              <p className="text-2xs text-muted-foreground">Provider-agnostic invoicing</p>
             </div>
 
             <div className="p-3.5 rounded-lg bg-muted/40 border border-border space-y-1">
               <span className="text-2xs text-muted-foreground font-semibold">
-                Billing Period
+                Billing period
               </span>
-              <p className="text-xs font-mono font-medium text-foreground">
+              <p className="text-xs font-medium tabular-nums text-foreground">
                 {subscription?.currentPeriodStart
                   ? new Date(subscription.currentPeriodStart).toLocaleDateString()
                   : 'Active'}{' '}
@@ -134,10 +134,10 @@ export const BillingSettingsTab: React.FC<BillingSettingsTabProps> = ({
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-semibold text-foreground">
-                Current Monthly Usage &amp; Quotas
+                Current monthly usage &amp; quotas
               </h4>
-              <span className="text-2xs text-muted-foreground font-mono">
-                Billing Cycle: {usage?.periodKey || new Date().toISOString().slice(0, 7)}
+              <span className="text-2xs text-muted-foreground tabular-nums">
+                Billing cycle: {usage?.periodKey || new Date().toISOString().slice(0, 7)}
               </span>
             </div>
 
@@ -147,9 +147,9 @@ export const BillingSettingsTab: React.FC<BillingSettingsTabProps> = ({
                 <div className="flex items-center justify-between text-xs">
                   <span className="flex items-center gap-1.5 font-medium text-foreground">
                     <Building2 className="h-3.5 w-3.5 text-primary" />
-                    <span>Registered Legal Entities</span>
+                    <span>Registered legal entities</span>
                   </span>
-                  <span className="font-mono text-xs text-muted-foreground">
+                  <span className="tabular-nums text-xs text-muted-foreground">
                     <strong className="text-foreground">
                       {usage?.activeCompanies ?? companiesCount}
                     </strong>{' '}
@@ -179,9 +179,9 @@ export const BillingSettingsTab: React.FC<BillingSettingsTabProps> = ({
                 <div className="flex items-center justify-between text-xs">
                   <span className="flex items-center gap-1.5 font-medium text-foreground">
                     <Users className="h-3.5 w-3.5 text-primary" />
-                    <span>Team User Seats</span>
+                    <span>Team user seats</span>
                   </span>
-                  <span className="font-mono text-xs text-muted-foreground">
+                  <span className="tabular-nums text-xs text-muted-foreground">
                     <strong className="text-foreground">{usage?.activeUsers ?? 1}</strong> /{' '}
                     {(usage?.maxUsers ?? 10) >= 9999 ? 'Unlimited' : (usage?.maxUsers ?? 10)}
                   </span>
@@ -206,7 +206,7 @@ export const BillingSettingsTab: React.FC<BillingSettingsTabProps> = ({
                     <FileText className="h-3.5 w-3.5 text-primary" />
                     <span>Tender Ingestions this Month</span>
                   </span>
-                  <span className="font-mono text-xs text-muted-foreground">
+                  <span className="tabular-nums text-xs text-muted-foreground">
                     <strong className="text-foreground">{usage?.monthlyAnalyses ?? 0}</strong> /{' '}
                     {(usage?.maxMonthlyAnalyses ?? 50) >= 9999
                       ? 'Unlimited'
@@ -232,9 +232,9 @@ export const BillingSettingsTab: React.FC<BillingSettingsTabProps> = ({
                 <div className="flex items-center justify-between text-xs">
                   <span className="flex items-center gap-1.5 font-medium text-foreground">
                     <HardDrive className="h-3.5 w-3.5 text-primary" />
-                    <span>Evidence Storage Limit</span>
+                    <span>Evidence storage limit</span>
                   </span>
-                  <span className="font-mono text-xs text-muted-foreground">
+                  <span className="tabular-nums text-xs text-muted-foreground">
                     <strong className="text-foreground">
                       {usage?.entitlements['evidence_storage.mb'] ?? 500} MB
                     </strong>
@@ -250,7 +250,7 @@ export const BillingSettingsTab: React.FC<BillingSettingsTabProps> = ({
       {/* Change / Upgrade Plan Selection Grid */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base font-semibold">Change or Upgrade Plan</CardTitle>
+          <CardTitle className="text-base font-semibold">Change or upgrade plan</CardTitle>
           <CardDescription className="text-xs">
             Instantly adjust tenant quotas and unlock advanced features
           </CardDescription>

@@ -15,7 +15,7 @@ export const DashboardKpiStrip: React.FC<DashboardKpiStripProps> = ({ bids }) =>
   const isAnyVerified = isGstVerified || isMcaVerified;
 
   const activeBids = bids.filter((b) => b.status !== 'ARCHIVED');
-  const evaluatedBidsCount = bids.filter((b) => b.status === 'REVIEW_READY').length;
+  const reviewReadyCount = bids.filter((b) => b.status === 'REVIEW_READY').length;
 
   const totalValue = activeBids.reduce((sum, b) => sum + (Number(b.estimatedValueRupees) || 0), 0);
 
@@ -34,26 +34,26 @@ export const DashboardKpiStrip: React.FC<DashboardKpiStripProps> = ({ bids }) =>
       {/* 1. Active Pipeline Count */}
       <div className="p-5 border border-border rounded-lg bg-card shadow-xs transition-colors">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-2xs font-semibold text-muted-foreground">ACTIVE BIDS TRACKED</span>
+          <span className="text-xs font-medium text-muted-foreground">Active bids</span>
           <span className="text-muted-foreground">
             <TendersIcon size={15} />
           </span>
         </div>
-        <div className="text-3xl font-bold tracking-tight text-foreground">
-          {String(activeBids.length).padStart(2, '0')}
+        <div className="text-2xl font-semibold tabular-nums text-foreground">
+          {activeBids.length}
         </div>
         <div className="text-xs font-medium text-foreground/80 flex items-center gap-1.5 mt-2">
           <span
             className={`w-1.5 h-1.5 rounded-full inline-block ${
-              evaluatedBidsCount > 0 ? 'bg-primary' : 'bg-muted-foreground/40'
+              reviewReadyCount > 0 ? 'bg-primary' : 'bg-muted-foreground/40'
             }`}
           />
           <span
-            className={`mono font-semibold ${
-              evaluatedBidsCount > 0 ? 'text-primary dark:text-primary' : 'text-muted-foreground'
+            className={`font-medium tabular-nums ${
+              reviewReadyCount > 0 ? 'text-primary dark:text-primary' : 'text-muted-foreground'
             }`}
           >
-            {evaluatedBidsCount} of {activeBids.length || 0} evaluated
+            {reviewReadyCount} of {activeBids.length} ready for review
           </span>
         </div>
       </div>
@@ -61,15 +61,13 @@ export const DashboardKpiStrip: React.FC<DashboardKpiStripProps> = ({ bids }) =>
       {/* 2. Total Contract Value */}
       <div className="p-5 border border-border rounded-lg bg-card shadow-xs transition-colors">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-2xs font-semibold text-muted-foreground">
-            PIPELINE CONTRACT VALUE
-          </span>
+          <span className="text-xs font-medium text-muted-foreground">Contract value</span>
           <span className="text-primary dark:text-primary">
             <CheckIcon size={15} />
           </span>
         </div>
         <div
-          className="text-3xl font-bold tracking-tight text-foreground"
+          className="text-2xl font-semibold tabular-nums text-foreground"
           title={formatCurrency(totalValue)}
         >
           {formatCompactINR(totalValue)}
@@ -85,7 +83,7 @@ export const DashboardKpiStrip: React.FC<DashboardKpiStripProps> = ({ bids }) =>
       {/* 3. Statutory Evidence Status */}
       <div className="p-5 border border-border rounded-lg bg-card shadow-xs transition-colors">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-2xs font-semibold text-muted-foreground">EVIDENCE STATUS</span>
+          <span className="text-xs font-medium text-muted-foreground">Evidence status</span>
           <span
             className={
               totalFlagged > 0
@@ -99,7 +97,7 @@ export const DashboardKpiStrip: React.FC<DashboardKpiStripProps> = ({ bids }) =>
           </span>
         </div>
         <div
-          className={`text-3xl font-bold tracking-tight ${
+          className={`text-2xl font-semibold tabular-nums ${
             totalFlagged > 0
               ? 'text-destructive dark:text-destructive'
               : isAnyVerified
@@ -140,14 +138,14 @@ export const DashboardKpiStrip: React.FC<DashboardKpiStripProps> = ({ bids }) =>
       {/* 4. Submission Deadlines / Recommendation */}
       <div className="p-5 border border-border rounded-lg bg-card shadow-xs transition-colors">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-2xs font-semibold text-muted-foreground">
-            {urgentDeadlines.length > 0 ? 'IMMINENT DEADLINES' : 'PIPELINE HEALTH'}
+          <span className="text-xs font-medium text-muted-foreground">
+            {urgentDeadlines.length > 0 ? 'Closing soon' : 'Ready for review'}
           </span>
           <span
             className={
               urgentDeadlines.length > 0
                 ? 'text-destructive dark:text-destructive'
-                : evaluatedBidsCount > 0
+                : reviewReadyCount > 0
                   ? 'text-primary dark:text-primary'
                   : 'text-muted-foreground'
             }
@@ -156,10 +154,10 @@ export const DashboardKpiStrip: React.FC<DashboardKpiStripProps> = ({ bids }) =>
           </span>
         </div>
         <div
-          className={`text-2xl font-bold tracking-tight ${
+          className={`text-2xl font-semibold tabular-nums ${
             urgentDeadlines.length > 0
               ? 'text-destructive dark:text-destructive'
-              : evaluatedBidsCount > 0
+              : reviewReadyCount > 0
                 ? 'text-primary dark:text-primary'
                 : 'text-muted-foreground'
           }`}
@@ -168,18 +166,18 @@ export const DashboardKpiStrip: React.FC<DashboardKpiStripProps> = ({ bids }) =>
             ? `${urgentDeadlines.length} closing soon`
             : activeBids.length === 0
               ? 'No active bids'
-              : evaluatedBidsCount > 0
-                ? `${evaluatedBidsCount} evaluated`
-                : 'Not evaluated'}
+              : reviewReadyCount > 0
+                ? `${reviewReadyCount} ready`
+                : 'None ready'}
         </div>
         <div className="text-xs font-medium text-foreground/80 mt-2">
           {urgentDeadlines.length > 0
-            ? 'Submissions due < 7 days'
+            ? 'Due within 7 days'
             : activeBids.length === 0
               ? 'Create a bid to begin'
-              : evaluatedBidsCount > 0
-                ? 'Readiness evaluated'
-                : 'Upload tender docs to evaluate'}
+              : reviewReadyCount > 0
+                ? 'Extraction finished; clauses to review'
+                : 'Upload tender documents to start'}
         </div>
       </div>
     </div>

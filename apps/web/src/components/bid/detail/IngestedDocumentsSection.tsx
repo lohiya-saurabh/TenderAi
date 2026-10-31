@@ -4,6 +4,7 @@ import { formatFileSize } from '@/utils/formatFileSize.js';
 import { DocumentUploader } from '@/components/bid/DocumentUploader.js';
 import { Plus, RefreshCw, Trash2, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button.js';
+import { enumLabel } from '@/lib/utils.js';
 
 export interface IngestedDocumentsSectionProps {
   bidId: string;
@@ -91,7 +92,7 @@ export const IngestedDocumentsSection: React.FC<IngestedDocumentsSectionProps> =
               className="gap-1.5 text-xs font-medium border-border"
             >
               <Plus className="h-3.5 w-3.5" />
-              Upload Initial Tender Document
+              Upload initial tender document
             </Button>
           )}
         </div>
@@ -122,7 +123,7 @@ export const IngestedDocumentsSection: React.FC<IngestedDocumentsSectionProps> =
                       </div>
                       <div className="text-2xs text-muted-foreground truncate">
                         {doc.documentType === 'NIT'
-                          ? 'Notice Inviting Tender'
+                          ? 'Notice inviting tender'
                           : doc.documentType === 'TECHNICAL_SPECS'
                             ? 'Technical Specifications'
                             : doc.documentType === 'BOQ'
@@ -143,7 +144,7 @@ export const IngestedDocumentsSection: React.FC<IngestedDocumentsSectionProps> =
                           : 'bg-muted text-muted-foreground border-border'
                     }`}
                   >
-                    {doc.status}
+                    {enumLabel(doc.status)}
                   </span>
                 </div>
 

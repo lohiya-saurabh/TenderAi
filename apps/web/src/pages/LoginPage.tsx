@@ -72,7 +72,7 @@ export const LoginPage: React.FC = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="email" className="text-xs font-semibold text-muted-foreground">
-                Email Address
+                Email address
               </Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -115,7 +115,7 @@ export const LoginPage: React.FC = () => {
               disabled={isSubmitting}
               className="w-full mt-2 font-semibold shadow-sm"
             >
-              {isSubmitting ? 'Authenticating...' : 'Sign In to Workspace →'}
+              {isSubmitting ? 'Signing in…' : 'Sign in'}
             </Button>
           </form>
 
@@ -123,7 +123,7 @@ export const LoginPage: React.FC = () => {
             <p>
               New organization?{' '}
               <Link to="/signup" className="text-primary hover:underline font-semibold">
-                Register Workspace
+                Register workspace
               </Link>
             </p>
 

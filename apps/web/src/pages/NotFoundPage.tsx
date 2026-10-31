@@ -16,7 +16,7 @@ export const NotFoundPage: React.FC = () => {
             <Link to="/bids" className="no-underline">
               <Button variant="default" className="gap-2">
                 <ArrowLeft className="w-4 h-4" />
-                Return to Bid Dashboard
+                Return to bid dashboard
               </Button>
             </Link>
           }

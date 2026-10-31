@@ -416,7 +416,7 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
               )}
               {visibleColumns.includes('value') && (
                 <SortableHeader
-                  label="Est. Value"
+                  label="Est. value"
                   columnKey="value"
                   sortKey={sortKey}
                   sortDirection={sortDirection}

@@ -42,7 +42,7 @@ function ObligationGrid({ summary }: { summary: ObligationsSummary }) {
 
   const obligations: ObligationDisplayItem[] = [
     {
-      label: 'Stamp Paper',
+      label: 'Stamp paper',
       active: summary.stampPaperCount > 0,
       detail:
         summary.stampPaperCount === 0
@@ -69,7 +69,7 @@ function ObligationGrid({ summary }: { summary: ObligationsSummary }) {
           : `${summary.udinCount} requirement${summary.udinCount === 1 ? '' : 's'} — 18-digit UDIN mandatory`,
     },
     {
-      label: 'Signing Authority',
+      label: 'Signing authority',
       active: ranks.length > 0,
       detail:
         ranks.length === 0 ? (
@@ -131,8 +131,8 @@ function ObligationGrid({ summary }: { summary: ObligationsSummary }) {
               {obligation.label}
             </span>
             {obligation.active ? (
-              <span className="text-2xs font-bold text-warning dark:text-warning bg-warning/10 px-1.5 py-0.5 rounded shrink-0">
-                REQUIRED
+              <span className="text-2xs font-semibold text-warning bg-warning/10 px-1.5 py-0.5 rounded shrink-0">
+                Required
               </span>
             ) : (
               <span className="text-2xs text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded shrink-0">

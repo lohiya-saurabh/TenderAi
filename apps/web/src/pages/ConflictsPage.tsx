@@ -154,7 +154,7 @@ const ConflictCard: React.FC<{
                 {v.clauseRef ?? 'No clause no.'} · p.{v.page}
               </Link>
             </div>
-            <blockquote className="m-0 rounded-lg border border-[var(--quote-border)] bg-[var(--quote-bg)] px-[11px] py-[9px] font-serif text-sm leading-[1.5] text-foreground dark:text-white/85">
+            <blockquote className="m-0 rounded-lg border border-[var(--quote-border)] bg-[var(--quote-bg)] px-[11px] py-[9px] font-serif text-sm leading-[1.5] text-foreground">
               {v.quote}
             </blockquote>
             {canReview && open && (

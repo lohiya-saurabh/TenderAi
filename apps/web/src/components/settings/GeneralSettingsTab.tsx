@@ -40,7 +40,7 @@ export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="workspaceName">Workspace Name</Label>
+              <Label htmlFor="workspaceName">Workspace name</Label>
               <Input
                 id="workspaceName"
                 value={workspaceSettings?.organizationName || organizationName || 'Workspace'}
@@ -69,7 +69,7 @@ export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({
           <Separator />
 
           <div className="space-y-3">
-            <Label className="text-xs font-semibold">Default Active Company Entity</Label>
+            <Label className="text-xs font-semibold">Default active company entity</Label>
             <p className="text-xs text-muted-foreground">
               Select which registered company is automatically selected when you launch new tenders
               or review dossiers.
@@ -116,7 +116,7 @@ export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({
       {/* Appearance & Color Theme */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base font-semibold">Appearance &amp; Visual Theme</CardTitle>
+          <CardTitle className="text-base font-semibold">Appearance &amp; visual theme</CardTitle>
           <CardDescription className="text-xs">
             Select your preferred interface display mode. Saved persistently to tenant preferences.
           </CardDescription>
@@ -136,7 +136,7 @@ export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({
               <div className="space-y-1.5 pr-2">
                 <div className="text-sm font-semibold text-foreground flex items-center gap-2">
                   <Moon className="h-4 w-4 text-warning" />
-                  <span>Executive Dark (Default)</span>
+                  <span>Executive dark (default)</span>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">
                   Deep zinc canvas with crisp high-contrast cards and surgical terracotta orange
@@ -163,7 +163,7 @@ export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({
               <div className="space-y-1.5 pr-2">
                 <div className="text-sm font-semibold text-foreground flex items-center gap-2">
                   <Sun className="h-4 w-4 text-warning" />
-                  <span>Crisp Daylight Light</span>
+                  <span>Crisp daylight light</span>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">
                   Pure white canvas with ink-black typography and hairline zinc dividers for daytime

@@ -3,22 +3,11 @@ import type { AuditEvent } from '@/api/audit.js';
 import { formatDateTime } from '@/utils/formatDate.js';
 import { EmptyState } from '@/components/common/EmptyState.js';
 import { History } from 'lucide-react';
+import { enumLabel as words } from '@/lib/utils.js';
 
 export interface AuditTimelineProps {
   events: AuditEvent[];
 }
-
-/** "CLAUSE_REVIEWED" / "clauseReviewed" → "Clause reviewed". */
-const words = (s: string) => {
-  const w = s
-    .replace(/([a-z])([A-Z])/g, '$1 $2')
-    .replace(/[_.-]+/g, ' ')
-    .trim()
-    .toLowerCase();
-  return (w.charAt(0).toUpperCase() + w.slice(1)).replace(/\b(ai|id|pdf|url|emd|gst)\b/gi, (m) =>
-    m.toUpperCase(),
-  );
-};
 
 /** Flattens a payload into labelled fields (one level of nesting), never raw JSON. */
 function payloadFields(payload: Record<string, unknown>): [string, string][] {

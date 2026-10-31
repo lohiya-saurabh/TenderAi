@@ -48,7 +48,7 @@ const PIPELINE_STEPS: readonly PipelineStepDef[] = [
   {
     key: 'UPLOADED',
     stepNumber: 1,
-    label: 'Upload & Storage',
+    label: 'Upload & storage',
     contextualDescription:
       'Direct byte transfer to encrypted tenant storage with SHA-256 integrity check.',
     activeMessage: 'Storing document in encrypted tenant storage...',
@@ -57,7 +57,7 @@ const PIPELINE_STEPS: readonly PipelineStepDef[] = [
   {
     key: 'PARSING_PAGES',
     stepNumber: 2,
-    label: 'Document Normalization',
+    label: 'Document normalization',
     contextualDescription: 'Parsing PDF text layers, multi-column layouts, and technical tables.',
     activeMessage: 'Normalizing text layers, table structures, and multi-column formatting...',
     icon: FileText,
@@ -65,7 +65,7 @@ const PIPELINE_STEPS: readonly PipelineStepDef[] = [
   {
     key: 'EXTRACTING_COMPLIANCE',
     stepNumber: 3,
-    label: 'Requirement Extraction',
+    label: 'Requirement extraction',
     contextualDescription:
       'Identifying mandatory criteria, eligibility rules, and statutory clauses.',
     activeMessage:
@@ -75,7 +75,7 @@ const PIPELINE_STEPS: readonly PipelineStepDef[] = [
   {
     key: 'VERIFYING_CITATIONS',
     stepNumber: 4,
-    label: 'Evidence & Risk Analysis',
+    label: 'Evidence & risk analysis',
     contextualDescription:
       'Grounding citations against source text and evaluating against Company Profile.',
     activeMessage:
@@ -85,7 +85,7 @@ const PIPELINE_STEPS: readonly PipelineStepDef[] = [
   {
     key: 'COMPLETED',
     stepNumber: 5,
-    label: 'Bid Readiness Ready',
+    label: 'Bid readiness ready',
     contextualDescription: 'Complete compliance matrix generated and ready for human review.',
     activeMessage: 'Preparing bid readiness assessment and workspace sign-off...',
     icon: CheckCircle2,

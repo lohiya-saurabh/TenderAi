@@ -144,7 +144,7 @@ export const ChecklistPage: React.FC = () => {
                   </div>
                   {checklist.groups.map((g) => (
                     <div key={g.stage} data-testid="checklist-group">
-                      <div className="border-b border-border bg-primary/10 px-3.5 py-2 text-xs dark:bg-white/5">
+                      <div className="border-b border-border bg-primary/10 px-3.5 py-2 text-xs">
                         <strong>{g.label}</strong>{' '}
                         <span className="text-muted-foreground">
                           · {g.ready} of {g.rows.length} ready
@@ -169,7 +169,7 @@ export const ChecklistPage: React.FC = () => {
               <h2 className="m-0 text-base font-semibold">Coverage · what the AI read</h2>
               <div className="flex flex-wrap gap-3.5 text-xs text-muted-foreground">
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="inline-block h-3 w-3 rounded-[2px] bg-muted dark:bg-white/20" />
+                  <span className="inline-block h-3 w-3 rounded-[2px] bg-muted" />
                   Analysed
                 </span>
                 <span className="inline-flex items-center gap-1.5">
@@ -210,7 +210,7 @@ export const ChecklistPage: React.FC = () => {
                 return (
                   <div
                     key={d.id}
-                    className="flex flex-wrap items-start gap-4 border-t border-border pt-2.5 dark:border-white/10"
+                    className="flex flex-wrap items-start gap-4 border-t border-border pt-2.5"
                   >
                     <div className="flex flex-[0_0_260px] flex-col gap-0.5">
                       <strong className="text-sm break-words">{d.name}</strong>
@@ -233,7 +233,7 @@ export const ChecklistPage: React.FC = () => {
                             title={`p.${i + 1}${failed.has(i + 1) ? ' · not analysed' : ''}`}
                             className={cn(
                               'h-3 w-3 rounded-[2px]',
-                              failed.has(i + 1) ? 'bg-destructive' : 'bg-muted dark:bg-white/20',
+                              failed.has(i + 1) ? 'bg-destructive' : 'bg-muted',
                             )}
                           />
                         ))}
@@ -303,7 +303,7 @@ const ChecklistRow: React.FC<{ bidId: string; clause: Clause }> = ({ bidId, clau
   const parties = c.parties.map((p) => PARTY_LABEL[p]).join(' · ');
   return (
     <div
-      className={cn(GRID, 'items-start border-b border-border py-2.5 text-sm dark:border-white/10')}
+      className={cn(GRID, 'items-start border-b border-border py-2.5 text-sm')}
       data-testid="checklist-row"
     >
       <span className="flex min-w-0 flex-col items-start gap-1">

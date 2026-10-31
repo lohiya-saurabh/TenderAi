@@ -185,7 +185,7 @@ describe('Chat Copilot Web Components Suite', () => {
       expect(html).toBe('');
     });
 
-    it('renders tender document provenance with verbatim quote and confidence score', () => {
+    it('renders tender document provenance with verbatim quote and no confidence score', () => {
       const citation: CitationDto = {
         citationId: 'cit-tender-01',
         documentName: 'NIT_Section_4_Technical_Eligibility.pdf',
@@ -203,11 +203,11 @@ describe('Chat Copilot Web Components Suite', () => {
         }),
       );
 
-      expect(html).toContain('Citation Provenance');
-      expect(html).toContain('Tender Document');
+      expect(html).toContain('Citation provenance');
+      expect(html).toContain('Tender document');
       expect(html).toContain('NIT_Section_4_Technical_Eligibility.pdf');
       expect(html).toContain('Page 14 • Clause 4.3.2(b)');
-      expect(html).toContain('96% Grounded');
+      expect(html).not.toMatch(/\d+%/); // no confidence percentage (AGENTS.md)
       expect(html).toContain('The bidder shall have completed at least one similar railway signalling work.');
     });
 
@@ -228,10 +228,10 @@ describe('Chat Copilot Web Components Suite', () => {
         }),
       );
 
-      expect(html).toContain('Company Evidence Vault');
+      expect(html).toContain('Company evidence');
       expect(html).toContain('CA_Certified_Turnover_FY24.pdf');
       expect(html).toContain('Page 2');
-      expect(html).toContain('99% Grounded');
+      expect(html).not.toMatch(/\d+%/); // no confidence percentage (AGENTS.md)
       expect(html).toContain('Total certified turnover for FY 2023-24 is INR 52.4 Crores.');
     });
   });
@@ -286,10 +286,10 @@ describe('Chat Copilot Web Components Suite', () => {
       expect(html).toContain('z-50'); // Modal is higher than drawer (z-40)
       expect(html).toContain('NHAI_NIT_baswantpur.pdf');
       expect(html).toContain('Page 3 • Clause 4.1');
-      expect(html).toContain('98% Grounded');
+      expect(html).not.toMatch(/\d+%/); // no confidence percentage (AGENTS.md)
     });
 
-    it('renders bounding box highlight metadata when present on citation', () => {
+    it('shows the quote, not raw bounding box coordinates', () => {
       const citationWithBox: CitationDto = {
         citationId: 'cit-box-01',
         documentName: 'Tender_Document.pdf',
@@ -315,7 +315,7 @@ describe('Chat Copilot Web Components Suite', () => {
         }),
       );
 
-      expect(html).toContain('Document Viewer Snippet');
+      expect(html).not.toContain('Coordinates');
       expect(html).toContain('Notarized affidavit on INR 500 stamp paper.');
     });
   });

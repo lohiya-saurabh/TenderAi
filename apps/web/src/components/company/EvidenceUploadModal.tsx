@@ -75,7 +75,7 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
             </Button>
           ) : (
             <Button variant="primary" onClick={onExecuteCloudImport} disabled={loading}>
-              {loading ? 'Importing...' : 'Import Selected File'}
+              {loading ? 'Importing…' : 'Import selected file'}
             </Button>
           )}
         </>
@@ -98,7 +98,7 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
               }`}
             >
               <Upload size={13} />
-              Upload from Device
+              Upload from device
             </button>
             <button
               type="button"
@@ -113,7 +113,7 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
               }`}
             >
               <CloudDownload size={13} />
-              Cloud Storage
+              Cloud storage
             </button>
           </div>
         )}
@@ -129,7 +129,7 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
         {CLOUD_IMPORT_ENABLED && evidenceSource === 'CLOUD' && (
           <div className="flex flex-col gap-2.5 p-3 rounded-lg border border-border bg-muted/20">
             <label className="font-semibold block text-xs text-foreground">
-              Select Connected Cloud Provider
+              Select connected cloud provider
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <label
@@ -199,7 +199,7 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
                   </div>
                   <div className="font-semibold text-foreground">Choose a PDF or drop it here</div>
                   <div className="text-2xs text-muted-foreground">
-                    Audited Balance Sheets, Completion Certificates, ISO, PAN, GST (Max 50MB PDF)
+                    Audited balance sheets, completion certificates, ISO, PAN, GST (max 50MB PDF)
                   </div>
                 </div>
               </div>
@@ -211,8 +211,8 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
                   </div>
                   <div className="min-w-0">
                     <div className="font-semibold text-foreground truncate">{deviceFile.name}</div>
-                    <div className="text-2xs mono text-muted-foreground">
-                      {(deviceFile.size / (1024 * 1024)).toFixed(2)} MB · PDF Document
+                    <div className="text-2xs tabular-nums text-muted-foreground">
+                      {(deviceFile.size / (1024 * 1024)).toFixed(2)} MB · PDF
                     </div>
                   </div>
                 </div>
@@ -241,21 +241,21 @@ export const EvidenceUploadModal: React.FC<EvidenceUploadModalProps> = ({
             className="w-full p-2 rounded-md border border-border bg-background text-foreground text-xs outline-none focus:ring-1 focus:ring-primary"
           >
             <option value="AUDITED_BALANCE_SHEET">
-              Audited Balance Sheet / Financial Statement
+              Audited balance sheet / financial statement
             </option>
             <option value="COMPLETION_CERT">
-              Client Project Completion Certificate / Work Completion
+              Client project completion certificate / work completion
             </option>
             <option value="WORK_ORDER">
-              Work Order / Letter of Award (LOA) / Contract Agreement
+              Work order / letter of award (LOA) / contract agreement
             </option>
-            <option value="ISO_CERT">ISO Quality, Environmental & Safety Certificate</option>
-            <option value="GST_REG">GST Registration Certificate (Form REG-06)</option>
-            <option value="PAN_CARD">Permanent Account Number (PAN Card)</option>
-            <option value="INCORPORATION_CERT">Certificate of Incorporation (MCA / CIN)</option>
-            <option value="UDYAM_CERT">MSME Udyam Registration Certificate</option>
-            <option value="OEM_MAF">Manufacturer Authorization Form (OEM MAF)</option>
-            <option value="OTHER">Other Statutory Credential / Tender Document</option>
+            <option value="ISO_CERT">ISO quality, environmental & safety certificate</option>
+            <option value="GST_REG">GST registration certificate (Form REG-06)</option>
+            <option value="PAN_CARD">Permanent account number (PAN card)</option>
+            <option value="INCORPORATION_CERT">Certificate of incorporation (MCA / CIN)</option>
+            <option value="UDYAM_CERT">MSME Udyam registration certificate</option>
+            <option value="OEM_MAF">Manufacturer authorization Form (OEM MAF)</option>
+            <option value="OTHER">Other statutory credential / tender document</option>
           </select>
         </div>
 

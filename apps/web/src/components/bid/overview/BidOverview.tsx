@@ -54,7 +54,7 @@ export const RefLink: React.FC<{
   <Link
     to={`/bids/${encodeURIComponent(bidId)}/clauses?clause=${encodeURIComponent(clauseId)}`}
     className={cn(
-      'inline-flex items-center whitespace-nowrap rounded-md border border-border bg-primary/10 px-[7px] py-px font-mono text-2xs text-foreground no-underline hover:border-primary hover:text-primary dark:bg-white/5 dark:text-white/80',
+      'inline-flex items-center whitespace-nowrap rounded-md border border-border bg-primary/10 px-[7px] py-px font-mono text-2xs text-foreground no-underline hover:border-primary hover:text-primary',
       className,
     )}
   >
@@ -141,7 +141,7 @@ export const BidOverviewHeader: React.FC<{
             )}
           </div>
           <div
-            className="flex h-2 overflow-hidden rounded-full bg-muted dark:bg-white/10"
+            className="flex h-2 overflow-hidden rounded-full bg-muted"
             role="img"
             aria-label={`${reviewed} of ${total} clauses reviewed, ${needs} need review`}
           >
@@ -151,7 +151,7 @@ export const BidOverviewHeader: React.FC<{
           <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
             <LegendSwatch className="bg-primary">Reviewed</LegendSwatch>
             <LegendSwatch className="bg-warning">Needs review</LegendSwatch>
-            <LegendSwatch className="border border-primary/40 bg-muted dark:bg-white/10">
+            <LegendSwatch className="border border-primary/40 bg-muted">
               Unreviewed AI readings
             </LegendSwatch>
           </div>
@@ -217,11 +217,9 @@ export const KeyFacts: React.FC<{ bid: BidDetail; verdict: BidRecommendation | n
         {facts.map((f) => (
           <div
             key={f.k}
-            className="flex flex-wrap items-baseline gap-3 border-t border-border py-[9px] dark:border-white/10"
+            className="flex flex-wrap items-baseline gap-3 border-t border-border py-[9px]"
           >
-            <dt className="flex-[0_0_200px] text-sm font-medium text-foreground dark:text-white/70">
-              {f.k}
-            </dt>
+            <dt className="flex-[0_0_200px] text-sm font-medium text-foreground">{f.k}</dt>
             <dd
               className={cn(
                 'm-0 min-w-0 flex-[1_1_260px] tabular-nums',
@@ -339,15 +337,12 @@ export const MoneyAtStake: React.FC<{ bidId: string; summary: BidClauseSummary }
       </p>
     ) : (
       summary.amounts.map((m) => (
-        <div
-          key={m.clauseId}
-          className="flex items-baseline gap-3 border-t border-border py-1.5 dark:border-white/10"
-        >
+        <div key={m.clauseId} className="flex items-baseline gap-3 border-t border-border py-1.5">
           <span className="flex min-w-0 flex-auto flex-wrap items-baseline gap-2 text-sm">
             {m.title}
             <RefLink bidId={bidId} clauseId={m.clauseId} clauseRef={m.clauseRef} page={m.page} />
           </span>
-          <span className="whitespace-nowrap text-right font-semibold tabular-nums">
+          <span className="max-w-[55%] text-right text-sm font-semibold tabular-nums">
             {formatAmount(m.amount)}
           </span>
         </div>
@@ -391,7 +386,7 @@ export const DeadlineTimeline: React.FC<{ bidId: string; summary: BidClauseSumma
                     <li key={d.clauseId} className="flex min-w-0 flex-1 flex-col gap-1.5 pr-2.5">
                       <div className="flex items-center" aria-hidden="true">
                         <span className="h-3 w-3 flex-none rounded-full border-2 border-primary bg-card" />
-                        <span className="h-0.5 flex-auto bg-primary dark:bg-white/20" />
+                        <span className="h-0.5 flex-auto bg-primary" />
                       </div>
                       <span className="text-sm font-bold tabular-nums">
                         {formatDeadline(d.deadline)}
@@ -412,7 +407,7 @@ export const DeadlineTimeline: React.FC<{ bidId: string; summary: BidClauseSumma
             </div>
           )}
           {relative.length > 0 && (
-            <div className="flex flex-wrap gap-2.5 border-t border-dashed border-primary/40 pt-3 dark:border-white/20">
+            <div className="flex flex-wrap gap-2.5 border-t border-dashed border-primary/40 pt-3">
               <span className="self-center text-2xs font-semibold text-muted-foreground">
                 Relative to an event
               </span>

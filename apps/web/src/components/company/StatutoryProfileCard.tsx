@@ -39,7 +39,7 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-5 border-b border-border/80 mb-6">
           <div>
             <h2 className="text-base font-semibold text-foreground font-heading">
-              Statutory Business Profile
+              Statutory business profile
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
               Registration details for this company. Use the registry checks above to verify them.
@@ -51,7 +51,7 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
           {/* Legal Entity Name */}
           <div className="flex flex-col gap-1.5">
             <span className="text-2xs font-semibold text-muted-foreground">
-              Legal Entity Name
+              Legal entity name
             </span>
             <span className="text-sm font-semibold text-foreground leading-snug">
               {profile.legalEntityName}
@@ -61,7 +61,7 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
           {/* CIN */}
           <div className="flex flex-col gap-1.5">
             <span className="text-2xs font-semibold text-muted-foreground">
-              CIN / Registration Number
+              CIN / registration number
             </span>
             <span className="text-sm font-mono font-semibold text-foreground">
               {profile.cinNumber}
@@ -71,7 +71,7 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
           {/* Incorporation Date */}
           <div className="flex flex-col gap-1.5">
             <span className="text-2xs font-semibold text-muted-foreground">
-              Incorporation Date
+              Incorporation date
             </span>
             <span className="text-sm font-semibold text-foreground">
               {profile.incorporationDate}
@@ -117,7 +117,7 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
           {/* Credit Rating */}
           <div className="flex flex-col gap-1.5">
             <span className="text-2xs font-semibold text-muted-foreground">
-              External Credit Rating
+              External credit rating
             </span>
             {profile.creditRating ? (
               <span className="text-sm font-semibold text-foreground">
@@ -128,7 +128,7 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
               </span>
             ) : (
               <span className="text-sm text-muted-foreground italic">
-                Not Rated / Assessment Pending
+                Not stated
               </span>
             )}
           </div>
@@ -167,7 +167,7 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
         <div className="bg-card border border-border rounded-xl p-5 shadow-xs flex flex-col justify-between gap-3">
           <div>
             <span className="text-xs font-medium text-muted-foreground">
-              Highest Single Contract
+              Highest single contract
             </span>
             <div className="text-2xl font-bold font-heading text-foreground mt-1">
               {highestContract
@@ -184,7 +184,7 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
         <div className="bg-card border border-border rounded-xl p-5 shadow-xs flex flex-col justify-between gap-3">
           <div>
             <span className="text-xs font-medium text-muted-foreground">
-              Active Bank Solvency
+              Active bank solvency
             </span>
             <div className="text-2xl font-bold font-heading text-foreground mt-1">
               {activeSolvency
@@ -201,7 +201,7 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
         <div className="bg-card border border-border rounded-xl p-5 shadow-xs flex flex-col justify-between gap-3">
           <div>
             <span className="text-xs font-medium text-muted-foreground">
-              Evidence Documents Linked
+              Evidence documents linked
             </span>
             <div className="text-2xl font-bold font-heading text-foreground mt-1">
               {profile.evidenceVault.length} Docs

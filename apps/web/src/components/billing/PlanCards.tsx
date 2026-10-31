@@ -5,11 +5,12 @@ import { Button } from '@/components/ui/button.js';
 import { Badge } from '@/components/ui/badge.js';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card.js';
 import { Check, ArrowRight, Building2, Users, FileText, HardDrive, Sparkles } from 'lucide-react';
+import { enumLabel } from '@/lib/utils.js';
 
 const CANONICAL_PLANS: PlanDefinition[] = [
   {
     tier: 'FREE',
-    name: 'Free Evaluation',
+    name: 'Free evaluation',
     description: 'For contractors exploring tender intelligence and bid readiness.',
     monthlyPriceInr: 0,
     annualMonthlyPriceInr: 0,
@@ -30,7 +31,7 @@ const CANONICAL_PLANS: PlanDefinition[] = [
   },
   {
     tier: 'STARTER',
-    name: 'Starter Plan',
+    name: 'Starter plan',
     description: 'For small vendors beginning structured public procurement operations.',
     monthlyPriceInr: 999,
     annualMonthlyPriceInr: 799,
@@ -52,7 +53,7 @@ const CANONICAL_PLANS: PlanDefinition[] = [
   },
   {
     tier: 'GROWTH',
-    name: 'Growth Plan',
+    name: 'Growth plan',
     description: 'For active MSME bid teams managing multiple sister entities.',
     monthlyPriceInr: 2499,
     annualMonthlyPriceInr: 1999,
@@ -76,7 +77,7 @@ const CANONICAL_PLANS: PlanDefinition[] = [
   },
   {
     tier: 'BUSINESS',
-    name: 'Business Plan',
+    name: 'Business plan',
     description: 'For multi-entity EPC contractors & consortium bidding leaders.',
     monthlyPriceInr: 6999,
     annualMonthlyPriceInr: 5599,
@@ -99,7 +100,7 @@ const CANONICAL_PLANS: PlanDefinition[] = [
   },
   {
     tier: 'ENTERPRISE',
-    name: 'Enterprise Plan',
+    name: 'Enterprise plan',
     description: 'For infrastructure enterprises requiring custom volume and security.',
     monthlyPriceInr: null,
     annualMonthlyPriceInr: null,
@@ -168,7 +169,7 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              Monthly Billing
+              Monthly billing
             </button>
             <button
               type="button"
@@ -179,9 +180,9 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              <span>Annual Billing</span>
+              <span>Annual billing</span>
               <span className="text-2xs px-1.5 py-0.5 rounded bg-warning/15 text-warning dark:text-warning tabular-nums border border-warning/25">
-                SAVE 20%
+                Save 20%
               </span>
             </button>
           </div>
@@ -217,7 +218,7 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
                   <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-primary text-primary-foreground text-2xs font-bold shadow-sm">
                     <Sparkles className="h-3 w-3" />
-                    <span>Most Popular</span>
+                    <span>Most popular</span>
                   </span>
                 </div>
               )}
@@ -225,18 +226,15 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
               {isBusiness && !isHighlighted && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-muted border border-border text-foreground text-2xs font-semibold">
-                    High Volume
+                    High volume
                   </span>
                 </div>
               )}
 
               <CardHeader className="space-y-2 pb-4 pt-5">
                 <div className="flex items-center justify-between">
-                  <Badge
-                    variant={isHighlighted ? 'default' : 'outline'}
-                    className="text-2xs font-mono"
-                  >
-                    {plan.tier}
+                  <Badge variant={isHighlighted ? 'default' : 'outline'} className="text-2xs">
+                    {enumLabel(plan.tier)}
                   </Badge>
                 </div>
 
@@ -303,12 +301,12 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
                   <div className="flex items-center justify-between text-muted-foreground">
                     <span className="flex items-center gap-1.5">
                       <Users className="h-3.5 w-3.5 text-primary shrink-0" />
-                      <span>Team Seats</span>
+                      <span>Team seats</span>
                     </span>
                     <span className="font-semibold text-foreground tabular-nums text-2xs">
                       {plan.entitlements['users.max'] >= 9999
                         ? 'Unlimited'
-                        : `${plan.entitlements['users.max']} Users`}
+                        : `${plan.entitlements['users.max']} users`}
                     </span>
                   </div>
 
@@ -327,7 +325,7 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
                   <div className="flex items-center justify-between text-muted-foreground">
                     <span className="flex items-center gap-1.5">
                       <HardDrive className="h-3.5 w-3.5 text-primary shrink-0" />
-                      <span>Evidence Vault</span>
+                      <span>Evidence vault</span>
                     </span>
                     <span className="font-semibold text-foreground tabular-nums text-2xs">
                       {plan.entitlements['evidence_storage.mb'] >= 1024
@@ -339,7 +337,7 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
 
                 {/* Features List */}
                 <div className="space-y-2 pt-3 border-t border-border/60">
-                  <p className="text-2xs font-semibold text-muted-foreground">Key Capabilities</p>
+                  <p className="text-2xs font-semibold text-muted-foreground">Key capabilities</p>
                   <ul className="space-y-1.5 text-xs text-muted-foreground">
                     {plan.features.map((feat, idx) => (
                       <li key={idx} className="flex items-start gap-2">
@@ -355,7 +353,7 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
                   {plan.tier === 'ENTERPRISE' ? (
                     <Link to="/signup?plan=ENTERPRISE">
                       <Button variant="outline" className="w-full text-xs font-semibold">
-                        Contact Enterprise Sales
+                        Contact enterprise sales
                       </Button>
                     </Link>
                   ) : (
@@ -366,7 +364,7 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
                       >
                         <span>
                           {isHighlighted
-                            ? 'Start Growth Trial'
+                            ? 'Start Growth trial'
                             : isBusiness
                               ? 'Select Business'
                               : `Select ${plan.name.replace(' Plan', '').replace(' Evaluation', '')}`}

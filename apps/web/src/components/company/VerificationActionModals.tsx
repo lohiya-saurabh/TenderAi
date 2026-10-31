@@ -34,7 +34,7 @@ export const VerificationActionModals: React.FC<VerificationActionModalsProps> =
       <Modal
         isOpen={true}
         onClose={onClose}
-        title="Connect Official DigiLocker Depository"
+        title="Connect official DigiLocker depository"
         footer={
           <>
             <Button variant="ghost" onClick={onClose} disabled={loading}>
@@ -56,8 +56,8 @@ export const VerificationActionModals: React.FC<VerificationActionModalsProps> =
             <strong className="text-foreground">Certificates automatically pulled into Evidence Vault:</strong>
             <ul className="mt-1.5 ml-5 text-muted-foreground text-2xs list-disc space-y-0.5">
               <li>MCA Certificate of Incorporation (with CIN verification)</li>
-              <li>GST Registration Certificate (Form REG-06)</li>
-              <li>MSME Udyam Registration Certificate</li>
+              <li>GST registration certificate (Form REG-06)</li>
+              <li>MSME Udyam registration certificate</li>
             </ul>
           </div>
           {errorMsg && (
@@ -82,7 +82,7 @@ export const VerificationActionModals: React.FC<VerificationActionModalsProps> =
       ? '15-Character GSTIN Number'
       : activeModal === 'MCA'
         ? '21-Character CIN or LLPIN'
-        : 'Udyam Registration Number';
+        : 'Udyam registration number';
 
   const placeholder =
     activeModal === 'GSTIN'

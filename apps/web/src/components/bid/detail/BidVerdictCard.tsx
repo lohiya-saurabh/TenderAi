@@ -249,7 +249,7 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
         </div>
 
         <div className="flex justify-between items-center py-0.5">
-          <span className="text-muted-foreground">Liquidated Damages / Contract Risk</span>
+          <span className="text-muted-foreground">Liquidated damages / contract risk</span>
           <span
             className={ldRisk ? 'text-warning dark:text-warning font-bold' : 'text-foreground '}
           >
@@ -263,7 +263,7 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
         </div>
 
         <div className="flex justify-between items-center py-0.5">
-          <span className="text-muted-foreground">Technical Qualification Criteria</span>
+          <span className="text-muted-foreground">Technical qualification criteria</span>
           <div className="text-right">
             <span className="text-foreground font-semibold">
               {techGate ? techGate.detail : 'Technical capacity check'}
@@ -278,7 +278,7 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
 
         {solvencyGate && (
           <div className="flex justify-between items-center py-0.5">
-            <span className="text-muted-foreground">Bank Solvency &amp; Credit Facilities</span>
+            <span className="text-muted-foreground">Bank solvency &amp; credit facilities</span>
             <div className="text-right">
               <span className="text-foreground font-semibold">{solvencyGate.detail}</span>
               <span className="text-primary dark:text-primary font-bold ml-1.5">✓ PASS</span>
@@ -293,7 +293,7 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
           href="#compliance-matrix"
           className="w-full block py-2.5 px-4 text-center text-xs font-semibold rounded-md border border-border bg-muted/30 hover:bg-muted/70 text-foreground transition-colors shadow-2xs"
         >
-          Open Full Compliance Matrix ({complianceItems.length} Clauses)
+          Open clause workspace ({complianceItems.length} clauses)
         </a>
       </div>
 
@@ -362,7 +362,7 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
             decision.verdict !== 'DO_NOT_PURSUE' && (
               <div className="space-y-1.5">
                 <div className="text-xs font-semibold text-foreground">
-                  Commercial &amp; Contractual Risks
+                  Commercial &amp; contractual risks
                 </div>
                 <ul className="list-disc pl-5 space-y-1 text-xs text-muted-foreground">
                   {decision.commercialRisks.map((risk, index) => {
@@ -415,7 +415,7 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
                   Verified Evidence Provenance ({decision.evidenceCitations.length})
                 </span>
                 <span className="text-2xs text-primary dark:text-primary font-medium">
-                  Dual-Grounded in Vault
+                  Dual-grounded in vault
                 </span>
               </div>
               <div className="space-y-1.5">

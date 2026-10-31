@@ -24,6 +24,7 @@ import {
   Wrench,
   MapPin,
 } from 'lucide-react';
+import { enumLabel } from '@/lib/utils.js';
 
 export interface CompanyProfileViewProps {
   profile: FullCompanyProfile;
@@ -212,7 +213,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                       : 'bg-background text-muted-foreground border-border hover:text-foreground hover:bg-muted/50 font-medium'
                   }`}
                 >
-                  {st === 'ALL' ? 'All' : st.replace(/_/g, ' ')}
+                  {st === 'ALL' ? 'All' : enumLabel(st)}
                 </button>
               ),
             )}
@@ -229,7 +230,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
           {filteredRegistrations.length === 0 ? (
             <CapabilityEmptyState
               icon={ShieldCheck}
-              title="No Statutory Registrations Added"
+              title="No statutory registrations added"
               description="Add your GSTIN, PAN, CIN, or Udyam registrations to verify your corporate entity and establish eligibility for government tenders."
               actionLabel="Upload evidence"
               onAction={onUploadEvidence}
@@ -245,14 +246,14 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                 onViewEvidence={(doc) => setSelectedDocPreview(doc)}
                 fields={[
                   {
-                    label: 'Registration / License №',
+                    label: 'Registration / license №',
                     value: reg.regNumber,
                     isMono: true,
                     highlight: true,
                   },
-                  { label: 'Issuing Authority', value: reg.issuingAuthority },
-                  { label: 'Jurisdiction / State', value: reg.stateOrJurisdiction || 'National' },
-                  { label: 'Last Verified', value: reg.lastVerifiedAt || '2026-09-01' },
+                  { label: 'Issuing authority', value: reg.issuingAuthority },
+                  { label: 'Jurisdiction / state', value: reg.stateOrJurisdiction || 'National' },
+                  { label: 'Last verified', value: reg.lastVerifiedAt || '2026-09-01' },
                 ]}
               />
             ))
@@ -266,9 +267,9 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
           {filteredCertifications.length === 0 ? (
             <CapabilityEmptyState
               icon={Award}
-              title="No ISO or Quality Certifications Added"
+              title="No ISO or quality certifications added"
               description="Upload your ISO 9001:2015, ISO 14001, or ISO 45001 certificates from your device or evidence vault to fulfill technical quality prequalification."
-              actionLabel="Upload Certification"
+              actionLabel="Upload certification"
               onAction={onUploadEvidence}
               actionIcon="upload"
             />
@@ -282,14 +283,14 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                 onViewEvidence={(doc) => setSelectedDocPreview(doc)}
                 fields={[
                   {
-                    label: 'Certificate Number',
+                    label: 'Certificate number',
                     value: cert.certificateNumber,
                     isMono: true,
                     highlight: true,
                   },
-                  { label: 'Accredited Registrar', value: cert.issuingBody },
+                  { label: 'Accredited registrar', value: cert.issuingBody },
                   { label: 'Valid From', value: cert.validFrom },
-                  { label: 'Certified Scope', value: cert.scopeSummary },
+                  { label: 'Certified scope', value: cert.scopeSummary },
                 ]}
               />
             ))
@@ -313,9 +314,9 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
           {filteredExperience.length === 0 ? (
             <CapabilityEmptyState
               icon={FileCheck2}
-              title="No Past Experience Projects Recorded"
+              title="No past experience projects recorded"
               description="Upload client work orders, completion certificates, or commercial operation declarations to verify qualifying similar works."
-              actionLabel="Upload Work Order / Completion Certificate"
+              actionLabel="Upload work order / completion certificate"
               onAction={onUploadEvidence}
               actionIcon="upload"
             />
@@ -328,15 +329,15 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                 onViewEvidence={(doc) => setSelectedDocPreview(doc)}
                 fields={[
                   {
-                    label: 'Executed Contract Value',
-                    value: `₹${exp.contractValueInrCrores.toFixed(2)} Crores`,
+                    label: 'Executed contract value',
+                    value: `₹${exp.contractValueInrCrores.toFixed(2)} Cr`,
                     highlight: true,
                   },
-                  { label: 'Procuring Client', value: exp.clientName },
-                  { label: 'Completion Date', value: exp.completionDate },
-                  { label: 'State / Location', value: exp.locationState },
+                  { label: 'Procuring client', value: exp.clientName },
+                  { label: 'Completion date', value: exp.completionDate },
+                  { label: 'State / location', value: exp.locationState },
                   {
-                    label: 'Scope & Work Highlights',
+                    label: 'Scope & work highlights',
                     value: (
                       <ul className="list-disc pl-4">
                         {exp.scopeHighlights.map((s, i) => (
@@ -358,7 +359,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
           {profile.projects.length === 0 ? (
             <CapabilityEmptyState
               icon={Briefcase}
-              title="No Ongoing Major Projects Recorded"
+              title="No ongoing major projects recorded"
               description="Add ongoing project contracts to accurately calculate available bid capacity and active commitment commitments."
               actionLabel="Upload evidence"
               onAction={onUploadEvidence}
@@ -372,15 +373,15 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                 typeBadge={proj.role.replace(/_/g, ' ')}
                 onViewEvidence={(doc) => setSelectedDocPreview(doc)}
                 fields={[
-                  { label: 'Project Name', value: proj.projectName, highlight: true },
-                  { label: 'Client / Authority', value: proj.clientName },
+                  { label: 'Project name', value: proj.projectName, highlight: true },
+                  { label: 'Client / authority', value: proj.clientName },
                   {
-                    label: 'Contract Value',
-                    value: `₹${proj.contractValueInrCrores.toFixed(2)} Crores`,
+                    label: 'Contract value',
+                    value: `₹${proj.contractValueInrCrores.toFixed(2)} Cr`,
                     highlight: true,
                   },
-                  { label: 'Execution Period', value: `${proj.startDate} to ${proj.endDate}` },
-                  { label: 'Key Deliverables', value: proj.keyDeliverables },
+                  { label: 'Execution period', value: `${proj.startDate} to ${proj.endDate}` },
+                  { label: 'Key deliverables', value: proj.keyDeliverables },
                 ]}
               />
             ))
@@ -394,7 +395,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
           {profile.oemAuthorizations.length === 0 ? (
             <CapabilityEmptyState
               icon={Award}
-              title="No OEM Authorizations Recorded"
+              title="No OEM authorizations recorded"
               description="Upload Manufacturer Authorization Forms (MAFs) or dealership certificates to satisfy equipment supply requirements."
               actionLabel="Upload OEM MAF"
               onAction={onUploadEvidence}
@@ -410,8 +411,8 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                 onViewEvidence={(doc) => setSelectedDocPreview(doc)}
                 fields={[
                   { label: 'OEM Brand', value: oem.oemName, highlight: true },
-                  { label: 'Authorized Product Lines', value: oem.productCategories.join(', ') },
-                  { label: 'Authorized Territory', value: oem.authorizedTerritory },
+                  { label: 'Authorized product lines', value: oem.productCategories.join(', ') },
+                  { label: 'Authorized territory', value: oem.authorizedTerritory },
                   { label: 'Valid From', value: oem.validFrom },
                 ]}
               />
@@ -426,7 +427,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
           {profile.employees.length === 0 ? (
             <CapabilityEmptyState
               icon={Users}
-              title="No Key Personnel Recorded"
+              title="No key personnel recorded"
               description="Add certified project directors, structural engineers, or safety officers to meet tender technical personnel criteria."
               actionLabel="Upload evidence"
               onAction={onUploadEvidence}
@@ -441,16 +442,16 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                 onViewEvidence={(doc) => setSelectedDocPreview(doc)}
                 fields={[
                   {
-                    label: 'Full Name & Designation',
+                    label: 'Full name & designation',
                     value: `${emp.name} — ${emp.designation}`,
                     highlight: true,
                   },
-                  { label: 'Technical Qualification', value: emp.qualification },
-                  { label: 'Experience in Sector', value: `${emp.experienceYears} Years` },
+                  { label: 'Technical qualification', value: emp.qualification },
+                  { label: 'Experience in sector', value: `${emp.experienceYears} years` },
                   { label: 'EPFO UAN Reference', value: emp.epfoUan || 'N/A', isMono: true },
                   {
-                    label: 'Key Personnel Status',
-                    value: emp.isKeyPersonnel ? 'Designated Key Personnel' : 'Supporting Staff',
+                    label: 'Key personnel status',
+                    value: emp.isKeyPersonnel ? 'Key personnel' : 'Supporting staff',
                   },
                 ]}
               />
@@ -465,7 +466,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
           {profile.equipment.length === 0 ? (
             <CapabilityEmptyState
               icon={Wrench}
-              title="No Equipment or Plant Assets Recorded"
+              title="No equipment or plant assets recorded"
               description="Add owned or leased heavy equipment, rotary piling rigs, or automated batching plants to fulfill mobilization conditions."
               actionLabel="Upload evidence"
               onAction={onUploadEvidence}
@@ -480,10 +481,10 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                 expiryDate={eq.calibrationValidUntil}
                 onViewEvidence={(doc) => setSelectedDocPreview(doc)}
                 fields={[
-                  { label: 'Equipment Model & Make', value: eq.modelAndMake, highlight: true },
-                  { label: 'Equipment Category', value: eq.equipmentType },
-                  { label: 'Rating / Capacity', value: eq.capacityOrRating },
-                  { label: 'Year of Manufacture', value: eq.manufactureYear },
+                  { label: 'Equipment model & make', value: eq.modelAndMake, highlight: true },
+                  { label: 'Equipment category', value: eq.equipmentType },
+                  { label: 'Rating / capacity', value: eq.capacityOrRating },
+                  { label: 'Year of manufacture', value: eq.manufactureYear },
                 ]}
               />
             ))
@@ -497,7 +498,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
           {profile.geographicCoverage.length === 0 ? (
             <CapabilityEmptyState
               icon={MapPin}
-              title="No Geographic Facilities Recorded"
+              title="No geographic facilities recorded"
               description="Add corporate headquarters, regional offices, or project site offices to verify local presence requirements."
               actionLabel="Upload evidence"
               onAction={onUploadEvidence}
@@ -512,14 +513,14 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
                 onViewEvidence={(doc) => setSelectedDocPreview(doc)}
                 fields={[
                   {
-                    label: 'Facility Address',
+                    label: 'Facility address',
                     value: `${geo.address}, ${geo.city}, ${geo.state}`,
                     highlight: true,
                   },
-                  { label: 'Committed SLA Response', value: `< ${geo.slaResponseHours} Hours` },
+                  { label: 'Committed SLA response', value: `< ${geo.slaResponseHours} hours` },
                   {
-                    label: 'Resident Staff Strength',
-                    value: `${geo.serviceStaffCount} Technical Personnel`,
+                    label: 'Resident staff strength',
+                    value: `${geo.serviceStaffCount} technical staff`,
                   },
                 ]}
               />

@@ -24,27 +24,27 @@ interface DocTypeOption {
 const DOC_TYPES: readonly DocTypeOption[] = [
   {
     value: 'NIT',
-    label: 'Notice Inviting Tender (NIT)',
+    label: 'Notice inviting tender (NIT)',
     description: 'Core tender notice with eligibility & critical dates',
   },
   {
     value: 'TECHNICAL_SPECS',
-    label: 'Technical Specs & SOW',
+    label: 'Technical specs & SOW',
     description: 'Scope of work, engineering requirements & standards',
   },
   {
     value: 'BOQ',
-    label: 'Bill of Quantities (BOQ)',
+    label: 'Bill of quantities (BOQ)',
     description: 'Schedule of rates and item breakdown',
   },
   {
     value: 'CORRIGENDUM',
-    label: 'Corrigendum / Addendum',
+    label: 'Corrigendum / addendum',
     description: 'Official amendments, date extensions & clause revisions',
   },
   {
     value: 'FINANCIAL_BID',
-    label: 'Financial Bid Guidelines',
+    label: 'Financial bid guidelines',
     description: 'Price evaluation rules & bank guarantee requirements',
   },
 ];

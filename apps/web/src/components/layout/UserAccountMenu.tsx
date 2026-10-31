@@ -74,7 +74,7 @@ export const UserAccountMenu: React.FC = () => {
         <DropdownMenuSeparator />
         <div className="px-3 py-2 bg-muted/40 text-xs">
           <p className="text-2xs font-semibold text-muted-foreground mb-0.5">
-            Organization Tenant
+            Organization tenant
           </p>
           <p className="font-medium text-foreground truncate">
             {user?.organizationName || 'Default Organization'}
@@ -87,13 +87,13 @@ export const UserAccountMenu: React.FC = () => {
         <DropdownMenuItem asChild className="cursor-pointer">
           <Link to="/profile" className="flex items-center w-full">
             <User className="mr-2 h-4 w-4 text-muted-foreground" />
-            <span>User Profile</span>
+            <span>User profile</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild className="cursor-pointer">
           <Link to="/settings" className="flex items-center w-full">
             <Settings className="mr-2 h-4 w-4 text-muted-foreground" />
-            <span>Workspace Settings</span>
+            <span>Workspace settings</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
@@ -102,7 +102,7 @@ export const UserAccountMenu: React.FC = () => {
           className="text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer"
         >
           <LogOut className="mr-2 h-4 w-4" />
-          <span>Sign Out</span>
+          <span>Sign out</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
