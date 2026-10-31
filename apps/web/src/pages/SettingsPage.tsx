@@ -334,7 +334,6 @@ export const SettingsPage: React.FC = () => {
             isChangingPlan={isChangingPlan}
             billingFeedback={billingFeedback}
             onChangePlan={handleChangePlan}
-            companiesCount={companies.length}
           />
         </TabsContent>
 

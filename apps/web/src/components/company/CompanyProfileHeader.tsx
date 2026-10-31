@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Button } from '@/components/common/Button.js';
 import { Badge } from '@/components/common/Badge.js';
-import { Modal } from '@/components/common/Modal.js';
 import { type FullCompanyProfile, computeProfileHealth } from '@/components/company/companyProfileData.js';
-import { Zap, Building2, Check, CheckCircle2, FolderArchive, Plus, RefreshCw } from 'lucide-react';
+import { Zap, Building2, Check, FolderArchive, Plus } from 'lucide-react';
 import { useCompany } from '@/context/useCompany.js';
 
 export interface CompanyProfileHeaderProps {
@@ -19,8 +18,6 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
 }) => {
   const { selectedCompany } = useCompany();
   const health = computeProfileHealth(profile);
-  const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
-  const [publishSuccess, setPublishSuccess] = useState(false);
 
   const displayName = selectedCompany?.legalName || profile.companyName;
   const displayGstin =
@@ -28,13 +25,6 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
     profile.registrations.find((r) => r.regType === 'GSTIN')?.regNumber ||
     'Pending Registration';
 
-  const handlePublishVersion = () => {
-    setPublishSuccess(true);
-    setTimeout(() => {
-      setPublishSuccess(false);
-      setIsPublishModalOpen(false);
-    }, 1500);
-  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -61,15 +51,6 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
               {profile.profileVersion}
             </Badge>
           )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsPublishModalOpen(true)}
-            className="gap-1.5 text-xs"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            Publish version
-          </Button>
         </div>
       </div>
 
@@ -181,47 +162,6 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
         </div>
       </div>
 
-      {/* Publish Version Modal */}
-      {isPublishModalOpen && (
-        <Modal
-          isOpen={true}
-          onClose={() => setIsPublishModalOpen(false)}
-          title="Publish new immutable profile snapshot"
-          footer={
-            <>
-              <Button variant="ghost" onClick={() => setIsPublishModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button variant="primary" onClick={handlePublishVersion}>
-                Publish v2.5
-              </Button>
-            </>
-          }
-        >
-          <div className="flex flex-col gap-3 text-sm">
-            {publishSuccess ? (
-              <div className="text-primary text-center py-4 flex items-center justify-center gap-2 font-semibold">
-                <CheckCircle2 className="w-5 h-5" /> Profile Version v2.5 published and pinned
-                successfully!
-              </div>
-            ) : (
-              <>
-                <p className="m-0 text-foreground">
-                  Publishing creates a permanent cryptographic snapshot of all verified credentials,
-                  CA UDIN statements, and registrations.
-                </p>
-                <div className="bg-background p-3 rounded-lg border border-border text-xs text-muted-foreground space-y-1">
-                  <div>• Active bids will retain their pinned versions.</div>
-                  <div>• New bid evaluations will automatically utilize this new snapshot.</div>
-                  <div>
-                    • All linked evidence documents will be locked in the tamper-proof ledger.
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        </Modal>
-      )}
     </div>
   );
 };

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Badge } from '@/components/common/Badge.js';
 import { Check, FileText } from 'lucide-react';
-import type { FullCompanyProfile } from '@/components/company/companyProfileData.js';
+import { type FullCompanyProfile, isVerified } from '@/components/company/companyProfileData.js';
 
 export interface StatutoryProfileCardProps {
   profile: FullCompanyProfile;
@@ -29,7 +29,7 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
       : null;
 
   const activeSolvency = profile.solvencyRecords.find(
-    (s) => s.status === 'VERIFIED' && new Date(s.validUntil) > new Date(),
+    (s) => isVerified(s.status) && new Date(s.validUntil) > new Date(),
   );
 
   return (

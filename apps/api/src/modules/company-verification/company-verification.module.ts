@@ -5,7 +5,7 @@
  * Allows swapping between live adapters (IRIS IRP, MCA, Udyam, DigiLocker, Google Drive, OneDrive)
  * and zero-network deterministic mock adapters via environment variables.
  */
-import { Module } from '@nestjs/common';
+import { Module, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DatabaseModule } from '@/common/database/database.module.js';
 import { StorageModule } from '@/infrastructure/storage/storage.module.js';
@@ -42,6 +42,25 @@ import { AiEvidenceExtractor } from '@/modules/company-verification/application/
 import { CompanyEvidenceController } from '@/modules/company-verification/presentation/CompanyEvidenceController.js';
 import { CompanyVerificationController } from '@/modules/company-verification/presentation/CompanyVerificationController.js';
 
+/**
+ * Mock registry adapters answer with canned data, so they are only for development and tests.
+ * In production an unconfigured provider refuses every call (HTTP 503) instead of returning a
+ * mock "verified" result.
+ */
+function mockOrRefuse<T extends object>(name: string, config: ConfigService, mock: () => T): T {
+  const production = config.get<string>('NODE_ENV') === 'production';
+  if (!production || config.get<string>('ALLOW_MOCK_SERVICES') === 'true') return mock();
+  return new Proxy({} as T, {
+    // Nest probes providers for lifecycle hooks and `then`; only port methods refuse.
+    get: (_, prop) =>
+      typeof prop === 'string' && !/^(then|on[A-Z]|before[A-Z])/.test(prop)
+        ? () => {
+            throw new ServiceUnavailableException(`${name} is not configured on this deployment.`);
+          }
+        : undefined,
+  });
+}
+
 @Module({
   imports: [DatabaseModule, StorageModule, CompanyProfileModule],
   controllers: [CompanyEvidenceController, CompanyVerificationController],
@@ -61,7 +80,11 @@ import { CompanyVerificationController } from '@/modules/company-verification/pr
         const provider = configService.get<string>('GST_VERIFICATION_PROVIDER');
         return provider === 'iris'
           ? new IrisIrpGstAdapter(configService)
-          : new MockGstVerificationAdapter();
+          : mockOrRefuse(
+              'GSTIN verification (GST_VERIFICATION_PROVIDER)',
+              configService,
+              () => new MockGstVerificationAdapter(),
+            );
       },
       inject: [ConfigService],
     },
@@ -73,7 +96,11 @@ import { CompanyVerificationController } from '@/modules/company-verification/pr
         const provider = configService.get<string>('MCA_REGISTRY_PROVIDER');
         return provider === 'mca'
           ? new McaRegistryAdapter(configService)
-          : new MockMcaRegistryAdapter();
+          : mockOrRefuse(
+              'MCA verification (MCA_REGISTRY_PROVIDER)',
+              configService,
+              () => new MockMcaRegistryAdapter(),
+            );
       },
       inject: [ConfigService],
     },
@@ -85,7 +112,11 @@ import { CompanyVerificationController } from '@/modules/company-verification/pr
         const provider = configService.get<string>('MSME_VERIFICATION_PROVIDER');
         return provider === 'udyam'
           ? new UdyamVerificationAdapter(configService)
-          : new MockMsmeVerificationAdapter();
+          : mockOrRefuse(
+              'Udyam verification (MSME_VERIFICATION_PROVIDER)',
+              configService,
+              () => new MockMsmeVerificationAdapter(),
+            );
       },
       inject: [ConfigService],
     },
@@ -97,11 +128,20 @@ import { CompanyVerificationController } from '@/modules/company-verification/pr
         const provider = configService.get<string>('DIGILOCKER_PROVIDER');
         return provider === 'digilocker'
           ? new DigiLockerAdapter(configService)
-          : new MockDigitalLockerAdapter(configService);
+          : mockOrRefuse(
+              'DigiLocker (DIGILOCKER_PROVIDER)',
+              configService,
+              () => new MockDigitalLockerAdapter(configService),
+            );
       },
       inject: [ConfigService],
     },
   ],
-  exports: [CompanyEvidenceService, EvidenceVerificationService, CompanyVerificationRepository, AiEvidenceExtractor],
+  exports: [
+    CompanyEvidenceService,
+    EvidenceVerificationService,
+    CompanyVerificationRepository,
+    AiEvidenceExtractor,
+  ],
 })
 export class CompanyVerificationModule {}

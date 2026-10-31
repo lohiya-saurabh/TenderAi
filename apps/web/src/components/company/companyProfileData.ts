@@ -19,6 +19,8 @@ export type CapabilityStatus =
   | 'NEEDS_REVIEW'
   | 'REJECTED';
 
+export const isVerified = (s: CapabilityStatus) => s === 'VERIFIED' || s === 'SOURCE_VERIFIED';
+
 export type CapabilitySectionId =
   | 'overview'
   | 'registrations'
@@ -236,7 +238,7 @@ export function computeProfileHealth(profile: FullCompanyProfile): ProfileHealth
     };
   }
 
-  const verifiedCount = allStatuses.filter((s) => s === 'VERIFIED').length;
+  const verifiedCount = allStatuses.filter(isVerified).length;
   const expiringSoonCount = allStatuses.filter((s) => s === 'EXPIRING_SOON').length;
   const expiredCount = allStatuses.filter((s) => s === 'EXPIRED').length;
   const missingCount = allStatuses.filter((s) => s === 'MISSING').length;

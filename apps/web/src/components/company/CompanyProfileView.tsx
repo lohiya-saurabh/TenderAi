@@ -10,6 +10,7 @@ import {
   type CapabilitySectionId,
   type CapabilityStatus,
   type EvidenceVaultItem,
+  isVerified,
 } from '@/components/company/companyProfileData.js';
 import { getCompanyEvidenceDownloadUrl } from '@/api/companies.js';
 import { getAccessToken } from '@/api/client.js';
@@ -30,20 +31,20 @@ export interface CompanyProfileViewProps {
   profile: FullCompanyProfile;
   activeSection: CapabilitySectionId;
   onUploadEvidence?: () => void;
-  onImportCloud?: () => void;
 }
 
 export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
   profile,
   activeSection,
   onUploadEvidence,
-  onImportCloud,
 }) => {
   const [selectedDocPreview, setSelectedDocPreview] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [downloadingDocId, setDownloadingDocId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<CapabilityStatus | 'ALL'>('ALL');
+  const matchesFilter = (st: CapabilityStatus) =>
+    filterStatus === 'ALL' || st === filterStatus || (filterStatus === 'VERIFIED' && isVerified(st));
   const [searchQuery, setSearchQuery] = useState('');
 
 
@@ -131,7 +132,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
 
 
   const filteredRegistrations = profile.registrations
-    .filter((r) => filterStatus === 'ALL' || r.status === filterStatus)
+    .filter((r) => matchesFilter(r.status))
     .filter(
       (r) =>
         !searchQuery ||
@@ -140,7 +141,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
     );
 
   const filteredCertifications = profile.certifications
-    .filter((c) => filterStatus === 'ALL' || c.status === filterStatus)
+    .filter((c) => matchesFilter(c.status))
     .filter(
       (c) =>
         !searchQuery ||
@@ -149,7 +150,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
     );
 
   const filteredTurnovers = profile.turnoverRecords
-    .filter((t) => filterStatus === 'ALL' || t.status === filterStatus)
+    .filter((t) => matchesFilter(t.status))
     .filter(
       (t) =>
         !searchQuery ||
@@ -158,7 +159,7 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
     );
 
   const filteredExperience = profile.pastExperience
-    .filter((e) => filterStatus === 'ALL' || e.status === filterStatus)
+    .filter((e) => matchesFilter(e.status))
     .filter(
       (e) =>
         !searchQuery ||
@@ -534,7 +535,6 @@ export const CompanyProfileView: React.FC<CompanyProfileViewProps> = ({
         <EvidenceVaultSection
           evidenceVault={profile.evidenceVault}
           onUploadEvidence={onUploadEvidence}
-          onImportCloud={onImportCloud}
           onSelectDocPreview={(fileName) => setSelectedDocPreview(fileName)}
           onDownloadEvidence={handleDownloadEvidence}
           downloadingDocId={downloadingDocId}

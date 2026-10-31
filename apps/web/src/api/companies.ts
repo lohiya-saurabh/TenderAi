@@ -232,28 +232,6 @@ export function verifyUdyam(
   );
 }
 
-export function getDigiLockerAuthUrl(
-  companyId: string,
-  redirectUri?: string,
-): Promise<ApiResult<{ authorizationUrl: string; state: string }>> {
-  const query = redirectUri ? `?redirectUri=${encodeURIComponent(redirectUri)}` : '';
-  return apiGet<{ authorizationUrl: string; state: string }>(
-    `/api/v1/companies/${encodeURIComponent(companyId)}/verification/digilocker/authorize${query}`,
-  );
-}
-
-export function submitDigiLockerCallback(
-  companyId: string,
-  code: string,
-  state: string,
-  redirectUri?: string,
-): Promise<ApiResult<EvidenceDocumentItem[]>> {
-  return apiPost<EvidenceDocumentItem[]>(
-    `/api/v1/companies/${encodeURIComponent(companyId)}/verification/digilocker/callback`,
-    { code, state, redirectUri },
-  );
-}
-
 export function getVerificationHistory(
   companyId: string,
 ): Promise<ApiResult<VerificationHistoryItem[]>> {
@@ -303,36 +281,6 @@ export function uploadCompanyEvidence(
   return apiPost<EvidenceDocumentItem>(
     `/api/v1/companies/${encodeURIComponent(companyId)}/evidence/upload`,
     input,
-  );
-}
-
-export function importCloudEvidence(
-  companyId: string,
-  input: {
-    provider: 'google-drive' | 'onedrive';
-    fileId: string;
-    fileName?: string;
-    evidenceType: string;
-    issuer?: string;
-    referenceNumber?: string;
-    validFrom?: string;
-    validTo?: string;
-  },
-): Promise<ApiResult<EvidenceDocumentItem>> {
-  return apiPost<EvidenceDocumentItem>(
-    `/api/v1/companies/${encodeURIComponent(companyId)}/evidence/import-cloud`,
-    input,
-  );
-}
-
-export function listCloudFiles(
-  companyId: string,
-  provider: 'google-drive' | 'onedrive',
-  folderId?: string,
-): Promise<ApiResult<Array<{ id: string; name: string; mimeType: string; sizeBytes: number }>>> {
-  const query = folderId ? `&folderId=${encodeURIComponent(folderId)}` : '';
-  return apiGet<Array<{ id: string; name: string; mimeType: string; sizeBytes: number }>>(
-    `/api/v1/companies/${encodeURIComponent(companyId)}/evidence/cloud-files?provider=${provider}${query}`,
   );
 }
 

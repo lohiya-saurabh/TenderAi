@@ -10,7 +10,7 @@ Source of truth: the controllers under `apps/api/src/modules/**`. When you add o
 | ------ | --------------------- | ----------------------------------------------------------------------------------- |
 | POST   | `/auth/register`      | Creates the organization and its first user (ADMIN)                                 |
 | POST   | `/auth/accept-invite` | Sets an invited member's password from their one-time invite link and signs them in |
-| POST   | `/auth/login`         | Returns access + refresh token and the user                                         |
+| POST   | `/auth/login`         | Returns access + refresh token and the user; 400 without email and password         |
 | POST   | `/auth/refresh`       | Rotates the refresh token (the old one is revoked)                                  |
 | POST   | `/auth/logout`        | Revokes the refresh token                                                           |
 
@@ -65,7 +65,7 @@ Source of truth: the controllers under `apps/api/src/modules/**`. When you add o
 | GET, POST         | `/company-profile`, `/company-profile/versions/:versionId`, `/company-profile/expiring-certificates`                                   | Profile of the caller's default company                                                                                                                                                                              |
 | POST              | `/company-profile/evidence/:evidenceId/apply?companyId=`                                                                               | Adds what an evidence document states (turnover per year, a completed project, a certificate) to the profile as a new version; returns `added` and `skipped` (fields the document did not state are never filled in) |
 | GET, POST, DELETE | `/companies/:companyId/evidence[...]`                                                                                                  | Upload, list, import from cloud drives, download, delete, and `POST /:evidenceId/extract` (AI `/api/v1/evidence/extract`)                                                                                            |
-| POST, GET         | `/companies/:companyId/verification/{gstin,mca,udyam}`, `digilocker/authorize`, `digilocker/callback`, `history`, `review-discrepancy` | Third-party registry checks (mock providers locally)                                                                                                                                                                 |
+| POST, GET         | `/companies/:companyId/verification/{gstin,mca,udyam}`, `digilocker/authorize`, `digilocker/callback`, `history`, `review-discrepancy` | Third-party registry checks. Mock providers locally; in production an unconfigured provider answers 503 (unless `ALLOW_MOCK_SERVICES=true`). The web has no DigiLocker control: there is no OAuth callback page      |
 
 ## Workspace
 
@@ -77,7 +77,7 @@ Source of truth: the controllers under `apps/api/src/modules/**`. When you add o
 | GET, PATCH        | `/settings/workspace`                                                                                      | Organization settings                                                                                                                                                                  |
 | GET, POST         | `/teams/members`, `/teams/invite`, `/teams/members/:id/invite-link`                                        | Team management. An invite returns a one-time `inviteUrl` (valid 7 days; only its hash is stored, and no email is sent yet). `invite-link` issues a fresh link and retires the old one |
 | GET, PATCH, POST  | `/users/me`, `/users/change-password`                                                                      | The caller's account                                                                                                                                                                   |
-| GET, POST         | `/billing/plans` (public), `/billing/subscription`, `/billing/usage`, `/billing/change-plan`               | Plans and usage                                                                                                                                                                        |
+| GET, POST         | `/billing/plans` (public), `/billing/subscription`, `/billing/usage`, `/billing/change-plan`               | Plans and usage. `change-plan` answers 503 in production (no payment provider) unless `ALLOW_MOCK_SERVICES=true`                                                                       |
 
 ## Internal
 

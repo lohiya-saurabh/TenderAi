@@ -145,8 +145,8 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
   const summaryText = rawFirstReason
     ? formatReasonItem(rawFirstReason) || extractCleanText(rawFirstReason)
     : decision
-      ? 'Deterministic eligibility qualification evaluation completed.'
-      : 'Deterministic eligibility evaluation has not yet been executed for this tender. Run evaluation to verify company credentials against tender thresholds.';
+      ? 'Eligibility evaluation completed.'
+      : 'Eligibility has not been evaluated for this tender yet. Run the evaluation to check company evidence against the tender thresholds.';
 
   const findReasonText = (
     ...keywords: string[]
@@ -257,7 +257,7 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
               ? typeof ldRisk === 'object' &&
                 'penaltySummary' in (ldRisk as Record<string, unknown>)
                 ? String((ldRisk as Record<string, unknown>).penaltySummary)
-                : 'Exposure Flagged ⚠'
+                : 'Exposure flagged'
               : 'Not assessed'}
           </span>
         </div>
@@ -266,11 +266,13 @@ export const BidVerdictCard: React.FC<BidVerdictCardProps> = ({
           <span className="text-muted-foreground">Technical qualification criteria</span>
           <div className="text-right">
             <span className="text-foreground font-semibold">
-              {techGate ? techGate.detail : 'Technical capacity check'}
+              {techGate ? techGate.detail : 'Not assessed'}
             </span>
             {techGate && (
-              <span className="text-primary dark:text-primary font-bold ml-1.5">
-                {techGate.pass ? '✓ PASS' : '✗ SHORTFALL'}
+              <span
+                className={`font-semibold ml-1.5 ${techGate.pass ? 'text-success' : 'text-destructive'}`}
+              >
+                {techGate.pass ? 'Pass' : 'Shortfall'}
               </span>
             )}
           </div>

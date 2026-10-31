@@ -5,7 +5,6 @@
  * 1. IRIS IRP GSTIN verification
  * 2. MCA CIN master data verification
  * 3. MSME Udyam registration check
- * 4. DigiLocker document depository connection
  * 5. Google Drive / OneDrive evidence import
  * 6. Local PDF device uploads
  */
@@ -17,9 +16,6 @@ import {
   verifyGstin,
   verifyMca,
   verifyUdyam,
-  getDigiLockerAuthUrl,
-  submitDigiLockerCallback,
-  importCloudEvidence,
   uploadCompanyEvidence,
   type CompanyItem,
   type VerificationResult,
@@ -32,25 +28,21 @@ export interface CompanyVerificationBarProps {
   company: CompanyItem;
   onRefresh: () => void;
   openEvidenceModalTrigger?: number;
-  defaultEvidenceSource?: 'DEVICE' | 'CLOUD' | 'GOOGLE_DRIVE' | 'ONEDRIVE';
 }
 
 export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
   company,
   onRefresh,
   openEvidenceModalTrigger,
-  defaultEvidenceSource,
 }) => {
   const [activeModal, setActiveModal] = useState<
-    'GSTIN' | 'MCA' | 'UDYAM' | 'DIGILOCKER' | 'CLOUD_IMPORT' | null
+    'GSTIN' | 'MCA' | 'UDYAM' | 'EVIDENCE_UPLOAD' | null
   >(null);
   const [inputVal, setInputVal] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successResult, setSuccessResult] = useState<VerificationResult | null>(null);
 
-  // Evidence Source & Modal State (Device vs Cloud)
-  const [evidenceSource, setEvidenceSource] = useState<'DEVICE' | 'CLOUD'>('DEVICE');
   const [deviceFile, setDeviceFile] = useState<File | null>(null);
   const [evidenceType, setEvidenceType] = useState('AUDITED_BALANCE_SHEET');
   const [isDragOver, setIsDragOver] = useState(false);
@@ -96,27 +88,14 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
   const [genericValidFrom, setGenericValidFrom] = useState('');
   const [genericValidTo, setGenericValidTo] = useState('');
 
-  const [cloudProvider, setCloudProvider] = useState<'google-drive' | 'onedrive'>('google-drive');
 
   useEffect(() => {
     if (openEvidenceModalTrigger && openEvidenceModalTrigger > 0) {
-      const src =
-        defaultEvidenceSource === 'CLOUD' ||
-        defaultEvidenceSource === 'GOOGLE_DRIVE' ||
-        defaultEvidenceSource === 'ONEDRIVE'
-          ? 'CLOUD'
-          : 'DEVICE';
-      setEvidenceSource(src);
-      if (defaultEvidenceSource === 'ONEDRIVE') {
-        setCloudProvider('onedrive');
-      } else if (defaultEvidenceSource === 'GOOGLE_DRIVE') {
-        setCloudProvider('google-drive');
-      }
       setErrorMsg(null);
       resetDeviceForm();
-      setActiveModal('CLOUD_IMPORT');
+      setActiveModal('EVIDENCE_UPLOAD');
     }
-  }, [openEvidenceModalTrigger, defaultEvidenceSource]);
+  }, [openEvidenceModalTrigger]);
 
   const resetDeviceForm = () => {
     setDeviceFile(null);
@@ -156,37 +135,31 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
   };
 
   const handleOpenGstin = () => {
-    setInputVal(company.gstin || '27AAACA1234F1Z9');
+    setInputVal(company.gstin ?? '');
     setErrorMsg(null);
     setSuccessResult(null);
     setActiveModal('GSTIN');
   };
 
   const handleOpenMca = () => {
-    setInputVal(company.cin || 'L45200MH1993PLC071970');
+    setInputVal(company.cin ?? '');
     setErrorMsg(null);
     setSuccessResult(null);
     setActiveModal('MCA');
   };
 
   const handleOpenUdyam = () => {
-    setInputVal(company.udyamId || 'UDYAM-MH-01-0012345');
+    setInputVal(company.udyamId ?? '');
     setErrorMsg(null);
     setSuccessResult(null);
     setActiveModal('UDYAM');
   };
 
-  const handleOpenDigiLocker = () => {
-    setErrorMsg(null);
-    setSuccessResult(null);
-    setActiveModal('DIGILOCKER');
-  };
 
-  const handleOpenEvidenceModal = (source: 'DEVICE' | 'CLOUD' = 'DEVICE') => {
-    setEvidenceSource(source);
+  const handleOpenEvidenceModal = () => {
     setErrorMsg(null);
     resetDeviceForm();
-    setActiveModal('CLOUD_IMPORT');
+    setActiveModal('EVIDENCE_UPLOAD');
   };
 
   const validateAndSetDeviceFile = (file: File) => {
@@ -385,81 +358,10 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
     }
   };
 
-  const handleSimulateDigiLockerImport = async () => {
-    setLoading(true);
-    setErrorMsg(null);
-    try {
-      const authRes = await getDigiLockerAuthUrl(company.id);
-      if (!authRes.ok) {
-        setErrorMsg(authRes.error.message);
-        return;
-      }
-
-      const callbackRes = await submitDigiLockerCallback(
-        company.id,
-        'mock_consent_code_123',
-        authRes.data.state,
-      );
-
-      if (callbackRes.ok) {
-        onRefresh();
-        setActiveModal(null);
-      } else {
-        setErrorMsg(callbackRes.error.message);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleExecuteCloudImport = async () => {
-    setLoading(true);
-    setErrorMsg(null);
-    try {
-      const { issuer, referenceNumber, validFrom, validTo } = getContextualMetadata();
-
-      const defaultName =
-        evidenceType === 'AUDITED_BALANCE_SHEET'
-          ? 'Audited_Balance_Sheet_FY24.pdf'
-          : evidenceType === 'COMPLETION_CERT'
-            ? 'NHAI_STRR_Completion_Certificate.pdf'
-            : evidenceType === 'ISO_CERT'
-              ? 'ISO_9001_Quality_Management_Certificate.pdf'
-              : 'Company_Evidence_Document.pdf';
-
-      const fileId =
-        cloudProvider === 'google-drive' ? 'gdrive_file_evidence_01' : 'onedrive_file_evidence_01';
-      const fileName = defaultName;
-
-      const res = await importCloudEvidence(company.id, {
-        provider: cloudProvider,
-        fileId,
-        fileName,
-        evidenceType,
-        issuer:
-          issuer ||
-          (cloudProvider === 'google-drive' ? 'Google Cloud Drive Import' : 'Microsoft 365 Import'),
-        referenceNumber: referenceNumber || undefined,
-        validFrom: validFrom || undefined,
-        validTo: validTo || undefined,
-      });
-
-      if (res.ok) {
-        onRefresh();
-        setActiveModal(null);
-        resetDeviceForm();
-      } else {
-        setErrorMsg(res.error.message);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const isGstVerified = Boolean(company.gstinVerifiedAt);
   const isMcaVerified = Boolean(company.mcaVerifiedAt);
   const isUdyamVerified = Boolean(company.udyamVerifiedAt);
-  const isDigiLockerLinked = Boolean(company.digilockerLinkedAt);
 
   return (
     <>
@@ -470,12 +372,12 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
             <span className="font-bold text-sm text-foreground">Registry checks</span>
           </div>
           <span className="text-xs text-muted-foreground">
-            IRIS IRP · MCA · Udyam · DigiLocker · cloud drive
+            IRIS IRP · MCA · Udyam
           </span>
         </div>
 
         {/* Integration Status Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
           {/* 1. IRIS IRP GSTIN */}
           <div className="p-4 rounded-lg border border-border bg-card shadow-2xs flex flex-col justify-between gap-3 hover:border-border-strong transition-colors">
             <div className="flex justify-between items-center">
@@ -543,30 +445,7 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
             </Button>
           </div>
 
-          {/* 4. DigiLocker */}
-          <div className="p-4 rounded-lg border border-border bg-card shadow-2xs flex flex-col justify-between gap-3 hover:border-border-strong transition-colors">
-            <div className="flex justify-between items-center">
-              <span className="text-xs font-bold text-foreground">DigiLocker Depository</span>
-              <Badge variant={isDigiLockerLinked ? 'success' : 'neutral'} size="sm">
-                {isDigiLockerLinked ? 'Connected' : 'Not Linked'}
-              </Badge>
-            </div>
-            <p className="text-2xs text-muted-foreground m-0 truncate">
-              {isDigiLockerLinked
-                ? 'Pulling official signed certificates'
-                : 'Import digitally signed government docs'}
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleOpenDigiLocker}
-              className="self-start mt-auto text-xs h-7 border-border"
-            >
-              {isDigiLockerLinked ? 'Sync DigiLocker' : 'Connect DigiLocker'}
-            </Button>
-          </div>
-
-          {/* 5. Company Evidence Documents */}
+          {/* 4. Company Evidence Documents */}
           <div className="p-4 rounded-lg border border-border bg-card shadow-2xs flex flex-col justify-between gap-3 hover:border-border-strong transition-colors">
             <div className="flex justify-between items-center">
               <span className="text-xs font-bold text-foreground">Evidence documents</span>
@@ -580,7 +459,7 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => handleOpenEvidenceModal('DEVICE')}
+              onClick={() => handleOpenEvidenceModal()}
               className="self-start mt-auto text-xs h-7 border-border hover:border-foreground/30"
               icon={<Upload size={13} />}
             >
@@ -590,13 +469,12 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
         </div>
       </div>
 
-      {/* Verification Modal for GSTIN / MCA / UDYAM / DIGILOCKER */}
+      {/* Verification Modal for GSTIN / MCA / UDYAM */}
       <VerificationActionModals
         activeModal={
           activeModal === 'GSTIN' ||
           activeModal === 'MCA' ||
-          activeModal === 'UDYAM' ||
-          activeModal === 'DIGILOCKER'
+          activeModal === 'UDYAM'
             ? activeModal
             : null
         }
@@ -607,23 +485,17 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
         errorMsg={errorMsg}
         successResult={successResult}
         onExecuteVerification={handleExecuteVerification}
-        onSimulateDigiLockerImport={handleSimulateDigiLockerImport}
       />
 
-      {/* Evidence Ingestion Modal (Device Upload & Cloud Drive Import) */}
+      {/* Evidence upload */}
       <EvidenceUploadModal
-        isOpen={activeModal === 'CLOUD_IMPORT'}
+        isOpen={activeModal === 'EVIDENCE_UPLOAD'}
         onClose={() => {
           setActiveModal(null);
           resetDeviceForm();
         }}
         loading={loading}
         errorMsg={errorMsg}
-        setErrorMsg={setErrorMsg}
-        evidenceSource={evidenceSource}
-        setEvidenceSource={setEvidenceSource}
-        cloudProvider={cloudProvider}
-        setCloudProvider={setCloudProvider}
         deviceFile={deviceFile}
         setDeviceFile={setDeviceFile}
         evidenceType={evidenceType}
@@ -634,7 +506,6 @@ export const CompanyVerificationBar: React.FC<CompanyVerificationBarProps> = ({
         handleDeviceFileChange={handleDeviceFileChange}
         handleDeviceFileDrop={handleDeviceFileDrop}
         onExecuteDeviceUpload={handleExecuteDeviceUpload}
-        onExecuteCloudImport={handleExecuteCloudImport}
         renderDynamicFields={() => (
           <EvidenceAttributeFields
             evidenceType={evidenceType}

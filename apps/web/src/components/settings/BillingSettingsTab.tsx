@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card.js';
-import { Badge } from '@/components/ui/badge.js';
+import { Badge } from '@/components/common/Badge.js';
+import { enumLabel } from '@/lib/utils.js';
 import { Button } from '@/components/ui/button.js';
 import { Separator } from '@/components/ui/separator.js';
 import { Progress } from '@/components/ui/progress.js';
@@ -29,7 +30,6 @@ interface BillingSettingsTabProps {
     message: string;
   } | null;
   onChangePlan: (tier: PlanTier) => void;
-  companiesCount: number;
 }
 
 export const BillingSettingsTab: React.FC<BillingSettingsTabProps> = ({
@@ -39,7 +39,6 @@ export const BillingSettingsTab: React.FC<BillingSettingsTabProps> = ({
   isChangingPlan,
   billingFeedback,
   onChangePlan,
-  companiesCount,
 }) => {
   return (
     <div className="space-y-6">
@@ -64,185 +63,93 @@ export const BillingSettingsTab: React.FC<BillingSettingsTabProps> = ({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <div>
-            <CardTitle className="text-base font-semibold">Active subscription plan</CardTitle>
-            <CardDescription className="text-xs">
-              Current tier, billing interval, and entitlement boundaries
-            </CardDescription>
+            <CardTitle className="text-base font-semibold">Current plan</CardTitle>
+            <CardDescription className="text-xs">Tier, billing period and quotas</CardDescription>
           </div>
-          <Badge
-            variant={subscription?.status === 'ACTIVE' ? 'default' : 'secondary'}
-            className="text-xs"
-          >
-            {subscription?.status || 'ACTIVE'}
-          </Badge>
+          {subscription && (
+            <Badge variant={subscription.status === 'ACTIVE' ? 'success' : 'neutral'} size="sm">
+              {enumLabel(subscription.status)}
+            </Badge>
+          )}
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="p-3.5 rounded-lg bg-muted/40 border border-border space-y-1">
-              <span className="text-2xs text-muted-foreground font-semibold">
-                Current tier
-              </span>
-              <div className="flex items-center gap-2">
-                <span className="text-base font-bold text-foreground">
-                  {subscription?.planName || 'Growth Plan'}
+          {!subscription ? (
+            <p className="text-sm text-muted-foreground">No subscription on record.</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Fact label="Tier">
+                <span className="text-base font-semibold text-foreground">
+                  {subscription.planName}
                 </span>
-                <Badge variant="outline" className="text-2xs">
-                  {subscription?.planTier || 'GROWTH'}
-                </Badge>
-              </div>
-              <p className="text-2xs text-muted-foreground">
-                {subscription?.billingInterval === 'ANNUAL'
-                  ? 'Billed Annually'
-                  : 'Billed Monthly'}
-              </p>
+                <p className="text-xs text-muted-foreground">
+                  {enumLabel(subscription.billingInterval)}
+                </p>
+              </Fact>
+              <Fact label="Price">
+                <p className="text-base font-semibold tabular-nums text-foreground">
+                  {subscription.priceInr !== null
+                    ? `₹${subscription.priceInr.toLocaleString('en-IN')} / mo`
+                    : 'Not stated'}
+                </p>
+              </Fact>
+              <Fact label="Billing period">
+                <p className="text-sm tabular-nums text-foreground">
+                  {new Date(subscription.currentPeriodStart).toLocaleDateString()} –{' '}
+                  {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {subscription.cancelAtPeriodEnd ? 'Ends at period end' : 'Renews at period end'}
+                </p>
+              </Fact>
             </div>
-
-            <div className="p-3.5 rounded-lg bg-muted/40 border border-border space-y-1">
-              <span className="text-2xs text-muted-foreground font-semibold">
-                Price / interval
-              </span>
-              <p className="text-base font-bold text-foreground">
-                {subscription?.priceInr !== null && subscription?.priceInr !== undefined
-                  ? `₹${subscription.priceInr.toLocaleString('en-IN')} / mo`
-                  : 'Custom Enterprise'}
-              </p>
-              <p className="text-2xs text-muted-foreground">Provider-agnostic invoicing</p>
-            </div>
-
-            <div className="p-3.5 rounded-lg bg-muted/40 border border-border space-y-1">
-              <span className="text-2xs text-muted-foreground font-semibold">
-                Billing period
-              </span>
-              <p className="text-xs font-medium tabular-nums text-foreground">
-                {subscription?.currentPeriodStart
-                  ? new Date(subscription.currentPeriodStart).toLocaleDateString()
-                  : 'Active'}{' '}
-                –{' '}
-                {subscription?.currentPeriodEnd
-                  ? new Date(subscription.currentPeriodEnd).toLocaleDateString()
-                  : 'Renewal Active'}
-              </p>
-              <p className="text-2xs text-muted-foreground font-medium">
-                Auto-renewal enabled
-              </p>
-            </div>
-          </div>
+          )}
 
           <Separator />
 
-          {/* Usage & Quota Meters */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-semibold text-foreground">
-                Current monthly usage &amp; quotas
-              </h4>
-              <span className="text-2xs text-muted-foreground tabular-nums">
-                Billing cycle: {usage?.periodKey || new Date().toISOString().slice(0, 7)}
-              </span>
+              <h3 className="text-sm font-semibold text-foreground">Usage this month</h3>
+              {usage && (
+                <span className="text-xs text-muted-foreground tabular-nums">
+                  {usage.periodKey}
+                </span>
+              )}
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Companies Meter */}
-              <div className="p-3 rounded-lg border border-border bg-card space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="flex items-center gap-1.5 font-medium text-foreground">
-                    <Building2 className="h-3.5 w-3.5 text-primary" />
-                    <span>Registered legal entities</span>
-                  </span>
-                  <span className="tabular-nums text-xs text-muted-foreground">
-                    <strong className="text-foreground">
-                      {usage?.activeCompanies ?? companiesCount}
-                    </strong>{' '}
-                    /{' '}
-                    {(usage?.maxCompanies ?? 5) >= 9999
-                      ? 'Unlimited'
-                      : (usage?.maxCompanies ?? 5)}
-                  </span>
-                </div>
-                <Progress
-                  value={
-                    (usage?.maxCompanies ?? 5) >= 9999
-                      ? 10
-                      : Math.min(
-                          100,
-                          ((usage?.activeCompanies ?? companiesCount) /
-                            (usage?.maxCompanies ?? 5)) *
-                            100,
-                        )
-                  }
-                  className="h-1.5"
+            {!usage ? (
+              <p className="text-sm text-muted-foreground">Usage is not available.</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Meter
+                  icon={<Building2 className="h-3.5 w-3.5 text-primary" />}
+                  label="Companies"
+                  used={usage.activeCompanies}
+                  max={usage.maxCompanies}
                 />
-              </div>
-
-              {/* Team Users Meter */}
-              <div className="p-3 rounded-lg border border-border bg-card space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="flex items-center gap-1.5 font-medium text-foreground">
-                    <Users className="h-3.5 w-3.5 text-primary" />
-                    <span>Team user seats</span>
-                  </span>
-                  <span className="tabular-nums text-xs text-muted-foreground">
-                    <strong className="text-foreground">{usage?.activeUsers ?? 1}</strong> /{' '}
-                    {(usage?.maxUsers ?? 10) >= 9999 ? 'Unlimited' : (usage?.maxUsers ?? 10)}
-                  </span>
-                </div>
-                <Progress
-                  value={
-                    (usage?.maxUsers ?? 10) >= 9999
-                      ? 10
-                      : Math.min(
-                          100,
-                          ((usage?.activeUsers ?? 1) / (usage?.maxUsers ?? 10)) * 100,
-                        )
-                  }
-                  className="h-1.5"
+                <Meter
+                  icon={<Users className="h-3.5 w-3.5 text-primary" />}
+                  label="Team seats"
+                  used={usage.activeUsers}
+                  max={usage.maxUsers}
                 />
-              </div>
-
-              {/* Monthly Tender Analyses Meter */}
-              <div className="p-3 rounded-lg border border-border bg-card space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="flex items-center gap-1.5 font-medium text-foreground">
-                    <FileText className="h-3.5 w-3.5 text-primary" />
-                    <span>Tender Ingestions this Month</span>
-                  </span>
-                  <span className="tabular-nums text-xs text-muted-foreground">
-                    <strong className="text-foreground">{usage?.monthlyAnalyses ?? 0}</strong> /{' '}
-                    {(usage?.maxMonthlyAnalyses ?? 50) >= 9999
-                      ? 'Unlimited'
-                      : (usage?.maxMonthlyAnalyses ?? 50)}
-                  </span>
-                </div>
-                <Progress
-                  value={
-                    (usage?.maxMonthlyAnalyses ?? 50) >= 9999
-                      ? 5
-                      : Math.min(
-                          100,
-                          ((usage?.monthlyAnalyses ?? 0) / (usage?.maxMonthlyAnalyses ?? 50)) *
-                            100,
-                        )
-                  }
-                  className="h-1.5"
+                <Meter
+                  icon={<FileText className="h-3.5 w-3.5 text-primary" />}
+                  label="Tender analyses"
+                  used={usage.monthlyAnalyses}
+                  max={usage.maxMonthlyAnalyses}
                 />
-              </div>
-
-              {/* Evidence Storage Meter */}
-              <div className="p-3 rounded-lg border border-border bg-card space-y-2">
-                <div className="flex items-center justify-between text-xs">
+                <div className="p-3 rounded-lg border border-border bg-card flex items-center justify-between text-xs">
                   <span className="flex items-center gap-1.5 font-medium text-foreground">
                     <HardDrive className="h-3.5 w-3.5 text-primary" />
-                    <span>Evidence storage limit</span>
+                    Evidence storage limit
                   </span>
-                  <span className="tabular-nums text-xs text-muted-foreground">
-                    <strong className="text-foreground">
-                      {usage?.entitlements['evidence_storage.mb'] ?? 500} MB
-                    </strong>
+                  <span className="tabular-nums text-foreground">
+                    {usage.entitlements['evidence_storage.mb'] != null
+                      ? `${usage.entitlements['evidence_storage.mb']} MB`
+                      : 'Not stated'}
                   </span>
                 </div>
-                <Progress value={25} className="h-1.5" />
               </div>
-            </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -272,7 +179,7 @@ export const BillingSettingsTab: React.FC<BillingSettingsTabProps> = ({
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-xs text-foreground">{p.name}</span>
                       {isCurrent && (
-                        <Badge variant="default" className="text-2xs">
+                        <Badge variant="primary" size="sm">
                           Current
                         </Badge>
                       )}
@@ -281,7 +188,7 @@ export const BillingSettingsTab: React.FC<BillingSettingsTabProps> = ({
                     <p className="text-base font-extrabold text-foreground">
                       {p.monthlyPriceInr !== null
                         ? `₹${p.monthlyPriceInr.toLocaleString('en-IN')}`
-                        : 'Custom'}
+                        : 'Not stated'}
                       {p.monthlyPriceInr !== null && (
                         <span className="text-2xs text-muted-foreground font-normal">
                           /mo
@@ -292,24 +199,24 @@ export const BillingSettingsTab: React.FC<BillingSettingsTabProps> = ({
                     <div className="text-2xs text-muted-foreground space-y-1 pt-1">
                       <p>
                         &bull;{' '}
-                        {p.entitlements['companies.max'] >= 9999
+                        {p.entitlements['companies.max'] >= UNLIMITED
                           ? 'Unlimited'
                           : p.entitlements['companies.max']}{' '}
-                        Companies
+                        companies
                       </p>
                       <p>
                         &bull;{' '}
-                        {p.entitlements['users.max'] >= 9999
+                        {p.entitlements['users.max'] >= UNLIMITED
                           ? 'Unlimited'
                           : p.entitlements['users.max']}{' '}
-                        Users
+                        users
                       </p>
                       <p>
                         &bull;{' '}
-                        {p.entitlements['tender_analyses.monthly'] >= 9999
+                        {p.entitlements['tender_analyses.monthly'] >= UNLIMITED
                           ? 'Unlimited'
                           : p.entitlements['tender_analyses.monthly']}{' '}
-                        Analyses/mo
+                        analyses/mo
                       </p>
                     </div>
                   </div>
@@ -322,7 +229,7 @@ export const BillingSettingsTab: React.FC<BillingSettingsTabProps> = ({
                     className="w-full text-xs h-8"
                   >
                     {isCurrent
-                      ? 'Active Plan'
+                      ? 'Current plan'
                       : `Switch to ${p.name.replace(' Plan', '').replace(' Tier', '')}`}
                   </Button>
                 </div>
@@ -334,3 +241,33 @@ export const BillingSettingsTab: React.FC<BillingSettingsTabProps> = ({
     </div>
   );
 };
+
+const UNLIMITED = 9999;
+
+const Fact: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+  <div className="p-3.5 rounded-lg bg-muted/40 border border-border space-y-1">
+    <span className="text-xs text-muted-foreground">{label}</span>
+    {children}
+  </div>
+);
+
+const Meter: React.FC<{ icon: React.ReactNode; label: string; used: number; max: number }> = ({
+  icon,
+  label,
+  used,
+  max,
+}) => (
+  <div className="p-3 rounded-lg border border-border bg-card space-y-2">
+    <div className="flex items-center justify-between text-xs">
+      <span className="flex items-center gap-1.5 font-medium text-foreground">
+        {icon}
+        {label}
+      </span>
+      <span className="tabular-nums text-muted-foreground">
+        <strong className="text-foreground">{used}</strong> /{' '}
+        {max >= UNLIMITED ? 'Unlimited' : max}
+      </span>
+    </div>
+    {max < UNLIMITED && <Progress value={Math.min(100, (used / max) * 100)} className="h-1.5" />}
+  </div>
+);

@@ -5,7 +5,7 @@ import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 import type { VerificationResult } from '@/api/companies.js';
 
 export interface VerificationActionModalsProps {
-  activeModal: 'GSTIN' | 'MCA' | 'UDYAM' | 'DIGILOCKER' | null;
+  activeModal: 'GSTIN' | 'MCA' | 'UDYAM' | null;
   onClose: () => void;
   loading: boolean;
   inputVal: string;
@@ -13,7 +13,6 @@ export interface VerificationActionModalsProps {
   errorMsg: string | null;
   successResult: VerificationResult | null;
   onExecuteVerification: () => void;
-  onSimulateDigiLockerImport: () => void;
 }
 
 export const VerificationActionModals: React.FC<VerificationActionModalsProps> = ({
@@ -25,50 +24,8 @@ export const VerificationActionModals: React.FC<VerificationActionModalsProps> =
   errorMsg,
   successResult,
   onExecuteVerification,
-  onSimulateDigiLockerImport,
 }) => {
   if (!activeModal) return null;
-
-  if (activeModal === 'DIGILOCKER') {
-    return (
-      <Modal
-        isOpen={true}
-        onClose={onClose}
-        title="Connect official DigiLocker depository"
-        footer={
-          <>
-            <Button variant="ghost" onClick={onClose} disabled={loading}>
-              Cancel
-            </Button>
-            <Button variant="primary" onClick={onSimulateDigiLockerImport} disabled={loading}>
-              {loading ? 'Authorizing & Importing...' : 'Authorize & Pull Certificates'}
-            </Button>
-          </>
-        }
-      >
-        <div className="flex flex-col gap-4 text-xs">
-          <p className="text-foreground m-0">
-            Connecting to DigiLocker allows TenderPulse AI to pull digitally signed government
-            certificates directly from the Ministry of Corporate Affairs, GSTN, and Ministry of MSME
-            without manual document tampering risk.
-          </p>
-          <div className="p-3 rounded-md bg-muted/40 border border-border">
-            <strong className="text-foreground">Certificates automatically pulled into Evidence Vault:</strong>
-            <ul className="mt-1.5 ml-5 text-muted-foreground text-2xs list-disc space-y-0.5">
-              <li>MCA Certificate of Incorporation (with CIN verification)</li>
-              <li>GST registration certificate (Form REG-06)</li>
-              <li>MSME Udyam registration certificate</li>
-            </ul>
-          </div>
-          {errorMsg && (
-            <div className="p-3 rounded-md bg-destructive/10 border border-destructive/30 text-destructive text-xs flex items-center gap-2">
-              <AlertTriangle size={16} /> {errorMsg}
-            </div>
-          )}
-        </div>
-      </Modal>
-    );
-  }
 
   const modalTitle =
     activeModal === 'GSTIN'

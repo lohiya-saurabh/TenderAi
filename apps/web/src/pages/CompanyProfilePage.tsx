@@ -16,6 +16,7 @@ import {
 import type { CompanyProfileView as ApiCompanyProfileView } from '@/api/companyProfile.js';
 import type {
   CapabilitySectionId,
+  CapabilityStatus,
   FullCompanyProfile,
   RegistrationItem,
   EvidenceVaultItem,
@@ -34,9 +35,6 @@ export const CompanyProfilePage: React.FC = () => {
   const [evidenceList, setEvidenceList] = useState<EvidenceDocumentItem[]>([]);
   const [apiProfile, setApiProfile] = useState<ApiCompanyProfileView | null>(null);
   const [openEvidenceTrigger, setOpenEvidenceTrigger] = useState(0);
-  const [evidenceSourceDefault, setEvidenceSourceDefault] = useState<
-    'DEVICE' | 'GOOGLE_DRIVE' | 'ONEDRIVE'
-  >('DEVICE');
 
   const fetchEvidence = useCallback(async () => {
     if (selectedCompany?.id) {
@@ -153,6 +151,9 @@ export const CompanyProfilePage: React.FC = () => {
     }));
 
     const payload = apiProfile?.active?.payload;
+    // A record is only as verified as the evidence document behind it.
+    const evidenceStatus = (id?: string | null): CapabilityStatus =>
+      evidenceList.find((d) => d.id === id)?.verificationStatus ?? 'UNVERIFIED';
 
     const turnoverRecords: FinancialTurnoverItem[] = (payload?.turnover_records ?? []).map((t) => ({
       id: t.entry_id,
@@ -165,7 +166,7 @@ export const CompanyProfilePage: React.FC = () => {
       caUdin: t.ca_udin || '',
       isUdinValidated: Boolean(t.ca_udin),
       audited: true,
-      status: 'VERIFIED',
+      status: evidenceStatus(t.evidence_document_id),
       evidenceDocId: t.evidence_document_id,
     }));
 
@@ -178,7 +179,7 @@ export const CompanyProfilePage: React.FC = () => {
       validFrom: c.valid_from,
       validUntil: c.valid_to || '',
       scopeSummary: `${c.standard_name} Quality Management Scope`,
-      status: 'VERIFIED',
+      status: evidenceStatus(c.evidence_document_id),
       evidenceDocId: c.evidence_document_id,
     }));
 
@@ -193,7 +194,7 @@ export const CompanyProfilePage: React.FC = () => {
       locationState: e.location_state,
       scopeHighlights: e.work_type_tags || ['Infrastructure EPC Works'],
       workTypeTags: e.work_type_tags || [],
-      status: 'VERIFIED',
+      status: evidenceStatus(e.evidence_document_id),
       evidenceDocId: e.evidence_document_id,
     }));
 
@@ -208,7 +209,7 @@ export const CompanyProfilePage: React.FC = () => {
         validFrom: o.valid_from,
         validUntil: o.valid_to,
         mafDocName: '',
-        status: 'VERIFIED',
+        status: evidenceStatus(o.evidence_document_id),
         evidenceDocId: o.evidence_document_id,
       }),
     );
@@ -222,7 +223,7 @@ export const CompanyProfilePage: React.FC = () => {
       qualification: s.qualification,
       experienceYears: s.experience_years,
       isKeyPersonnel: true,
-      status: 'VERIFIED',
+      status: evidenceStatus(s.evidence_document_id),
       evidenceDocId: s.evidence_document_id,
     }));
 
@@ -236,7 +237,7 @@ export const CompanyProfilePage: React.FC = () => {
       ownership: eq.owned ? 'OWNED' : 'LEASED',
       manufactureYear: 2022,
       capacityOrRating: 'Heavy Machinery',
-      status: 'VERIFIED',
+      status: evidenceStatus(eq.evidence_document_id),
       evidenceDocId: eq.evidence_document_id,
     }));
 
@@ -244,13 +245,13 @@ export const CompanyProfilePage: React.FC = () => {
       payload?.solvency_records && payload.solvency_records.length > 0
         ? payload.solvency_records.map((s) => ({
             id: s.entry_id,
-            title: `${s.bank_name || 'Bank'} Solvency Certificate`,
-            bankName: s.bank_name || 'Scheduled Commercial Bank',
+            title: s.bank_name ? `${s.bank_name} solvency certificate` : 'Solvency certificate',
+            bankName: s.bank_name || 'Not stated',
             solvencyLimitInrCrores: Number(s.solvency_limit_inr_crores) || 0,
             sanctionDate: s.sanction_date || '',
             validUntil: s.valid_until || '',
-            accountNumberMasked: s.account_number_masked || 'XXXX-XXXX-XXXX',
-            status: 'VERIFIED',
+            accountNumberMasked: s.account_number_masked || 'Not stated',
+            status: evidenceStatus(s.evidence_document_id),
             evidenceDocId: s.evidence_document_id || undefined,
           }))
         : evidenceList
@@ -259,13 +260,13 @@ export const CompanyProfilePage: React.FC = () => {
               const attrs = (d.extractedAttributes || {}) as Record<string, unknown>;
               return {
                 id: d.id,
-                title: `${d.issuer || 'Bank'} Solvency Certificate`,
-                bankName: d.issuer || 'Scheduled Commercial Bank',
+                title: d.issuer ? `${d.issuer} solvency certificate` : 'Solvency certificate',
+                bankName: d.issuer || 'Not stated',
                 solvencyLimitInrCrores: Number(attrs.solvency_limit_inr_crores) || 0,
                 sanctionDate: d.validFrom ? d.validFrom.split('T')[0]! : '',
                 validUntil: d.validTo ? d.validTo.split('T')[0]! : '',
-                accountNumberMasked: d.referenceNumber || 'XXXX-XXXX-XXXX',
-                status: 'VERIFIED',
+                accountNumberMasked: d.referenceNumber || 'Not stated',
+                status: evidenceStatus(d.id),
                 evidenceDocId: d.id,
               };
             });
@@ -281,7 +282,7 @@ export const CompanyProfilePage: React.FC = () => {
           const attrs = (solvDoc?.extractedAttributes || {}) as Record<string, unknown>;
           if (attrs?.rating) {
             return {
-              agency: String(attrs.agency || solvDoc?.issuer || 'Credit Rating Agency'),
+              agency: String(attrs.agency || solvDoc?.issuer || 'Not stated'),
               rating: String(attrs.rating),
               validUntil: solvDoc?.validTo ? solvDoc.validTo.split('T')[0] : undefined,
             };
@@ -340,7 +341,6 @@ export const CompanyProfilePage: React.FC = () => {
   }
 
   const uploadEvidence = () => {
-    setEvidenceSourceDefault('DEVICE');
     setOpenEvidenceTrigger(Date.now());
   };
 
@@ -353,12 +353,11 @@ export const CompanyProfilePage: React.FC = () => {
         onAddCredential={uploadEvidence}
       />
 
-      {/* Third-Party Verification Hub (IRIS IRP, MCA, Udyam, DigiLocker, Cloud Drive) */}
+      {/* Third-Party Verification Hub (IRIS IRP, MCA, Udyam) */}
       <CompanyVerificationBar
         company={selectedCompany}
         onRefresh={handleRefreshAll}
         openEvidenceModalTrigger={openEvidenceTrigger}
-        defaultEvidenceSource={evidenceSourceDefault}
       />
 
       {/* 11-Section Tab Navigation */}
@@ -373,10 +372,6 @@ export const CompanyProfilePage: React.FC = () => {
         profile={profile}
         activeSection={activeSection}
         onUploadEvidence={uploadEvidence}
-        onImportCloud={() => {
-          setEvidenceSourceDefault('GOOGLE_DRIVE');
-          setOpenEvidenceTrigger(Date.now());
-        }}
       />
     </Page>
   );

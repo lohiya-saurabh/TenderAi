@@ -109,6 +109,6 @@ npm run build -w @tenderpulse/web
 npm test -w @tenderpulse/web
 npx vitest run apps/api/src/modules/compliance/application/__tests__/compliance-item.mapper.spec.ts
 
-# 4. Browser tests (clause workspace U1–U13; starts its own API on a fresh demo DB + Vite)
+# 4. Browser tests (clause workspace U1–U14; starts its own API on a fresh demo DB + Vite)
 npx playwright test
 ```

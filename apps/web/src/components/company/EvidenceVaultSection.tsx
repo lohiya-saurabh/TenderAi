@@ -4,12 +4,11 @@ import { Button } from '@/components/common/Button.js';
 import { CapabilityStatusBadge } from '@/components/company/CapabilityStatusBadge.js';
 import { CapabilityEmptyState } from '@/components/company/CapabilityEmptyState.js';
 import type { EvidenceVaultItem } from '@/components/company/companyProfileData.js';
-import { FileText, Lock, Upload, CloudDownload, Download, Eye } from 'lucide-react';
+import { FileText, Lock, Upload, Download, Eye } from 'lucide-react';
 
 export interface EvidenceVaultSectionProps {
   evidenceVault: EvidenceVaultItem[];
   onUploadEvidence?: () => void;
-  onImportCloud?: () => void;
   onSelectDocPreview: (fileName: string) => void;
   onDownloadEvidence: (doc: EvidenceVaultItem) => Promise<void>;
   downloadingDocId: string | null;
@@ -18,7 +17,6 @@ export interface EvidenceVaultSectionProps {
 export const EvidenceVaultSection: React.FC<EvidenceVaultSectionProps> = ({
   evidenceVault,
   onUploadEvidence,
-  onImportCloud,
   onSelectDocPreview,
   onDownloadEvidence,
   downloadingDocId,
@@ -34,7 +32,7 @@ export const EvidenceVaultSection: React.FC<EvidenceVaultSectionProps> = ({
           </div>
         </div>
 
-        {(onUploadEvidence || onImportCloud) && (
+        {onUploadEvidence && (
           <div className="flex items-center gap-2 shrink-0">
             {onUploadEvidence && (
               <Button
@@ -44,16 +42,6 @@ export const EvidenceVaultSection: React.FC<EvidenceVaultSectionProps> = ({
                 icon={<Upload size={13} />}
               >
                 Upload document
-              </Button>
-            )}
-            {onImportCloud && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onImportCloud}
-                icon={<CloudDownload size={13} />}
-              >
-                Import Drive
               </Button>
             )}
           </div>

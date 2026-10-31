@@ -6,6 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
 import { AuthService } from '@/modules/auth/auth.service.js';
 import { Public } from '@/common/security/decorators/public.decorator.js';
+import { BadRequestError } from '@/common/errors/errors.js';
 
 @Controller('api/v1/auth')
 export class AuthController {
@@ -54,6 +55,9 @@ export class AuthController {
     @Body() body: { email?: string; password?: string },
     @Res({ passthrough: true }) res?: Response,
   ) {
+    if (!body?.email || !body?.password) {
+      throw new BadRequestError('Fields "email" and "password" are required.');
+    }
     const result = await this.authService.login(body.email, body.password);
     if (res) {
       this.setAuthCookies(res, result.refreshToken, result.accessToken);

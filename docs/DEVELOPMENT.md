@@ -120,7 +120,7 @@ npm run type-check
 npm test -w @tenderpulse/api
 npm test -w @tenderpulse/web
 
-# Browser tests: clause workspace U1–U13 (U12 runs axe in light and dark), on their own API, fresh demo DB and Vite
+# Browser tests: clause workspace U1–U14 (U12 runs axe in light and dark, U14 flags chips over 12px and uppercase labels), on their own API, fresh demo DB and Vite
 npx playwright test
 ```
 

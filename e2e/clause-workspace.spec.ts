@@ -235,6 +235,38 @@ test.describe.serial('clause workspace', () => {
     }
   });
 
+  test('U14 type scale: chips at most 12px, no uppercase labels', async ({ page }) => {
+    const check = async (label: string) => {
+      const found = await page.evaluate(() => {
+        // Identifiers and acronyms stay upper case; everything else is sentence case.
+        const ACR = /^(GSTIN|GSTN|PAN|CIN|EMD|PDF|BOQ|ISO|MSME|UDIN|GST|NIT|OEM|IRIS|IRP|MCA|PBG|INR|CCTV|ICCC|NHAI|CPWD|AI|SCC|LOA|PSU|SLA|SOW)$/;
+        const out: string[] = [];
+        for (const el of document.querySelectorAll('main *')) {
+          const h = el as HTMLElement;
+          if (!h.offsetParent || h.closest('[data-testid="source-viewer"], blockquote')) continue;
+          const own = [...h.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join(' ').trim();
+          if (!own) continue;
+          const cs = getComputedStyle(h);
+          const chip = !h.closest('button, a') && /rounded/.test(String(h.className)) && /inline/.test(cs.display) && own.length <= 40;
+          if (chip && parseFloat(cs.fontSize) > 12) out.push(`chip ${cs.fontSize} "${own}"`);
+          if (/mono/.test(cs.fontFamily)) continue;
+          const text = cs.textTransform === 'uppercase' ? own.toUpperCase() : own;
+          for (const w of text.split(/[^A-Za-z-]+/)) if (/^[A-Z][A-Z-]{3,}$/.test(w) && !ACR.test(w)) out.push(`caps "${w}"`);
+        }
+        return [...new Set(out)];
+      });
+      expect(found.map((f) => `${label}: ${f}`)).toEqual([]);
+    };
+    await navigate(page, '/bids');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await check('bids');
+    await navigate(page, `/bids/${bidId}`);
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await check('overview');
+    await openWorkspace(page);
+    await check('workspace');
+  });
+
   test('U13 read-only users see the clauses but no review actions', async ({ page }) => {
     await page.context().clearCookies();
     await uiLogin(page, USERS.readOnly);

@@ -120,7 +120,7 @@ export const EvidencePreviewDrawer: React.FC<EvidencePreviewDrawerProps> = ({
               </span>
             </div>
             <CapabilityStatusBadge
-              status={matchedDoc?.verificationStatus || 'VERIFIED'}
+              status={matchedDoc?.verificationStatus || 'UNVERIFIED'}
               size="sm"
             />
           </div>

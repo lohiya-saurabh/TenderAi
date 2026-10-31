@@ -354,10 +354,12 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
       case 'risk': {
         const level = computeRiskLevel(bid);
         const flagged = bid.flaggedRequirements || 0;
-        return flagged > 0 ? (
-          <RiskBadge level={level} label={`${flagged} flagged`} size="sm" />
+        if (flagged > 0) return <RiskBadge level={level} label={`${flagged} flagged`} size="sm" />;
+        // No flags only means something once clauses were extracted; it is not a risk level.
+        return bid.totalRequirements ? (
+          <span className="text-xs text-muted-foreground">None flagged</span>
         ) : (
-          <RiskBadge level="LOW" label="Clean" size="sm" />
+          <NotEvaluatedCell />
         );
       }
       case 'readiness':
