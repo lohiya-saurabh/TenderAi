@@ -692,18 +692,22 @@ def make_validation_node(ctx: WorkflowNodeContext):
             )
 
             if page_texts:
-                if cand_p not in page_texts:
-                    # Find which page in the window contains this quote
-                    matched_p = None
-                    for p_num, (p_norm, p_dehyphen) in page_texts.items():
-                        if (
-                            clean_quote in p_norm
-                            or clean_quote_dehyphenated in p_dehyphen
-                            or clean_quote in p_dehyphen
-                        ):
-                            matched_p = p_num
-                            break
-                    candidate.provenance.page_number = matched_p or page_no
+
+                def _quote_on(p_num: int) -> bool:
+                    p_norm, p_dehyphen = page_texts[p_num]
+                    return (
+                        clean_quote in p_norm
+                        or clean_quote_dehyphenated in p_dehyphen
+                        or clean_quote in p_dehyphen
+                    )
+
+                # The page that holds the quote wins over the model's page, even when the
+                # model's page is another page of the same window.
+                if cand_p not in page_texts or not _quote_on(cand_p):
+                    matched_p = next((p for p in page_texts if _quote_on(p)), None)
+                    candidate.provenance.page_number = matched_p or (
+                        cand_p if cand_p in page_texts else page_no
+                    )
             else:
                 candidate.provenance.page_number = page_no
 
@@ -961,10 +965,12 @@ def make_uncertainty_verification_node(ctx: WorkflowNodeContext):
             else:
                 sorted_keys = sorted(percentages.keys())
                 first_ref = (
-                    percentages[sorted_keys[0]][0].provenance.clause_reference or "Specific Clause"
+                    percentages[sorted_keys[0]][0].provenance.clause_reference
+                    or f"Page {percentages[sorted_keys[0]][0].provenance.page_number}"
                 )
                 second_ref = (
-                    percentages[sorted_keys[1]][0].provenance.clause_reference or "General Clause"
+                    percentages[sorted_keys[1]][0].provenance.clause_reference
+                    or f"Page {percentages[sorted_keys[1]][0].provenance.page_number}"
                 )
                 ruling = f"Per standard Order of Precedence, specific tender conditions ({first_ref} with {sorted_keys[0]:g}%) govern over general conditions ({second_ref} with {sorted_keys[1]:g}%)."
                 rec = f"Prepare {sorted_keys[0]:g}% PBG per {first_ref}, but clarify conflicting {sorted_keys[1]:g}% in {second_ref}."

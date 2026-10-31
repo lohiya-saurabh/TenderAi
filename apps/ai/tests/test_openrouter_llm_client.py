@@ -673,3 +673,44 @@ def test_concrete_free_models_are_tried_before_the_router():
     from tenderpulse_ai.infrastructure.llm.openai_compatible_client import PROVIDER_SPECS
 
     assert PROVIDER_SPECS["openrouter"]["models"][-1] == "openrouter/free"
+
+
+@pytest.mark.asyncio
+async def test_401_on_the_only_provider_raises_extraction_error_and_blocks_it():
+    from tenderpulse_ai.infrastructure.llm.openai_compatible_client import is_provider_blocked
+
+    transport = httpx.MockTransport(lambda r: httpx.Response(401, json={"error": "bad key"}))
+    client = OpenAICompatibleLlmClient(
+        api_key="bad-key", client=httpx.AsyncClient(transport=transport)
+    )
+    with pytest.raises(LLMExtractionError, match="rejected the API key"):
+        await client.extract_compliance("sys", "user", max_retries=0)
+    assert is_provider_blocked(client.base_url)
+
+
+@pytest.mark.asyncio
+async def test_chat_429_honours_retry_after_and_success_keeps_cooldowns():
+    from tenderpulse_ai.infrastructure.llm.openai_compatible_client import (
+        _MODEL_COOLDOWNS,
+        _RATE_LIMITED_UNTIL,
+        LlmEndpoint,
+    )
+
+    def handler(request: httpx.Request):
+        if json.loads(request.content)["model"] == "limited":
+            return httpx.Response(429, headers={"retry-after": "7"}, json={})
+        return httpx.Response(200, json={"choices": [{"message": {"content": "hello"}}]})
+
+    endpoints = [
+        LlmEndpoint(provider="groq", base_url="https://g.test/v1", api_key="k", model=m)
+        for m in ("limited", "ok")
+    ]
+    client = OpenAICompatibleLlmClient(
+        api_key="k", client=httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    )
+    client.endpoints = endpoints
+    _MODEL_COOLDOWNS["ok"] = time.time() + 100  # set by another call meanwhile
+
+    assert await client.generate_chat_completion([{"role": "user", "content": "hi"}]) == "hello"
+    assert 0 < _RATE_LIMITED_UNTIL["https://g.test/v1::limited"] - time.time() <= 7.5
+    assert _MODEL_COOLDOWNS["ok"] > time.time() + 90

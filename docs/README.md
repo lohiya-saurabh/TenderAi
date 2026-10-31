@@ -42,6 +42,8 @@ Some ADRs cite documents that have since been merged into the guides:
 - [END_TO_END_AUDIT.md](audits/END_TO_END_AUDIT.md) — the system audit whose remediation Phases 1–4 are complete
 - [PIPELINE_DIAGNOSTICS_AND_BENCHMARK_AUDIT.md](audits/PIPELINE_DIAGNOSTICS_AND_BENCHMARK_AUDIT.md) — pipeline stages, the 30-obligation benchmark matrix, multi-tender hazards
 - [DOCUMENT_AGNOSTIC_GENERALIZATION_AUDIT.md](audits/DOCUMENT_AGNOSTIC_GENERALIZATION_AUDIT.md) — the move to LLM-only, document-agnostic extraction
+- [UI_AUDIT_2026-10-31.md](audits/UI_AUDIT_2026-10-31.md) — type scale, copy, and controls that faked success or showed invented values
+- [AI_PIPELINE_AUDIT_2026-10-31.md](audits/AI_PIPELINE_AUDIT_2026-10-31.md) — the pipeline checked against Invariant 5, the fixes and the benchmark
 
 ## Keeping docs current
 

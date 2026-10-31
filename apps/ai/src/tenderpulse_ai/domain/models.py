@@ -256,7 +256,7 @@ class CandidatePassage(BaseModel):
 class AssembledClauseContext(BaseModel):
     candidate_id: str
     section_path: str
-    clause_reference: str
+    clause_reference: str | None = None  # None when the tender states no clause number
     current_clause: str
     previous_clause: str | None = None
     following_clause: str | None = None

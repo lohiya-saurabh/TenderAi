@@ -262,3 +262,55 @@ async def test_page_number_clamping_and_fragment_rejection(valid_sec_context):
     frag_result = await val_node(frag_state)
     assert len(frag_result["verified_items"]) == 0
     assert len(frag_result["unverified_items"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_page_moves_to_the_window_page_that_holds_the_quote(valid_sec_context):
+    """A model page inside the window loses to the window page that actually holds the quote."""
+    from tenderpulse_ai.domain.models import (
+        CandidateComplianceItem,
+        ExecutionRulesProps,
+        ProvenanceProps,
+    )
+    from tenderpulse_ai.tools.page_text import PageTextTool
+    from tenderpulse_ai.tools.retrieval import ScopedRetrievalTool
+    from tenderpulse_ai.workflow.nodes import WorkflowNodeContext, make_validation_node
+
+    val_node = make_validation_node(
+        WorkflowNodeContext(
+            retrieval_tool=ScopedRetrievalTool(),
+            page_text_tool=PageTextTool(),
+            llm_client=fake_llm_client(lambda s, u: []),
+        )
+    )
+    quote = "The bidder shall submit a valid labour licence before award."
+    pages = [
+        {"page_number": 1, "text": "Section 1. Instructions to bidders."},
+        {"page_number": 2, "text": f"Clause 2.3. {quote}"},
+    ]
+    state = {
+        "security_context": valid_sec_context.model_dump(),
+        "bid_id": "bid_page_1",
+        "document_id": "doc_page_1",
+        "page_number": 1,
+        "raw_page_text": "\n\n".join(p["text"] for p in pages),
+        "pages": pages,
+        "extracted_candidates": [
+            CandidateComplianceItem(
+                category="LEGAL",
+                title="Labour licence",
+                description="Submit a valid labour licence before award",
+                execution_rules=ExecutionRulesProps(),
+                provenance=ProvenanceProps(
+                    source_document_id="doc_page_1",
+                    source_file_name="doc.pdf",
+                    page_number=1,  # no clause_reference: the context must accept None
+                    verbatim_quote=quote,
+                    confidence_score=0.9,
+                ),
+            )
+        ],
+    }
+
+    result = await val_node(state)
+    assert [v.provenance.page_number for v in result["verified_items"]] == [2]

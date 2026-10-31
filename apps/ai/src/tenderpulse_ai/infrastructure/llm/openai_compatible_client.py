@@ -654,14 +654,15 @@ class OpenAICompatibleLlmClient:
 
                     # HTTP 429: 60-second cooldown on this provider endpoint; rotate immediately
                     if response.status_code == 429:
-                        _MODEL_COOLDOWNS[ep.model] = time.time() + 60.0
-                        _MODEL_COOLDOWNS[k] = time.time() + 60.0
-                        scope = mark_rate_limited(ep, 60.0)
+                        cooldown = rate_limit_cooldown_seconds(response)
+                        cool_down(ep, cooldown)
+                        scope = mark_rate_limited(ep, cooldown)
                         logger.warning(
-                            "[OpenAICompatibleClient] Endpoint '%s' (%s) rate-limited (429). Resting this %s for 60s and rotating...",
+                            "[OpenAICompatibleClient] Endpoint '%s' (%s) rate-limited (429). Resting this %s for %.0fs and rotating...",
                             ep.model,
                             ep.provider,
                             scope,
+                            cooldown,
                         )
                         break
 
@@ -676,8 +677,9 @@ class OpenAICompatibleLlmClient:
                         )
                         break
 
-                    # HTTP 401 / 403: Re-raise immediately
+                    # HTTP 401 / 403: the key is bad for every model on this provider.
                     if response.status_code in (401, 403):
+                        block_provider(ep.base_url, float("inf"))
                         response.raise_for_status()
 
                     # HTTP 400 / 402: Configuration or quota
@@ -712,9 +714,8 @@ class OpenAICompatibleLlmClient:
                     choices = data.get("choices", [])
                     if choices:
                         res_content = str(choices[0].get("message", {}).get("content", "")).strip()
+                        # A success never clears a cooldown another call set meanwhile.
                         if res_content:
-                            _MODEL_COOLDOWNS.pop(ep.model, None)
-                            _MODEL_COOLDOWNS.pop(k, None)
                             return res_content
                     break
                 except (httpx.RequestError, httpx.HTTPStatusError) as exc:
@@ -885,8 +886,8 @@ class OpenAICompatibleLlmClient:
                 apply_reasoning_controls(payload, ep)
                 if is_rate_limited(ep):
                     continue
-                # Rotation budget: never chain slow models past the client timeout; the caller
-                # falls back to deterministic extraction instead.
+                # Rotation budget: never chain slow models past the client timeout (the
+                # window then fails with LLMExtractionError; there is no fallback).
                 if last_error is not None and time.perf_counter() - request_started > self.timeout:
                     logger.warning(
                         "[OpenAICompatibleClient] Rotation budget of %.0fs exhausted; skipping remaining endpoints.",
@@ -964,8 +965,7 @@ class OpenAICompatibleLlmClient:
 
                         # HTTP 401 / 403: Re-raise immediately
                         if response.status_code in (401, 403):
-                            _MODEL_COOLDOWNS[ep.model] = float("inf")
-                            _MODEL_COOLDOWNS[k] = float("inf")
+                            block_provider(ep.base_url, float("inf"))
                             response.raise_for_status()
 
                         # HTTP 400 / 402:
@@ -1081,7 +1081,9 @@ class OpenAICompatibleLlmClient:
                                 e for e in endpoints_to_try if e.base_url != ep.base_url
                             ]
                             if not other_providers:
-                                raise exc
+                                raise LLMExtractionError(
+                                    f"LLM provider rejected the API key: {describe_error(exc)}"
+                                ) from exc
                         logger.warning(
                             "[OpenAICompatibleClient] Network/HTTP error on %s (%s) attempt %d/%d: %s",
                             ep.model,
