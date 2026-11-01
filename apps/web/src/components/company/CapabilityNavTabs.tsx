@@ -33,7 +33,7 @@ interface SectionTabDef {
 const SECTION_TABS: readonly SectionTabDef[] = [
   {
     id: 'overview',
-    label: 'Company Overview',
+    label: 'Company overview',
     icon: Building2,
     count: () => 1,
   },
@@ -61,13 +61,13 @@ const SECTION_TABS: readonly SectionTabDef[] = [
   },
   {
     id: 'experience',
-    label: 'Past Experience',
+    label: 'Past experience',
     icon: Briefcase,
     count: (p) => p.pastExperience.length,
   },
   {
     id: 'projects',
-    label: 'Major Projects',
+    label: 'Major projects',
     icon: Layers,
     count: (p) => p.projects.length,
   },
@@ -79,26 +79,26 @@ const SECTION_TABS: readonly SectionTabDef[] = [
   },
   {
     id: 'employees',
-    label: 'Key Personnel',
+    label: 'Key personnel',
     icon: Users,
     count: (p) => p.employees.length,
   },
   {
     id: 'equipment',
-    label: 'Plant & Equipment',
+    label: 'Plant & equipment',
     icon: Wrench,
     count: (p) => p.equipment.length,
     hasWarning: (p) => p.equipment.some((eq) => eq.status === 'EXPIRING_SOON'),
   },
   {
     id: 'geography',
-    label: 'Geographic Coverage',
+    label: 'Geographic coverage',
     icon: MapPin,
     count: (p) => p.geographicCoverage.length,
   },
   {
     id: 'evidence',
-    label: 'Evidence Vault',
+    label: 'Evidence vault',
     icon: FolderArchive,
     count: (p) => p.evidenceVault.length,
   },
@@ -111,7 +111,7 @@ export const CapabilityNavTabs: React.FC<CapabilityNavTabsProps> = ({
 }) => {
   return (
     <nav
-      aria-label="Company Capability Sections"
+      aria-label="Company capability sections"
       className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-border scrollbar-thin w-full"
     >
       {SECTION_TABS.map((tab) => {
@@ -137,11 +137,11 @@ export const CapabilityNavTabs: React.FC<CapabilityNavTabsProps> = ({
             />
             <span>{tab.label}</span>
             <span
-              className={`inline-flex items-center gap-1 text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded-full border ${
+              className={`inline-flex items-center gap-1 text-2xs tabular-nums font-semibold px-1.5 py-0.5 rounded-full border ${
                 isActive
                   ? 'bg-primary text-primary-foreground border-primary'
                   : warn
-                    ? 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/40 dark:text-orange-400 dark:border-orange-800'
+                    ? 'bg-warning/10 text-warning border-warning/30 dark:bg-warning/40 dark:text-warning dark:border-warning/40'
                     : 'bg-muted text-muted-foreground border-border'
               }`}
             >
@@ -149,7 +149,7 @@ export const CapabilityNavTabs: React.FC<CapabilityNavTabsProps> = ({
               {warn && (
                 <AlertTriangle
                   size={10}
-                  className="text-orange-600 dark:text-orange-400 shrink-0"
+                  className="text-warning dark:text-warning shrink-0"
                 />
               )}
             </span>

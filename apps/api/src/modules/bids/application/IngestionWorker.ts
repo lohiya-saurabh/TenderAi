@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID as uuidv4 } from 'node:crypto';
 import { IJobQueue, QueueMessage, IngestionJobMessage } from '@/modules/bids/application/IJobQueue.js';
 import { IIngestionJobRepository } from '@/modules/bids/domain/repositories/IIngestionJobRepository.js';
 import { IBidRepository } from '@/modules/bids/domain/repositories/IBidRepository.js';
@@ -29,7 +29,7 @@ export interface ExtractedComplianceItem {
     pageNumber: number;
     clauseReference: string;
     verbatimQuote: string;
-    confidenceScore: number;
+    confidenceScore: number | null;
   };
 }
 

@@ -1,0 +1,25 @@
+title = "TenderPulse AI Gitleaks Configuration"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Global allowlist for test fixtures, unit test tokens, golden contract fixtures, and past test commits"
+paths = [
+  '''(?:^|/)packages/shared-types/fixtures/.*''',
+  '''(?:^|/)apps/ai/tests/fixtures/.*''',
+  '''(?:^|/)fixtures/.*''',
+]
+regexes = [
+  '''cl_[a-f0-9]{24}''',
+  '''cf_[a-f0-9]{24}''',
+  '''tenderpulse-internal-secret-2026''',
+  '''do_not_leak_me''',
+  '''AKIAIOSFODNN7EXAMPLE''',
+]
+commits = [
+  "9c31a61a85d9083a97bc2adb813b1f56c41d92ef",
+  "dfce56d108b5eaaa3bdb556f879a82019b56bf83",
+  "d57d12af2b57d788ccd14d6ff972f18a8b7ce463",
+  "cffdf0990e4e123298f3190c74f663d1e1b00d48",
+]

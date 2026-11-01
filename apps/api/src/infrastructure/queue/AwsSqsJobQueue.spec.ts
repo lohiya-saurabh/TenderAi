@@ -59,7 +59,8 @@ describe('AwsSqsJobQueue', () => {
         ],
       });
 
-      const messages = await jobQueue.receiveMessages(5, 120);
+      const shutdown = new AbortController();
+      const messages = await jobQueue.receiveMessages(5, 120, { abortSignal: shutdown.signal });
 
       expect(messages).toHaveLength(1);
       expect(messages[0]).toEqual({
@@ -67,7 +68,10 @@ describe('AwsSqsJobQueue', () => {
         body: mockPayload,
         receiveCount: 2,
       });
-      expect(mockSend).toHaveBeenCalledWith(expect.any(ReceiveMessageCommand));
+      // The abort signal reaches the SDK so shutdown can cancel an in-flight long poll.
+      expect(mockSend).toHaveBeenCalledWith(expect.any(ReceiveMessageCommand), {
+        abortSignal: shutdown.signal,
+      });
       const command = mockSend.mock.calls[0][0] as ReceiveMessageCommand;
       expect(command.input.MaxNumberOfMessages).toBe(5);
       expect(command.input.VisibilityTimeout).toBe(120);

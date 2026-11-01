@@ -9,6 +9,21 @@ from tenderpulse_ai.domain.models import (
 )
 
 
+def _as_float(token: str) -> float | None:
+    try:
+        return float(token.replace(",", ""))
+    except ValueError:
+        return None
+
+
+def _ordered_numbers(text: str) -> list[str]:
+    return re.findall(r"\b\d[\d,]*(?:\.\d+)?\b", text or "")
+
+
+def _numbers(text: str) -> set[float | None]:
+    return {_as_float(n) for n in _ordered_numbers(text)}
+
+
 class DeterministicValidator:
     """Node 6 & Node 7 - Validation and Confidence Scoring Engine.
 
@@ -69,25 +84,35 @@ class DeterministicValidator:
                 )
                 score_penalty += 0.15
 
-        # 3. Number Preservation Check
+        # 3. Number Preservation Check: every figure in the quote AND in the generated
+        # description must exist in the source clause (catches hallucinated amounts).
         numbers_preserved = True
-        clean_quote_text = re.sub(r"(\d+),(\d+)", r"\1\2", item.provenance.verbatim_quote)
-        clean_clause_text = re.sub(r"(\d+),(\d+)", r"\1\2", clause_text)
-        quote_numbers = re.findall(r"\b\d+(?:\.\d+)?\b", clean_quote_text)
-        clause_numbers = re.findall(r"\b\d+(?:\.\d+)?\b", clean_clause_text)
-        for num in quote_numbers:
-            if num not in clause_numbers:
+        clause_numbers = _numbers(clause_text)
+        quote_numbers = _ordered_numbers(item.provenance.verbatim_quote)
+        supported = clause_numbers | _numbers(quote)  # a description may cite its own quote
+        claimed = [(n, clause_numbers) for n in quote_numbers] + [
+            (n, supported) for n in _ordered_numbers(item.description) if n not in quote_numbers
+        ]
+        for num, pool in claimed:
+            if _as_float(num) not in pool:
                 numbers_preserved = False
-                discrepancies.append(
-                    f"Number/amount '{num}' in verbatim quote not found in clause text."
-                )
+                where = "verbatim quote" if pool is clause_numbers else "description"
+                discrepancies.append(f"Number/amount '{num}' in {where} not found in clause text.")
                 score_penalty += 0.20
 
         # 4. SHALL/MUST Interpretation Check
         shall_must_correct = True
-        if ("shall not" in clause_text.lower() or "must not" in clause_text.lower()) and (
-            "prohibited" not in item.description.lower()
-            and "not allowed" not in item.description.lower()
+        desc_lower = item.description.lower()
+        if ("shall not" in clause_text.lower() or "must not" in clause_text.lower()) and not any(
+            neg in desc_lower
+            for neg in (
+                "prohibited",
+                "not allowed",
+                "shall not",
+                "must not",
+                "not permitted",
+                "barred",
+            )
         ):
             shall_must_correct = False
             discrepancies.append(
@@ -97,13 +122,10 @@ class DeterministicValidator:
 
         # 5. Exception Preservation Check
         exceptions_retained = True
-        if (
-            any(
-                kw in clause_text.lower()
-                for kw in ["except", "unless", "provided that", "subject to"]
-            )
-            and "except" not in item.description.lower()
-            and "unless" not in item.description.lower()
+        if any(
+            kw in clause_text.lower() for kw in ["except", "unless", "provided that", "subject to"]
+        ) and not any(
+            kw in desc_lower for kw in ("except", "unless", "provided that", "subject to")
         ):
             exceptions_retained = False
             discrepancies.append(

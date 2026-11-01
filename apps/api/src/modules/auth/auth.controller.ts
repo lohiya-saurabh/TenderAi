@@ -1,14 +1,19 @@
 /**
  * AuthController — NestJS controller for authentication endpoints with cookie security.
  */
-import { Controller, Post, Body, Req, Res, HttpCode, Inject } from '@nestjs/common';
+import { Controller, Post, Body, Req, Res, HttpCode, Inject, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
 import { AuthService } from '@/modules/auth/auth.service.js';
 import { Public } from '@/common/security/decorators/public.decorator.js';
+import { BadRequestError } from '@/common/errors/errors.js';
 
 @Controller('api/v1/auth')
 export class AuthController {
-  constructor(@Inject(AuthService) private readonly authService: AuthService) {}
+  constructor(
+    @Inject(AuthService) private readonly authService: AuthService,
+    @Optional() private readonly configService?: ConfigService,
+  ) {}
 
   private extractCookie(req: Request, name: string): string | undefined {
     const cookieHeader = req.headers?.cookie;
@@ -19,7 +24,7 @@ export class AuthController {
 
   private setAuthCookies(res: Response, refreshToken: string, accessToken?: string): void {
     if (!res || typeof res.cookie !== 'function') return;
-    const isProd = process.env.NODE_ENV === 'production';
+    const isProd = this.configService?.get<string>('NODE_ENV') === 'production';
     res.cookie('tp_refresh_token', refreshToken, {
       httpOnly: true,
       secure: isProd,
@@ -50,7 +55,23 @@ export class AuthController {
     @Body() body: { email?: string; password?: string },
     @Res({ passthrough: true }) res?: Response,
   ) {
+    if (!body?.email || !body?.password) {
+      throw new BadRequestError('Fields "email" and "password" are required.');
+    }
     const result = await this.authService.login(body.email, body.password);
+    if (res) {
+      this.setAuthCookies(res, result.refreshToken, result.accessToken);
+    }
+    return result;
+  }
+
+  @Public()
+  @Post('accept-invite')
+  async acceptInvite(
+    @Body() body: { token?: string; password?: string },
+    @Res({ passthrough: true }) res?: Response,
+  ) {
+    const result = await this.authService.acceptInvite(body?.token, body?.password);
     if (res) {
       this.setAuthCookies(res, result.refreshToken, result.accessToken);
     }

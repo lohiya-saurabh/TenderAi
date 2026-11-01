@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { Page } from '@/components/ui/page.js';
 import { useCompany } from '@/context/useCompany.js';
 import { CompanyProfileHeader } from '@/components/company/CompanyProfileHeader.js';
 import { CapabilityNavTabs } from '@/components/company/CapabilityNavTabs.js';
@@ -6,10 +7,16 @@ import { CompanyProfileView } from '@/components/company/CompanyProfileView.js';
 import { CompanyVerificationBar } from '@/components/company/CompanyVerificationBar.js';
 import { Card, CardContent } from '@/components/ui/card.js';
 import { Building2 } from 'lucide-react';
-import { listCompanyEvidence, getCompanyProfile, type EvidenceDocumentItem } from '@/api/companies.js';
+import {
+  listCompanyEvidence,
+  getCompanyProfile,
+  PROFILE_UPDATED_EVENT,
+  type EvidenceDocumentItem,
+} from '@/api/companies.js';
 import type { CompanyProfileView as ApiCompanyProfileView } from '@/api/companyProfile.js';
 import type {
   CapabilitySectionId,
+  CapabilityStatus,
   FullCompanyProfile,
   RegistrationItem,
   EvidenceVaultItem,
@@ -28,7 +35,6 @@ export const CompanyProfilePage: React.FC = () => {
   const [evidenceList, setEvidenceList] = useState<EvidenceDocumentItem[]>([]);
   const [apiProfile, setApiProfile] = useState<ApiCompanyProfileView | null>(null);
   const [openEvidenceTrigger, setOpenEvidenceTrigger] = useState(0);
-  const [evidenceSourceDefault, setEvidenceSourceDefault] = useState<'DEVICE' | 'GOOGLE_DRIVE' | 'ONEDRIVE'>('DEVICE');
 
   const fetchEvidence = useCallback(async () => {
     if (selectedCompany?.id) {
@@ -49,6 +55,13 @@ export const CompanyProfilePage: React.FC = () => {
     fetchEvidence();
   }, [fetchEvidence]);
 
+  // Evidence applied to the profile from the preview drawer creates a new version.
+  useEffect(() => {
+    const reload = () => void fetchEvidence();
+    window.addEventListener(PROFILE_UPDATED_EVENT, reload);
+    return () => window.removeEventListener(PROFILE_UPDATED_EVENT, reload);
+  }, [fetchEvidence]);
+
   const handleRefreshAll = async () => {
     await reloadCompanies();
     await fetchEvidence();
@@ -62,25 +75,31 @@ export const CompanyProfilePage: React.FC = () => {
       const isGstVerified = Boolean(selectedCompany.gstinVerifiedAt);
       registrations.push({
         id: 'reg-gstin',
-        title: 'Goods & Services Tax (GSTIN)',
+        title: 'Goods & services tax (GSTIN)',
         regType: 'GSTIN',
         regNumber: selectedCompany.gstin,
         issuingAuthority: 'Goods & Services Tax Network (GSTN)',
         stateOrJurisdiction: 'India',
-        status: isGstVerified ? 'SOURCE_VERIFIED' : 'VERIFIED',
-        verificationNotes: isGstVerified ? 'Verified via IRIS IRP GSP' : undefined,
+        status: isGstVerified ? 'SOURCE_VERIFIED' : 'UNVERIFIED',
+        verificationNotes: isGstVerified ? 'Verified via IRIS IRP GSP' : 'Pending verification',
         lastVerifiedAt: selectedCompany.gstinVerifiedAt || undefined,
       });
     }
     if (selectedCompany.pan) {
+      const isPanVerified = Boolean(
+        selectedCompany.gstinVerifiedAt || selectedCompany.mcaVerifiedAt,
+      );
       registrations.push({
         id: 'reg-pan',
-        title: 'Permanent Account Number (PAN)',
+        title: 'Permanent account number (PAN)',
         regType: 'PAN',
         regNumber: selectedCompany.pan,
         issuingAuthority: 'Income Tax Department of India',
         stateOrJurisdiction: 'Pan-India',
-        status: 'VERIFIED',
+        status: isPanVerified ? 'SOURCE_VERIFIED' : 'UNVERIFIED',
+        verificationNotes: isPanVerified
+          ? 'Verified via Statutory Return Cross-Check'
+          : 'Pending verification',
       });
     }
     if (selectedCompany.cin) {
@@ -92,8 +111,8 @@ export const CompanyProfilePage: React.FC = () => {
         regNumber: selectedCompany.cin,
         issuingAuthority: 'Ministry of Corporate Affairs (MCA)',
         stateOrJurisdiction: 'India',
-        status: isMcaVerified ? 'SOURCE_VERIFIED' : 'VERIFIED',
-        verificationNotes: isMcaVerified ? 'Verified via MCA Master Data' : undefined,
+        status: isMcaVerified ? 'SOURCE_VERIFIED' : 'UNVERIFIED',
+        verificationNotes: isMcaVerified ? 'Verified via MCA Master Data' : 'Pending verification',
         lastVerifiedAt: selectedCompany.mcaVerifiedAt || undefined,
       });
     }
@@ -106,8 +125,10 @@ export const CompanyProfilePage: React.FC = () => {
         regNumber: selectedCompany.udyamId,
         issuingAuthority: 'Ministry of MSME, Govt of India',
         stateOrJurisdiction: 'India',
-        status: isUdyamVerified ? 'SOURCE_VERIFIED' : 'VERIFIED',
-        verificationNotes: isUdyamVerified ? 'Verified via MSME National Portal' : undefined,
+        status: isUdyamVerified ? 'SOURCE_VERIFIED' : 'UNVERIFIED',
+        verificationNotes: isUdyamVerified
+          ? 'Verified via MSME National Portal'
+          : 'Pending verification',
         lastVerifiedAt: selectedCompany.udyamVerifiedAt || undefined,
       });
     }
@@ -130,6 +151,9 @@ export const CompanyProfilePage: React.FC = () => {
     }));
 
     const payload = apiProfile?.active?.payload;
+    // A record is only as verified as the evidence document behind it.
+    const evidenceStatus = (id?: string | null): CapabilityStatus =>
+      evidenceList.find((d) => d.id === id)?.verificationStatus ?? 'UNVERIFIED';
 
     const turnoverRecords: FinancialTurnoverItem[] = (payload?.turnover_records ?? []).map((t) => ({
       id: t.entry_id,
@@ -142,7 +166,7 @@ export const CompanyProfilePage: React.FC = () => {
       caUdin: t.ca_udin || '',
       isUdinValidated: Boolean(t.ca_udin),
       audited: true,
-      status: 'VERIFIED',
+      status: evidenceStatus(t.evidence_document_id),
       evidenceDocId: t.evidence_document_id,
     }));
 
@@ -155,7 +179,7 @@ export const CompanyProfilePage: React.FC = () => {
       validFrom: c.valid_from,
       validUntil: c.valid_to || '',
       scopeSummary: `${c.standard_name} Quality Management Scope`,
-      status: 'VERIFIED',
+      status: evidenceStatus(c.evidence_document_id),
       evidenceDocId: c.evidence_document_id,
     }));
 
@@ -170,23 +194,25 @@ export const CompanyProfilePage: React.FC = () => {
       locationState: e.location_state,
       scopeHighlights: e.work_type_tags || ['Infrastructure EPC Works'],
       workTypeTags: e.work_type_tags || [],
-      status: 'VERIFIED',
+      status: evidenceStatus(e.evidence_document_id),
       evidenceDocId: e.evidence_document_id,
     }));
 
-    const oemAuthorizations: OemAuthorizationItem[] = (payload?.oem_authorizations ?? []).map((o) => ({
-      id: o.entry_id,
-      title: `${o.oem_name} Authorization`,
-      oemName: o.oem_name,
-      partnerTier: 'Authorized Partner',
-      productCategories: o.product_lines || [],
-      authorizedTerritory: 'National',
-      validFrom: o.valid_from,
-      validUntil: o.valid_to,
-      mafDocName: '',
-      status: 'VERIFIED',
-      evidenceDocId: o.evidence_document_id,
-    }));
+    const oemAuthorizations: OemAuthorizationItem[] = (payload?.oem_authorizations ?? []).map(
+      (o) => ({
+        id: o.entry_id,
+        title: `${o.oem_name} Authorization`,
+        oemName: o.oem_name,
+        partnerTier: 'Authorized Partner',
+        productCategories: o.product_lines || [],
+        authorizedTerritory: 'National',
+        validFrom: o.valid_from,
+        validUntil: o.valid_to,
+        mafDocName: '',
+        status: evidenceStatus(o.evidence_document_id),
+        evidenceDocId: o.evidence_document_id,
+      }),
+    );
 
     const employees: EmployeeItem[] = (payload?.staff ?? []).map((s) => ({
       id: s.entry_id,
@@ -197,7 +223,7 @@ export const CompanyProfilePage: React.FC = () => {
       qualification: s.qualification,
       experienceYears: s.experience_years,
       isKeyPersonnel: true,
-      status: 'VERIFIED',
+      status: evidenceStatus(s.evidence_document_id),
       evidenceDocId: s.evidence_document_id,
     }));
 
@@ -211,21 +237,21 @@ export const CompanyProfilePage: React.FC = () => {
       ownership: eq.owned ? 'OWNED' : 'LEASED',
       manufactureYear: 2022,
       capacityOrRating: 'Heavy Machinery',
-      status: 'VERIFIED',
+      status: evidenceStatus(eq.evidence_document_id),
       evidenceDocId: eq.evidence_document_id,
     }));
 
     const solvencyRecords: SolvencyItem[] =
-      (payload?.solvency_records && payload.solvency_records.length > 0)
+      payload?.solvency_records && payload.solvency_records.length > 0
         ? payload.solvency_records.map((s) => ({
             id: s.entry_id,
-            title: `${s.bank_name || 'Bank'} Solvency Certificate`,
-            bankName: s.bank_name || 'Scheduled Commercial Bank',
+            title: s.bank_name ? `${s.bank_name} solvency certificate` : 'Solvency certificate',
+            bankName: s.bank_name || 'Not stated',
             solvencyLimitInrCrores: Number(s.solvency_limit_inr_crores) || 0,
             sanctionDate: s.sanction_date || '',
             validUntil: s.valid_until || '',
-            accountNumberMasked: s.account_number_masked || 'XXXX-XXXX-XXXX',
-            status: 'VERIFIED',
+            accountNumberMasked: s.account_number_masked || 'Not stated',
+            status: evidenceStatus(s.evidence_document_id),
             evidenceDocId: s.evidence_document_id || undefined,
           }))
         : evidenceList
@@ -234,13 +260,13 @@ export const CompanyProfilePage: React.FC = () => {
               const attrs = (d.extractedAttributes || {}) as Record<string, unknown>;
               return {
                 id: d.id,
-                title: `${d.issuer || 'Bank'} Solvency Certificate`,
-                bankName: d.issuer || 'Scheduled Commercial Bank',
+                title: d.issuer ? `${d.issuer} solvency certificate` : 'Solvency certificate',
+                bankName: d.issuer || 'Not stated',
                 solvencyLimitInrCrores: Number(attrs.solvency_limit_inr_crores) || 0,
                 sanctionDate: d.validFrom ? d.validFrom.split('T')[0]! : '',
                 validUntil: d.validTo ? d.validTo.split('T')[0]! : '',
-                accountNumberMasked: d.referenceNumber || 'XXXX-XXXX-XXXX',
-                status: 'VERIFIED',
+                accountNumberMasked: d.referenceNumber || 'Not stated',
+                status: evidenceStatus(d.id),
                 evidenceDocId: d.id,
               };
             });
@@ -256,7 +282,7 @@ export const CompanyProfilePage: React.FC = () => {
           const attrs = (solvDoc?.extractedAttributes || {}) as Record<string, unknown>;
           if (attrs?.rating) {
             return {
-              agency: String(attrs.agency || solvDoc?.issuer || 'Credit Rating Agency'),
+              agency: String(attrs.agency || solvDoc?.issuer || 'Not stated'),
               rating: String(attrs.rating),
               validUntil: solvDoc?.validTo ? solvDoc.validTo.split('T')[0] : undefined,
             };
@@ -265,7 +291,9 @@ export const CompanyProfilePage: React.FC = () => {
         })();
 
     const mcaData = (selectedCompany.mcaVerificationData || {}) as Record<string, unknown>;
-    const cinYearMatch = selectedCompany.cin ? selectedCompany.cin.match(/[A-Za-z]{2}(\d{4})[A-Za-z]{3}/) : null;
+    const cinYearMatch = selectedCompany.cin
+      ? selectedCompany.cin.match(/[A-Za-z]{2}(\d{4})[A-Za-z]{3}/)
+      : null;
     const derivedIncorporation =
       (mcaData.incorporationDate as string) ||
       (mcaData.incorporation_date as string) ||
@@ -278,10 +306,11 @@ export const CompanyProfilePage: React.FC = () => {
       legalEntityName: selectedCompany.legalName,
       cinNumber: selectedCompany.cin || '—',
       incorporationDate: derivedIncorporation,
-      profileVersion: apiProfile?.active ? `v${apiProfile.active.version}.0 (Active)` : 'v1.0 (Clean Baseline)',
-      msmeCategory: selectedCompany.udyamId ? 'SMALL' : 'LARGE ENTERPRISE',
-      msmeType: 'CONSTRUCTION_INFRA',
-      isBlacklisted: false,
+      profileVersion: apiProfile?.active ? `Version ${apiProfile.active.version}` : null,
+      // Not captured yet: shown as "Not stated", never guessed.
+      msmeCategory: null,
+      msmeType: null,
+      isBlacklisted: null,
       creditRating,
       registrations,
       certifications,
@@ -302,7 +331,7 @@ export const CompanyProfilePage: React.FC = () => {
       <Card className="p-8 text-center border-dashed border-border/80">
         <CardContent className="flex flex-col items-center gap-2">
           <Building2 className="h-8 w-8 text-muted-foreground" />
-          <h3 className="font-semibold text-foreground">No Company Selected</h3>
+          <h3 className="font-semibold text-foreground">No company selected</h3>
           <p className="text-xs text-muted-foreground">
             Please select or register a company entity to view its capability profile.
           </p>
@@ -311,21 +340,24 @@ export const CompanyProfilePage: React.FC = () => {
     );
   }
 
+  const uploadEvidence = () => {
+    setOpenEvidenceTrigger(Date.now());
+  };
+
   return (
-    <div className="w-full flex flex-col gap-6">
+    <Page className="min-w-0">
       {/* Profile Header & Health Summary */}
       <CompanyProfileHeader
         profile={profile}
         onOpenVault={() => setActiveSection('evidence')}
-        onAddCredential={() => setActiveSection('overview')}
+        onAddCredential={uploadEvidence}
       />
 
-      {/* Third-Party Verification Hub (IRIS IRP, MCA, Udyam, DigiLocker, Cloud Drive) */}
+      {/* Third-Party Verification Hub (IRIS IRP, MCA, Udyam) */}
       <CompanyVerificationBar
         company={selectedCompany}
         onRefresh={handleRefreshAll}
         openEvidenceModalTrigger={openEvidenceTrigger}
-        defaultEvidenceSource={evidenceSourceDefault}
       />
 
       {/* 11-Section Tab Navigation */}
@@ -339,15 +371,8 @@ export const CompanyProfilePage: React.FC = () => {
       <CompanyProfileView
         profile={profile}
         activeSection={activeSection}
-        onUploadEvidence={() => {
-          setEvidenceSourceDefault('DEVICE');
-          setOpenEvidenceTrigger(Date.now());
-        }}
-        onImportCloud={() => {
-          setEvidenceSourceDefault('GOOGLE_DRIVE');
-          setOpenEvidenceTrigger(Date.now());
-        }}
+        onUploadEvidence={uploadEvidence}
       />
-    </div>
+    </Page>
   );
 };

@@ -48,9 +48,23 @@ Branches follow the standard prefix structure:
 
 ## 3. Pull Request & Quality Gate Requirements
 
-Before any PR can be merged to `main`:
+Work is merged into `develop`. `main` only ever receives merges from `develop`; CI rejects anything else (see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) §2).
+
+Before any PR is merged:
 
 1. `npm run type-check`: 0 TypeScript errors.
 2. `npm run lint`: 0 ESLint errors or warnings.
 3. `npm test`: 100% passing tests.
-4. Security check: No secrets or raw PII in commit history.
+4. `uv run ruff check src tests` and `uv run pytest -m unit` in `apps/ai`.
+5. Security check: no secrets or raw PII in commit history.
+6. The affected docs are updated in the same PR.
+
+---
+
+## 4. Local setup
+
+Local development (PostgreSQL, dev queues, provider keys, running the stack) and the verification gates are in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). Schema changes and migrations are in [docs/DATABASE.md](docs/DATABASE.md) §2.
+
+## 5. Documentation
+
+Every change updates the documents it affects in the same commit; [docs/README.md](docs/README.md) says which document covers what.

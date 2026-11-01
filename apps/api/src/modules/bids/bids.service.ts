@@ -3,22 +3,16 @@
  */
 import { Injectable, Inject, Optional } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
-import { eq, and, desc } from 'drizzle-orm';
 import {
-  DRIZZLE_TOKEN,
   type DrizzleDb,
-  createDrizzle,
 } from '@/common/database/database.module.js';
 import { STORAGE_TOKEN } from '@/infrastructure/storage/storage.module.js';
 import type { IStorageService } from '@/modules/bids/application/IStorageService.js';
-import * as schema from '@/common/database/schema.js';
 import { NotFoundError, BadRequestError } from '@/common/errors/errors.js';
 import type { DemoBid } from '@/seed/data.js';
 import { TenantContextHolder } from '@/common/security/TenantContext.js';
 import {
-  fetchBidsWithRelations,
   mapBidRecord,
-  resolveBidDocuments,
   type ListBidsQuery,
   type BidDecisionProjection,
   type BidWithDecision,
@@ -38,6 +32,8 @@ import {
   type TenderAmendmentItem,
   type TenderAmendmentsResult,
 } from './application/tender-amendments.service.js';
+import { BidsRepository } from './bids.repository.js';
+import { BidsQueries } from './bids.queries.js';
 
 export interface CreateBidDto {
   companyId?: string;
@@ -69,39 +65,38 @@ export type {
 
 @Injectable()
 export class BidsService {
-  private readonly db: DrizzleDb;
+  private readonly repository: BidsRepository;
+  private readonly queries: BidsQueries;
 
   constructor(
-    @Inject(DRIZZLE_TOKEN) db: DrizzleDb | PGlite,
+    @Inject(BidsRepository)
+    repoOrDb: BidsRepository | DrizzleDb | PGlite,
     @Optional() @Inject(STORAGE_TOKEN) private readonly storageService?: IStorageService | null,
   ) {
-    this.db = 'select' in db ? (db as DrizzleDb) : createDrizzle(db as PGlite);
+    if (repoOrDb instanceof BidsRepository) {
+      this.repository = repoOrDb;
+      this.queries = new BidsQueries(repoOrDb.getDb());
+    } else {
+      this.repository = new BidsRepository(repoOrDb);
+      this.queries = new BidsQueries(this.repository.getDb());
+    }
   }
 
   public async listBids(query?: ListBidsQuery): Promise<PaginatedBidsResult | BidWithDecision[]> {
     const orgId = TenantContextHolder.get()?.organizationId || '';
-    return fetchBidsWithRelations(this.db, orgId, query);
+    return this.queries.listBids(orgId, query);
   }
 
   public async getBidById(bidId: string): Promise<DemoBid> {
     const orgId = TenantContextHolder.get()?.organizationId;
-    const [bidRecord] = await this.db
-      .select()
-      .from(schema.bids)
-      .where(
-        orgId
-          ? and(eq(schema.bids.id, bidId), eq(schema.bids.organizationId, orgId))
-          : eq(schema.bids.id, bidId),
-      )
-      .limit(1);
+    const bidRecord = await this.queries.findBidById(bidId, orgId);
 
     if (!bidRecord) {
       throw new NotFoundError(`Bid project '${bidId}' not found.`);
     }
 
     const finalOrgId = orgId || bidRecord.organizationId;
-    const documents = await resolveBidDocuments(
-      this.db,
+    const documents = await this.queries.resolveDocuments(
       bidId,
       finalOrgId,
       this.storageService,
@@ -139,21 +134,13 @@ export class BidsService {
 
     let companyId = dto.companyId?.trim();
     if (companyId) {
-      const [comp] = await this.db
-        .select()
-        .from(schema.companies)
-        .where(and(eq(schema.companies.id, companyId), eq(schema.companies.organizationId, orgId)))
-        .limit(1);
+      const comp = await this.repository.findCompany(companyId, orgId);
 
       if (!comp) {
         throw new NotFoundError(`Company '${companyId}' not found in your organization.`);
       }
     } else {
-      const [defaultComp] = await this.db
-        .select()
-        .from(schema.companies)
-        .where(eq(schema.companies.organizationId, orgId))
-        .limit(1);
+      const defaultComp = await this.repository.findDefaultCompany(orgId);
 
       if (!defaultComp) {
         throw new BadRequestError(
@@ -165,7 +152,7 @@ export class BidsService {
 
     const now = new Date();
 
-    await this.db.insert(schema.bids).values({
+    await this.repository.createBid({
       id: newBidId,
       organizationId: orgId,
       companyId: companyId!,
@@ -184,7 +171,7 @@ export class BidsService {
       updatedAt: now,
     });
 
-    await this.db.insert(schema.auditLogs).values({
+    await this.repository.createAuditLog({
       id: `aud-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
       bidId: newBidId,
       organizationId: orgId,
@@ -222,34 +209,18 @@ export class BidsService {
   ): Promise<DeleteBidResult> {
     const userId = TenantContextHolder.get()?.userId || 'usr_admin';
     // 1. Verify existence and tenant boundary (Anti-IDOR)
-    const [bid] = await this.db
-      .select()
-      .from(schema.bids)
-      .where(
-        organizationId
-          ? and(eq(schema.bids.id, bidId), eq(schema.bids.organizationId, organizationId))
-          : eq(schema.bids.id, bidId),
-      )
-      .limit(1);
+    const bid = await this.repository.findBidById(bidId, organizationId);
 
     if (!bid) {
       throw new NotFoundError(`Bid project '${bidId}' not found.`);
     }
 
     // 2. Query documents belonging to this bid
-    const docs = await this.db
-      .select()
-      .from(schema.tenderDocuments)
-      .where(
-        and(
-          eq(schema.tenderDocuments.bidId, bidId),
-          eq(schema.tenderDocuments.organizationId, organizationId),
-        ),
-      );
+    const docs = await this.repository.findDocumentsByBid(bidId, organizationId);
 
     // 3. Record audit log before deletion
     const now = new Date();
-    await this.db.insert(schema.auditLogs).values({
+    await this.repository.createAuditLog({
       id: `aud-del-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
       bidId,
       organizationId,
@@ -268,9 +239,7 @@ export class BidsService {
     });
 
     // 4. Delete the bid from PostgreSQL (cascades to tender_documents and compliance_items)
-    await this.db
-      .delete(schema.bids)
-      .where(and(eq(schema.bids.id, bidId), eq(schema.bids.organizationId, organizationId)));
+    await this.repository.deleteBid(bidId, organizationId);
 
     // 5. Delete cloud storage prefix (tenants/{orgId}/bids/{bidId}/)
     if (this.storageService) {
@@ -294,15 +263,7 @@ export class BidsService {
    */
   public async getTenderDeadlines(bidId: string): Promise<TenderDeadlinesResult> {
     const orgId = TenantContextHolder.get()?.organizationId;
-    const [bid] = await this.db
-      .select()
-      .from(schema.bids)
-      .where(
-        orgId
-          ? and(eq(schema.bids.id, bidId), eq(schema.bids.organizationId, orgId))
-          : eq(schema.bids.id, bidId),
-      )
-      .limit(1);
+    const bid = await this.queries.findBidById(bidId, orgId);
 
     if (!bid) {
       throw new NotFoundError(`Bid project '${bidId}' not found.`);
@@ -333,10 +294,7 @@ export class BidsService {
         updatedAt: new Date().toISOString(),
       };
     }
-    const allBids = await this.db
-      .select()
-      .from(schema.bids)
-      .where(eq(schema.bids.organizationId, orgId));
+    const allBids = await this.queries.listAllBidsByOrg(orgId);
 
     return calculateDashboardMetrics(allBids);
   }
@@ -355,28 +313,10 @@ export class BidsService {
       };
     }
 
-    const allBids = await this.db
-      .select()
-      .from(schema.bids)
-      .where(eq(schema.bids.organizationId, orgId));
-
-    const corrDocs = await this.db
-      .select()
-      .from(schema.tenderDocuments)
-      .where(
-        and(
-          eq(schema.tenderDocuments.organizationId, orgId),
-          eq(schema.tenderDocuments.documentType, 'CORRIGENDUM'),
-        ),
-      )
-      .orderBy(desc(schema.tenderDocuments.uploadedAt));
-
-    const allCompliance = await this.db
-      .select()
-      .from(schema.complianceItems)
-      .where(eq(schema.complianceItems.organizationId, orgId));
+    const allBids = await this.queries.listAllBidsByOrg(orgId);
+    const corrDocs = await this.queries.listCorrigendumDocuments(orgId);
+    const allCompliance = await this.queries.listComplianceItemsByOrg(orgId);
 
     return buildTenderAmendments(orgId, allBids, corrDocs, allCompliance, bidIdFilter);
   }
 }
-

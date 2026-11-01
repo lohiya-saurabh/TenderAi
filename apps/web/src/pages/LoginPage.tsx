@@ -47,11 +47,11 @@ export const LoginPage: React.FC = () => {
             TP
           </div>
         </Link>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
           Sign in to TenderPulse AI
         </h1>
         <p className="text-xs text-muted-foreground">
-          Deterministic Bid Evaluation &amp; Compliance Verification Platform
+          Tender reading and bid readiness for Indian contractors
         </p>
       </div>
 
@@ -65,18 +65,14 @@ export const LoginPage: React.FC = () => {
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Back to home</span>
             </Link>
-            <span className="text-[11px] font-mono text-muted-foreground">v2.4 Enterprise</span>
           </div>
 
           {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <Label
-                htmlFor="email"
-                className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-              >
-                Email Address
+              <Label htmlFor="email" className="text-xs font-semibold text-muted-foreground">
+                Email address
               </Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -94,10 +90,7 @@ export const LoginPage: React.FC = () => {
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label
-                  htmlFor="password"
-                  className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-                >
+                <Label htmlFor="password" className="text-xs font-semibold text-muted-foreground">
                   Password
                 </Label>
               </div>
@@ -122,7 +115,7 @@ export const LoginPage: React.FC = () => {
               disabled={isSubmitting}
               className="w-full mt-2 font-semibold shadow-sm"
             >
-              {isSubmitting ? 'Authenticating...' : 'Sign In to Workspace →'}
+              {isSubmitting ? 'Signing in…' : 'Sign in'}
             </Button>
           </form>
 
@@ -130,13 +123,13 @@ export const LoginPage: React.FC = () => {
             <p>
               New organization?{' '}
               <Link to="/signup" className="text-primary hover:underline font-semibold">
-                Register Workspace
+                Register workspace
               </Link>
             </p>
 
-            <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground font-mono">
+            <div className="flex items-center justify-center gap-1.5 text-2xs text-muted-foreground font-mono">
               <ShieldCheck className="w-3.5 h-3.5 text-foreground" />
-              <span>Protected by Fiber-Safe Tenant Isolation &amp; RBAC</span>
+              <span>Your workspace data is private to your company</span>
             </div>
           </div>
         </div>

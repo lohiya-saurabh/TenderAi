@@ -4,6 +4,7 @@ import { useAuth } from '@/auth/useAuth.js';
 import { Button } from '@/components/ui/button.js';
 import { ShieldCheck, ArrowRight, Layers, FileCheck2, Cpu, Sun, Moon } from 'lucide-react';
 import { useTheme } from '@/context/useTheme.js';
+import { Logo } from '@/components/layout/Logo.js';
 
 export const PublicNav: React.FC = () => {
   const { isAuthenticated } = useAuth();
@@ -13,18 +14,8 @@ export const PublicNav: React.FC = () => {
     <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/80 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Brand Logo */}
-        <Link to="/" className="flex items-center gap-2.5 group">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm tracking-wider shadow-xs group-hover:scale-105 transition-transform">
-            TP
-          </div>
-          <div className="flex flex-col">
-            <span className="text-base font-bold tracking-tight text-foreground transition-colors">
-              TenderPulse<span className="text-vermilion">.ai</span>
-            </span>
-            <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-mono">
-              Bid Readiness SaaS
-            </span>
-          </div>
+        <Link to="/" className="no-underline" aria-label="TenderPulse home">
+          <Logo tagline="Bid assurance" />
         </Link>
 
         {/* Center Nav Links */}
@@ -34,21 +25,21 @@ export const PublicNav: React.FC = () => {
             className="hover:text-foreground transition-colors flex items-center gap-1.5"
           >
             <Layers className="h-3.5 w-3.5" />
-            <span>Platform</span>
+            <span>Why TenderPulse</span>
           </a>
           <a
             href="/#workflow"
             className="hover:text-foreground transition-colors flex items-center gap-1.5"
           >
             <Cpu className="h-3.5 w-3.5" />
-            <span>Workflow</span>
+            <span>How it works</span>
           </a>
           <a
             href="/#security"
             className="hover:text-foreground transition-colors flex items-center gap-1.5"
           >
             <ShieldCheck className="h-3.5 w-3.5" />
-            <span>Enterprise Security</span>
+            <span>Trust</span>
           </a>
           <Link
             to="/pricing"
@@ -71,18 +62,18 @@ export const PublicNav: React.FC = () => {
             title={`Current theme: ${theme === 'dark' ? 'Dark' : 'Light'}. Click to toggle`}
           >
             {theme === 'dark' ? (
-              <Moon className="h-3.5 w-3.5 text-orange-400" />
+              <Moon className="h-3.5 w-3.5 text-warning" />
             ) : (
-              <Sun className="h-3.5 w-3.5 text-amber-500" />
+              <Sun className="h-3.5 w-3.5 text-warning" />
             )}
-            <span className="hidden sm:inline text-xs font-mono font-medium text-foreground">
+            <span className="hidden sm:inline text-xs font-medium text-foreground">
               {theme === 'dark' ? 'Dark' : 'Light'}
             </span>
           </Button>
           {isAuthenticated ? (
             <Link to="/bids">
               <Button size="sm" className="gap-2 text-xs font-semibold shadow-xs">
-                <span>Enter Workspace</span>
+                <span>Open workspace</span>
                 <ArrowRight className="h-3.5 w-3.5" />
               </Button>
             </Link>
@@ -90,12 +81,12 @@ export const PublicNav: React.FC = () => {
             <>
               <Link to="/login">
                 <Button variant="ghost" size="sm" className="text-xs font-medium">
-                  Sign In
+                  Sign in
                 </Button>
               </Link>
               <Link to="/signup">
                 <Button size="sm" className="gap-1.5 text-xs font-semibold shadow-xs">
-                  <span>Start Free</span>
+                  <span>Start free</span>
                   <ArrowRight className="h-3.5 w-3.5" />
                 </Button>
               </Link>

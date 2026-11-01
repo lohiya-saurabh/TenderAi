@@ -16,6 +16,7 @@ import {
 } from '@/components/common/Icons.js';
 import { buildActionItems, type ActionItem, type ActionItemType } from '@/components/dashboard/dashboardData.js';
 import { cn } from '@/lib/utils.js';
+import { enumLabel } from '@/lib/utils.js';
 
 export interface ActionRequiredCardProps {
   bids: BidSummary[];
@@ -35,6 +36,7 @@ const CATEGORY_BADGE_VARIANT: Record<
   STATUTORY: 'destructive',
   EXECUTION: 'secondary',
   COMMERCIAL: 'secondary',
+  OPERATIONAL: 'secondary',
 };
 
 function ActionIcon({ item }: { item: ActionItem }) {
@@ -42,11 +44,11 @@ function ActionIcon({ item }: { item: ActionItem }) {
     case 'FLAGGED_REQUIREMENT':
       return <AlertCircleIcon size={16} className="text-destructive" />;
     case 'REVIEW_REQUIRED':
-      return <ReviewRequiredIcon size={16} className="text-orange-500" />;
+      return <ReviewRequiredIcon size={16} className="text-warning" />;
     case 'EXTRACTION_IN_PROGRESS':
       return <SpinnerIcon size={16} className="text-foreground animate-spin" />;
     case 'IMMINENT_DEADLINE':
-      return <WarningIcon size={16} className="text-orange-500" />;
+      return <WarningIcon size={16} className="text-warning" />;
     case 'DRAFT_INCOMPLETE':
     default:
       return <MissingIcon size={16} className="text-muted-foreground" />;
@@ -55,7 +57,7 @@ function ActionIcon({ item }: { item: ActionItem }) {
 
 function urgencyBorderClass(urgency: ActionItem['urgency']): string {
   if (urgency === 'critical') return 'border-destructive/40 hover:border-destructive/60';
-  if (urgency === 'high') return 'border-amber-500/40 hover:border-amber-500/60';
+  if (urgency === 'high') return 'border-warning/40 hover:border-warning/60';
   return 'border-border hover:border-muted-foreground/30';
 }
 
@@ -76,13 +78,13 @@ export const ActionRequiredCard: React.FC<ActionRequiredCardProps> = ({
     <Card className="shadow-xs">
       <CardHeader className="flex flex-row items-center justify-between pb-3">
         <div>
-          <CardTitle className="text-base font-semibold">Action Required</CardTitle>
+          <CardTitle className="text-base font-semibold">Action required</CardTitle>
           <p className="text-xs text-muted-foreground mt-0.5">
             Flagged clauses, reviews, in-flight extraction, and imminent deadlines
           </p>
         </div>
         <Badge variant={actionItems.length > 0 ? 'warning' : 'success'} className="font-medium">
-          {actionItems.length} {actionItems.length === 1 ? 'Action' : 'Actions'}
+          {actionItems.length} {actionItems.length === 1 ? 'action' : 'actions'}
         </Badge>
       </CardHeader>
 
@@ -99,7 +101,7 @@ export const ActionRequiredCard: React.FC<ActionRequiredCardProps> = ({
               <CheckIcon size={16} />
             </span>
             <div>
-              <div className="text-sm font-semibold text-foreground">No Urgent Blockers</div>
+              <div className="text-sm font-semibold text-foreground">No urgent blockers</div>
               <div className="text-xs text-muted-foreground">
                 All active tenders are on schedule with zero unreviewed critical flags.
               </div>
@@ -135,12 +137,12 @@ export const ActionRequiredCard: React.FC<ActionRequiredCardProps> = ({
                         {item.category && (
                           <Badge
                             variant={CATEGORY_BADGE_VARIANT[item.category]}
-                            className="text-[10px] px-1.5 py-0"
+                            className="text-2xs px-1.5 py-0"
                           >
-                            {item.category}
+                            {enumLabel(item.category)}
                           </Badge>
                         )}
-                        <span className="text-[10px] font-mono text-muted-foreground">
+                        <span className="text-2xs font-mono text-muted-foreground">
                           № {item.tenderNumber}
                         </span>
                       </div>
@@ -162,7 +164,7 @@ export const ActionRequiredCard: React.FC<ActionRequiredCardProps> = ({
               <button
                 type="button"
                 onClick={() => setIsExpanded((prev) => !prev)}
-                className="w-full pt-1.5 pb-0.5 text-[11px] text-muted-foreground hover:text-foreground text-center transition-colors font-medium cursor-pointer focus:outline-hidden"
+                className="w-full pt-1.5 pb-0.5 text-2xs text-muted-foreground hover:text-foreground text-center transition-colors font-medium cursor-pointer focus:outline-hidden"
                 aria-expanded={isExpanded}
               >
                 {isExpanded ? (

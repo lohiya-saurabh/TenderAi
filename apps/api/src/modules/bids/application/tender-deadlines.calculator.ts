@@ -37,12 +37,6 @@ export function calculateTenderDeadlines(
     daysRemaining = Math.ceil((submissionDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
   }
 
-  const formatMilestoneDate = (baseDate: Date | null, offsetDays: number): string | null => {
-    if (!baseDate) return null;
-    const target = new Date(baseDate.getTime() + offsetDays * 24 * 60 * 60 * 1000);
-    return target.toISOString().split('T')[0] ?? null;
-  };
-
   const getMilestoneStatus = (dateStr: string | null): MilestoneStatus => {
     if (!dateStr) return 'NOT_SET';
     const d = new Date(dateStr);
@@ -60,16 +54,14 @@ export function calculateTenderDeadlines(
     return Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
   };
 
-  const preBidDate = isValidSubmissionDate ? formatMilestoneDate(submissionDate, -15) : null;
-  const clarificationDate = isValidSubmissionDate
-    ? formatMilestoneDate(submissionDate, -10)
-    : null;
-  const technicalOpeningDate = isValidSubmissionDate
-    ? formatMilestoneDate(submissionDate, 1)
-    : null;
-  const financialOpeningDate = isValidSubmissionDate
-    ? formatMilestoneDate(submissionDate, 8)
-    : null;
+  // Only the submission deadline is known (entered on the bid). Pre-bid, clarification, EMD and
+  // opening dates differ per tender and are not extracted yet, so they are "not stated" rather
+  // than guessed as offsets from the deadline.
+  const preBidDate: string | null = null;
+  const clarificationDate: string | null = null;
+  const emdDate: string | null = null;
+  const technicalOpeningDate: string | null = null;
+  const financialOpeningDate: string | null = null;
 
   const milestones: TenderMilestone[] = [
     {
@@ -93,9 +85,9 @@ export function calculateTenderDeadlines(
     {
       milestoneKey: 'EMD_SUBMISSION',
       label: 'EMD & Tender Fee Physical / SFMS Submission',
-      date: bid.submissionDeadline,
-      daysRemaining,
-      status: getMilestoneStatus(bid.submissionDeadline),
+      date: emdDate,
+      daysRemaining: getDaysLeft(emdDate),
+      status: getMilestoneStatus(emdDate),
       isMandatory: true,
       notes: 'Original BG / DD physical submission or SFMS transmission confirmation.',
     },
@@ -119,7 +111,7 @@ export function calculateTenderDeadlines(
     },
     {
       milestoneKey: 'FINANCIAL_BID_OPENING',
-      label: 'Financial Bid Opening Date (Estimated)',
+      label: 'Financial Bid Opening Date',
       date: financialOpeningDate,
       daysRemaining: getDaysLeft(financialOpeningDate),
       status: getMilestoneStatus(financialOpeningDate),

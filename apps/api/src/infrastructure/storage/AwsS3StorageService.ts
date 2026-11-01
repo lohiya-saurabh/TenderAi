@@ -14,6 +14,7 @@ import {
   IStorageService,
   HeadObjectResult,
 } from '@/modules/bids/application/IStorageService.js';
+import { ConfigService } from '@nestjs/config';
 import { StructuredLogger } from '@/common/logging/StructuredLogger.js';
 
 export interface AwsS3StorageConfig {
@@ -32,18 +33,22 @@ export class AwsS3StorageService implements IStorageService {
   private readonly bucketName: string;
   private readonly logger = new StructuredLogger('AwsS3StorageService', 'api');
 
-  constructor(config: AwsS3StorageConfig) {
+  constructor(config: AwsS3StorageConfig, configService?: ConfigService) {
+    const cfg = configService ?? new ConfigService();
     this.bucketName = config.bucketName;
+    const endpoint = config.endpoint || cfg.get<string>('S3_ENDPOINT') || undefined;
+    const accessKeyId = cfg.get<string>('AWS_ACCESS_KEY_ID');
+    const secretAccessKey = cfg.get<string>('AWS_SECRET_ACCESS_KEY');
     this.s3Client = new S3Client({
-      region: config.region || process.env.AWS_REGION || 'ap-south-1',
-      endpoint: config.endpoint || process.env.S3_ENDPOINT || undefined,
-      forcePathStyle: config.forcePathStyle ?? Boolean(config.endpoint || process.env.S3_ENDPOINT),
+      region: config.region || cfg.get<string>('AWS_REGION') || 'ap-south-1',
+      endpoint,
+      forcePathStyle: config.forcePathStyle ?? Boolean(endpoint),
       credentials:
         config.credentials ||
-        (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+        (accessKeyId && secretAccessKey
           ? {
-              accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-              secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+              accessKeyId,
+              secretAccessKey,
             }
           : undefined),
     });

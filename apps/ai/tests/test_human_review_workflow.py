@@ -1,6 +1,7 @@
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from fakes import fake_llm_client
 
 from tenderpulse_ai.domain.models import (
     CandidateComplianceItem,
@@ -8,7 +9,6 @@ from tenderpulse_ai.domain.models import (
     ProvenanceProps,
     WorkflowStatus,
 )
-from tenderpulse_ai.models.llm_client import StructuredLLMClient
 from tenderpulse_ai.review import (
     CrossTenantReviewException,
     DuplicateReviewException,
@@ -102,7 +102,7 @@ async def test_human_review_interrupt_and_approve(review_setup):
     setup = review_setup
     manager = HumanReviewManager()
 
-    llm_client = StructuredLLMClient(extractor_fn=lambda sys, user: [setup["ambiguous_item"]])
+    llm_client = fake_llm_client(lambda sys, user: [setup["ambiguous_item"]])
     ctx = WorkflowNodeContext(setup["retrieval_tool"], setup["page_text_tool"], llm_client)
     graph = build_compliance_workflow_graph(ctx)
 
@@ -182,7 +182,7 @@ async def test_human_review_interrupt_and_reject(review_setup):
     setup = review_setup
     manager = HumanReviewManager()
 
-    llm_client = StructuredLLMClient(extractor_fn=lambda sys, user: [setup["ambiguous_item"]])
+    llm_client = fake_llm_client(lambda sys, user: [setup["ambiguous_item"]])
     ctx = WorkflowNodeContext(setup["retrieval_tool"], setup["page_text_tool"], llm_client)
     graph = build_compliance_workflow_graph(ctx)
 
@@ -248,7 +248,7 @@ async def test_human_review_interrupt_and_edit(review_setup):
     setup = review_setup
     manager = HumanReviewManager()
 
-    llm_client = StructuredLLMClient(extractor_fn=lambda sys, user: [setup["ambiguous_item"]])
+    llm_client = fake_llm_client(lambda sys, user: [setup["ambiguous_item"]])
     ctx = WorkflowNodeContext(setup["retrieval_tool"], setup["page_text_tool"], llm_client)
     graph = build_compliance_workflow_graph(ctx)
 
@@ -395,7 +395,7 @@ async def test_duplicate_review_submission_is_blocked(review_setup):
     setup = review_setup
     manager = HumanReviewManager()
 
-    llm_client = StructuredLLMClient(extractor_fn=lambda sys, user: [setup["ambiguous_item"]])
+    llm_client = fake_llm_client(lambda sys, user: [setup["ambiguous_item"]])
     ctx = WorkflowNodeContext(setup["retrieval_tool"], setup["page_text_tool"], llm_client)
     graph = build_compliance_workflow_graph(ctx)
 

@@ -5,32 +5,31 @@
  * Explicitly populates mock procurement demo data (users, companies, bids, documents, compliance items)
  * into PostgreSQL.
  */
-import { PGlite } from '@electric-sql/pglite';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { databaseUrl, describeDatabase } from './lib/db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
-const dbPath = path.join(rootDir, 'data/postgres');
 
 async function seed() {
-  console.log('🌱 Seeding demo procurement data into PostgreSQL (PGlite)...');
-  const { initDatabase } = await import(
-    path.join(rootDir, 'apps/api/dist/common/database/database.provider.js')
-  );
-  const pg = new PGlite(dbPath);
-  await pg.waitReady;
+  databaseUrl(); // exits with setup help when DATABASE_URL is missing
+  console.log(`🌱 Seeding demo procurement data into PostgreSQL (${describeDatabase()})...`);
+  const dist = path.join(rootDir, 'apps/api/dist/common/database');
+  const { getDatabase, initDatabase } = await import(path.join(dist, 'database.provider.js'));
+  const { closeDatabase } = await import(path.join(dist, 'client.js'));
+  const db = await getDatabase();
 
   try {
-    await initDatabase(pg, {
+    await initDatabase(db, {
       seedUsers: true,
       seedFullProfile: true,
       seedBidsAndCompliance: true,
     });
     console.log('✅ Seeding completed successfully.');
   } finally {
-    await pg.close();
+    await closeDatabase(db);
   }
 }
 

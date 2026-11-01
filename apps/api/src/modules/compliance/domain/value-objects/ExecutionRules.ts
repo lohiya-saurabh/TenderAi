@@ -31,7 +31,8 @@ export class ExecutionRules {
       this.stampPaperDenominationInr = props.stampPaperDenominationInr ?? 0;
     }
 
-    this.signingAuthorityRank = props.signingAuthorityRank?.trim() ?? 'Authorized Signatory';
+    // Empty = the tender names no signatory (never a default rank).
+    this.signingAuthorityRank = props.signingAuthorityRank?.trim() ?? '';
 
     Object.freeze(this);
   }

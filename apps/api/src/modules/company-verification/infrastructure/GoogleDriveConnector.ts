@@ -3,7 +3,7 @@
  *
  * Implements DocumentSourceConnector for importing existing company evidence
  * (audited accounts, work orders, completion certificates, ISO certificates).
- * Supports live Google Drive REST API with fallback to deterministic dev/mock files.
+ * Supports the live Google Drive REST API when an OAuth token is supplied; without one it refuses.
  */
 import { Injectable, Logger } from '@nestjs/common';
 import type {
@@ -71,41 +71,8 @@ export class GoogleDriveConnector implements DocumentSourceConnector {
       }
     }
 
-    // Dev/Test Mock Mode: Returns typical Indian procurement company evidence
-    return [
-      {
-        id: 'gdrive_file_audited_fy24',
-        name: 'ACME_Audited_Balance_Sheet_FY24.pdf',
-        mimeType: 'application/pdf',
-        sizeBytes: 1542000,
-        modifiedTime: '2024-09-30T10:00:00.000Z',
-        folderPath: '/Financials/Audited',
-      },
-      {
-        id: 'gdrive_file_nhai_completion',
-        name: 'NHAI_STRR_Package_Completion_Certificate.pdf',
-        mimeType: 'application/pdf',
-        sizeBytes: 890400,
-        modifiedTime: '2024-05-15T14:30:00.000Z',
-        folderPath: '/Experience/Highways',
-      },
-      {
-        id: 'gdrive_file_iso_9001',
-        name: 'ISO_9001_2015_Quality_Certificate.pdf',
-        mimeType: 'application/pdf',
-        sizeBytes: 450200,
-        modifiedTime: '2023-11-10T09:15:00.000Z',
-        folderPath: '/Certifications',
-      },
-      {
-        id: 'gdrive_file_oem_maf',
-        name: 'Wirtgen_Group_OEM_Authorization_2024.pdf',
-        mimeType: 'application/pdf',
-        sizeBytes: 320100,
-        modifiedTime: '2024-01-20T11:45:00.000Z',
-        folderPath: '/OEM_MAF',
-      },
-    ];
+    // No connection: never invent files.
+    throw new BadRequestError('Google Drive is not connected. Drive import needs an OAuth connection, which is not available yet; upload the file directly.');
   }
 
   public async downloadFile(
@@ -141,16 +108,6 @@ export class GoogleDriveConnector implements DocumentSourceConnector {
       }
     }
 
-    // Mock download generator
-    const content = `%PDF-1.4\n%Google-Drive-Imported-Evidence\nFile ID: ${externalFileId}\nImportedAt: ${new Date().toISOString()}\n%%EOF`;
-    const buffer = Buffer.from(content, 'utf-8');
-    const fileName = (authContext?.fileName as string) || `${externalFileId}.pdf`;
-
-    return {
-      buffer,
-      fileName,
-      mimeType: 'application/pdf',
-      sizeBytes: buffer.byteLength,
-    };
+    throw new BadRequestError('Google Drive is not connected. Drive import needs an OAuth connection, which is not available yet; upload the file directly.');
   }
 }

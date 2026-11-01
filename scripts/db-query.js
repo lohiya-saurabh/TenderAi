@@ -7,14 +7,7 @@
  *   node scripts/db-query.js "SELECT id, title, status FROM bids"
  *   npm run db:query "SELECT count(*) FROM compliance_items"
  */
-import { PGlite } from '@electric-sql/pglite';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const rootDir = path.resolve(__dirname, '..');
-const dbPath = path.join(rootDir, 'data/postgres');
+import { openDb } from './lib/db.js';
 
 const query = process.argv.slice(2).join(' ').trim();
 
@@ -33,8 +26,7 @@ Examples:
 }
 
 async function runQuery() {
-  const pg = new PGlite(dbPath);
-  await pg.waitReady;
+  const pg = await openDb();
 
   try {
     const res = await pg.query(query);

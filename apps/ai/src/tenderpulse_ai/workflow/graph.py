@@ -14,8 +14,8 @@ from tenderpulse_ai.workflow.nodes import (
     make_human_review_node,
     make_llm_extraction_node,
     make_postgres_store_node,
-    make_rescue_pass_node,
     make_targeted_refine_node,
+    make_uncertainty_verification_node,
     make_validation_node,
 )
 from tenderpulse_ai.workflow.state import ComplianceWorkflowState
@@ -27,14 +27,19 @@ def route_verification_outcome(state: ComplianceWorkflowState) -> str:
     - If zero unverified items and confidence >= 0.80: Proceed to Node 8 (PostgreSQL Store).
     - If unverified items exist and retry_count < 2: Route to targeted refinement (Node 5 retry).
     - If unverified items exist and retry_count >= 2 (or score < 0.80): Escalate to human review.
+    - If the LLM produced no valid answer (extraction_error): escalate; there is no fallback.
     """
-    unverified = state.get("unverified_items", [])
+    if state.get("extraction_error"):
+        return "escalate_human_review"
+    # Deliberate drops (deleted clauses, candidates redundant with a verified quote) are the
+    # validator working, not lost obligations: only genuine failures count.
+    failed = len(state.get("unverified_items", [])) - state.get("intentional_rejections", 0)
     score = state.get("confidence_score", 1.0)
     retry_count = state.get("retry_count", 0)
 
-    if len(unverified) == 0 and score >= 0.80:
+    if failed <= 0 and score >= 0.80:
         return "postgres_store"
-    elif len(unverified) > 0 and retry_count < 2:
+    elif failed > 0 and retry_count < 2:
         return "targeted_refine"
     else:
         return "escalate_human_review"
@@ -63,8 +68,8 @@ def build_compliance_workflow_graph(
     workflow.add_node("candidate_detection", make_candidate_detection_node(ctx))
     workflow.add_node("context_assembly", make_context_assembly_node(ctx))
     workflow.add_node("llm_extraction", make_llm_extraction_node(ctx))
-    workflow.add_node("rescue_pass", make_rescue_pass_node(ctx))
     workflow.add_node("validation", make_validation_node(ctx))
+    workflow.add_node("uncertainty_verification", make_uncertainty_verification_node(ctx))
     workflow.add_node("confidence_routing", make_confidence_routing_node(ctx))
     workflow.add_node("targeted_refine", make_targeted_refine_node(ctx))
     workflow.add_node("escalate_human_review", make_escalate_human_review_node(ctx))
@@ -77,9 +82,9 @@ def build_compliance_workflow_graph(
     workflow.add_edge("build_structure", "candidate_detection")
     workflow.add_edge("candidate_detection", "context_assembly")
     workflow.add_edge("context_assembly", "llm_extraction")
-    workflow.add_edge("llm_extraction", "rescue_pass")
-    workflow.add_edge("rescue_pass", "validation")
-    workflow.add_edge("validation", "confidence_routing")
+    workflow.add_edge("llm_extraction", "validation")
+    workflow.add_edge("validation", "uncertainty_verification")
+    workflow.add_edge("uncertainty_verification", "confidence_routing")
 
     # 3. Add Conditional Routing Edge
     workflow.add_conditional_edges(

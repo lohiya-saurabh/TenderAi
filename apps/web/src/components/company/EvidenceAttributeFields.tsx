@@ -143,7 +143,7 @@ export const EvidenceAttributeFields: React.FC<EvidenceAttributeFieldsProps> = (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="font-semibold block mb-1 text-foreground">
-                CA Firm / Statutory Auditor Name
+                CA firm / statutory auditor name
               </label>
               <input
                 type="text"
@@ -155,7 +155,7 @@ export const EvidenceAttributeFields: React.FC<EvidenceAttributeFieldsProps> = (
             </div>
             <div>
               <label className="font-semibold block mb-1 text-foreground">
-                Statutory CA UDIN (18 Digits)
+                Statutory CA UDIN (18 digits)
               </label>
               <input
                 type="text"
@@ -163,14 +163,14 @@ export const EvidenceAttributeFields: React.FC<EvidenceAttributeFieldsProps> = (
                 value={finUdin}
                 onChange={(e) => setFinUdin(e.target.value.toUpperCase())}
                 maxLength={18}
-                className="w-full p-2 rounded-md border border-border bg-background text-foreground text-xs mono outline-none focus:ring-1 focus:ring-primary"
+                className="w-full p-2 rounded-md border border-border bg-background text-foreground text-xs font-mono outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="font-semibold block mb-1 text-foreground">Financial Year (FY)</label>
+              <label className="font-semibold block mb-1 text-foreground">Financial year (FY)</label>
               <select
                 value={finFy}
                 onChange={(e) => setFinFy(e.target.value)}
@@ -197,7 +197,7 @@ export const EvidenceAttributeFields: React.FC<EvidenceAttributeFieldsProps> = (
             </div>
             <div>
               <label className="font-semibold block mb-1 text-foreground">
-                Net Worth (₹ Cr, Optional)
+                Net worth (₹ Cr, optional)
               </label>
               <input
                 type="number"
@@ -219,7 +219,7 @@ export const EvidenceAttributeFields: React.FC<EvidenceAttributeFieldsProps> = (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="font-semibold block mb-1 text-foreground">
-                Client Authority / Employer *
+                Client authority / employer *
               </label>
               <input
                 type="text"
@@ -231,14 +231,14 @@ export const EvidenceAttributeFields: React.FC<EvidenceAttributeFieldsProps> = (
             </div>
             <div>
               <label className="font-semibold block mb-1 text-foreground">
-                Contract / Agreement / Work Order No.
+                Contract / agreement / work order no.
               </label>
               <input
                 type="text"
                 placeholder="e.g. NHAI/TECH/2023/102 or WO-2023-89"
                 value={expContractRef}
                 onChange={(e) => setExpContractRef(e.target.value)}
-                className="w-full p-2 rounded-md border border-border bg-background text-foreground text-xs mono outline-none focus:ring-1 focus:ring-primary"
+                className="w-full p-2 rounded-md border border-border bg-background text-foreground text-xs font-mono outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
           </div>
@@ -246,7 +246,7 @@ export const EvidenceAttributeFields: React.FC<EvidenceAttributeFieldsProps> = (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="font-semibold block mb-1 text-foreground">
-                Completed Contract Value (₹ Crores)
+                Completed contract value (₹ crores)
               </label>
               <input
                 type="number"
@@ -259,7 +259,7 @@ export const EvidenceAttributeFields: React.FC<EvidenceAttributeFieldsProps> = (
             </div>
             <div>
               <label className="font-semibold block mb-1 text-foreground">
-                {evidenceType === 'COMPLETION_CERT' ? 'Date of Completion' : 'Work Order Date'}
+                {evidenceType === 'COMPLETION_CERT' ? 'Completion date' : 'Work order date'}
               </label>
               <input
                 type="date"
@@ -272,7 +272,7 @@ export const EvidenceAttributeFields: React.FC<EvidenceAttributeFieldsProps> = (
 
           <div>
             <label className="font-semibold block mb-1 text-foreground">
-              Project Name / Scope of Work
+              Project name / scope of work
             </label>
             <input
               type="text"
@@ -290,7 +290,7 @@ export const EvidenceAttributeFields: React.FC<EvidenceAttributeFieldsProps> = (
         <div className="flex flex-col gap-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="font-semibold block mb-1 text-foreground">Standard Specification *</label>
+              <label className="font-semibold block mb-1 text-foreground">Standard specification *</label>
               <select
                 value={isoStandard}
                 onChange={(e) => setIsoStandard(e.target.value)}
@@ -298,15 +298,15 @@ export const EvidenceAttributeFields: React.FC<EvidenceAttributeFieldsProps> = (
               >
                 <option value="ISO 9001:2015">ISO 9001:2015 (Quality Management)</option>
                 <option value="ISO 14001:2015">ISO 14001:2015 (Environmental Management)</option>
-                <option value="ISO 45001:2018">ISO 45001:2018 (Occupational Health & Safety)</option>
+                <option value="ISO 45001:2018">ISO 45001:2018 (occupational health & safety)</option>
                 <option value="ISO 27001:2022">ISO 27001:2022 (Information Security)</option>
                 <option value="ISO 50001:2018">ISO 50001:2018 (Energy Management)</option>
-                <option value="OTHER_ISO">Other Quality / Safety Standard</option>
+                <option value="OTHER_ISO">Other quality / safety standard</option>
               </select>
             </div>
             <div>
               <label className="font-semibold block mb-1 text-foreground">
-                Certifying Authority / Registrar *
+                Certifying authority / registrar *
               </label>
               <input
                 type="text"
@@ -320,20 +320,20 @@ export const EvidenceAttributeFields: React.FC<EvidenceAttributeFieldsProps> = (
 
           <div>
             <label className="font-semibold block mb-1 text-foreground">
-              Certificate Registration Number
+              Certificate registration number
             </label>
             <input
               type="text"
               placeholder="e.g. BVC-IND-2023-0941"
               value={isoCertNumber}
               onChange={(e) => setIsoCertNumber(e.target.value)}
-              className="w-full p-2 rounded-md border border-border bg-background text-foreground text-xs mono outline-none focus:ring-1 focus:ring-primary"
+              className="w-full p-2 rounded-md border border-border bg-background text-foreground text-xs font-mono outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="font-semibold block mb-1 text-foreground">Valid From (Issue Date)</label>
+              <label className="font-semibold block mb-1 text-foreground">Valid from (issue date)</label>
               <input
                 type="date"
                 value={isoValidFrom}
@@ -342,7 +342,7 @@ export const EvidenceAttributeFields: React.FC<EvidenceAttributeFieldsProps> = (
               />
             </div>
             <div>
-              <label className="font-semibold block mb-1 text-foreground">Valid To (Expiry Date) *</label>
+              <label className="font-semibold block mb-1 text-foreground">Valid to (expiry date) *</label>
               <input
                 type="date"
                 value={isoValidTo}
@@ -365,11 +365,11 @@ export const EvidenceAttributeFields: React.FC<EvidenceAttributeFieldsProps> = (
                 value={gstNumber}
                 onChange={(e) => setGstNumber(e.target.value.toUpperCase())}
                 maxLength={15}
-                className="w-full p-2 rounded-md border border-border bg-background text-foreground text-xs mono outline-none focus:ring-1 focus:ring-primary"
+                className="w-full p-2 rounded-md border border-border bg-background text-foreground text-xs font-mono outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
             <div>
-              <label className="font-semibold block mb-1 text-foreground">Legal / Trade Name *</label>
+              <label className="font-semibold block mb-1 text-foreground">Legal / trade name *</label>
               <input
                 type="text"
                 value={gstTradeName}
@@ -392,11 +392,11 @@ export const EvidenceAttributeFields: React.FC<EvidenceAttributeFieldsProps> = (
                 value={panNumber}
                 onChange={(e) => setPanNumber(e.target.value.toUpperCase())}
                 maxLength={10}
-                className="w-full p-2 rounded-md border border-border bg-background text-foreground text-xs mono outline-none focus:ring-1 focus:ring-primary"
+                className="w-full p-2 rounded-md border border-border bg-background text-foreground text-xs font-mono outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
             <div>
-              <label className="font-semibold block mb-1 text-foreground">Name on PAN Card *</label>
+              <label className="font-semibold block mb-1 text-foreground">Name on PAN card *</label>
               <input
                 type="text"
                 value={panHolderName}
@@ -419,7 +419,7 @@ export const EvidenceAttributeFields: React.FC<EvidenceAttributeFieldsProps> = (
                 value={cinNumber}
                 onChange={(e) => setCinNumber(e.target.value.toUpperCase())}
                 maxLength={21}
-                className="w-full p-2 rounded-md border border-border bg-background text-foreground text-xs mono outline-none focus:ring-1 focus:ring-primary"
+                className="w-full p-2 rounded-md border border-border bg-background text-foreground text-xs font-mono outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
             <div>
@@ -441,25 +441,25 @@ export const EvidenceAttributeFields: React.FC<EvidenceAttributeFieldsProps> = (
         <div className="flex flex-col gap-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="font-semibold block mb-1 text-foreground">Udyam Registration Number *</label>
+              <label className="font-semibold block mb-1 text-foreground">Udyam registration number *</label>
               <input
                 type="text"
                 placeholder="e.g. UDYAM-MH-01-0012345"
                 value={udyamNumber}
                 onChange={(e) => setUdyamNumber(e.target.value.toUpperCase())}
-                className="w-full p-2 rounded-md border border-border bg-background text-foreground text-xs mono outline-none focus:ring-1 focus:ring-primary"
+                className="w-full p-2 rounded-md border border-border bg-background text-foreground text-xs font-mono outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
             <div>
-              <label className="font-semibold block mb-1 text-foreground">Enterprise Classification</label>
+              <label className="font-semibold block mb-1 text-foreground">Enterprise classification</label>
               <select
                 value={udyamCategory}
                 onChange={(e) => setUdyamCategory(e.target.value as 'MICRO' | 'SMALL' | 'MEDIUM')}
                 className="w-full p-2 rounded-md border border-border bg-background text-foreground text-xs outline-none focus:ring-1 focus:ring-primary"
               >
-                <option value="MICRO">Micro Enterprise (Turnover &lt; ₹5 Cr)</option>
-                <option value="SMALL">Small Enterprise (Turnover &lt; ₹50 Cr)</option>
-                <option value="MEDIUM">Medium Enterprise (Turnover &lt; ₹250 Cr)</option>
+                <option value="MICRO">Micro enterprise (turnover &lt; ₹5 Cr)</option>
+                <option value="SMALL">Small enterprise (turnover &lt; ₹50 Cr)</option>
+                <option value="MEDIUM">Medium enterprise (turnover &lt; ₹250 Cr)</option>
               </select>
             </div>
           </div>
@@ -471,7 +471,7 @@ export const EvidenceAttributeFields: React.FC<EvidenceAttributeFieldsProps> = (
         <div className="flex flex-col gap-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="font-semibold block mb-1 text-foreground">OEM Principal Manufacturer *</label>
+              <label className="font-semibold block mb-1 text-foreground">OEM principal manufacturer *</label>
               <input
                 type="text"
                 placeholder="e.g. Cisco Systems, Cummins, Schneider Electric"
@@ -481,19 +481,19 @@ export const EvidenceAttributeFields: React.FC<EvidenceAttributeFieldsProps> = (
               />
             </div>
             <div>
-              <label className="font-semibold block mb-1 text-foreground">Tender Reference № (If Specific)</label>
+              <label className="font-semibold block mb-1 text-foreground">Tender reference № (if specific)</label>
               <input
                 type="text"
                 placeholder="e.g. NIT-NHAI-2026-991"
                 value={oemTenderRef}
                 onChange={(e) => setOemTenderRef(e.target.value)}
-                className="w-full p-2 rounded-md border border-border bg-background text-foreground text-xs mono outline-none focus:ring-1 focus:ring-primary"
+                className="w-full p-2 rounded-md border border-border bg-background text-foreground text-xs font-mono outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
           </div>
 
           <div>
-            <label className="font-semibold block mb-1 text-foreground">Authorization Validity Expiry</label>
+            <label className="font-semibold block mb-1 text-foreground">Authorization validity expiry</label>
             <input
               type="date"
               value={oemValidTo}
@@ -509,7 +509,7 @@ export const EvidenceAttributeFields: React.FC<EvidenceAttributeFieldsProps> = (
         <div className="flex flex-col gap-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="font-semibold block mb-1 text-foreground">Issuing Authority / Body</label>
+              <label className="font-semibold block mb-1 text-foreground">Issuing authority / body</label>
               <input
                 type="text"
                 placeholder="e.g. Government of India, State PWD, CPWD"
@@ -519,13 +519,13 @@ export const EvidenceAttributeFields: React.FC<EvidenceAttributeFieldsProps> = (
               />
             </div>
             <div>
-              <label className="font-semibold block mb-1 text-foreground">Document / Reference №</label>
+              <label className="font-semibold block mb-1 text-foreground">Document / reference №</label>
               <input
                 type="text"
                 placeholder="e.g. REG-2026-9901"
                 value={genericRefNumber}
                 onChange={(e) => setGenericRefNumber(e.target.value)}
-                className="w-full p-2 rounded-md border border-border bg-background text-foreground text-xs mono outline-none focus:ring-1 focus:ring-primary"
+                className="w-full p-2 rounded-md border border-border bg-background text-foreground text-xs font-mono outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
           </div>
@@ -541,7 +541,7 @@ export const EvidenceAttributeFields: React.FC<EvidenceAttributeFieldsProps> = (
               />
             </div>
             <div>
-              <label className="font-semibold block mb-1 text-foreground">Valid To (If Applicable)</label>
+              <label className="font-semibold block mb-1 text-foreground">Valid to (if applicable)</label>
               <input
                 type="date"
                 value={genericValidTo}

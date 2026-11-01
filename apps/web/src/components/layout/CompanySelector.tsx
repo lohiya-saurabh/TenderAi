@@ -63,15 +63,15 @@ export const CompanySelector: React.FC = () => {
         )}
         aria-expanded={isOpen}
         aria-haspopup="true"
-        title="Switch Business Entity / Company"
+        title="Switch business entity / company"
       >
-        <div className="flex items-center justify-center w-5 h-5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shrink-0">
+        <div className="flex items-center justify-center w-5 h-5 rounded bg-success/15 text-success dark:text-success shrink-0">
           <Building2 size={13} />
         </div>
 
         <div className="flex flex-col items-start min-w-0">
-          <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold leading-none">
-            Active Company
+          <span className="text-2xs text-muted-foreground font-semibold leading-none">
+            Active company
           </span>
           <span className="font-semibold text-xs text-foreground max-w-[150px] sm:max-w-[200px] md:max-w-[240px] truncate leading-tight mt-0.5">
             {currentLabel}
@@ -92,14 +92,12 @@ export const CompanySelector: React.FC = () => {
           {/* Header */}
           <div className="px-3 py-2 border-b border-border/80 flex items-center justify-between">
             <div>
-              <div className="text-[11px] font-bold text-foreground uppercase tracking-wider">
-                Tenant Companies
-              </div>
-              <div className="text-[10px] text-muted-foreground mt-0.5">
+              <div className="text-2xs font-bold text-foreground">Tenant companies</div>
+              <div className="text-2xs text-muted-foreground mt-0.5">
                 Bids, profiles &amp; AI evaluations are scoped per company
               </div>
             </div>
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary border border-primary/20">
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-2xs font-medium bg-primary/10 text-primary border border-primary/20">
               {companies.length} {companies.length === 1 ? 'Entity' : 'Entities'}
             </span>
           </div>
@@ -132,9 +130,9 @@ export const CompanySelector: React.FC = () => {
                     >
                       {company.legalName}
                     </div>
-                    <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
+                    <div className="flex items-center gap-2 mt-1 text-2xs text-muted-foreground">
                       {company.gstin && (
-                        <span className="font-mono bg-muted/60 px-1 py-0.2 rounded text-[9px]">
+                        <span className="font-mono bg-muted/60 px-1 py-0.2 rounded text-2xs">
                           GST: {company.gstin}
                         </span>
                       )}
@@ -147,7 +145,7 @@ export const CompanySelector: React.FC = () => {
                   </div>
 
                   {isSelected && (
-                    <div className="flex items-center justify-center w-5 h-5 rounded-full bg-vermilion text-white shrink-0 mt-0.5 shadow-xs">
+                    <div className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground shrink-0 mt-0.5 shadow-xs">
                       <Check size={11} strokeWidth={3} />
                     </div>
                   )}
@@ -163,12 +161,12 @@ export const CompanySelector: React.FC = () => {
                 onSubmit={handleCreate}
                 className="p-2 bg-muted/40 rounded-lg space-y-2 border border-border"
               >
-                <div className="text-[11px] font-semibold text-foreground">
-                  Register New Legal Entity
+                <div className="text-2xs font-semibold text-foreground">
+                  Register new legal entity
                 </div>
                 <div>
-                  <label className="text-[10px] text-muted-foreground block mb-0.5 font-medium">
-                    Company Legal Name *
+                  <label className="text-2xs text-muted-foreground block mb-0.5 font-medium">
+                    Company legal name *
                   </label>
                   <input
                     type="text"
@@ -181,7 +179,7 @@ export const CompanySelector: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] text-muted-foreground block mb-0.5 font-medium">
+                  <label className="text-2xs text-muted-foreground block mb-0.5 font-medium">
                     GSTIN (Optional)
                   </label>
                   <input
@@ -218,7 +216,7 @@ export const CompanySelector: React.FC = () => {
                 className="w-full flex items-center gap-2 px-3 py-2 text-primary hover:text-primary/80 font-medium rounded-lg hover:bg-accent text-left transition-colors"
               >
                 <Plus size={14} className="text-primary" />
-                <span>Add Legal Company Entity</span>
+                <span>Add legal company entity</span>
               </button>
             )}
           </div>

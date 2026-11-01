@@ -9,7 +9,7 @@
  * - PAN: AAACA1234F
  * - Tenant Admin: admin@ashokabuildcon.com
  */
-import { PGlite } from '@electric-sql/pglite';
+import { openDb } from './lib/db.js';
 import bcrypt from 'bcrypt';
 import crypto from 'node:crypto';
 import path from 'node:path';
@@ -18,7 +18,6 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
-const dbPath = path.join(rootDir, 'data/postgres');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'tenderpulse-super-secret-jwt-key-2026-production-grade';
 
@@ -37,8 +36,7 @@ function signToken(payload, secret = JWT_SECRET, ttlSeconds = 7 * 24 * 3600) {
 
 async function provisionAshoka() {
   console.log('🚀 Provisioning Enterprise Tenant: Ashoka Buildcon Limited...');
-  const pg = new PGlite(dbPath);
-  await pg.waitReady;
+  const pg = await openDb();
 
   const orgId = 'org_ashoka_001';
   const compId = 'comp_ashoka_001';

@@ -13,11 +13,11 @@ export const PricingPage: React.FC = () => {
       {/* Header Section */}
       <section className="pt-12 pb-12 md:pt-16 md:pb-16 border-b border-border/60 bg-muted/20">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
-          <Badge variant="outline" className="text-xs font-mono text-primary border-primary/30">
+          <Badge variant="outline" className="text-xs tabular-nums text-primary border-primary/30">
             Subscription Pricing &amp; Entitlements
           </Badge>
 
-          <h1 className="text-3xl sm:text-5xl font-extrabold text-foreground tracking-tight">
+          <h1 className="text-3xl sm:text-5xl font-semibold text-foreground tracking-tight">
             Transparent plans for every bidding pipeline
           </h1>
 
@@ -39,9 +39,7 @@ export const PricingPage: React.FC = () => {
       <section className="py-20 border-b border-border/60 bg-muted/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
           <div className="text-center space-y-2 max-w-2xl mx-auto">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-primary font-mono">
-              Detailed Comparison
-            </h2>
+            <h2 className="text-base font-semibold text-foreground">Detailed Comparison</h2>
             <p className="text-2xl sm:text-3xl font-extrabold text-foreground">
               Compare plans feature by feature
             </p>
@@ -62,35 +60,41 @@ export const PricingPage: React.FC = () => {
               <tbody className="divide-y divide-border/60">
                 <tr>
                   <td className="p-4 font-medium text-foreground">Company Legal Entities</td>
-                  <td className="p-4 text-center font-mono text-muted-foreground">1</td>
-                  <td className="p-4 text-center font-mono text-muted-foreground">1</td>
-                  <td className="p-4 text-center font-mono font-bold text-foreground">5</td>
-                  <td className="p-4 text-center font-mono text-muted-foreground">15</td>
-                  <td className="p-4 text-center font-mono text-foreground font-bold">Unlimited</td>
+                  <td className="p-4 text-center tabular-nums text-muted-foreground">1</td>
+                  <td className="p-4 text-center tabular-nums text-muted-foreground">1</td>
+                  <td className="p-4 text-center tabular-nums font-bold text-foreground">5</td>
+                  <td className="p-4 text-center tabular-nums text-muted-foreground">15</td>
+                  <td className="p-4 text-center tabular-nums text-foreground font-bold">
+                    Unlimited
+                  </td>
                 </tr>
                 <tr>
-                  <td className="p-4 font-medium text-foreground">Team Member Seats (RBAC)</td>
-                  <td className="p-4 text-center font-mono text-muted-foreground">1</td>
-                  <td className="p-4 text-center font-mono text-muted-foreground">3</td>
-                  <td className="p-4 text-center font-mono font-bold text-foreground">10</td>
-                  <td className="p-4 text-center font-mono text-muted-foreground">25</td>
-                  <td className="p-4 text-center font-mono text-foreground font-bold">Unlimited</td>
+                  <td className="p-4 font-medium text-foreground">Team member seats</td>
+                  <td className="p-4 text-center tabular-nums text-muted-foreground">1</td>
+                  <td className="p-4 text-center tabular-nums text-muted-foreground">3</td>
+                  <td className="p-4 text-center tabular-nums font-bold text-foreground">10</td>
+                  <td className="p-4 text-center tabular-nums text-muted-foreground">25</td>
+                  <td className="p-4 text-center tabular-nums text-foreground font-bold">
+                    Unlimited
+                  </td>
                 </tr>
                 <tr>
                   <td className="p-4 font-medium text-foreground">Monthly Tender Ingestions</td>
-                  <td className="p-4 text-center font-mono text-muted-foreground">3</td>
-                  <td className="p-4 text-center font-mono text-muted-foreground">15</td>
-                  <td className="p-4 text-center font-mono font-bold text-foreground">50</td>
-                  <td className="p-4 text-center font-mono text-muted-foreground">150</td>
-                  <td className="p-4 text-center font-mono text-foreground font-bold">Unlimited</td>
+                  <td className="p-4 text-center tabular-nums text-muted-foreground">3</td>
+                  <td className="p-4 text-center tabular-nums text-muted-foreground">15</td>
+                  <td className="p-4 text-center tabular-nums font-bold text-foreground">50</td>
+                  <td className="p-4 text-center tabular-nums text-muted-foreground">150</td>
+                  <td className="p-4 text-center tabular-nums text-foreground font-bold">
+                    Unlimited
+                  </td>
                 </tr>
                 <tr>
                   <td className="p-4 font-medium text-foreground">Evidence Document Storage</td>
-                  <td className="p-4 text-center font-mono text-muted-foreground">100 MB</td>
-                  <td className="p-4 text-center font-mono text-muted-foreground">1 GB</td>
-                  <td className="p-4 text-center font-mono font-bold text-foreground">5 GB</td>
-                  <td className="p-4 text-center font-mono text-muted-foreground">20 GB</td>
-                  <td className="p-4 text-center font-mono text-foreground font-bold">
+                  <td className="p-4 text-center tabular-nums text-muted-foreground">100 MB</td>
+                  <td className="p-4 text-center tabular-nums text-muted-foreground">1 GB</td>
+                  <td className="p-4 text-center tabular-nums font-bold text-foreground">5 GB</td>
+                  <td className="p-4 text-center tabular-nums text-muted-foreground">20 GB</td>
+                  <td className="p-4 text-center tabular-nums text-foreground font-bold">
                     100+ GB VPC
                   </td>
                 </tr>

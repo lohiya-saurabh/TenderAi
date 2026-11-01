@@ -218,7 +218,7 @@ describe('Security & RBAC Hardening Suite', () => {
       expect((req.user as Record<string, unknown>).sub).toBe('usr_mgr_01');
     });
 
-    it('should authenticate SSE stream using ?token= query parameter', () => {
+    it('should reject a token passed only as a ?token= query parameter', () => {
       vi.spyOn(reflector, 'getAllAndOverride').mockImplementation((key) =>
         key === 'isPublic' ? false : undefined,
       );
@@ -237,9 +237,8 @@ describe('Security & RBAC Hardening Suite', () => {
         query: { token },
       });
 
-      const canActivate = authGuard.canActivate(context);
-      expect(canActivate).toBe(true);
-      expect(req.user).toBeDefined();
+      expect(() => authGuard.canActivate(context)).toThrow(UnauthorizedError);
+      expect(req.user).toBeUndefined();
     });
 
     it('should authenticate request with valid tp_access_token cookie', () => {

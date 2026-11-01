@@ -132,11 +132,11 @@ export class TenderDocumentRelevanceValidator {
       }
     }
 
-    // Signal B: Tendering Authority / Department (+30 points)
+    // Signal B: Tendering Authority / Department (+20 points)
     if (tender.tenderingAuthority && tender.tenderingAuthority.trim().length > 2) {
       const cleanAuthority = tender.tenderingAuthority.trim().toLowerCase();
       if (docCorpus.includes(cleanAuthority)) {
-        score += 30;
+        score += 20;
         matchedSignals.push(`Full tendering authority match: "${tender.tenderingAuthority}"`);
       } else {
         // Test authority acronyms in parentheses or significant words (e.g. CPWD, NHAI, MHA)
@@ -144,7 +144,7 @@ export class TenderDocumentRelevanceValidator {
         const acronym =
           acronymMatch && acronymMatch[1] ? acronymMatch[1].trim().toLowerCase() : null;
         if (acronym && acronym.length >= 3 && docCorpus.includes(acronym)) {
-          score += 25;
+          score += 15;
           matchedSignals.push(`Authority acronym match: "${acronym.toUpperCase()}"`);
         } else {
           // Check significant words of authority
@@ -154,7 +154,7 @@ export class TenderDocumentRelevanceValidator {
             .filter((w) => w.length >= 4 && !COMMON_STOP_WORDS.has(w));
           const matchedAuthWords = authWords.filter((w) => docCorpus.includes(w));
           if (matchedAuthWords.length >= 2) {
-            score += 20;
+            score += 15;
             matchedSignals.push(`Authority key terms matched: [${matchedAuthWords.join(', ')}]`);
           }
         }

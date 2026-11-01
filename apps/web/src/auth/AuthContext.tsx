@@ -6,6 +6,7 @@ export interface AuthContextValue {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  acceptInvite: (token: string, password: string) => Promise<{ success: boolean; error?: string }>;
   register: (
     data: RegisterRequest,
   ) => Promise<{ success: boolean; error?: string; companyId?: string }>;

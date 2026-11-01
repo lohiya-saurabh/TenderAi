@@ -1,0 +1,44 @@
+# Gitleaks ignore file
+# Ignores known false-positive contract fixture hashes and past test commits
+
+# Past commit 9c31a61a85d9083a97bc2adb813b1f56c41d92ef
+9c31a61a85d9083a97bc2adb813b1f56c41d92ef:apps/ai/tests/test_production_pipeline.py:generic-api-key:24
+apps/ai/tests/test_production_pipeline.py:generic-api-key:24
+
+# Past commit dfce56d108b5eaaa3bdb556f879a82019b56bf83 (Golden contract fixture items and conflicts)
+dfce56d108b5eaaa3bdb556f879a82019b56bf83:packages/shared-types/fixtures/extraction-completed.phase1.json:generic-api-key:10
+dfce56d108b5eaaa3bdb556f879a82019b56bf83:packages/shared-types/fixtures/extraction-completed.phase1.json:generic-api-key:55
+dfce56d108b5eaaa3bdb556f879a82019b56bf83:packages/shared-types/fixtures/extraction-completed.phase1.json:generic-api-key:99
+dfce56d108b5eaaa3bdb556f879a82019b56bf83:packages/shared-types/fixtures/extraction-completed.phase1.json:generic-api-key:151
+dfce56d108b5eaaa3bdb556f879a82019b56bf83:packages/shared-types/fixtures/extraction-completed.phase1.json:generic-api-key:196
+dfce56d108b5eaaa3bdb556f879a82019b56bf83:packages/shared-types/fixtures/extraction-completed.phase1.json:generic-api-key:237
+dfce56d108b5eaaa3bdb556f879a82019b56bf83:packages/shared-types/fixtures/extraction-completed.phase1.json:generic-api-key:278
+dfce56d108b5eaaa3bdb556f879a82019b56bf83:packages/shared-types/fixtures/extraction-completed.phase1.json:generic-api-key:323
+dfce56d108b5eaaa3bdb556f879a82019b56bf83:packages/shared-types/fixtures/extraction-completed.phase1.json:generic-api-key:367
+dfce56d108b5eaaa3bdb556f879a82019b56bf83:packages/shared-types/fixtures/extraction-completed.phase1.json:generic-api-key:1026
+dfce56d108b5eaaa3bdb556f879a82019b56bf83:packages/shared-types/fixtures/extraction-completed.phase1.json:generic-api-key:1032
+dfce56d108b5eaaa3bdb556f879a82019b56bf83:packages/shared-types/fixtures/extraction-completed.phase1.json:generic-api-key:1039
+dfce56d108b5eaaa3bdb556f879a82019b56bf83:packages/shared-types/fixtures/extraction-completed.phase1.json:generic-api-key:1054
+dfce56d108b5eaaa3bdb556f879a82019b56bf83:packages/shared-types/fixtures/extraction-completed.phase1.json:generic-api-key:1061
+
+# Path-based generic-api-key ignore for extraction-completed fixtures
+packages/shared-types/fixtures/extraction-completed.phase1.json:generic-api-key:10
+packages/shared-types/fixtures/extraction-completed.phase1.json:generic-api-key:55
+packages/shared-types/fixtures/extraction-completed.phase1.json:generic-api-key:99
+packages/shared-types/fixtures/extraction-completed.phase1.json:generic-api-key:151
+packages/shared-types/fixtures/extraction-completed.phase1.json:generic-api-key:196
+packages/shared-types/fixtures/extraction-completed.phase1.json:generic-api-key:237
+packages/shared-types/fixtures/extraction-completed.phase1.json:generic-api-key:278
+packages/shared-types/fixtures/extraction-completed.phase1.json:generic-api-key:323
+packages/shared-types/fixtures/extraction-completed.phase1.json:generic-api-key:367
+packages/shared-types/fixtures/extraction-completed.phase1.json:generic-api-key:1026
+packages/shared-types/fixtures/extraction-completed.phase1.json:generic-api-key:1032
+packages/shared-types/fixtures/extraction-completed.phase1.json:generic-api-key:1039
+packages/shared-types/fixtures/extraction-completed.phase1.json:generic-api-key:1054
+packages/shared-types/fixtures/extraction-completed.phase1.json:generic-api-key:1061
+
+# StructuredLogger test JWT redaction tests
+d57d12af2b57d788ccd14d6ff972f18a8b7ce463:apps/api/src/common/logging/StructuredLogger.spec.ts:jwt:89
+cffdf0990e4e123298f3190c74f663d1e1b00d48:apps/api/src/common/logging/StructuredLogger.spec.ts:jwt:88
+apps/api/src/common/logging/StructuredLogger.spec.ts:jwt:89
+apps/api/src/common/logging/StructuredLogger.spec.ts:jwt:88

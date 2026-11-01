@@ -10,7 +10,9 @@
  * 6. DigiLocker OAuth2 consent, HMAC-SHA256 state protection, and digital certificate ingestion
  * 7. 6-state verification lifecycle and immutable verification history
  */
+import { AiEvidenceExtractor } from '@/modules/company-verification/application/AiEvidenceExtractor.js';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { ensureOrganizations } from '@/test/support/organizations.js';
 import { PGlite } from '@electric-sql/pglite';
 import { eq } from 'drizzle-orm';
 import crypto from 'node:crypto';
@@ -60,12 +62,30 @@ describe('Company Evidence & Third-Party Verification Layer', () => {
     const oneDrive = new OneDriveConnector();
     const localUpload = new LocalUploadConnector();
 
+    // Tests never reach a real AI worker: the extractor answers with no attributes.
+    const offlineExtractor = new AiEvidenceExtractor({
+      customFetch: (async (_url: string, init: RequestInit) => {
+        const req = JSON.parse(String(init.body)) as Record<string, string>;
+        const body = {
+          evidence_document_id: req.evidence_document_id,
+          organization_id: req.organization_id,
+          company_id: req.company_id,
+          status: 'COMPLETED',
+          extracted_attributes: {},
+          chunks: [
+            { chunk_index: 0, chunk_type: 'FINANCIAL_TURNOVER', content: 'page 1', page_number: 1 },
+          ],
+        };
+        return { ok: true, status: 200, json: async () => body } as Response;
+      }) as unknown as typeof fetch,
+    });
     evidenceService = new CompanyEvidenceService(
       db,
       storageService,
       googleDrive,
       oneDrive,
       localUpload,
+      offlineExtractor,
     );
 
     const gstAdapter = new MockGstVerificationAdapter();
@@ -84,6 +104,7 @@ describe('Company Evidence & Third-Party Verification Layer', () => {
     );
 
     // Seed test companies
+    await ensureOrganizations(db, TEST_ORG_ID, OTHER_ORG_ID);
     await db.insert(schema.companies).values({
       id: TEST_COMPANY_ID,
       organizationId: TEST_ORG_ID,
@@ -96,6 +117,8 @@ describe('Company Evidence & Third-Party Verification Layer', () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     });
+
+    await ensureOrganizations(db, TEST_ORG_ID, OTHER_ORG_ID);
 
     await db.insert(schema.companies).values({
       id: 'comp_foreign_001',
@@ -171,18 +194,16 @@ describe('Company Evidence & Third-Party Verification Layer', () => {
       ).rejects.toThrow(NotFoundError);
     });
 
-    it('should import evidence from Google Drive connector', async () => {
-      const imported = await evidenceService.importFromCloudSource(TEST_COMPANY_ID, {
-        provider: 'google-drive',
-        fileId: 'gdrive_file_nhai_completion',
-        fileName: 'NHAI_STRR_Completion.pdf',
-        evidenceType: 'COMPLETION_CERT',
-        issuer: 'National Highways Authority of India',
-      });
-
-      expect(imported.fileName).toBe('NHAI_STRR_Completion.pdf');
-      expect(imported.evidenceType).toBe('COMPLETION_CERT');
-      expect(imported.verificationStatus).toBe('EXTRACTED');
+    it('refuses drive import without a connection instead of inventing files', async () => {
+      await expect(
+        evidenceService.importFromCloudSource(TEST_COMPANY_ID, {
+          provider: 'google-drive',
+          fileId: 'any-file',
+          fileName: 'NHAI_STRR_Completion.pdf',
+          evidenceType: 'COMPLETION_CERT',
+          issuer: 'National Highways Authority of India',
+        }),
+      ).rejects.toThrow(/not connected/);
     });
   });
 
@@ -216,6 +237,7 @@ describe('Company Evidence & Third-Party Verification Layer', () => {
     it('should detect discrepancy when entered company name differs from GSTIN registered name', async () => {
       // Create company with conflicting name
       const conflictingId = 'comp_name_mismatch_001';
+      await ensureOrganizations(db, TEST_ORG_ID, OTHER_ORG_ID);
       await db.insert(schema.companies).values({
         id: conflictingId,
         organizationId: TEST_ORG_ID,

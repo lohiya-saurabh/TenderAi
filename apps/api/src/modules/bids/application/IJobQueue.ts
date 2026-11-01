@@ -32,6 +32,8 @@ export interface IJobQueue {
   receiveMessages(
     maxMessages?: number,
     visibilityTimeoutSeconds?: number,
+    /** abortSignal cancels an in-flight long poll (graceful shutdown). */
+    options?: { abortSignal?: AbortSignal },
   ): Promise<QueueMessage<IngestionJobMessage>[]>;
 
   deleteMessage(receiptHandle: string): Promise<void>;

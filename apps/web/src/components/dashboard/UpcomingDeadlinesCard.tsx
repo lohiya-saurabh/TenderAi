@@ -31,15 +31,13 @@ export const UpcomingDeadlinesCard: React.FC<UpcomingDeadlinesCardProps> = ({ bi
       <CardHeader className="flex flex-row items-center justify-between pb-3">
         <div>
           <div className="flex items-center gap-2">
-            <WarningIcon size={16} className="text-amber-400" />
-            <CardTitle className="text-base font-semibold">Upcoming Tender Deadlines</CardTitle>
+            <WarningIcon size={16} className="text-warning" />
+            <CardTitle className="text-base font-semibold">Upcoming tender deadlines</CardTitle>
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Submission closing dates ordered chronologically for bidding operations
-          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">Submission dates, soonest first</p>
         </div>
         <Badge variant="secondary" className="font-medium">
-          {datedBids.length} Scheduled
+          {datedBids.length} scheduled
         </Badge>
       </CardHeader>
 
@@ -70,10 +68,10 @@ export const UpcomingDeadlinesCard: React.FC<UpcomingDeadlinesCardProps> = ({ bi
                     <span className="text-xs font-semibold text-foreground truncate max-w-[260px]">
                       {bid.title}
                     </span>
-                    <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 truncate">
+                    <div className="text-2xs text-muted-foreground flex items-center gap-1.5 truncate">
                       <span>{bid.tenderingAuthority}</span>
                       <span>•</span>
-                      <span className="font-mono font-medium text-foreground">
+                      <span className="tabular-nums font-medium text-foreground">
                         {bid.estimatedValueRupees
                           ? formatCurrency(bid.estimatedValueRupees)
                           : 'Value TBD'}
@@ -85,13 +83,13 @@ export const UpcomingDeadlinesCard: React.FC<UpcomingDeadlinesCardProps> = ({ bi
                     <div className="text-right">
                       <div
                         className={cn(
-                          'text-[10px] font-bold uppercase tracking-wider',
+                          'text-2xs font-bold',
                           isPassed
                             ? 'text-muted-foreground'
                             : isUrgent
                               ? 'text-destructive'
                               : isImminent
-                                ? 'text-amber-400'
+                                ? 'text-warning'
                                 : 'text-foreground',
                         )}
                       >
@@ -101,7 +99,7 @@ export const UpcomingDeadlinesCard: React.FC<UpcomingDeadlinesCardProps> = ({ bi
                             ? '1 day left'
                             : `${bid.daysLeft} days left`}
                       </div>
-                      <div className="font-mono text-[10px] text-muted-foreground">
+                      <div className="tabular-nums text-2xs text-muted-foreground">
                         {formatDate(bid.submissionDeadline!)}
                       </div>
                     </div>

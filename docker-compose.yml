@@ -34,6 +34,8 @@ services:
     profiles:
       - localstack # Only starts when explicitly requested: docker compose --profile localstack up
 
+  # Both services read the same .env files as `npm run dev` (see docs/DEVELOPMENT.md);
+  # only the addresses that differ inside the compose network are overridden here.
   api:
     build:
       context: .
@@ -41,25 +43,10 @@ services:
     container_name: tenderpulse-api
     ports:
       - "3000:3000"
+    env_file:
+      - .env
     environment:
-      - NODE_ENV=development
-      - PORT=3000
       - DATABASE_URL=postgresql://${POSTGRES_USER:-tenderpulse}:${POSTGRES_PASSWORD:-tenderpulse_dev_password}@postgres:5432/${POSTGRES_DB:-tenderpulse_db}
-      - INTERNAL_SERVICE_KEY=${INTERNAL_SERVICE_KEY:-tenderpulse-internal-secret-2026}
-      - STORAGE_PROVIDER=${STORAGE_PROVIDER:-gcp}
-      - QUEUE_PROVIDER=${QUEUE_PROVIDER:-gcp}
-      - STORAGE_BUCKET_NAME=${STORAGE_BUCKET_NAME:-}
-      - INGESTION_QUEUE_TOPIC=${INGESTION_QUEUE_TOPIC:-}
-      - INGESTION_QUEUE_SUBSCRIPTION=${INGESTION_QUEUE_SUBSCRIPTION:-}
-      - INGESTION_DLQ_TOPIC=${INGESTION_DLQ_TOPIC:-}
-      - GCP_PROJECT_ID=${GCP_PROJECT_ID:-}
-      - AWS_REGION=${AWS_REGION:-ap-south-1}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
-      - S3_BUCKET_NAME=${S3_BUCKET_NAME:-${STORAGE_BUCKET_NAME:-}}
-      - S3_ENDPOINT=${S3_ENDPOINT:-}
-      - SQS_INGESTION_QUEUE_URL=${SQS_INGESTION_QUEUE_URL:-}
-      - SQS_ENDPOINT=${SQS_ENDPOINT:-}
       - AI_ENGINE_URL=http://ai:8000
     depends_on:
       postgres:
@@ -72,18 +59,11 @@ services:
     container_name: tenderpulse-ai
     ports:
       - "8000:8000"
+    env_file:
+      - .env
+      - apps/ai/.env
     environment:
       - API_GATEWAY_URL=http://api:3000
-      - INTERNAL_SERVICE_KEY=${INTERNAL_SERVICE_KEY:-tenderpulse-internal-secret-2026}
-      - AI_PROVIDER=${AI_PROVIDER:-vertex}
-      - VERTEX_AI_MODEL=${VERTEX_AI_MODEL:-gemini-1.5-pro}
-      - VERTEX_AI_LOCATION=${VERTEX_AI_LOCATION:-asia-south1}
-      - GCP_PROJECT_ID=${GCP_PROJECT_ID:-}
-      - AWS_REGION=${AWS_REGION:-ap-south-1}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
-      - LLM_PROVIDER=${LLM_PROVIDER:-bedrock}
-      - BEDROCK_MODEL_ID=${BEDROCK_MODEL_ID:-anthropic.claude-3-5-sonnet-20241022-v2:0}
     depends_on:
       - api
 

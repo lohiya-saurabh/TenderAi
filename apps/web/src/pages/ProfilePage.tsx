@@ -1,17 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { Page, PageHeader } from '@/components/ui/page.js';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/auth/useAuth.js';
 import { getMe, updateMe, changePassword, type UserProfile } from '@/api/users.js';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar.js';
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card.js';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card.js';
 import { Input } from '@/components/ui/input.js';
 import { Label } from '@/components/ui/label.js';
 import { Separator } from '@/components/ui/separator.js';
@@ -161,24 +156,19 @@ export const ProfilePage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 pb-12">
-      {/* 1. Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/80 pb-5">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">User Profile</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-            Manage your personal identity, credentials, and tenant workspace permissions
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+    <Page width="narrow" className="pb-12">
+      <PageHeader
+        title="Your profile"
+        description="Your name, contact details, password and role in this workspace."
+        actions={
           <Link to="/settings">
-            <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+            <Button variant="outline" size="sm" className="gap-1.5">
               <KeyRound className="h-3.5 w-3.5" />
-              Workspace Settings
+              Workspace settings
             </Button>
           </Link>
-        </div>
-      </div>
+        }
+      />
 
       {/* 2. Tenant Workspace Profile Banner */}
       <div className="p-4 sm:p-5 rounded-lg bg-card border border-border/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -188,17 +178,15 @@ export const ProfilePage: React.FC = () => {
           </div>
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Tenant:
-              </span>
+              <span className="text-2xs font-semibold text-muted-foreground">Workspace:</span>
               <span className="text-base sm:text-lg font-semibold text-foreground tracking-tight">
                 {profile?.organizationName || user?.organizationName || 'Organization Workspace'}
               </span>
               <Badge
                 variant="outline"
-                className="text-[10px] font-mono border-primary/30 text-primary bg-primary/5"
+                className="text-2xs tabular-nums border-primary/30 text-primary bg-primary/5"
               >
-                Multi-Tenant Isolated
+                Multi-tenant isolated
               </Badge>
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
@@ -213,7 +201,7 @@ export const ProfilePage: React.FC = () => {
           <Link to="/settings">
             <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
               <KeyRound className="h-3.5 w-3.5 text-muted-foreground" />
-              Tenant Settings
+              Tenant settings
             </Button>
           </Link>
         </div>
@@ -223,7 +211,7 @@ export const ProfilePage: React.FC = () => {
       <div className="p-3.5 rounded-lg bg-accent/40 border border-border flex items-start gap-3 text-xs">
         <Building2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
         <div className="space-y-0.5">
-          <span className="font-semibold text-foreground">Personal Profile vs Company Dossier</span>
+          <span className="font-semibold text-foreground">Personal profile vs company dossier</span>
           <p className="text-muted-foreground leading-relaxed">
             This page represents your individual user identity. To manage company registrations,
             GSTINs, CA UDIN certificates, or past contracts, visit the{' '}
@@ -231,7 +219,7 @@ export const ProfilePage: React.FC = () => {
               to="/company-profile"
               className="text-primary hover:underline font-medium inline-flex items-center gap-0.5"
             >
-              Company Capability Profile
+              Company capability profile
               <ExternalLink className="h-3 w-3" />
             </Link>
             .
@@ -262,7 +250,7 @@ export const ProfilePage: React.FC = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <div>
-            <CardTitle className="text-base font-semibold">Personal Information</CardTitle>
+            <CardTitle className="text-base font-semibold">Personal information</CardTitle>
             <CardDescription className="text-xs">
               Your personal credentials and display information across tender evaluation logs
             </CardDescription>
@@ -280,7 +268,7 @@ export const ProfilePage: React.FC = () => {
               disabled={isLoading}
             >
               <Edit2 className="h-3.5 w-3.5" />
-              Edit Information
+              Edit information
             </Button>
           )}
         </CardHeader>
@@ -294,12 +282,12 @@ export const ProfilePage: React.FC = () => {
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <span className="text-base font-semibold text-foreground">{displayName}</span>
-                <Badge variant="secondary" className="text-[10px] uppercase font-semibold">
+                <Badge variant="secondary" className="text-2xs font-semibold">
                   {displayRole.replace(/_/g, ' ')}
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground">{displayEmail}</p>
-              <p className="text-[10px] text-muted-foreground font-mono">
+              <p className="text-2xs text-muted-foreground tabular-nums">
                 Avatar initials derived from verified name
               </p>
             </div>
@@ -310,7 +298,7 @@ export const ProfilePage: React.FC = () => {
           {isEditing ? (
             <form onSubmit={handleSaveProfile} className="space-y-4 max-w-md">
               <div className="space-y-1.5">
-                <Label htmlFor="fullName">Full Name *</Label>
+                <Label htmlFor="fullName">Full name *</Label>
                 <Input
                   id="fullName"
                   value={nameInput}
@@ -322,7 +310,7 @@ export const ProfilePage: React.FC = () => {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="phoneField">Phone Number (Optional)</Label>
+                <Label htmlFor="phoneField">Phone number (optional)</Label>
                 <Input
                   id="phoneField"
                   value={phoneInput}
@@ -333,14 +321,14 @@ export const ProfilePage: React.FC = () => {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="emailReadonly">Email Address</Label>
+                <Label htmlFor="emailReadonly">Email address</Label>
                 <Input
                   id="emailReadonly"
                   value={displayEmail}
                   disabled
                   className="bg-muted text-muted-foreground cursor-not-allowed font-mono text-xs"
                 />
-                <span className="text-[10px] text-muted-foreground">
+                <span className="text-2xs text-muted-foreground">
                   Email address is bound to your SaaS tenant authentication identity
                 </span>
               </div>
@@ -368,29 +356,23 @@ export const ProfilePage: React.FC = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
               <div className="p-3 rounded-lg bg-muted/30 border border-border/60 space-y-1">
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  Full Name
-                </span>
+                <span className="text-2xs font-semibold text-muted-foreground">Full name</span>
                 <p className="font-medium text-foreground">{displayName}</p>
               </div>
 
               <div className="p-3 rounded-lg bg-muted/30 border border-border/60 space-y-1">
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  Email Address
-                </span>
+                <span className="text-2xs font-semibold text-muted-foreground">Email address</span>
                 <p className="font-medium text-foreground">{displayEmail}</p>
               </div>
 
               <div className="p-3 rounded-lg bg-muted/30 border border-border/60 space-y-1">
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  Phone Number
-                </span>
+                <span className="text-2xs font-semibold text-muted-foreground">Phone number</span>
                 <p className="font-medium text-foreground">{profile?.phone || 'Not provided'}</p>
               </div>
 
               <div className="p-3 rounded-lg bg-muted/30 border border-border/60 space-y-1">
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  Assigned Workspace Role
+                <span className="text-2xs font-semibold text-muted-foreground">
+                  Assigned workspace role
                 </span>
                 <p className="font-medium text-foreground">{displayRole.replace(/_/g, ' ')}</p>
               </div>
@@ -403,7 +385,7 @@ export const ProfilePage: React.FC = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <div>
-            <CardTitle className="text-base font-semibold">Security &amp; Password</CardTitle>
+            <CardTitle className="text-base font-semibold">Security &amp; password</CardTitle>
             <CardDescription className="text-xs">
               Manage your bcrypt-encrypted password credentials
             </CardDescription>
@@ -419,7 +401,7 @@ export const ProfilePage: React.FC = () => {
               className="gap-1.5 text-xs"
             >
               <Key className="h-3.5 w-3.5" />
-              Change Password
+              Change password
             </Button>
           )}
         </CardHeader>
@@ -433,7 +415,7 @@ export const ProfilePage: React.FC = () => {
               )}
 
               <div className="space-y-1.5">
-                <Label htmlFor="currPass">Current Password *</Label>
+                <Label htmlFor="currPass">Current password *</Label>
                 <Input
                   id="currPass"
                   type="password"
@@ -456,7 +438,7 @@ export const ProfilePage: React.FC = () => {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="confPass">Confirm New Password *</Label>
+                <Label htmlFor="confPass">Confirm new password *</Label>
                 <Input
                   id="confPass"
                   type="password"
@@ -492,7 +474,7 @@ export const ProfilePage: React.FC = () => {
                 <ShieldCheck className="h-4 w-4 text-foreground" />
                 <span>Password encrypted with bcrypt standard</span>
               </div>
-              <Badge variant="outline" className="text-[10px]">
+              <Badge variant="outline" className="text-2xs">
                 Secure
               </Badge>
             </div>
@@ -503,7 +485,7 @@ export const ProfilePage: React.FC = () => {
       {/* 6. Workspace & Permissions Card */}
       <Card>
         <CardHeader className="pb-4">
-          <CardTitle className="text-base font-semibold">Workspace & Access Matrix</CardTitle>
+          <CardTitle className="text-base font-semibold">Workspace & access matrix</CardTitle>
           <CardDescription className="text-xs">
             SaaS tenant boundary and assigned authorization scopes
           </CardDescription>
@@ -511,17 +493,15 @@ export const ProfilePage: React.FC = () => {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
             <div className="p-3 rounded-lg bg-muted/30 border border-border/60 space-y-1">
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                Tenant Workspace
-              </span>
+              <span className="text-2xs font-semibold text-muted-foreground">Tenant workspace</span>
               <p className="font-medium text-foreground">
                 {profile?.organizationName || user?.organizationName || 'Default Workspace'}
               </p>
             </div>
 
             <div className="p-3 rounded-lg bg-muted/30 border border-border/60 space-y-1">
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                Organization Tenant ID
+              <span className="text-2xs font-semibold text-muted-foreground">
+                Organization tenant ID
               </span>
               <p className="font-mono text-foreground">
                 {profile?.organizationId || user?.organizationId || '—'}
@@ -533,9 +513,9 @@ export const ProfilePage: React.FC = () => {
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                 <Layers className="h-3.5 w-3.5 text-primary" />
-                Active Permissions List
+                Active permissions list
               </span>
-              <Badge variant="outline" className="text-[10px] font-mono">
+              <Badge variant="outline" className="text-2xs tabular-nums">
                 {(profile?.permissions || user?.permissions)?.length || 0} Scopes
               </Badge>
             </div>
@@ -544,7 +524,7 @@ export const ProfilePage: React.FC = () => {
               {(profile?.permissions || user?.permissions)?.map((perm) => (
                 <span
                   key={perm}
-                  className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono bg-primary/10 text-primary border border-primary/20"
+                  className="inline-flex items-center px-2 py-0.5 rounded text-2xs font-mono bg-primary/10 text-primary border border-primary/20"
                 >
                   {perm}
                 </span>
@@ -557,9 +537,7 @@ export const ProfilePage: React.FC = () => {
       {/* 7. Session Security & Compliance Overview */}
       <Card>
         <CardHeader className="pb-4">
-          <CardTitle className="text-base font-semibold">
-            Session Security &amp; Token Architecture
-          </CardTitle>
+          <CardTitle className="text-base font-semibold">Sessions</CardTitle>
           <CardDescription className="text-xs">
             Cryptographic token session and multi-tenant security guarantees
           </CardDescription>
@@ -571,7 +549,7 @@ export const ProfilePage: React.FC = () => {
                 <ShieldCheck className="h-4 w-4" />
                 <span>HMAC-SHA256</span>
               </div>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-2xs text-muted-foreground">
                 Signed cryptographic access token with continuous validity
               </p>
             </div>
@@ -579,9 +557,9 @@ export const ProfilePage: React.FC = () => {
             <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 space-y-1">
               <div className="flex items-center gap-1.5 text-primary font-semibold">
                 <Lock className="h-4 w-4" />
-                <span>Tenant Gated</span>
+                <span>Tenant gated</span>
               </div>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-2xs text-muted-foreground">
                 Fiber-safe anti-IDOR isolation applied on every API query
               </p>
             </div>
@@ -591,13 +569,13 @@ export const ProfilePage: React.FC = () => {
                 <KeyRound className="h-4 w-4 text-muted-foreground" />
                 <span>OCC Protected</span>
               </div>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-2xs text-muted-foreground">
                 Optimistic concurrency control across compliance reviews
               </p>
             </div>
           </div>
         </CardContent>
       </Card>
-    </div>
+    </Page>
   );
 };

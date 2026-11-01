@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Page, PageHeader } from '@/components/ui/page.js';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/auth/useAuth.js';
 import { useCompany } from '@/context/useCompany.js';
@@ -9,7 +10,13 @@ import {
   type NotificationPreferences,
   type WorkspaceSettings,
 } from '@/api/settings.js';
-import { listTeamMembers, inviteTeamMember, type TeamMember } from '@/api/teams.js';
+import {
+  listTeamMembers,
+  inviteTeamMember,
+  reissueInviteLink,
+  type InviteLink,
+  type TeamMember,
+} from '@/api/teams.js';
 import {
   getSubscription,
   getUsageSummary,
@@ -21,7 +28,6 @@ import {
   type PlanTier,
 } from '@/api/billing.js';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs.js';
-import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
 import {
   Building2,
@@ -72,8 +78,8 @@ export const SettingsPage: React.FC = () => {
   const [inviteName, setInviteName] = useState('');
   const [inviteRole, setInviteRole] = useState('BID_MANAGER');
   const [isSubmittingInvite, setIsSubmittingInvite] = useState(false);
-  const [inviteSuccess, setInviteSuccess] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
+  const [inviteLink, setInviteLink] = useState<InviteLink | null>(null);
 
   // New Company form in Company tab
   const [isAddingCompany, setIsAddingCompany] = useState(false);
@@ -186,13 +192,22 @@ export const SettingsPage: React.FC = () => {
 
     if (res.ok) {
       setTeamMembers((prev) => [...prev, res.data]);
-      setInviteSuccess(true);
+      setInviteLink(res.data);
       setInviteEmail('');
       setInviteName('');
       setIsInvitingMember(false);
-      setTimeout(() => setInviteSuccess(false), 3500);
     } else {
       setInviteError(res.error.message || 'Failed to provision team member.');
+    }
+  };
+
+  const handleReissueInvite = async (memberId: string) => {
+    setInviteError(null);
+    const res = await reissueInviteLink(memberId);
+    if (res.ok) {
+      setInviteLink(res.data);
+    } else {
+      setInviteError(res.error.message || 'Could not create a new invite link.');
     }
   };
 
@@ -242,47 +257,30 @@ export const SettingsPage: React.FC = () => {
   };
 
   return (
-    <div className="w-full flex flex-col gap-6">
-      {/* 1. Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/80 pb-5">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            Workspace &amp; System Settings
-          </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-            Configure tenant workspace parameters, billing subscriptions, team members, and alerts
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-xs font-mono">
-            Tenant: {user?.organizationId || '—'}
-          </Badge>
+    <Page width="narrow">
+      <PageHeader
+        title="Settings"
+        description="Workspace, team, companies, billing and notifications."
+        actions={
           <Button
             type="button"
             variant="outline"
             size="sm"
             onClick={toggleTheme}
-            className="h-8 px-2.5 text-xs font-semibold gap-1.5 border-border hover:bg-accent cursor-pointer transition-colors shadow-2xs"
-            aria-label={`Current theme: ${theme === 'dark' ? 'Dark' : 'Light'}. Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-            title={`Current theme: ${theme === 'dark' ? 'Dark' : 'Light'}. Click to switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
+            className="gap-1.5"
+            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
           >
-            {theme === 'dark' ? (
-              <Moon className="h-3.5 w-3.5 text-orange-400" />
-            ) : (
-              <Sun className="h-3.5 w-3.5 text-amber-500" />
-            )}
-            <span className="hidden sm:inline text-xs font-mono font-medium text-foreground">
-              {theme === 'dark' ? 'Dark' : 'Light'}
-            </span>
+            {theme === 'dark' ? <Moon className="h-3.5 w-3.5" /> : <Sun className="h-3.5 w-3.5" />}
+            {theme === 'dark' ? 'Dark' : 'Light'}
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Global Feedback Banner */}
       {settingsSuccess && (
         <div className="p-3 rounded-lg bg-primary/10 border border-primary/30 text-primary flex items-center gap-2 text-xs font-medium">
           <CheckCircle2 className="h-4 w-4 shrink-0" />
-          <span>Workspace preferences saved and synchronized to PostgreSQL.</span>
+          <span>Workspace settings saved.</span>
         </div>
       )}
 
@@ -307,7 +305,7 @@ export const SettingsPage: React.FC = () => {
           </TabsTrigger>
           <TabsTrigger value="team" className="gap-1.5 text-xs">
             <Users className="h-3.5 w-3.5" />
-            <span>Team &amp; RBAC</span>
+            <span>Team</span>
           </TabsTrigger>
           <TabsTrigger value="companies" className="gap-1.5 text-xs">
             <Building2 className="h-3.5 w-3.5" />
@@ -336,7 +334,6 @@ export const SettingsPage: React.FC = () => {
             isChangingPlan={isChangingPlan}
             billingFeedback={billingFeedback}
             onChangePlan={handleChangePlan}
-            companiesCount={companies.length}
           />
         </TabsContent>
 
@@ -354,6 +351,9 @@ export const SettingsPage: React.FC = () => {
 
         <TabsContent value="team" className="space-y-6 mt-0">
           <TeamSettingsTab
+            inviteLink={inviteLink}
+            onDismissInviteLink={() => setInviteLink(null)}
+            onReissueInvite={handleReissueInvite}
             organizationName={user?.organizationName}
             teamMembers={teamMembers}
             isTeamLoading={isTeamLoading}
@@ -362,7 +362,6 @@ export const SettingsPage: React.FC = () => {
             inviteEmail={inviteEmail}
             inviteRole={inviteRole}
             isSubmittingInvite={isSubmittingInvite}
-            inviteSuccess={inviteSuccess}
             inviteError={inviteError}
             onSetIsInvitingMember={setIsInvitingMember}
             onSetInviteName={setInviteName}
@@ -388,6 +387,6 @@ export const SettingsPage: React.FC = () => {
           />
         </TabsContent>
       </Tabs>
-    </div>
+    </Page>
   );
 };

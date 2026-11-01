@@ -2,26 +2,23 @@
  * AuthService — Handles user authentication against PostgreSQL with cryptographic JWTs.
  */
 import { Injectable, Inject, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PGlite } from '@electric-sql/pglite';
 import bcrypt from 'bcrypt';
 import crypto from 'node:crypto';
-import { sql } from 'drizzle-orm';
-import {
-  DRIZZLE_TOKEN,
-  type DrizzleDb,
-  createDrizzle,
-} from '@/common/database/database.module.js';
-import * as schema from '@/common/database/schema.js';
+import { type DrizzleDb } from '@/common/database/database.module.js';
 import { UnauthorizedError, ConflictError, BadRequestError } from '@/common/errors/errors.js';
 import { TokenService } from '@/common/security/TokenService.js';
-import {
-  ROLE_PERMISSIONS,
-  type UserRole,
-  type Permission,
-} from '@/common/security/permissions.js';
+import { ROLE_PERMISSIONS, type UserRole, type Permission } from '@/common/security/permissions.js';
+import { AuthRepository } from '@/modules/auth/auth.repository.js';
+import { hashInviteToken } from '@/modules/teams/teams.service.js';
+import type * as schema from '@/common/database/schema.js';
 
-// Precomputed cost-10 bcrypt hash used to normalize timing and defend against user enumeration
-const DUMMY_BCRYPT_HASH = '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
+/**
+ * The temporary password every invited member used to get. Accounts still carrying it
+ * must come back through a fresh invite link, so it is refused outright.
+ */
+const RETIRED_SHARED_INVITE_PASSWORD = 'TenderPulse@2026';
 
 export interface AuthResult {
   accessToken: string;
@@ -59,31 +56,31 @@ export interface RegisterResult extends AuthResult {
 
 @Injectable()
 export class AuthService {
-  private readonly db: DrizzleDb;
+  private readonly repository: AuthRepository;
   private readonly tokenService: TokenService;
+  private readonly dummyBcryptHash: string;
 
   constructor(
-    @Inject(DRIZZLE_TOKEN) db: DrizzleDb | PGlite,
+    @Inject(AuthRepository) repoOrDb: AuthRepository | DrizzleDb | PGlite,
     @Optional() @Inject(TokenService) tokenService?: TokenService,
+    @Optional() configService?: ConfigService,
   ) {
-    this.db = 'select' in db ? (db as DrizzleDb) : createDrizzle(db as PGlite);
+    this.repository = repoOrDb instanceof AuthRepository ? repoOrDb : new AuthRepository(repoOrDb);
     this.tokenService = tokenService || new TokenService();
+    this.dummyBcryptHash = configService?.get<string>('BCRYPT_HASH') ?? '';
   }
 
   public async login(email?: string, password?: string): Promise<AuthResult> {
     const candidateEmail = String(email || '').trim();
     const candidatePassword = String(password || '');
 
-    // Drizzle ORM Type-Safe Query
-    const [matched] = await this.db
-      .select()
-      .from(schema.users)
-      .where(sql`LOWER(${schema.users.email}) = LOWER(${candidateEmail})`)
-      .limit(1);
+    const matched = await this.repository.findUserByEmail(candidateEmail);
 
     if (!matched) {
       // Defend against user enumeration by equalizing comparison latency (~70ms)
-      await bcrypt.compare(candidatePassword, DUMMY_BCRYPT_HASH);
+      if (this.dummyBcryptHash) {
+        await bcrypt.compare(candidatePassword, this.dummyBcryptHash);
+      }
       throw new UnauthorizedError('Invalid email or password.');
     }
 
@@ -91,16 +88,56 @@ export class AuthService {
     if (!passwordValid) {
       throw new UnauthorizedError('Invalid email or password.');
     }
+    if (candidatePassword === RETIRED_SHARED_INVITE_PASSWORD) {
+      throw new UnauthorizedError(
+        'This temporary invite password is no longer accepted. Ask your workspace admin for a new invite link.',
+      );
+    }
 
+    return this.issueSession(matched);
+  }
+
+  /**
+   * Accept a one-time invite link: set the member's own password, retire the link and
+   * sign them in.
+   */
+  public async acceptInvite(token?: string, password?: string): Promise<AuthResult> {
+    const candidatePassword = String(password || '');
+    if (!token) {
+      throw new BadRequestError('The invite link is missing its token.');
+    }
+    if (candidatePassword.length < 8) {
+      throw new BadRequestError('Password must be at least 8 characters long.');
+    }
+    if (candidatePassword === RETIRED_SHARED_INVITE_PASSWORD) {
+      throw new BadRequestError('Choose a different password.');
+    }
+    const invited = await this.repository.findUserByInviteHash(hashInviteToken(token));
+    if (!invited || !invited.inviteExpiresAt || invited.inviteExpiresAt.getTime() < Date.now()) {
+      throw new UnauthorizedError(
+        'This invite link is invalid or has expired. Ask your workspace admin for a new one.',
+      );
+    }
+    const passwordHash = await bcrypt.hash(candidatePassword, 10);
+    const accepted = await this.repository.acceptInvite(invited.id, passwordHash);
+    if (!accepted) {
+      throw new UnauthorizedError('This invite link has already been used.');
+    }
+    return this.issueSession(accepted);
+  }
+
+  private async issueSession(matched: schema.User): Promise<AuthResult> {
     const rawPermissions: Permission[] =
       typeof matched.permissions === 'string'
         ? JSON.parse(matched.permissions)
         : (matched.permissions ?? []);
-    const normalizedRole = String(matched.role ?? 'BID_MANAGER')
+    const normalizedRole = String(matched.role ?? 'VIEWER')
       .toUpperCase()
       .replace(/\s+/g, '_') as UserRole;
 
-    const defaultRolePerms = ROLE_PERMISSIONS[normalizedRole] ? Array.from(ROLE_PERMISSIONS[normalizedRole]) : [];
+    const defaultRolePerms = ROLE_PERMISSIONS[normalizedRole]
+      ? Array.from(ROLE_PERMISSIONS[normalizedRole])
+      : [];
     const permissions: Permission[] = Array.from(new Set([...rawPermissions, ...defaultRolePerms]));
 
     const userProfile = {
@@ -144,33 +181,17 @@ export class AuthService {
     const { userId } = this.tokenService.verifyRefreshToken(incomingRefreshToken);
 
     const tokenHash = crypto.createHash('sha256').update(incomingRefreshToken).digest('hex');
-    try {
-      const [storedToken] = await this.db
-        .select()
-        .from(schema.refreshTokens)
-        .where(sql`${schema.refreshTokens.tokenHash} = ${tokenHash}`)
-        .limit(1);
+    const storedToken = await this.repository.findRefreshTokenByHash(tokenHash);
 
-      if (storedToken && storedToken.revokedAt) {
-        throw new UnauthorizedError('Refresh token has been revoked.');
-      }
-
-      if (storedToken) {
-        await this.db
-          .update(schema.refreshTokens)
-          .set({ revokedAt: new Date() })
-          .where(sql`${schema.refreshTokens.tokenHash} = ${tokenHash}`);
-      }
-    } catch (err) {
-      if (err instanceof UnauthorizedError) throw err;
-      // ignore table absence in memory test doubles
+    if (storedToken && storedToken.revokedAt) {
+      throw new UnauthorizedError('Refresh token has been revoked.');
     }
 
-    const [user] = await this.db
-      .select()
-      .from(schema.users)
-      .where(sql`${schema.users.id} = ${userId}`)
-      .limit(1);
+    if (storedToken) {
+      await this.repository.revokeRefreshToken(tokenHash);
+    }
+
+    const user = await this.repository.findUserById(userId);
 
     if (!user) {
       throw new UnauthorizedError(
@@ -186,7 +207,9 @@ export class AuthService {
       .toUpperCase()
       .replace(/\s+/g, '_') as UserRole;
 
-    const defaultRolePerms = ROLE_PERMISSIONS[normalizedRole] ? Array.from(ROLE_PERMISSIONS[normalizedRole]) : [];
+    const defaultRolePerms = ROLE_PERMISSIONS[normalizedRole]
+      ? Array.from(ROLE_PERMISSIONS[normalizedRole])
+      : [];
     const permissions: Permission[] = Array.from(new Set([...rawPermissions, ...defaultRolePerms]));
 
     const userProfile = {
@@ -220,35 +243,21 @@ export class AuthService {
 
   public async logout(incomingRefreshToken?: string): Promise<void> {
     if (!incomingRefreshToken) return;
-    try {
-      const tokenHash = crypto.createHash('sha256').update(incomingRefreshToken).digest('hex');
-      await this.db
-        .update(schema.refreshTokens)
-        .set({ revokedAt: new Date() })
-        .where(sql`${schema.refreshTokens.tokenHash} = ${tokenHash}`);
-    } catch {
-      // ignore
-    }
+    const tokenHash = crypto.createHash('sha256').update(incomingRefreshToken).digest('hex');
+    await this.repository.revokeRefreshToken(tokenHash);
   }
 
   private async persistRefreshToken(userId: string, refreshToken: string): Promise<void> {
-    try {
-      const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
-      const now = new Date();
-      const expiresAt = new Date(now.getTime() + 7 * 24 * 3600 * 1000);
-      await this.db
-        .insert(schema.refreshTokens)
-        .values({
-          id: `rt_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`,
-          userId,
-          tokenHash,
-          expiresAt,
-          createdAt: now,
-        })
-        .onConflictDoNothing();
-    } catch {
-      // ignore in test doubles where table is unseeded
-    }
+    const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 7 * 24 * 3600 * 1000);
+    await this.repository.createRefreshToken({
+      id: `rt_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`,
+      userId,
+      tokenHash,
+      expiresAt,
+      createdAt: now,
+    });
   }
 
   /**
@@ -273,11 +282,7 @@ export class AuthService {
     }
 
     // 1. Email Uniqueness Check
-    const [existing] = await this.db
-      .select()
-      .from(schema.users)
-      .where(sql`LOWER(${schema.users.email}) = LOWER(${candidateEmail})`)
-      .limit(1);
+    const existing = await this.repository.findUserByEmail(candidateEmail);
 
     if (existing) {
       throw new ConflictError('An account with this email address already exists. Please sign in.');
@@ -299,11 +304,25 @@ export class AuthService {
     const periodEnd = new Date(now);
     periodEnd.setDate(periodEnd.getDate() + 30);
 
-    // 4. Create User Record as TENANT_ADMIN
+    // 3b. Create Canonical Organization Entity
+    const orgSlug = orgName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+
     const adminPermissions: Permission[] = Array.from(ROLE_PERMISSIONS.ADMIN);
-    const [createdUser] = await this.db
-      .insert(schema.users)
-      .values({
+    const profileVersionId = `cpv_${timestamp}_${rand}`;
+
+    const createdUser = await this.repository.registerTenant({
+      org: {
+        id: orgId,
+        name: orgName,
+        slug: `${orgSlug}-${rand}`,
+        domain: candidateEmail.split('@')[1] ?? null,
+        createdAt: now,
+        updatedAt: now,
+      },
+      user: {
         id: userId,
         email: candidateEmail,
         password: hashedPassword,
@@ -312,13 +331,8 @@ export class AuthService {
         permissions: adminPermissions,
         organizationId: orgId,
         organizationName: orgName,
-      })
-      .returning();
-
-    // 5. Create Tenant Settings with defaults
-    await this.db
-      .insert(schema.tenantSettings)
-      .values({
+      },
+      tenantSettings: {
         id: `ts_${timestamp}_${rand}`,
         organizationId: orgId,
         defaultCompanyId: companyId,
@@ -328,13 +342,8 @@ export class AuthService {
           notifyReviewRequests: true,
           notifyHighRiskFlags: true,
         },
-      })
-      .onConflictDoNothing();
-
-    // 6. Create Default Initial Company Entity
-    await this.db
-      .insert(schema.companies)
-      .values({
+      },
+      company: {
         id: companyId,
         organizationId: orgId,
         legalName: companyName,
@@ -349,14 +358,8 @@ export class AuthService {
         constitution: 'PUBLIC_LIMITED',
         createdAt: now,
         updatedAt: now,
-      })
-      .onConflictDoNothing();
-
-    // 6b. Create Initial Company Capability Profile Baseline
-    const profileVersionId = `cpv_${timestamp}_${rand}`;
-    await this.db
-      .insert(schema.companyProfileVersions)
-      .values({
+      },
+      profileVersion: {
         id: profileVersionId,
         companyId: companyId,
         organizationId: orgId,
@@ -376,24 +379,15 @@ export class AuthService {
         },
         createdBy: userId,
         createdAt: now,
-      })
-      .onConflictDoNothing();
-
-    await this.db
-      .insert(schema.companyProfiles)
-      .values({
+      },
+      profilePointer: {
         id: `prof_${companyId}`,
         companyId: companyId,
         organizationId: orgId,
         activeVersionId: profileVersionId,
         updatedAt: now,
-      })
-      .onConflictDoNothing();
-
-    // 7. Create Initial Free Tier Subscription
-    await this.db
-      .insert(schema.subscriptions)
-      .values({
+      },
+      subscription: {
         id: `sub_${timestamp}_${rand}`,
         organizationId: orgId,
         planTier: 'FREE',
@@ -402,8 +396,8 @@ export class AuthService {
         currentPeriodStart: now,
         currentPeriodEnd: periodEnd,
         cancelAtPeriodEnd: false,
-      })
-      .onConflictDoNothing();
+      },
+    });
 
     // 8. Sign JWT Access and Refresh Tokens
     const finalUserId = createdUser ? createdUser.id : userId;

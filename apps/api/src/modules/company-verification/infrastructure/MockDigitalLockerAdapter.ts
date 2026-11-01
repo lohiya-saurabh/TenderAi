@@ -5,7 +5,8 @@
  * and retrieval of government-issued corporate certificates (MCA, GSTN, MSME)
  * with authentic PDF buffers and computed SHA-256 cryptographic hashes.
  */
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import crypto from 'node:crypto';
 import type {
   IDigitalLockerPort,
@@ -17,8 +18,11 @@ import { BadRequestError } from '@/common/errors/errors.js';
 
 @Injectable()
 export class MockDigitalLockerAdapter implements IDigitalLockerPort {
-  private readonly hmacSecret =
-    process.env.DIGILOCKER_STATE_SECRET || 'tenderpulse-digilocker-mock-secret';
+  private readonly hmacSecret: string;
+
+  constructor(@Optional() private readonly configService?: ConfigService) {
+    this.hmacSecret = this.configService?.get<string>('DIGILOCKER_STATE_SECRET') ?? '';
+  }
 
   public async generateAuthUrl(
     tenantId: string,

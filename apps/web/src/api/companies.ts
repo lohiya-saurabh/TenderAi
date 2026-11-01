@@ -5,7 +5,7 @@
  * (companies) scoped within the authenticated tenant boundary.
  */
 
-import { apiGet, apiPost, type ApiResult } from '@/api/client.js';
+import { apiGet, apiPatch, apiPost, type ApiResult } from '@/api/client.js';
 import type {
   CompanyProfilePayload,
   CompanyProfileVersion,
@@ -31,6 +31,7 @@ export interface CompanyItem {
   mcaVerificationData?: Record<string, unknown> | null;
   digilockerLinkedAt?: string | null;
   digilockerMetadata?: Record<string, unknown> | null;
+  onboardingPreferences?: OnboardingPreferences | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -122,11 +123,33 @@ export function getCompany(id: string): Promise<ApiResult<CompanyItem>> {
 /**
  * Fetch capability profile and version history for a specific company.
  */
-export function getCompanyProfile(companyId?: string): Promise<ApiResult<CompanyProfileView>> {
-  const url = companyId
-    ? `/api/v1/companies/${encodeURIComponent(companyId)}/profile`
-    : '/api/v1/company-profile';
-  return apiGet<CompanyProfileView>(url);
+/** Adds what an evidence document states (turnover, a project, a certificate) to the profile. */
+export function applyEvidenceToProfile(
+  companyId: string,
+  evidenceId: string,
+): Promise<ApiResult<{ version: CompanyProfileVersion; added: string[]; skipped: string[] }>> {
+  return apiPost(
+    `/api/v1/company-profile/evidence/${encodeURIComponent(evidenceId)}/apply?companyId=${encodeURIComponent(companyId)}`,
+  );
+}
+
+/** Fired after the profile gains a version from evidence, so open views can reload it. */
+export const PROFILE_UPDATED_EVENT = 'tenderpulse:profile-updated';
+
+export function getCompanyProfile(companyId: string): Promise<ApiResult<CompanyProfileView>> {
+  return apiGet<CompanyProfileView>(`/api/v1/companies/${encodeURIComponent(companyId)}/profile`);
+}
+
+/**
+ * Fetch a specific pinned profile version for a company.
+ */
+export function getCompanyProfileVersion(
+  companyId: string,
+  versionId: string,
+): Promise<ApiResult<CompanyProfileVersion>> {
+  return apiGet<CompanyProfileVersion>(
+    `/api/v1/companies/${encodeURIComponent(companyId)}/profile/versions/${encodeURIComponent(versionId)}`,
+  );
 }
 
 /**
@@ -143,6 +166,28 @@ export function createCompanyProfile(
 }
 
 export const createCompanyProfileVersion = createCompanyProfile;
+
+export type TurnoverBand = 'under_10_cr' | '10_to_50_cr' | '50_to_250_cr' | 'above_250_cr';
+
+/** Self-declared onboarding answers; never part of the evidence-backed profile. */
+export interface OnboardingPreferences {
+  sectors: string[];
+  turnoverBand: TurnoverBand;
+  completedAt: string;
+}
+
+/**
+ * Save the onboarding wizard's sector and turnover answers on a company.
+ */
+export function updateOnboardingPreferences(
+  companyId: string,
+  input: { sectors: string[]; turnoverBand: TurnoverBand },
+): Promise<ApiResult<CompanyItem>> {
+  return apiPatch<CompanyItem>(
+    `/api/v1/companies/${encodeURIComponent(companyId)}/onboarding-preferences`,
+    input,
+  );
+}
 
 /**
  * Get expiring certificates for a specific company.
@@ -184,28 +229,6 @@ export function verifyUdyam(
   return apiPost<VerificationResult>(
     `/api/v1/companies/${encodeURIComponent(companyId)}/verification/udyam`,
     { udyamNumber },
-  );
-}
-
-export function getDigiLockerAuthUrl(
-  companyId: string,
-  redirectUri?: string,
-): Promise<ApiResult<{ authorizationUrl: string; state: string }>> {
-  const query = redirectUri ? `?redirectUri=${encodeURIComponent(redirectUri)}` : '';
-  return apiGet<{ authorizationUrl: string; state: string }>(
-    `/api/v1/companies/${encodeURIComponent(companyId)}/verification/digilocker/authorize${query}`,
-  );
-}
-
-export function submitDigiLockerCallback(
-  companyId: string,
-  code: string,
-  state: string,
-  redirectUri?: string,
-): Promise<ApiResult<EvidenceDocumentItem[]>> {
-  return apiPost<EvidenceDocumentItem[]>(
-    `/api/v1/companies/${encodeURIComponent(companyId)}/verification/digilocker/callback`,
-    { code, state, redirectUri },
   );
 }
 
@@ -261,36 +284,6 @@ export function uploadCompanyEvidence(
   );
 }
 
-export function importCloudEvidence(
-  companyId: string,
-  input: {
-    provider: 'google-drive' | 'onedrive';
-    fileId: string;
-    fileName?: string;
-    evidenceType: string;
-    issuer?: string;
-    referenceNumber?: string;
-    validFrom?: string;
-    validTo?: string;
-  },
-): Promise<ApiResult<EvidenceDocumentItem>> {
-  return apiPost<EvidenceDocumentItem>(
-    `/api/v1/companies/${encodeURIComponent(companyId)}/evidence/import-cloud`,
-    input,
-  );
-}
-
-export function listCloudFiles(
-  companyId: string,
-  provider: 'google-drive' | 'onedrive',
-  folderId?: string,
-): Promise<ApiResult<Array<{ id: string; name: string; mimeType: string; sizeBytes: number }>>> {
-  const query = folderId ? `&folderId=${encodeURIComponent(folderId)}` : '';
-  return apiGet<Array<{ id: string; name: string; mimeType: string; sizeBytes: number }>>(
-    `/api/v1/companies/${encodeURIComponent(companyId)}/evidence/cloud-files?provider=${provider}${query}`,
-  );
-}
-
 export interface EvidenceDownloadUrlResponse {
   downloadUrl: string;
   expiresInSeconds: number;
@@ -307,4 +300,3 @@ export function getCompanyEvidenceDownloadUrl(
     `/api/v1/companies/${encodeURIComponent(companyId)}/evidence/${encodeURIComponent(evidenceId)}/download-url`,
   );
 }
-

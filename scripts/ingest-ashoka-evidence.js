@@ -9,7 +9,7 @@
  * - ISO Certifications (9001, 14001, 45001)
  * - Statutory Identity (GSTIN, PAN, MCA CIN)
  */
-import { PGlite } from '@electric-sql/pglite';
+import { openDb } from './lib/db.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -18,7 +18,6 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
-const dbPath = path.join(rootDir, 'data/postgres');
 const evidenceDir = path.join(rootDir, 'data/procurement-evidence/02_Company_Evidence_and_Credentials');
 
 const orgId = 'org_ashoka_001';
@@ -282,8 +281,7 @@ const DOCUMENTS = [
 
 async function ingestEvidence() {
   console.log('📦 Batch Ingesting Authentic Procurement Evidence for Ashoka Buildcon...');
-  const pg = new PGlite(dbPath);
-  await pg.waitReady;
+  const pg = await openDb();
 
   try {
     for (const doc of DOCUMENTS) {

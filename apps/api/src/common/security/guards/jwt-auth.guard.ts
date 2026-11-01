@@ -2,7 +2,9 @@
  * JwtAuthGuard — Global NestJS Guard for Cryptographic JWT Authentication
  *
  * Verifies Bearer tokens on every incoming request unless decorated with @Public().
- * Supports Authorization header ("Bearer <token>") and query param ("?token=<token>" for EventSource SSE).
+ * Accepts the Authorization header ("Bearer <token>") or the httpOnly tp_access_token cookie.
+ * Tokens in query parameters are deliberately rejected: URLs end up in proxy and access
+ * logs and browser history. The web client streams SSE over fetch with the Bearer header.
  */
 
 import { Injectable, CanActivate, ExecutionContext, Inject } from '@nestjs/common';
@@ -47,11 +49,6 @@ export class JwtAuthGuard implements CanActivate {
       if (match && match[1]) {
         token = decodeURIComponent(match[1]);
       }
-    }
-
-    // Support browser EventSource SSE connections passing token via query param as fallback
-    if (!token && request.query?.token && typeof request.query.token === 'string') {
-      token = request.query.token.trim();
     }
 
     if (!token) {

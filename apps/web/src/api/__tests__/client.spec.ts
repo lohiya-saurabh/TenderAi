@@ -229,3 +229,50 @@ describe('API Client', () => {
     expect(res3.ok).toBe(true);
   });
 });
+
+describe('API Client — request cancellation', () => {
+  beforeEach(() => {
+    clearTokens();
+    vi.restoreAllMocks();
+  });
+
+  const abortableFetch = () =>
+    vi.fn().mockImplementation(
+      (_url: string, init: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          init.signal?.addEventListener('abort', () =>
+            reject(new DOMException('The operation was aborted.', 'AbortError')),
+          );
+        }),
+    );
+
+  it('returns an aborted ApiError when the caller aborts', async () => {
+    vi.stubGlobal('fetch', abortableFetch());
+    const controller = new AbortController();
+
+    const pending = apiGet('/api/v1/bids/slow', { signal: controller.signal });
+    controller.abort();
+    const result = await pending;
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.aborted).toBe(true);
+    }
+  });
+
+  it("does not share an in-flight request, so one caller's abort leaves others running", async () => {
+    const mockFetch = abortableFetch();
+    vi.stubGlobal('fetch', mockFetch);
+    const first = new AbortController();
+    const second = new AbortController();
+
+    const firstReq = apiGet('/api/v1/bids/shared', { signal: first.signal });
+    void apiGet('/api/v1/bids/shared', { signal: second.signal });
+    await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(2));
+
+    first.abort();
+    await firstReq;
+    expect(second.signal.aborted).toBe(false);
+    second.abort();
+  });
+});

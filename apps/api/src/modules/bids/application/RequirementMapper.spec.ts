@@ -97,7 +97,7 @@ describe('RequirementMapper — ComplianceItem → AI RequirementCandidate', () 
       }),
     );
     expect(candidate.execution_rules.stamp_paper_denomination_inr).toBeNull();
-    expect(candidate.execution_rules.signing_authority_rank).toBe('Authorized Signatory');
+    expect(candidate.execution_rules.signing_authority_rank).toBe(''); // not stated = empty, never invented
   });
 
   it('always sends an empty ambiguity_flags list (extraction pipeline does not persist flags)', () => {

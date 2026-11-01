@@ -12,12 +12,9 @@ import {
   CheckCircle2,
   Layers,
 } from 'lucide-react';
-import {
-  getCompanyProfile,
-  getExpiringCertificates,
-  type CompanyProfileView,
-  type ExpiringCertificatesResponse,
-} from '@/api/companyProfile.js';
+import { getCompanyProfile, getCompanyExpiringCertificates } from '@/api/companies.js';
+import type { CompanyProfileView, ExpiringCertificatesResponse } from '@/api/companyProfile.js';
+import { useCompany } from '@/context/useCompany.js';
 import { Badge } from '@/components/ui/badge.js';
 
 /**
@@ -25,17 +22,26 @@ import { Badge } from '@/components/ui/badge.js';
  * evaluated deterministically against incoming tender requirements.
  *
  * Grounded in live backend endpoints:
- *   - GET /api/v1/company-profile
- *   - GET /api/v1/company-profile/expiring-certificates
+ *   - GET /api/v1/companies/:companyId/profile
+ *   - GET /api/v1/companies/:companyId/expiring-certificates
  */
 export const CompanyReadinessCard: React.FC = () => {
+  const { selectedCompany, isLoading: companiesLoading } = useCompany();
+  const companyId = selectedCompany?.id;
   const [profile, setProfile] = useState<CompanyProfileView | null>(null);
   const [expiring, setExpiring] = useState<ExpiringCertificatesResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    if (!companyId) {
+      setProfile(null);
+      setExpiring(null);
+      setLoading(false);
+      return;
+    }
     let isMounted = true;
-    Promise.all([getCompanyProfile(), getExpiringCertificates(90)])
+    setLoading(true);
+    Promise.all([getCompanyProfile(companyId), getCompanyExpiringCertificates(companyId, 90)])
       .then(([profRes, expRes]) => {
         if (!isMounted) return;
         if (profRes.ok && profRes.data) {
@@ -52,7 +58,7 @@ export const CompanyReadinessCard: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [companyId]);
 
   const activePayload = profile?.active?.payload;
   const activeVersion = profile?.active;
@@ -87,8 +93,8 @@ export const CompanyReadinessCard: React.FC = () => {
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2">
             <Building2 className="h-4 w-4 text-primary" />
-            <CardTitle className="text-sm font-semibold tracking-tight text-foreground">
-              Company Capability Profile
+            <CardTitle className="text-base font-semibold tracking-tight text-foreground">
+              Company capability profile
             </CardTitle>
           </div>
           {activeVersion && (
@@ -98,11 +104,11 @@ export const CompanyReadinessCard: React.FC = () => {
             >
               <Badge
                 variant="outline"
-                className="bg-muted text-foreground border-border text-[11px] font-medium flex items-center gap-1 cursor-pointer"
+                className="bg-muted text-foreground border-border text-2xs font-medium flex items-center gap-1 cursor-pointer"
               >
                 <CheckCircle2 className="h-3 w-3" />v{activeVersion.version} Active
               </Badge>
-              <span className="text-[11px] text-muted-foreground group-hover:text-foreground transition-colors hidden sm:inline font-mono">
+              <span className="text-2xs text-muted-foreground group-hover:text-foreground transition-colors hidden sm:inline tabular-nums">
                 {activePayload?.company_name}
               </span>
             </Link>
@@ -115,7 +121,7 @@ export const CompanyReadinessCard: React.FC = () => {
       </CardHeader>
 
       <CardContent className="pt-4 flex flex-col gap-4">
-        {loading ? (
+        {loading || companiesLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="h-20 rounded-lg bg-muted/40 animate-pulse" />
@@ -134,19 +140,17 @@ export const CompanyReadinessCard: React.FC = () => {
               {/* Pillar 1: Registrations */}
               <div className="p-3.5 rounded-lg border border-border/60 bg-muted/20 flex flex-col justify-between">
                 <div className="flex items-center justify-between text-muted-foreground mb-1.5">
-                  <span className="text-[11px] font-medium tracking-wide uppercase">
-                    Registrations
-                  </span>
+                  <span className="text-2xs font-medium">Registrations</span>
                   <ShieldCheck className="h-4 w-4 text-primary/80" />
                 </div>
                 <div>
-                  <div className="text-lg font-bold text-foreground font-mono">
+                  <div className="text-lg font-bold text-foreground tabular-nums">
                     {regCount}{' '}
                     <span className="text-xs font-normal text-muted-foreground font-sans">
                       Active
                     </span>
                   </div>
-                  <div className="text-[11px] text-foreground/80 font-medium mt-0.5 flex items-center gap-1">
+                  <div className="text-2xs text-foreground/80 font-medium mt-0.5 flex items-center gap-1">
                     <CheckCircle2 className="h-3 w-3" />
                     GSTIN, PAN, Udyam, GeM
                   </div>
@@ -156,17 +160,15 @@ export const CompanyReadinessCard: React.FC = () => {
               {/* Pillar 2: 3-Year Avg Turnover */}
               <div className="p-3.5 rounded-lg border border-border/60 bg-muted/20 flex flex-col justify-between">
                 <div className="flex items-center justify-between text-muted-foreground mb-1.5">
-                  <span className="text-[11px] font-medium tracking-wide uppercase">
-                    3-Yr Avg Turnover
-                  </span>
+                  <span className="text-2xs font-medium">3-Yr Avg Turnover</span>
                   <TrendingUp className="h-4 w-4 text-primary/80" />
                 </div>
                 <div>
-                  <div className="text-lg font-bold text-foreground font-mono">
+                  <div className="text-lg font-bold text-foreground tabular-nums">
                     ₹{avgTurnover.toFixed(1)}{' '}
                     <span className="text-xs font-normal text-muted-foreground font-sans">Cr</span>
                   </div>
-                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                  <div className="text-2xs text-muted-foreground mt-0.5">
                     {turnoverRecords.length} FYs CA Audited (UDIN)
                   </div>
                 </div>
@@ -175,19 +177,17 @@ export const CompanyReadinessCard: React.FC = () => {
               {/* Pillar 3: Past Qualifying Works */}
               <div className="p-3.5 rounded-lg border border-border/60 bg-muted/20 flex flex-col justify-between">
                 <div className="flex items-center justify-between text-muted-foreground mb-1.5">
-                  <span className="text-[11px] font-medium tracking-wide uppercase">
-                    7-Yr Experience
-                  </span>
+                  <span className="text-2xs font-medium">7-Yr Experience</span>
                   <FileCheck2 className="h-4 w-4 text-primary/80" />
                 </div>
                 <div>
-                  <div className="text-lg font-bold text-foreground font-mono">
+                  <div className="text-lg font-bold text-foreground tabular-nums">
                     {experienceList.length}{' '}
                     <span className="text-xs font-normal text-muted-foreground font-sans">
-                      Work Orders
+                      Work orders
                     </span>
                   </div>
-                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                  <div className="text-2xs text-muted-foreground mt-0.5">
                     Max: ₹{largestProject.toFixed(1)} Cr EPC Project
                   </div>
                 </div>
@@ -196,19 +196,17 @@ export const CompanyReadinessCard: React.FC = () => {
               {/* Pillar 4: Certifications & OEMs */}
               <div className="p-3.5 rounded-lg border border-border/60 bg-muted/20 flex flex-col justify-between">
                 <div className="flex items-center justify-between text-muted-foreground mb-1.5">
-                  <span className="text-[11px] font-medium tracking-wide uppercase">
-                    ISO &amp; OEM Authorizations
-                  </span>
+                  <span className="text-2xs font-medium">ISO &amp; OEM Authorizations</span>
                   <Award className="h-4 w-4 text-primary/80" />
                 </div>
                 <div>
-                  <div className="text-lg font-bold text-foreground font-mono">
+                  <div className="text-lg font-bold text-foreground tabular-nums">
                     {certCount + oemCount}{' '}
                     <span className="text-xs font-normal text-muted-foreground font-sans">
                       Credentials
                     </span>
                   </div>
-                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                  <div className="text-2xs text-muted-foreground mt-0.5">
                     {certCount} ISO/CMMI • {oemCount} OEM MAFs
                   </div>
                 </div>
@@ -217,10 +215,10 @@ export const CompanyReadinessCard: React.FC = () => {
 
             {/* Expiry Warning Callout if urgent */}
             {urgentExpiring.length > 0 && (
-              <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 flex items-start gap-3">
-                <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+              <div className="p-3 rounded-lg border border-warning/30 bg-warning/10 flex items-start gap-3">
+                <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
                 <div className="flex flex-col gap-1 text-xs">
-                  <span className="font-semibold text-amber-200">
+                  <span className="font-semibold text-warning">
                     Certificate Expiry Watch ({urgentExpiring.length} item
                     {urgentExpiring.length > 1 ? 's' : ''})
                   </span>
@@ -228,10 +226,10 @@ export const CompanyReadinessCard: React.FC = () => {
                     {urgentExpiring.map((cert) => (
                       <div
                         key={cert.entryId}
-                        className="flex items-center justify-between gap-2 text-[11px]"
+                        className="flex items-center justify-between gap-2 text-2xs"
                       >
-                        <span className="text-amber-300 font-medium">{cert.name}</span>
-                        <span className="text-amber-400 font-mono">
+                        <span className="text-warning font-medium">{cert.name}</span>
+                        <span className="text-warning tabular-nums">
                           {cert.isExpired ? 'EXPIRED' : `Expires in ${cert.daysRemaining} days`}
                         </span>
                       </div>
@@ -243,15 +241,15 @@ export const CompanyReadinessCard: React.FC = () => {
 
             {/* Footer Transparency Guarantee */}
             <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-border/40">
-              <span className="flex items-center gap-1.5 text-[11px]">
+              <span className="flex items-center gap-1.5 text-2xs">
                 <Layers className="h-3.5 w-3.5 text-primary/80" />
                 Evaluated deterministically against all incoming tender requirements
               </span>
               <Link
                 to="/company-profile"
-                className="inline-flex items-center gap-1 text-primary hover:text-primary/80 font-medium text-[11px] transition-colors"
+                className="inline-flex items-center gap-1 text-primary hover:text-primary/80 font-medium text-2xs transition-colors"
               >
-                View Full Dossier
+                View full dossier
                 <ArrowUpRight className="h-3.5 w-3.5" />
               </Link>
             </div>

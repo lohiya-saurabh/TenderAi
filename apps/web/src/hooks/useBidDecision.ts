@@ -30,20 +30,12 @@ export function useBidDecision(bidId: string | undefined): {
     setIsLoading(true);
     setError(null);
 
-    getBidDecision(bidId).then((result: ApiResult<BidDecisionSummary>) => {
+    getBidDecision(bidId).then((result: ApiResult<BidDecisionSummary | null>) => {
       if (cancelled) return;
 
-      if (result.ok) {
-        if (result.data) setDecision(result.data);
-      } else {
-        const apiError = result.error;
-        if (apiError?.status === 404) {
-          // Not evaluated yet — expected state, not an error
-          setDecision(null);
-        } else {
-          setError(apiError?.message ?? 'Unknown error');
-        }
-      }
+      if (result.ok)
+        setDecision(result.data); // null: not evaluated yet
+      else setError(result.error.message ?? 'Unknown error');
       setIsLoading(false);
     });
 

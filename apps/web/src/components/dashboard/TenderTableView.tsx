@@ -90,7 +90,7 @@ const NOT_EVALUATED_TOOLTIP =
 function NotEvaluatedCell(): React.ReactElement {
   return (
     <Tooltip content={NOT_EVALUATED_TOOLTIP} position="top">
-      <span className="inline-flex items-center gap-1 text-muted-foreground text-[11px] whitespace-nowrap cursor-help">
+      <span className="inline-flex items-center gap-1 text-muted-foreground text-2xs whitespace-nowrap cursor-help">
         <MissingIcon size={12} />
         Not evaluated
       </span>
@@ -162,7 +162,7 @@ function SortableHeader({
       <TableHead
         className={cn(
           align === 'right' && 'text-right',
-          'text-xs font-semibold uppercase tracking-wider',
+          'text-xs font-semibold',
           COLUMN_MIN_WIDTHS[columnKey],
         )}
         style={{ width: COLUMN_WIDTHS[columnKey] }}
@@ -178,7 +178,7 @@ function SortableHeader({
     <TableHead
       className={cn(
         align === 'right' && 'text-right',
-        'text-xs font-semibold uppercase tracking-wider',
+        'text-xs font-semibold',
         COLUMN_MIN_WIDTHS[columnKey],
       )}
       style={{ width: COLUMN_WIDTHS[columnKey] }}
@@ -219,19 +219,19 @@ function DeadlineCell({ bid, nowMs }: { bid: BidSummary; nowMs: number }) {
     urgency === 'urgent'
       ? 'text-destructive'
       : urgency === 'soon'
-        ? 'text-amber-400'
+        ? 'text-warning'
         : urgency === 'passed'
           ? 'text-muted-foreground'
           : 'text-muted-foreground';
 
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="font-mono text-xs font-medium whitespace-nowrap text-foreground">
+      <span className="tabular-nums text-xs font-medium whitespace-nowrap text-foreground">
         {formatDate(bid.submissionDeadline!)}
       </span>
       <span
         className={cn(
-          'text-[10px] font-bold uppercase tracking-wider whitespace-nowrap',
+          'text-2xs font-bold whitespace-nowrap',
           colorClass,
         )}
       >
@@ -245,19 +245,19 @@ function ReadinessCell({ bid }: { bid: BidSummary }) {
   const { total, approved, pct } = computeReadiness(bid);
 
   if (total === 0) {
-    return <span className="text-[11px] text-muted-foreground">Pending intake</span>;
+    return <span className="text-2xs text-muted-foreground">Pending intake</span>;
   }
 
   const indicatorClass =
     pct !== null && pct >= 80
       ? 'bg-primary'
       : pct !== null && pct >= 50
-        ? 'bg-amber-500'
+        ? 'bg-warning'
         : 'bg-muted-foreground';
 
   return (
     <div className="flex flex-col gap-1 w-24">
-      <div className="flex justify-between text-[10px] font-semibold">
+      <div className="flex justify-between text-2xs font-semibold">
         <span className="text-foreground">{pct}%</span>
         <span className="text-muted-foreground">
           {approved}/{total}
@@ -323,7 +323,7 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
             <span className="text-xs font-semibold text-foreground leading-snug group-hover:text-primary transition-colors line-clamp-2 break-words">
               {bid.title}
             </span>
-            <span className="text-[10px] font-mono text-muted-foreground truncate">
+            <span className="text-2xs font-mono text-muted-foreground truncate">
               № {bid.tenderNumber}
             </span>
           </Link>
@@ -339,7 +339,7 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
         );
       case 'value':
         return (
-          <span className="font-mono text-xs font-semibold text-foreground whitespace-nowrap tabular-nums">
+          <span className="tabular-nums text-xs font-semibold text-foreground whitespace-nowrap tabular-nums">
             {bid.estimatedValueRupees ? formatCurrency(bid.estimatedValueRupees) : '—'}
           </span>
         );
@@ -354,10 +354,12 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
       case 'risk': {
         const level = computeRiskLevel(bid);
         const flagged = bid.flaggedRequirements || 0;
-        return flagged > 0 ? (
-          <RiskBadge level={level} label={`${flagged} flagged`} size="sm" />
+        if (flagged > 0) return <RiskBadge level={level} label={`${flagged} flagged`} size="sm" />;
+        // No flags only means something once clauses were extracted; it is not a risk level.
+        return bid.totalRequirements ? (
+          <span className="text-xs text-muted-foreground">None flagged</span>
         ) : (
-          <RiskBadge level="LOW" label="Clean" size="sm" />
+          <NotEvaluatedCell />
         );
       }
       case 'readiness':
@@ -416,7 +418,7 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
               )}
               {visibleColumns.includes('value') && (
                 <SortableHeader
-                  label="Est. Value"
+                  label="Est. value"
                   columnKey="value"
                   sortKey={sortKey}
                   sortDirection={sortDirection}
@@ -442,7 +444,7 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
                 <TableHead
                   style={{ width: COLUMN_WIDTHS.fit }}
                   className={cn(
-                    'text-xs font-semibold uppercase tracking-wider',
+                    'text-xs font-semibold',
                     COLUMN_MIN_WIDTHS.fit,
                   )}
                 >
@@ -453,7 +455,7 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
                 <TableHead
                   style={{ width: COLUMN_WIDTHS.recommendation }}
                   className={cn(
-                    'text-xs font-semibold uppercase tracking-wider',
+                    'text-xs font-semibold',
                     COLUMN_MIN_WIDTHS.recommendation,
                   )}
                 >
@@ -479,7 +481,7 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
               <TableHead
                 style={{ width: COLUMN_WIDTHS.actions }}
                 className={cn(
-                  'text-right text-xs font-semibold uppercase tracking-wider',
+                  'text-right text-xs font-semibold',
                   COLUMN_MIN_WIDTHS.actions,
                 )}
               >
@@ -590,7 +592,7 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
       >
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Delete Tender Project</DialogTitle>
+            <DialogTitle>Delete this bid?</DialogTitle>
             <DialogDescription>This action is permanent and cannot be undone.</DialogDescription>
           </DialogHeader>
 
@@ -610,7 +612,7 @@ export const TenderTableView: React.FC<TenderTableViewProps> = ({
               Cancel
             </Button>
             <Button variant="destructive" onClick={confirmDelete} disabled={isDeleting}>
-              {isDeleting ? 'Deleting…' : 'Yes, Delete Permanently'}
+              {isDeleting ? 'Deleting…' : 'Delete bid'}
             </Button>
           </DialogFooter>
         </DialogContent>

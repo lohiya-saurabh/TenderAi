@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { ensureOrganizations } from '@/test/support/organizations.js';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import { AppModule } from '@/app.module.js';
@@ -61,6 +62,8 @@ startxref
     // Seed test organization, company, and user
     const bcrypt = await import('bcrypt');
     const hashedPassword = await bcrypt.hash('Password123!', 10);
+
+    await ensureOrganizations(db, 'org_acme_infra_001');
 
     await db
       .insert(schema.companies)
@@ -206,7 +209,8 @@ startxref
       .from(schema.tenderDocuments)
       .where(eq(schema.tenderDocuments.id, documentId));
     expect(dbDoc).toBeDefined();
-    expect(dbDoc?.status).toBe('QUEUED_FOR_EXTRACTION');
+    // The outbox publisher may already have handed the job to the worker.
+    expect(['QUEUED_FOR_EXTRACTION', 'PROCESSING']).toContain(dbDoc?.status);
 
     const [dbBid] = await db.select().from(schema.bids).where(eq(schema.bids.id, bidId));
     expect(dbBid?.status).toBe('QUEUED');

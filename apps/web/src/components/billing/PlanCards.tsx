@@ -5,11 +5,12 @@ import { Button } from '@/components/ui/button.js';
 import { Badge } from '@/components/ui/badge.js';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card.js';
 import { Check, ArrowRight, Building2, Users, FileText, HardDrive, Sparkles } from 'lucide-react';
+import { enumLabel } from '@/lib/utils.js';
 
 const CANONICAL_PLANS: PlanDefinition[] = [
   {
     tier: 'FREE',
-    name: 'Free Evaluation',
+    name: 'Free evaluation',
     description: 'For contractors exploring tender intelligence and bid readiness.',
     monthlyPriceInr: 0,
     annualMonthlyPriceInr: 0,
@@ -30,7 +31,7 @@ const CANONICAL_PLANS: PlanDefinition[] = [
   },
   {
     tier: 'STARTER',
-    name: 'Starter Plan',
+    name: 'Starter plan',
     description: 'For small vendors beginning structured public procurement operations.',
     monthlyPriceInr: 999,
     annualMonthlyPriceInr: 799,
@@ -52,7 +53,7 @@ const CANONICAL_PLANS: PlanDefinition[] = [
   },
   {
     tier: 'GROWTH',
-    name: 'Growth Plan',
+    name: 'Growth plan',
     description: 'For active MSME bid teams managing multiple sister entities.',
     monthlyPriceInr: 2499,
     annualMonthlyPriceInr: 1999,
@@ -76,7 +77,7 @@ const CANONICAL_PLANS: PlanDefinition[] = [
   },
   {
     tier: 'BUSINESS',
-    name: 'Business Plan',
+    name: 'Business plan',
     description: 'For multi-entity EPC contractors & consortium bidding leaders.',
     monthlyPriceInr: 6999,
     annualMonthlyPriceInr: 5599,
@@ -99,7 +100,7 @@ const CANONICAL_PLANS: PlanDefinition[] = [
   },
   {
     tier: 'ENTERPRISE',
-    name: 'Enterprise Plan',
+    name: 'Enterprise plan',
     description: 'For infrastructure enterprises requiring custom volume and security.',
     monthlyPriceInr: null,
     annualMonthlyPriceInr: null,
@@ -168,7 +169,7 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              Monthly Billing
+              Monthly billing
             </button>
             <button
               type="button"
@@ -179,9 +180,9 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              <span>Annual Billing</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-600 dark:text-orange-400 font-mono border border-orange-500/25">
-                SAVE 20%
+              <span>Annual billing</span>
+              <span className="text-2xs px-1.5 py-0.5 rounded bg-warning/15 text-warning dark:text-warning tabular-nums border border-warning/25">
+                Save 20%
               </span>
             </button>
           </div>
@@ -215,32 +216,29 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
             >
               {isHighlighted && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
-                  <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wider shadow-sm">
+                  <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-primary text-primary-foreground text-2xs font-bold shadow-sm">
                     <Sparkles className="h-3 w-3" />
-                    <span>Most Popular</span>
+                    <span>Most popular</span>
                   </span>
                 </div>
               )}
 
               {isBusiness && !isHighlighted && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-muted border border-border text-foreground text-[10px] font-semibold uppercase tracking-wider">
-                    High Volume
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-muted border border-border text-foreground text-2xs font-semibold">
+                    High volume
                   </span>
                 </div>
               )}
 
               <CardHeader className="space-y-2 pb-4 pt-5">
                 <div className="flex items-center justify-between">
-                  <Badge
-                    variant={isHighlighted ? 'default' : 'outline'}
-                    className="text-[10px] font-mono"
-                  >
-                    {plan.tier}
+                  <Badge variant={isHighlighted ? 'default' : 'outline'} className="text-2xs">
+                    {enumLabel(plan.tier)}
                   </Badge>
                 </div>
 
-                <CardTitle className="text-lg font-bold text-foreground">{plan.name}</CardTitle>
+                <CardTitle className="text-lg font-semibold text-foreground">{plan.name}</CardTitle>
 
                 <CardDescription className="text-xs text-muted-foreground min-h-[48px] line-clamp-3 leading-relaxed">
                   {plan.description}
@@ -257,15 +255,15 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
                         <span className="text-xs text-muted-foreground font-medium">/ month</span>
                       </div>
                       {isAnnual && price > 0 ? (
-                        <p className="text-[10px] text-muted-foreground font-mono mt-0.5">
+                        <p className="text-2xs text-muted-foreground font-mono mt-0.5">
                           Billed annually (₹{(price * 12).toLocaleString('en-IN')} / yr)
                         </p>
                       ) : price === 0 ? (
-                        <p className="text-[10px] text-muted-foreground font-mono mt-0.5">
+                        <p className="text-2xs text-muted-foreground font-mono mt-0.5">
                           Free forever &bull; No card required
                         </p>
                       ) : (
-                        <p className="text-[10px] text-muted-foreground font-mono mt-0.5">
+                        <p className="text-2xs text-muted-foreground font-mono mt-0.5">
                           Billed monthly
                         </p>
                       )}
@@ -275,7 +273,7 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
                       <span className="text-2xl sm:text-3xl font-extrabold text-foreground">
                         Custom
                       </span>
-                      <p className="text-[10px] text-muted-foreground font-mono mt-0.5">
+                      <p className="text-2xs text-muted-foreground font-mono mt-0.5">
                         Tailored enterprise contract
                       </p>
                     </div>
@@ -291,7 +289,7 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
                       <Building2 className="h-3.5 w-3.5 text-primary shrink-0" />
                       <span>Companies</span>
                     </span>
-                    <span className="font-semibold text-foreground font-mono text-[11px]">
+                    <span className="font-semibold text-foreground tabular-nums text-2xs">
                       {plan.entitlements['companies.max'] >= 9999
                         ? 'Unlimited'
                         : `${plan.entitlements['companies.max']} ${
@@ -303,12 +301,12 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
                   <div className="flex items-center justify-between text-muted-foreground">
                     <span className="flex items-center gap-1.5">
                       <Users className="h-3.5 w-3.5 text-primary shrink-0" />
-                      <span>Team Seats</span>
+                      <span>Team seats</span>
                     </span>
-                    <span className="font-semibold text-foreground font-mono text-[11px]">
+                    <span className="font-semibold text-foreground tabular-nums text-2xs">
                       {plan.entitlements['users.max'] >= 9999
                         ? 'Unlimited'
-                        : `${plan.entitlements['users.max']} Users`}
+                        : `${plan.entitlements['users.max']} users`}
                     </span>
                   </div>
 
@@ -317,7 +315,7 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
                       <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
                       <span>Analyses / mo</span>
                     </span>
-                    <span className="font-semibold text-foreground font-mono text-[11px]">
+                    <span className="font-semibold text-foreground tabular-nums text-2xs">
                       {plan.entitlements['tender_analyses.monthly'] >= 9999
                         ? 'Unlimited'
                         : `${plan.entitlements['tender_analyses.monthly']} / mo`}
@@ -327,9 +325,9 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
                   <div className="flex items-center justify-between text-muted-foreground">
                     <span className="flex items-center gap-1.5">
                       <HardDrive className="h-3.5 w-3.5 text-primary shrink-0" />
-                      <span>Evidence Vault</span>
+                      <span>Evidence vault</span>
                     </span>
-                    <span className="font-semibold text-foreground font-mono text-[11px]">
+                    <span className="font-semibold text-foreground tabular-nums text-2xs">
                       {plan.entitlements['evidence_storage.mb'] >= 1024
                         ? `${(plan.entitlements['evidence_storage.mb'] / 1024).toFixed(0)} GB`
                         : `${plan.entitlements['evidence_storage.mb']} MB`}
@@ -339,14 +337,12 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
 
                 {/* Features List */}
                 <div className="space-y-2 pt-3 border-t border-border/60">
-                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                    Key Capabilities
-                  </p>
+                  <p className="text-2xs font-semibold text-muted-foreground">Key capabilities</p>
                   <ul className="space-y-1.5 text-xs text-muted-foreground">
                     {plan.features.map((feat, idx) => (
                       <li key={idx} className="flex items-start gap-2">
                         <Check className="h-3.5 w-3.5 text-foreground shrink-0 mt-0.5" />
-                        <span className="text-[11px] leading-snug">{feat}</span>
+                        <span className="text-2xs leading-snug">{feat}</span>
                       </li>
                     ))}
                   </ul>
@@ -357,7 +353,7 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
                   {plan.tier === 'ENTERPRISE' ? (
                     <Link to="/signup?plan=ENTERPRISE">
                       <Button variant="outline" className="w-full text-xs font-semibold">
-                        Contact Enterprise Sales
+                        Contact enterprise sales
                       </Button>
                     </Link>
                   ) : (
@@ -368,7 +364,7 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
                       >
                         <span>
                           {isHighlighted
-                            ? 'Start Growth Trial'
+                            ? 'Start Growth trial'
                             : isBusiness
                               ? 'Select Business'
                               : `Select ${plan.name.replace(' Plan', '').replace(' Evaluation', '')}`}

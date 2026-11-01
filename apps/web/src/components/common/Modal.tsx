@@ -1,5 +1,7 @@
-import React, { useEffect } from 'react';
-import { CloseIcon } from '@/components/common/Icons.js';
+import React from 'react';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
+import { X } from 'lucide-react';
+import { cn } from '@/lib/utils.js';
 
 export interface ModalProps {
   isOpen: boolean;
@@ -8,180 +10,62 @@ export interface ModalProps {
   description?: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
-  maxWidth?: string;
-  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
 }
 
-export const Modal: React.FC<ModalProps> = ({
-  isOpen,
-  onClose,
-  title,
-  description,
-  children,
-  footer,
-  maxWidth,
-  size = 'md',
-}) => {
-  const modalId = React.useId();
-  const titleId = `modal-title-${modalId}`;
-  const descId = `modal-desc-${modalId}`;
+const overlayClass =
+  'fixed inset-0 z-50 bg-black/70 data-[state=open]:animate-in data-[state=open]:fade-in-0';
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
-      }
-    };
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      window.addEventListener('keydown', handleKeyDown);
-    }
-    return () => {
-      document.body.style.overflow = '';
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
-
-  const getMaxWidth = (): string => {
-    if (maxWidth) return maxWidth;
-    switch (size) {
-      case 'sm':
-        return '400px';
-      case 'lg':
-        return '720px';
-      case 'xl':
-        return '900px';
-      case 'full':
-        return '95vw';
-      case 'md':
-      default:
-        return '550px';
-    }
-  };
-
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={titleId}
-      aria-describedby={description ? descId : undefined}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(15, 23, 42, 0.75)',
-        backdropFilter: 'blur(6px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 'var(--z-index-modal, 70)' as unknown as number,
-        padding: '1rem',
-      }}
-      onClick={onClose}
+/** Shared dialog frame: header, scrolling body, optional footer. Focus trap, Escape and scroll lock come from Radix. */
+export const DialogFrame: React.FC<
+  Omit<ModalProps, 'isOpen'> & { className: string; bodyClassName?: string }
+> = ({ onClose, title, description, children, footer, className, bodyClassName }) => (
+  <DialogPrimitive.Portal>
+    <DialogPrimitive.Overlay className={overlayClass} />
+    <DialogPrimitive.Content
+      className={cn(
+        'fixed z-50 flex flex-col overflow-hidden border border-border bg-card text-card-foreground shadow-xl',
+        className,
+      )}
+      {...(description ? {} : { 'aria-describedby': undefined })}
     >
-      <div
-        className="scale-in"
-        style={{
-          backgroundColor: 'var(--color-surface-card)',
-          border: '1px solid var(--color-surface-border)',
-          borderRadius: 'var(--radius-xl)',
-          width: '100%',
-          maxWidth: getMaxWidth(),
-          boxShadow: 'var(--shadow-xl)',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-          maxHeight: '90vh',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div
-          style={{
-            padding: '1.25rem 1.5rem',
-            borderBottom: '1px solid var(--color-surface-border)',
-            display: 'flex',
-            alignItems: 'flex-start',
-            justifyContent: 'space-between',
-            gap: '1rem',
-          }}
-        >
-          <div>
-            <h3
-              id={titleId}
-              style={{
-                fontSize: 'var(--text-lg)',
-                fontWeight: 'var(--font-semibold)' as unknown as number,
-                color: 'var(--color-surface-text)',
-                lineHeight: 'var(--leading-tight)',
-              }}
-            >
-              {title}
-            </h3>
-            {description && (
-              <p
-                id={descId}
-                style={{
-                  fontSize: 'var(--text-xs)',
-                  color: 'var(--color-surface-muted)',
-                  marginTop: '0.25rem',
-                }}
-              >
-                {description}
-              </p>
-            )}
-          </div>
-          <button
-            onClick={onClose}
-            aria-label="Close dialog"
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--color-surface-muted)',
-              cursor: 'pointer',
-              padding: '0.35rem',
-              borderRadius: 'var(--radius-sm)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'color var(--transition-fast)',
-            }}
-          >
-            <CloseIcon size={18} />
-          </button>
+      <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
+        <div className="min-w-0">
+          <DialogPrimitive.Title className="text-base font-semibold leading-tight text-foreground">
+            {title}
+          </DialogPrimitive.Title>
+          {description && (
+            <DialogPrimitive.Description className="mt-1 break-words text-xs text-muted-foreground">
+              {description}
+            </DialogPrimitive.Description>
+          )}
         </div>
-
-        {/* Body */}
-        <div
-          style={{
-            padding: '1.5rem',
-            overflowY: 'auto',
-            flex: 1,
-            color: 'var(--color-surface-text)',
-            fontSize: 'var(--text-sm)',
-          }}
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close dialog"
+          className="inline-flex shrink-0 items-center justify-center rounded p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
-          {children}
-        </div>
-
-        {/* Footer */}
-        {footer && (
-          <div
-            style={{
-              padding: '1rem 1.5rem',
-              borderTop: '1px solid var(--color-surface-border)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-end',
-              gap: '0.75rem',
-              backgroundColor: 'var(--color-surface-card-subtle)',
-            }}
-          >
-            {footer}
-          </div>
-        )}
+          <X className="h-4 w-4" />
+        </button>
       </div>
-    </div>
-  );
-};
+      <div className={cn('flex-1 overflow-y-auto p-6 text-sm text-foreground', bodyClassName)}>
+        {children}
+      </div>
+      {footer && (
+        <div className="flex items-center justify-end gap-3 border-t border-border bg-muted px-6 py-4">
+          {footer}
+        </div>
+      )}
+    </DialogPrimitive.Content>
+  </DialogPrimitive.Portal>
+);
+
+export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, ...props }) => (
+  <DialogPrimitive.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <DialogFrame
+      onClose={onClose}
+      {...props}
+      className="left-1/2 top-1/2 max-h-[90vh] w-[calc(100%-2rem)] max-w-[34rem] -translate-x-1/2 -translate-y-1/2 rounded-xl data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
+    />
+  </DialogPrimitive.Root>
+);

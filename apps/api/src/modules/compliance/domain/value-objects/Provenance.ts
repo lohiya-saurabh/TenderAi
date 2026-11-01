@@ -6,7 +6,8 @@ export interface ProvenanceProps {
   pageNumber: number;
   clauseReference: string;
   verbatimQuote: string;
-  confidenceScore: number;
+  /** Deterministic validation score in [0, 1]; null when none was computed. */
+  confidenceScore: number | null;
 }
 
 export class Provenance {
@@ -15,7 +16,7 @@ export class Provenance {
   public readonly pageNumber: number;
   public readonly clauseReference: string;
   public readonly verbatimQuote: string;
-  public readonly confidenceScore: number;
+  public readonly confidenceScore: number | null;
 
   constructor(props: ProvenanceProps) {
     if (!props.sourceDocumentId || props.sourceDocumentId.trim() === '') {
@@ -37,9 +38,10 @@ export class Provenance {
       );
     }
     if (
-      typeof props.confidenceScore !== 'number' ||
-      props.confidenceScore < 0.0 ||
-      props.confidenceScore > 1.0
+      props.confidenceScore !== null &&
+      (typeof props.confidenceScore !== 'number' ||
+        props.confidenceScore < 0.0 ||
+        props.confidenceScore > 1.0)
     ) {
       throw new InvalidProvenanceException(
         'confidenceScore',
@@ -52,7 +54,8 @@ export class Provenance {
     this.pageNumber = props.pageNumber;
     this.clauseReference = props.clauseReference.trim();
     this.verbatimQuote = props.verbatimQuote.trim();
-    this.confidenceScore = Math.round(props.confidenceScore * 100) / 100;
+    this.confidenceScore =
+      props.confidenceScore === null ? null : Math.round(props.confidenceScore * 100) / 100;
 
     Object.freeze(this);
   }

@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';
 import { Label } from '@/components/ui/label.js';
 import { ErrorBanner } from '@/components/common/ErrorBanner.js';
-import { Building2, Lock, Mail, User, ShieldCheck, ArrowRight, Sparkles } from 'lucide-react';
+import { Building2, Lock, Mail, User, ArrowRight, Sparkles } from 'lucide-react';
+import { enumLabel } from '@/lib/utils.js';
 
 export const SignupPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -65,7 +66,7 @@ export const SignupPage: React.FC = () => {
             TP
           </div>
         </Link>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
           Create your TenderPulse workspace
         </h1>
         <p className="text-xs text-muted-foreground">
@@ -80,12 +81,12 @@ export const SignupPage: React.FC = () => {
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-primary shrink-0" />
               <div className="text-xs">
-                <span className="text-muted-foreground">Selected Tier: </span>
-                <span className="font-semibold text-foreground font-mono">{selectedPlan}</span>
+                <span className="text-muted-foreground">Selected tier: </span>
+                <span className="font-semibold text-foreground">{enumLabel(selectedPlan)}</span>
               </div>
             </div>
-            <Link to="/pricing" className="text-[11px] text-primary hover:underline">
-              Change Plan
+            <Link to="/pricing" className="text-2xs text-primary hover:underline">
+              Change plan
             </Link>
           </div>
 
@@ -96,7 +97,7 @@ export const SignupPage: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="fullName" className="text-xs">
-                  Full Name *
+                  Full name *
                 </Label>
                 <div className="relative">
                   <User className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -115,7 +116,7 @@ export const SignupPage: React.FC = () => {
 
               <div className="space-y-1.5">
                 <Label htmlFor="workEmail" className="text-xs">
-                  Work Email *
+                  Work email *
                 </Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -153,14 +154,14 @@ export const SignupPage: React.FC = () => {
             </div>
 
             <div className="pt-2 border-t border-border/60">
-              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                Workspace &amp; Company Setup
+              <p className="text-2xs font-semibold text-muted-foreground mb-3">
+                Workspace &amp; company setup
               </p>
 
               <div className="space-y-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="orgName" className="text-xs">
-                    Workspace / Organization Name (Optional)
+                    Workspace / organization name (optional)
                   </Label>
                   <Input
                     id="orgName"
@@ -176,7 +177,7 @@ export const SignupPage: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label htmlFor="compName" className="text-xs">
-                      Primary Company Legal Name *
+                      Primary company legal name *
                     </Label>
                     <div className="relative">
                       <Building2 className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -230,10 +231,6 @@ export const SignupPage: React.FC = () => {
                 Sign in to workspace
               </Link>
             </p>
-            <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground font-mono">
-              <ShieldCheck className="h-3.5 w-3.5 text-primary" />
-              <span>Isolated Tenant DB &bull; DPDP Act 2023 Compliant</span>
-            </div>
           </div>
         </div>
       </div>

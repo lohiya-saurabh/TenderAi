@@ -5,7 +5,8 @@
  * Allows swapping between live adapters (IRIS IRP, MCA, Udyam, DigiLocker, Google Drive, OneDrive)
  * and zero-network deterministic mock adapters via environment variables.
  */
-import { Module } from '@nestjs/common';
+import { Module, ServiceUnavailableException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { DatabaseModule } from '@/common/database/database.module.js';
 import { StorageModule } from '@/infrastructure/storage/storage.module.js';
 import { CompanyProfileModule } from '@/modules/company-profile/company-profile.module.js';
@@ -13,6 +14,7 @@ import { CompanyProfileModule } from '@/modules/company-profile/company-profile.
 // Application Services
 import { CompanyEvidenceService } from '@/modules/company-verification/application/CompanyEvidenceService.js';
 import { EvidenceVerificationService } from '@/modules/company-verification/application/EvidenceVerificationService.js';
+import { CompanyVerificationRepository } from '@/modules/company-verification/company-verification.repository.js';
 
 // Ports Tokens
 import { BUSINESS_VERIFICATION_PROVIDER } from '@/modules/company-verification/domain/ports/BusinessVerificationProvider.js';
@@ -40,12 +42,32 @@ import { AiEvidenceExtractor } from '@/modules/company-verification/application/
 import { CompanyEvidenceController } from '@/modules/company-verification/presentation/CompanyEvidenceController.js';
 import { CompanyVerificationController } from '@/modules/company-verification/presentation/CompanyVerificationController.js';
 
+/**
+ * Mock registry adapters answer with canned data, so they are only for development and tests.
+ * In production an unconfigured provider refuses every call (HTTP 503) instead of returning a
+ * mock "verified" result.
+ */
+function mockOrRefuse<T extends object>(name: string, config: ConfigService, mock: () => T): T {
+  const production = config.get<string>('NODE_ENV') === 'production';
+  if (!production || config.get<string>('ALLOW_MOCK_SERVICES') === 'true') return mock();
+  return new Proxy({} as T, {
+    // Nest probes providers for lifecycle hooks and `then`; only port methods refuse.
+    get: (_, prop) =>
+      typeof prop === 'string' && !/^(then|on[A-Z]|before[A-Z])/.test(prop)
+        ? () => {
+            throw new ServiceUnavailableException(`${name} is not configured on this deployment.`);
+          }
+        : undefined,
+  });
+}
+
 @Module({
   imports: [DatabaseModule, StorageModule, CompanyProfileModule],
   controllers: [CompanyEvidenceController, CompanyVerificationController],
   providers: [
     CompanyEvidenceService,
     EvidenceVerificationService,
+    CompanyVerificationRepository,
     AiEvidenceExtractor,
     LocalUploadConnector,
     GoogleDriveConnector,
@@ -54,37 +76,72 @@ import { CompanyVerificationController } from '@/modules/company-verification/pr
     // GST Verification Provider (IRIS IRP vs Mock)
     {
       provide: BUSINESS_VERIFICATION_PROVIDER,
-      useClass:
-        process.env.GST_VERIFICATION_PROVIDER === 'iris'
-          ? IrisIrpGstAdapter
-          : MockGstVerificationAdapter,
+      useFactory: (configService: ConfigService) => {
+        const provider = configService.get<string>('GST_VERIFICATION_PROVIDER');
+        return provider === 'iris'
+          ? new IrisIrpGstAdapter(configService)
+          : mockOrRefuse(
+              'GSTIN verification (GST_VERIFICATION_PROVIDER)',
+              configService,
+              () => new MockGstVerificationAdapter(),
+            );
+      },
+      inject: [ConfigService],
     },
 
     // MCA Registry Provider (MCA vs Mock)
     {
       provide: COMPANY_REGISTRY_PROVIDER,
-      useClass:
-        process.env.MCA_REGISTRY_PROVIDER === 'mca' ? McaRegistryAdapter : MockMcaRegistryAdapter,
+      useFactory: (configService: ConfigService) => {
+        const provider = configService.get<string>('MCA_REGISTRY_PROVIDER');
+        return provider === 'mca'
+          ? new McaRegistryAdapter(configService)
+          : mockOrRefuse(
+              'MCA verification (MCA_REGISTRY_PROVIDER)',
+              configService,
+              () => new MockMcaRegistryAdapter(),
+            );
+      },
+      inject: [ConfigService],
     },
 
     // MSME Udyam Verification Port (Udyam vs Mock)
     {
       provide: MSME_VERIFICATION_PORT,
-      useClass:
-        process.env.MSME_VERIFICATION_PROVIDER === 'udyam'
-          ? UdyamVerificationAdapter
-          : MockMsmeVerificationAdapter,
+      useFactory: (configService: ConfigService) => {
+        const provider = configService.get<string>('MSME_VERIFICATION_PROVIDER');
+        return provider === 'udyam'
+          ? new UdyamVerificationAdapter(configService)
+          : mockOrRefuse(
+              'Udyam verification (MSME_VERIFICATION_PROVIDER)',
+              configService,
+              () => new MockMsmeVerificationAdapter(),
+            );
+      },
+      inject: [ConfigService],
     },
 
     // Digital Document Provider (DigiLocker vs Mock)
     {
       provide: DIGITAL_DOCUMENT_PROVIDER,
-      useClass:
-        process.env.DIGILOCKER_PROVIDER === 'digilocker'
-          ? DigiLockerAdapter
-          : MockDigitalLockerAdapter,
+      useFactory: (configService: ConfigService) => {
+        const provider = configService.get<string>('DIGILOCKER_PROVIDER');
+        return provider === 'digilocker'
+          ? new DigiLockerAdapter(configService)
+          : mockOrRefuse(
+              'DigiLocker (DIGILOCKER_PROVIDER)',
+              configService,
+              () => new MockDigitalLockerAdapter(configService),
+            );
+      },
+      inject: [ConfigService],
     },
   ],
-  exports: [CompanyEvidenceService, EvidenceVerificationService, AiEvidenceExtractor],
+  exports: [
+    CompanyEvidenceService,
+    EvidenceVerificationService,
+    CompanyVerificationRepository,
+    AiEvidenceExtractor,
+  ],
 })
 export class CompanyVerificationModule {}

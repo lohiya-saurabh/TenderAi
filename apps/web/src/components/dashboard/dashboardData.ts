@@ -6,15 +6,14 @@
  *   - BidSummary[]        from GET /api/v1/bids
  *   - ComplianceItem[]    from GET /api/v1/bids/:id/compliance-items
  *
- * No fabricated data. Anything the backend does not expose yet (company
- * profile, expiring certificates, tender amendments) is documented as a
- * missing API in MissingApiCallout instead of being simulated here.
+ * No fabricated data: anything the backend does not expose is left out, never simulated.
  */
 
 import type { BidSummary } from '@/api/bids.js';
 import type { ComplianceItem } from '@/api/compliance.js';
 import { formatDate } from '@/utils/formatDate.js';
 import { computeReadiness, computeRiskLevel } from '@/utils/readiness.js';
+import { enumLabel } from '@/lib/utils.js';
 
 // Re-exported for dashboard consumers (single source of truth lives in utils/)
 export { computeReadiness, computeRiskLevel };
@@ -60,7 +59,7 @@ export function computePipelineStages(bids: BidSummary[]): PipelineStage[] {
     const flagged = stageBids.reduce((sum, b) => sum + (b.flaggedRequirements || 0), 0);
     return {
       status,
-      label: status.replace(/_/g, ' '),
+      label: enumLabel(status),
       description: PIPELINE_STAGE_DESCRIPTIONS[status],
       count: stageBids.length,
       totalRequirements: total,

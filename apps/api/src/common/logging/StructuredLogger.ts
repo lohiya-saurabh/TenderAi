@@ -1,4 +1,5 @@
 import type { LoggerService } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import fs from 'node:fs';
 import path from 'node:path';
 import { LoggingContextHolder } from '@/common/logging/LoggingContext.js';
@@ -39,6 +40,7 @@ export interface StructuredLogPayload {
 }
 
 export class StructuredLogger implements LoggerService {
+  private static readonly config = new ConfigService();
   private static fileStream: RotatingLogStream | null = null;
 
   private readonly contextName: string;
@@ -48,29 +50,31 @@ export class StructuredLogger implements LoggerService {
   constructor(contextName = 'API', serviceName = 'api') {
     this.contextName = contextName;
     this.serviceName = serviceName;
-    this.environment = process.env.NODE_ENV || 'development';
+    this.environment = StructuredLogger.config.get<string>('NODE_ENV') || 'development';
   }
 
   public static getRotatingFileStream(): RotatingLogStream | null {
-    if (process.env.LOG_TO_FILE === 'false') {
+    if (StructuredLogger.config.get<string>('LOG_TO_FILE') === 'false') {
       return null;
     }
     if (!this.fileStream) {
-      const isTest = process.env.NODE_ENV === 'test' || Boolean(process.env.VITEST);
-      if (isTest && process.env.LOG_TO_FILE !== 'true') {
+      const isTest =
+        StructuredLogger.config.get<string>('NODE_ENV') === 'test' ||
+        Boolean(StructuredLogger.config.get<string>('VITEST'));
+      if (isTest && StructuredLogger.config.get<string>('LOG_TO_FILE') !== 'true') {
         return null;
       }
 
       const logDir =
-        process.env.LOG_DIR ||
+        StructuredLogger.config.get<string>('LOG_DIR') ||
         (fs.existsSync(path.resolve(process.cwd(), 'apps/api')) ? 'logs' : '../../logs');
       const resolvedDir = path.resolve(process.cwd(), logDir);
       const filePath = path.join(resolvedDir, 'api.log');
 
-      const maxBytes = process.env.LOG_MAX_BYTES
-        ? parseInt(process.env.LOG_MAX_BYTES, 10)
-        : 10 * 1024 * 1024;
-      const maxFiles = process.env.LOG_MAX_FILES ? parseInt(process.env.LOG_MAX_FILES, 10) : 5;
+      const maxBytesEnv = StructuredLogger.config.get<string>('LOG_MAX_BYTES');
+      const maxBytes = maxBytesEnv ? parseInt(maxBytesEnv, 10) : 10 * 1024 * 1024;
+      const maxFilesEnv = StructuredLogger.config.get<string>('LOG_MAX_FILES');
+      const maxFiles = maxFilesEnv ? parseInt(maxFilesEnv, 10) : 5;
 
       this.fileStream = new RotatingLogStream({
         filePath,
@@ -82,16 +86,18 @@ export class StructuredLogger implements LoggerService {
   }
 
   private getConsoleMinLevel(): LogLevelName {
-    const isTest = process.env.NODE_ENV === 'test' || Boolean(process.env.VITEST);
+    const isTest =
+      StructuredLogger.config.get<string>('NODE_ENV') === 'test' ||
+      Boolean(StructuredLogger.config.get<string>('VITEST'));
     if (isTest) {
-      const envLevel = (process.env.LOG_LEVEL || '').toUpperCase();
+      const envLevel = (StructuredLogger.config.get<string>('LOG_LEVEL') || '').toUpperCase();
       if (envLevel in LOG_LEVEL_PRIORITY) return envLevel as LogLevelName;
       return 'DEBUG';
     }
 
     const consoleLevel = (
-      process.env.LOG_LEVEL_CONSOLE ||
-      process.env.LOG_LEVEL ||
+      StructuredLogger.config.get<string>('LOG_LEVEL_CONSOLE') ||
+      StructuredLogger.config.get<string>('LOG_LEVEL') ||
       ''
     ).toUpperCase();
     if (consoleLevel in LOG_LEVEL_PRIORITY) {
@@ -101,7 +107,11 @@ export class StructuredLogger implements LoggerService {
   }
 
   private getFileMinLevel(): LogLevelName {
-    const fileLevel = (process.env.LOG_LEVEL_FILE || process.env.LOG_LEVEL || '').toUpperCase();
+    const fileLevel = (
+      StructuredLogger.config.get<string>('LOG_LEVEL_FILE') ||
+      StructuredLogger.config.get<string>('LOG_LEVEL') ||
+      ''
+    ).toUpperCase();
     if (fileLevel in LOG_LEVEL_PRIORITY) {
       return fileLevel as LogLevelName;
     }
@@ -109,7 +119,7 @@ export class StructuredLogger implements LoggerService {
   }
 
   private shouldLogToConsole(level: LogLevelName, event?: string, message?: string): boolean {
-    if (process.env.LOG_TO_CONSOLE === 'false') {
+    if (StructuredLogger.config.get<string>('LOG_TO_CONSOLE') === 'false') {
       return false;
     }
     const minLevel = this.getConsoleMinLevel();
@@ -119,7 +129,9 @@ export class StructuredLogger implements LoggerService {
 
     // Suppress noisy framework route discovery and module initialization spam on console
     // unless console level is explicitly set to DEBUG
-    const isTest = process.env.NODE_ENV === 'test' || Boolean(process.env.VITEST);
+    const isTest =
+      StructuredLogger.config.get<string>('NODE_ENV') === 'test' ||
+      Boolean(StructuredLogger.config.get<string>('VITEST'));
     if (!isTest && minLevel !== 'DEBUG') {
       if (event === 'app.info' || event === 'app.verbose') {
         const msg = message || '';
@@ -178,10 +190,12 @@ export class StructuredLogger implements LoggerService {
 
     // 2. Write to console (stdout / stderr)
     if (this.shouldLogToConsole(sanitized.level, sanitized.event, sanitized.message)) {
-      const isTest = process.env.NODE_ENV === 'test' || Boolean(process.env.VITEST);
+      const isTest =
+        StructuredLogger.config.get<string>('NODE_ENV') === 'test' ||
+        Boolean(StructuredLogger.config.get<string>('VITEST'));
 
       // In tests, or if LOG_FORMAT=json, output JSON string
-      if (isTest || process.env.LOG_FORMAT === 'json') {
+      if (isTest || StructuredLogger.config.get<string>('LOG_FORMAT') === 'json') {
         if (sanitized.level === 'ERROR' || sanitized.level === 'FATAL') {
           process.stderr.write(jsonString + '\n');
         } else {

@@ -3,15 +3,11 @@
  */
 import { Injectable, Inject } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
-import { eq } from 'drizzle-orm';
-import {
-  DRIZZLE_TOKEN,
-  type DrizzleDb,
-  createDrizzle,
-} from '@/common/database/database.module.js';
+import { type DrizzleDb } from '@/common/database/database.module.js';
 import * as schema from '@/common/database/schema.js';
 import { BadRequestError } from '@/common/errors/errors.js';
 import { TenantContextHolder } from '@/common/security/TenantContext.js';
+import { SettingsRepository } from '@/modules/settings/settings.repository.js';
 
 export interface NotificationPreferences {
   notifyDeadlines: boolean;
@@ -29,16 +25,23 @@ export interface WorkspaceSettingsView {
 }
 
 export interface UpdateWorkspaceSettingsDto {
+  organizationName?: string;
   defaultCompanyId?: string;
   notificationPreferences?: Partial<NotificationPreferences>;
 }
 
 @Injectable()
 export class SettingsService {
-  private readonly db: DrizzleDb;
+  private readonly repository: SettingsRepository;
 
-  constructor(@Inject(DRIZZLE_TOKEN) db: DrizzleDb | PGlite) {
-    this.db = 'select' in db ? (db as DrizzleDb) : createDrizzle(db as PGlite);
+  constructor(
+    @Inject(SettingsRepository)
+    repositoryOrDb: SettingsRepository | DrizzleDb | PGlite,
+  ) {
+    this.repository =
+      repositoryOrDb instanceof SettingsRepository
+        ? repositoryOrDb
+        : new SettingsRepository(repositoryOrDb);
   }
 
   /**
@@ -48,23 +51,17 @@ export class SettingsService {
     const orgId = this.requireOrg();
     const userId = TenantContextHolder.get()?.userId;
 
-    let orgName = 'Default Workspace';
-    if (userId) {
-      const [userRec] = await this.db
-        .select({ organizationName: schema.users.organizationName })
-        .from(schema.users)
-        .where(eq(schema.users.id, userId))
-        .limit(1);
-      if (userRec?.organizationName) {
-        orgName = userRec.organizationName;
+    const orgNameFound = await this.repository.findOrganizationName(orgId);
+    let orgName = orgNameFound ?? 'Default Workspace';
+
+    if (!orgNameFound && userId) {
+      const userOrgName = await this.repository.findUserOrganizationName(userId);
+      if (userOrgName) {
+        orgName = userOrgName;
       }
     }
 
-    const [record] = await this.db
-      .select()
-      .from(schema.tenantSettings)
-      .where(eq(schema.tenantSettings.organizationId, orgId))
-      .limit(1);
+    const record = await this.repository.findSettingsByOrganization(orgId);
 
     if (!record) {
       // Auto-provision default settings on first access
@@ -78,17 +75,13 @@ export class SettingsService {
       const now = new Date();
       const id = `tset_${orgId}`;
 
-      const [created] = await this.db
-        .insert(schema.tenantSettings)
-        .values({
-          id,
-          organizationId: orgId,
-          defaultCompanyId: null,
-          notificationPreferences: defaultPrefs,
-          updatedAt: now,
-        })
-        .onConflictDoNothing()
-        .returning();
+      const created = await this.repository.createDefaultSettings({
+        id,
+        organizationId: orgId,
+        defaultCompanyId: null,
+        notificationPreferences: defaultPrefs,
+        updatedAt: now,
+      });
 
       return {
         organizationId: orgId,
@@ -134,19 +127,27 @@ export class SettingsService {
       updates.defaultCompanyId = dto.defaultCompanyId.trim() || null;
     }
 
-    await this.db
-      .insert(schema.tenantSettings)
-      .values({
+    await this.repository.upsertSettings(
+      {
         id: `tset_${orgId}`,
         organizationId: orgId,
         defaultCompanyId: updates.defaultCompanyId ?? null,
         notificationPreferences: mergedPrefs,
         updatedAt: new Date(),
-      })
-      .onConflictDoUpdate({
-        target: schema.tenantSettings.organizationId,
-        set: updates,
-      });
+      },
+      updates,
+    );
+
+    if (dto.organizationName !== undefined && dto.organizationName.trim()) {
+      const newName = dto.organizationName.trim();
+      const orgSlug = newName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+
+      await this.repository.upsertOrganization(orgId, newName, orgSlug);
+      await this.repository.updateUsersOrganizationName(orgId, newName);
+    }
 
     return this.getWorkspaceSettings();
   }
@@ -154,7 +155,7 @@ export class SettingsService {
   private requireOrg(): string {
     const orgId = TenantContextHolder.get()?.organizationId;
     if (!orgId) {
-      throw new BadRequestError('Tenant context is required.');
+      throw new BadRequestError('Tenant organization context is required.');
     }
     return orgId;
   }

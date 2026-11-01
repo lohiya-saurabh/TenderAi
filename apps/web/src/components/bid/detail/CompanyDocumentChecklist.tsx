@@ -13,6 +13,7 @@ import {
   ShieldAlert,
   ArrowRight,
 } from 'lucide-react';
+import { enumLabel } from '@/lib/utils.js';
 
 export interface CompanyDocumentChecklistProps {
   complianceItems: ComplianceItem[];
@@ -32,92 +33,11 @@ export interface ChecklistRow {
 }
 
 /**
- * Dynamically resolves the specific evidence document type from the tender clause
- * without hardcoding static universal requirements.
+ * The linked evidence's document type; never guessed from the clause text.
  */
 function deriveEvidenceType(item: ComplianceItem): string {
-  if (item.companyEvidence?.docType && item.companyEvidence.docType !== 'UNKNOWN') {
-    return item.companyEvidence.docType
-      .replace(/_/g, ' ')
-      .toLowerCase()
-      .replace(/\b\w/g, (c) => c.toUpperCase());
-  }
-
-  const combinedText = `${item.requirement ?? ''} ${item.description ?? ''}`;
-  const reqLower = combinedText.toLowerCase();
-
-  if (
-    reqLower.includes('iso') ||
-    reqLower.includes('certification') ||
-    reqLower.includes('standard')
-  ) {
-    return 'ISO / Quality Standard Certificate';
-  }
-  if (
-    reqLower.includes('turnover') ||
-    reqLower.includes('net worth') ||
-    reqLower.includes('financial') ||
-    reqLower.includes('balance sheet') ||
-    reqLower.includes('solvency')
-  ) {
-    return 'CA-Audited Balance Sheet & UDIN Certificate';
-  }
-  if (
-    reqLower.includes('similar') ||
-    reqLower.includes('experience') ||
-    reqLower.includes('completed') ||
-    reqLower.includes('past work') ||
-    reqLower.includes('track record')
-  ) {
-    return 'Client Completion Certificate & Work Order';
-  }
-  if (
-    reqLower.includes('personnel') ||
-    reqLower.includes('engineer') ||
-    reqLower.includes('staff') ||
-    reqLower.includes('curriculum vitae') ||
-    reqLower.includes('cv')
-  ) {
-    return 'Key Personnel CV & Statutory EPF Records';
-  }
-  if (
-    reqLower.includes('equipment') ||
-    reqLower.includes('machinery') ||
-    reqLower.includes('plant') ||
-    reqLower.includes('crane') ||
-    reqLower.includes('vehicle')
-  ) {
-    return 'Machinery RC / Ownership Proof & Lease Deeds';
-  }
-  if (
-    reqLower.includes('bid security') ||
-    reqLower.includes('earnest money') ||
-    reqLower.includes('emd') ||
-    reqLower.includes('bank guarantee') ||
-    reqLower.includes('pbg')
-  ) {
-    return 'Bank Guarantee (MT760) / EMD Challan';
-  }
-  if (
-    reqLower.includes('gst') ||
-    reqLower.includes('pan') ||
-    reqLower.includes('epf') ||
-    reqLower.includes('esi') ||
-    reqLower.includes('incorporation') ||
-    reqLower.includes('statutory')
-  ) {
-    return 'Statutory Incorporation & Tax Registration';
-  }
-  if (
-    reqLower.includes('affidavit') ||
-    reqLower.includes('undertaking') ||
-    reqLower.includes('non-blacklisting') ||
-    reqLower.includes('litigation')
-  ) {
-    return 'Notarized Non-Blacklisting Affidavit';
-  }
-
-  return 'Authorized Verification Document';
+  const docType = item.companyEvidence?.docType;
+  return docType && docType !== 'UNKNOWN' ? enumLabel(docType) : 'Not stated';
 }
 
 function deriveAdditionalInfo(item: ComplianceItem): string {
@@ -126,10 +46,8 @@ function deriveAdditionalInfo(item: ComplianceItem): string {
     parts.push('CA UDIN required');
   }
   if (item.executionRules?.stampPaperRequired) {
-    const denom = item.executionRules.stampPaperDenominationInr
-      ? `₹${item.executionRules.stampPaperDenominationInr}`
-      : '₹100';
-    parts.push(`Non-judicial stamp paper (${denom})`);
+    const denom = item.executionRules.stampPaperDenominationInr;
+    parts.push(denom ? `Non-judicial stamp paper (₹${denom})` : 'Non-judicial stamp paper');
   }
   if (item.executionRules?.notarizationRequired) {
     parts.push('Notarization required');
@@ -137,7 +55,7 @@ function deriveAdditionalInfo(item: ComplianceItem): string {
   if (item.executionRules?.signingAuthorityRank) {
     parts.push(`Signatory: ${item.executionRules.signingAuthorityRank}`);
   }
-  return parts.length > 0 ? parts.join(' • ') : 'Standard verification';
+  return parts.length > 0 ? parts.join(' • ') : 'None stated';
 }
 
 function renderCitationBadges(citationRef: string) {
@@ -149,7 +67,7 @@ function renderCitationBadges(citationRef: string) {
 
   if (citations.length <= 1) {
     return (
-      <span className="font-mono text-[11px] bg-muted/40 px-1.5 py-0.5 rounded border border-border/50 break-words leading-relaxed inline-block max-w-full">
+      <span className="font-mono text-2xs bg-muted/40 px-1.5 py-0.5 rounded border border-border/50 break-words leading-relaxed inline-block max-w-full">
         {citationRef}
       </span>
     );
@@ -160,7 +78,7 @@ function renderCitationBadges(citationRef: string) {
       {citations.map((cite, idx) => (
         <span
           key={idx}
-          className="font-mono text-[11px] bg-muted/40 px-1.5 py-0.5 rounded border border-border/50 break-words leading-relaxed inline-block"
+          className="font-mono text-2xs bg-muted/40 px-1.5 py-0.5 rounded border border-border/50 break-words leading-relaxed inline-block"
         >
           {cite}
         </span>
@@ -192,13 +110,13 @@ export const CompanyDocumentChecklist: React.FC<CompanyDocumentChecklistProps> =
     const citationRef =
       item.provenance?.sectionOrClause ||
       (item.provenance?.pageNumber
-        ? `Clause on Page ${item.provenance.pageNumber}`
-        : 'Tender Document');
+        ? `Page ${item.provenance.pageNumber}`
+        : 'No page');
 
     return {
       id: item.id,
-      requirement: item.requirement || item.description || 'Tender Compliance Criterion',
-      category: item.category || 'TECHNICAL',
+      requirement: item.requirement || item.description || 'Not stated',
+      category: item.category || '',
       evidenceType: deriveEvidenceType(item),
       isUploaded,
       isValid,
@@ -217,9 +135,9 @@ export const CompanyDocumentChecklist: React.FC<CompanyDocumentChecklistProps> =
       <CardHeader className="px-5 py-4 border-b border-border bg-muted/20 flex flex-row items-center justify-between flex-wrap gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <ShieldAlert size={18} className="text-amber-500" />
-            <CardTitle className="text-base font-bold text-foreground">
-              Company Document Checklist
+            <ShieldAlert size={18} className="text-warning dark:text-warning" />
+            <CardTitle className="text-base font-semibold text-foreground">
+              Company document checklist
             </CardTitle>
             <Badge variant="warning" className="text-xs">
               {missingCount} missing for this tender
@@ -234,7 +152,7 @@ export const CompanyDocumentChecklist: React.FC<CompanyDocumentChecklistProps> =
         <Link to="/company-profile">
           <Button variant="primary" size="sm" className="gap-1.5">
             <ExternalLink size={13} />
-            <span>Upload in Company Profile</span>
+            <span>Upload in company profile</span>
           </Button>
         </Link>
       </CardHeader>
@@ -249,15 +167,15 @@ export const CompanyDocumentChecklist: React.FC<CompanyDocumentChecklistProps> =
             <table className="w-full text-left text-xs border-collapse min-w-[1050px]">
               <thead>
                 <tr className="border-b border-border bg-muted/30 text-muted-foreground font-semibold">
-                  <th className="py-2.5 px-4 min-w-[260px] max-w-[340px]">Tender Requirement</th>
+                  <th className="py-2.5 px-4 min-w-[260px] max-w-[340px]">Tender requirement</th>
                   <th className="py-2.5 px-4 min-w-[200px] max-w-[260px]">
-                    Required Evidence Type
+                    Required evidence type
                   </th>
-                  <th className="py-2.5 px-4 min-w-[160px] whitespace-nowrap">Evidence Status</th>
+                  <th className="py-2.5 px-4 min-w-[160px] whitespace-nowrap">Evidence status</th>
                   <th className="py-2.5 px-4 min-w-[200px] max-w-[280px]">
-                    Execution &amp; Validity Rules
+                    Execution &amp; validity rules
                   </th>
-                  <th className="py-2.5 px-4 min-w-[220px] max-w-[320px]">Source Citation</th>
+                  <th className="py-2.5 px-4 min-w-[220px] max-w-[320px]">Source citation</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60">
@@ -265,11 +183,13 @@ export const CompanyDocumentChecklist: React.FC<CompanyDocumentChecklistProps> =
                   <tr key={row.id} className="hover:bg-muted/15 transition-colors">
                     {/* Requirement */}
                     <td className="py-3 px-4 min-w-[260px] max-w-[340px]">
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <Badge variant="neutral" className="text-[10px] px-1 py-0 uppercase">
-                          {row.category}
-                        </Badge>
-                      </div>
+                      {row.category && (
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <Badge variant="neutral" size="sm">
+                            {enumLabel(row.category)}
+                          </Badge>
+                        </div>
+                      )}
                       <p
                         className="font-medium text-foreground line-clamp-2 leading-relaxed break-words"
                         title={row.requirement}
@@ -294,14 +214,14 @@ export const CompanyDocumentChecklist: React.FC<CompanyDocumentChecklistProps> =
                           {row.isValid ? 'Uploaded & Valid' : 'Uploaded (Self-Attested)'}
                         </span>
                       ) : row.statusLabel === 'Expired' ? (
-                        <span className="inline-flex items-center gap-1 text-red-500 font-semibold">
+                        <span className="inline-flex items-center gap-1 text-destructive font-semibold">
                           <AlertTriangle size={14} />
-                          Expired Certificate
+                          Expired certificate
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-amber-500 font-semibold">
+                        <span className="inline-flex items-center gap-1 text-warning dark:text-warning font-semibold">
                           <XCircle size={14} />
-                          Missing in Profile
+                          Missing in profile
                         </span>
                       )}
                     </td>

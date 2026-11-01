@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Button } from '@/components/common/Button.js';
 import { Badge } from '@/components/common/Badge.js';
-import { Modal } from '@/components/common/Modal.js';
 import { type FullCompanyProfile, computeProfileHealth } from '@/components/company/companyProfileData.js';
-import { Zap, Building2, Check, CheckCircle2, FolderArchive, Plus, RefreshCw } from 'lucide-react';
+import { Zap, Building2, Check, FolderArchive, Plus } from 'lucide-react';
 import { useCompany } from '@/context/useCompany.js';
 
 export interface CompanyProfileHeaderProps {
@@ -19,8 +18,6 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
 }) => {
   const { selectedCompany } = useCompany();
   const health = computeProfileHealth(profile);
-  const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
-  const [publishSuccess, setPublishSuccess] = useState(false);
 
   const displayName = selectedCompany?.legalName || profile.companyName;
   const displayGstin =
@@ -28,13 +25,6 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
     profile.registrations.find((r) => r.regType === 'GSTIN')?.regNumber ||
     'Pending Registration';
 
-  const handlePublishVersion = () => {
-    setPublishSuccess(true);
-    setTimeout(() => {
-      setPublishSuccess(false);
-      setIsPublishModalOpen(false);
-    }, 1500);
-  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -45,9 +35,9 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
             <Zap className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-sm font-bold text-foreground">
+            <p className="text-sm font-semibold text-foreground">
               Maintain your company information once and reuse it across tenders.
-            </h2>
+            </p>
             <p className="text-xs text-muted-foreground mt-0.5">
               All verified registrations, CA UDIN financials, and past experience are automatically
               matched for every new tender.
@@ -56,22 +46,11 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          <Badge
-            variant="neutral"
-            size="sm"
-            className="font-mono bg-muted/50 border-border text-foreground"
-          >
-            {profile.profileVersion}
-          </Badge>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsPublishModalOpen(true)}
-            className="gap-1.5 text-xs"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            Publish Version
-          </Button>
+          {profile.profileVersion && (
+            <Badge variant="neutral" size="sm">
+              {profile.profileVersion}
+            </Badge>
+          )}
         </div>
       </div>
 
@@ -82,41 +61,40 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
           <div>
             <div className="flex items-center gap-2.5 flex-wrap mb-1.5">
               <Building2 className="w-6 h-6 text-foreground" />
-              <h1 className="text-xl font-bold tracking-tight text-foreground m-0">
+              <h1 className="text-2xl font-semibold tracking-tight text-foreground m-0">
                 {displayName}
               </h1>
-              <Badge variant="neutral" size="sm" dot>
-                Active Dossier
-              </Badge>
-              <Badge variant="neutral" size="sm" className="font-mono">
-                MSME {profile.msmeCategory}
-              </Badge>
-              {!profile.isBlacklisted && (
+              {profile.msmeCategory && (
+                <Badge variant="neutral" size="sm">
+                  MSME {profile.msmeCategory.toLowerCase()}
+                </Badge>
+              )}
+              {profile.isBlacklisted === false && (
                 <Badge variant="neutral" size="sm">
                   <span className="flex items-center gap-1">
-                    <Check className="w-3 h-3 text-foreground" /> Clean Non-Debarment Record
+                    <Check className="w-3 h-3 text-foreground" /> Not debarred
                   </span>
                 </Badge>
               )}
             </div>
 
-            <div className="flex gap-4 text-xs text-muted-foreground flex-wrap font-mono mt-2">
+            <div className="flex gap-4 text-xs text-muted-foreground flex-wrap mt-2">
               <div>
-                <strong className="text-foreground">GSTIN:</strong>{' '}
-                <span className="text-foreground font-semibold">{displayGstin}</span>
+                <span>GSTIN</span>{' '}
+                <span className="font-mono font-medium text-foreground">{displayGstin}</span>
               </div>
               <div>
-                <strong className="text-foreground">CIN:</strong>{' '}
-                <span className="text-foreground font-semibold">{profile.cinNumber}</span>
+                <span>CIN</span>{' '}
+                <span className="font-mono font-medium text-foreground">{profile.cinNumber}</span>
               </div>
               <div>
-                <strong className="text-foreground">Incorporated:</strong>{' '}
-                <span>{profile.incorporationDate}</span>
+                <span>Incorporated</span>{' '}
+                <span className="text-foreground">{profile.incorporationDate}</span>
               </div>
               <div>
-                <strong className="text-foreground">Credit Rating:</strong>{' '}
-                <span className="text-foreground font-semibold">
-                  {profile.creditRating?.rating ?? 'Not Rated / Pending'}
+                <span>Credit rating</span>{' '}
+                <span className="text-foreground">
+                  {profile.creditRating?.rating ?? 'Not stated'}
                 </span>
               </div>
             </div>
@@ -135,7 +113,7 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
               className="gap-1.5 text-xs shadow-xs"
             >
               <Plus className="w-3.5 h-3.5" />
-              Add Capability
+              Upload evidence
             </Button>
           </div>
         </div>
@@ -145,8 +123,8 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
           {/* Health Score Gauge */}
           <div>
             <div className="flex justify-between text-xs mb-1.5">
-              <span className="font-semibold text-foreground">Tender Readiness Health</span>
-              <strong className="font-mono text-foreground font-bold">
+              <span className="font-semibold text-foreground">Tender readiness health</span>
+              <strong className="tabular-nums text-foreground font-bold">
                 {health.healthScorePct}%
               </strong>
             </div>
@@ -160,22 +138,22 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
 
           {/* Count Cards */}
           <div className="flex gap-2 flex-wrap sm:col-span-1 md:col-span-2 justify-start md:justify-end">
-            <div className="bg-muted border border-border rounded-lg px-3 py-1.5 text-xs font-mono">
-              <span className="text-foreground font-bold">{health.verifiedCount}</span>{' '}
-              <span className="text-muted-foreground">Verified Credentials</span>
+            <div className="bg-muted border border-border rounded-lg px-3 py-1.5 text-xs">
+              <span className="text-foreground font-semibold tabular-nums">{health.verifiedCount}</span>{' '}
+              <span className="text-muted-foreground">verified credentials</span>
             </div>
 
             {health.expiringSoonCount > 0 && (
-              <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg px-3 py-1.5 text-xs font-mono">
-                <span className="text-orange-600 dark:text-orange-400 font-bold">
+              <div className="bg-warning/10 border border-warning/20 rounded-lg px-3 py-1.5 text-xs tabular-nums">
+                <span className="text-warning dark:text-warning font-bold">
                   {health.expiringSoonCount}
                 </span>{' '}
-                <span className="text-muted-foreground">Expiring Soon</span>
+                <span className="text-muted-foreground">Expiring soon</span>
               </div>
             )}
 
             {health.expiredCount > 0 && (
-              <div className="bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-1.5 text-xs font-mono">
+              <div className="bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-1.5 text-xs tabular-nums">
                 <span className="text-destructive font-bold">{health.expiredCount}</span>{' '}
                 <span className="text-muted-foreground">Expired</span>
               </div>
@@ -184,47 +162,6 @@ export const CompanyProfileHeader: React.FC<CompanyProfileHeaderProps> = ({
         </div>
       </div>
 
-      {/* Publish Version Modal */}
-      {isPublishModalOpen && (
-        <Modal
-          isOpen={true}
-          onClose={() => setIsPublishModalOpen(false)}
-          title="Publish New Immutable Profile Snapshot"
-          footer={
-            <>
-              <Button variant="ghost" onClick={() => setIsPublishModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button variant="primary" onClick={handlePublishVersion}>
-                Publish v2.5
-              </Button>
-            </>
-          }
-        >
-          <div className="flex flex-col gap-3 text-sm">
-            {publishSuccess ? (
-              <div className="text-primary text-center py-4 flex items-center justify-center gap-2 font-semibold">
-                <CheckCircle2 className="w-5 h-5" /> Profile Version v2.5 published and pinned
-                successfully!
-              </div>
-            ) : (
-              <>
-                <p className="m-0 text-foreground">
-                  Publishing creates a permanent cryptographic snapshot of all verified credentials,
-                  CA UDIN statements, and registrations.
-                </p>
-                <div className="bg-background p-3 rounded-lg border border-border text-xs text-muted-foreground font-mono space-y-1">
-                  <div>• Active bids will retain their pinned versions.</div>
-                  <div>• New bid evaluations will automatically utilize this new snapshot.</div>
-                  <div>
-                    • All linked evidence documents will be locked in the tamper-proof ledger.
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        </Modal>
-      )}
     </div>
   );
 };

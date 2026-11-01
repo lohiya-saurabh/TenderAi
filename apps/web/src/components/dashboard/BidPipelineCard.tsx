@@ -26,7 +26,7 @@ export const BidPipelineCard: React.FC<BidPipelineCardProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <TendersIcon size={16} className="text-primary" />
-            <CardTitle className="text-base font-semibold">Bid Pipeline</CardTitle>
+            <CardTitle className="text-base font-semibold">Bid pipeline</CardTitle>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
             Workflow stage distribution — select a stage to filter the tender list
@@ -54,13 +54,13 @@ export const BidPipelineCard: React.FC<BidPipelineCardProps> = ({
                   isSelected
                     ? 'bg-accent text-accent-foreground border-primary shadow-xs ring-1 ring-primary/20'
                     : 'bg-card/60 border-border hover:bg-accent/40',
-                  isEmpty && 'opacity-50',
+                  isEmpty && !isSelected && 'border-dashed bg-transparent',
                 )}
               >
                 <div className="flex items-center justify-between">
                   <span
                     className={cn(
-                      'text-[10px] font-semibold uppercase tracking-wider',
+                      'text-2xs font-semibold',
                       isSelected ? 'text-primary' : 'text-muted-foreground',
                     )}
                   >
@@ -71,7 +71,7 @@ export const BidPipelineCard: React.FC<BidPipelineCardProps> = ({
                   </span>
                 </div>
 
-                <span className="text-[11px] text-muted-foreground leading-tight line-clamp-1">
+                <span className="text-2xs text-muted-foreground leading-tight line-clamp-1">
                   {stage.description}
                 </span>
 
@@ -80,17 +80,17 @@ export const BidPipelineCard: React.FC<BidPipelineCardProps> = ({
                   {stage.readinessPct !== null ? (
                     <span
                       className={cn(
-                        'text-[11px] font-semibold',
+                        'text-2xs font-semibold',
                         stage.readinessPct >= 80 ? 'text-primary' : 'text-foreground',
                       )}
                     >
                       {stage.readinessPct}% ready
                     </span>
                   ) : (
-                    <span className="text-[10px] text-muted-foreground">No requirements yet</span>
+                    <span className="text-2xs text-muted-foreground">No requirements yet</span>
                   )}
                   {stage.flaggedRequirements > 0 && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-destructive">
+                    <span className="inline-flex items-center gap-1 text-2xs font-semibold text-destructive">
                       <AlertCircleIcon size={11} className="text-destructive" />
                       {stage.flaggedRequirements} flagged
                     </span>
@@ -102,7 +102,7 @@ export const BidPipelineCard: React.FC<BidPipelineCardProps> = ({
         </div>
 
         {archivedCount > 0 && (
-          <div className="mt-3 text-[11px] text-muted-foreground">
+          <div className="mt-3 text-2xs text-muted-foreground">
             {archivedCount} archived tender{archivedCount === 1 ? '' : 's'} excluded from the
             pipeline
           </div>

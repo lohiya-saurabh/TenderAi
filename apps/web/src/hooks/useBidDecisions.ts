@@ -22,7 +22,7 @@ export interface BidDecisionsState {
  * pipeline scale and uses only the existing
  * GET /api/v1/bids/:id/bid-decision endpoint; the documented
  * replacement is embedding the decision projection in
- * GET /api/v1/bids (see MissingApiCallout).
+ * GET /api/v1/bids.
  *
  * The effect is keyed on the bid-ID set (not bid object identity)
  * so filtering, sorting, and refetches with an unchanged bid set
@@ -61,13 +61,8 @@ export function useBidDecisions(bids: BidSummary[] | null): BidDecisionsState {
       const decisionsByBid: Record<string, BidDecisionSummary> = {};
       const failedBidIds: string[] = [];
       for (const { bidId, result } of entries) {
-        if (result.ok) {
-          decisionsByBid[bidId] = result.data;
-        } else if (result.error.status !== 404) {
-          // 404 = no decision evaluated yet (expected); anything
-          // else is a genuine failure worth surfacing.
-          failedBidIds.push(bidId);
-        }
+        if (!result.ok) failedBidIds.push(bidId);
+        else if (result.data) decisionsByBid[bidId] = result.data;
       }
       setState({ decisionsByBid, isLoading: false, failedBidIds });
     });

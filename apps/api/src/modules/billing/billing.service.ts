@@ -3,13 +3,7 @@
  */
 import { Injectable, Inject } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
-import { eq, sql, and } from 'drizzle-orm';
-import {
-  DRIZZLE_TOKEN,
-  type DrizzleDb,
-  createDrizzle,
-} from '@/common/database/database.module.js';
-import * as schema from '@/common/database/schema.js';
+import { type DrizzleDb } from '@/common/database/database.module.js';
 import { BadRequestError } from '@/common/errors/errors.js';
 import {
   PLAN_CATALOG,
@@ -20,13 +14,20 @@ import {
   type ChangePlanDto,
   type PlanDefinition,
 } from '@/modules/billing/billing.types.js';
+import { BillingRepository } from '@/modules/billing/billing.repository.js';
 
 @Injectable()
 export class BillingService {
-  private readonly db: DrizzleDb;
+  private readonly repository: BillingRepository;
 
-  constructor(@Inject(DRIZZLE_TOKEN) db: DrizzleDb | PGlite) {
-    this.db = 'select' in db ? (db as DrizzleDb) : createDrizzle(db as PGlite);
+  constructor(
+    @Inject(BillingRepository)
+    repositoryOrDb: BillingRepository | DrizzleDb | PGlite,
+  ) {
+    this.repository =
+      repositoryOrDb instanceof BillingRepository
+        ? repositoryOrDb
+        : new BillingRepository(repositoryOrDb);
   }
 
   /**
@@ -40,11 +41,7 @@ export class BillingService {
    * Get the active subscription for a tenant workspace.
    */
   public async getSubscription(organizationId: string): Promise<SubscriptionView> {
-    const [sub] = await this.db
-      .select()
-      .from(schema.subscriptions)
-      .where(eq(schema.subscriptions.organizationId, organizationId))
-      .limit(1);
+    const sub = await this.repository.findSubscriptionByOrganization(organizationId);
 
     if (sub) {
       const tier = (sub.planTier?.toUpperCase() || 'FREE') as PlanTier;
@@ -79,19 +76,16 @@ export class BillingService {
     periodEnd.setDate(periodEnd.getDate() + 30);
     const subId = `sub_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
-    await this.db
-      .insert(schema.subscriptions)
-      .values({
-        id: subId,
-        organizationId,
-        planTier: 'FREE',
-        billingInterval: 'MONTHLY',
-        status: 'ACTIVE',
-        currentPeriodStart: now,
-        currentPeriodEnd: periodEnd,
-        cancelAtPeriodEnd: false,
-      })
-      .onConflictDoNothing();
+    await this.repository.createSubscription({
+      id: subId,
+      organizationId,
+      planTier: 'FREE',
+      billingInterval: 'MONTHLY',
+      status: 'ACTIVE',
+      currentPeriodStart: now,
+      currentPeriodEnd: periodEnd,
+      cancelAtPeriodEnd: false,
+    });
 
     const freePlan = PLAN_CATALOG.FREE;
     return {
@@ -117,33 +111,15 @@ export class BillingService {
     const entitlements = sub.entitlements;
 
     // Active companies count
-    const compCountRes = await this.db
-      .select({ count: sql<string>`count(*)` })
-      .from(schema.companies)
-      .where(eq(schema.companies.organizationId, organizationId));
-    const activeCompanies = parseInt(compCountRes[0]?.count || '0', 10);
+    const activeCompanies = await this.repository.countActiveCompanies(organizationId);
 
     // Active users count
-    const userCountRes = await this.db
-      .select({ count: sql<string>`count(*)` })
-      .from(schema.users)
-      .where(eq(schema.users.organizationId, organizationId));
-    const activeUsers = parseInt(userCountRes[0]?.count || '0', 10);
+    const activeUsers = await this.repository.countActiveUsers(organizationId);
 
     // Current month analyses
     const now = new Date();
     const periodKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const usageRes = await this.db
-      .select({ total: sql<string>`coalesce(sum(${schema.usageRecords.quantity}), 0)` })
-      .from(schema.usageRecords)
-      .where(
-        and(
-          eq(schema.usageRecords.organizationId, organizationId),
-          eq(schema.usageRecords.metric, 'TENDER_ANALYSIS'),
-          eq(schema.usageRecords.periodKey, periodKey),
-        ),
-      );
-    const monthlyAnalyses = parseInt(usageRes[0]?.total || '0', 10);
+    const monthlyAnalyses = await this.repository.sumTenderAnalysisUsage(organizationId, periodKey);
 
     return {
       activeCompanies,
@@ -177,26 +153,19 @@ export class BillingService {
       periodEnd.setDate(periodEnd.getDate() + 30);
     }
 
-    const [existing] = await this.db
-      .select()
-      .from(schema.subscriptions)
-      .where(eq(schema.subscriptions.organizationId, organizationId))
-      .limit(1);
+    const existing = await this.repository.findSubscriptionByOrganization(organizationId);
 
     if (existing) {
-      await this.db
-        .update(schema.subscriptions)
-        .set({
-          planTier: targetTier,
-          billingInterval: interval,
-          status: 'ACTIVE',
-          currentPeriodStart: now,
-          currentPeriodEnd: periodEnd,
-          updatedAt: now,
-        })
-        .where(eq(schema.subscriptions.id, existing.id));
+      await this.repository.updateSubscription(existing.id, {
+        planTier: targetTier,
+        billingInterval: interval,
+        status: 'ACTIVE',
+        currentPeriodStart: now,
+        currentPeriodEnd: periodEnd,
+        updatedAt: now,
+      });
     } else {
-      await this.db.insert(schema.subscriptions).values({
+      await this.repository.createSubscription({
         id: `sub_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
         organizationId,
         planTier: targetTier,

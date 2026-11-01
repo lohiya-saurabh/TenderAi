@@ -32,9 +32,7 @@ export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base font-semibold">
-            Tenant Workspace Configuration
-          </CardTitle>
+          <CardTitle className="text-base font-semibold">Workspace</CardTitle>
           <CardDescription className="text-xs">
             Core workspace properties and tenant-level regional defaults
           </CardDescription>
@@ -42,28 +40,28 @@ export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="workspaceName">Workspace Name</Label>
+              <Label htmlFor="workspaceName">Workspace name</Label>
               <Input
                 id="workspaceName"
                 value={workspaceSettings?.organizationName || organizationName || 'Workspace'}
                 disabled
                 className="bg-muted/30 font-medium text-foreground cursor-not-allowed border-border"
               />
-              <span className="text-[10px] text-muted-foreground">
-                SaaS organization tenant boundary identifier
+              <span className="text-2xs text-muted-foreground">
+                Your organisation's name, set at sign-up
               </span>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="tenantId">Tenant Organization ID</Label>
+              <Label htmlFor="tenantId">Workspace ID</Label>
               <Input
                 id="tenantId"
                 value={workspaceSettings?.organizationId || organizationId || '—'}
                 disabled
                 className="bg-muted/30 font-mono text-xs text-foreground cursor-not-allowed border-border"
               />
-              <span className="text-[10px] text-muted-foreground">
-                Cryptographically bound to your JWT session token claims
+              <span className="text-2xs text-muted-foreground">
+                Quote this ID when you contact support.
               </span>
             </div>
           </div>
@@ -71,10 +69,10 @@ export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({
           <Separator />
 
           <div className="space-y-3">
-            <Label className="text-xs font-semibold">Default Active Company Entity</Label>
+            <Label className="text-xs font-semibold">Default active company entity</Label>
             <p className="text-xs text-muted-foreground">
-              Select which registered company is automatically selected when you launch new
-              tenders or review dossiers.
+              Select which registered company is automatically selected when you launch new tenders
+              or review dossiers.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
@@ -97,7 +95,7 @@ export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({
                         <span className="truncate">{company.legalName}</span>
                       </div>
                       {company.gstin && (
-                        <p className="text-[10px] font-mono text-muted-foreground">
+                        <p className="text-2xs font-mono text-muted-foreground">
                           GSTIN: {company.gstin}
                         </p>
                       )}
@@ -112,44 +110,15 @@ export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({
               })}
             </div>
           </div>
-
-          <Separator />
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-            <div className="p-3 rounded-lg bg-muted/30 border border-border/60 space-y-1">
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                Procurement Standard &amp; Region
-              </span>
-              <p className="font-medium text-foreground">
-                India Public Procurement (GeM / CPPP)
-              </p>
-              <p className="text-[10px] text-muted-foreground">
-                INR Currency (₹ Lakhs / Crores)
-              </p>
-            </div>
-
-            <div className="p-3 rounded-lg bg-muted/30 border border-border/60 space-y-1">
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                Data Residency &amp; Compliance
-              </span>
-              <p className="font-medium text-foreground">AWS ap-south-1 (Mumbai)</p>
-              <p className="text-[10px] text-muted-foreground">
-                DPDP Act 2023 Compliant Storage
-              </p>
-            </div>
-          </div>
         </CardContent>
       </Card>
 
       {/* Appearance & Color Theme */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base font-semibold">
-            Appearance &amp; Visual Theme
-          </CardTitle>
+          <CardTitle className="text-base font-semibold">Appearance &amp; visual theme</CardTitle>
           <CardDescription className="text-xs">
-            Select your preferred interface display mode. Saved persistently to tenant
-            preferences.
+            Select your preferred interface display mode. Saved persistently to tenant preferences.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -166,8 +135,8 @@ export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({
             >
               <div className="space-y-1.5 pr-2">
                 <div className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  <Moon className="h-4 w-4 text-orange-400" />
-                  <span>Executive Dark (Default)</span>
+                  <Moon className="h-4 w-4 text-warning" />
+                  <span>Executive dark (default)</span>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">
                   Deep zinc canvas with crisp high-contrast cards and surgical terracotta orange
@@ -193,12 +162,12 @@ export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({
             >
               <div className="space-y-1.5 pr-2">
                 <div className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  <Sun className="h-4 w-4 text-amber-500" />
-                  <span>Crisp Daylight Light</span>
+                  <Sun className="h-4 w-4 text-warning" />
+                  <span>Crisp daylight light</span>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Pure white canvas with ink-black typography and hairline zinc dividers for
-                  daytime audits.
+                  Pure white canvas with ink-black typography and hairline zinc dividers for daytime
+                  audits.
                 </p>
               </div>
               {theme === 'light' && (

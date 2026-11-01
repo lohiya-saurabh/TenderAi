@@ -7,6 +7,7 @@
  * and semantic chunking for the RAG Bid/No-Bid decision engine.
  */
 import { Injectable, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { StructuredLogger } from '@/common/logging/StructuredLogger.js';
 import { LoggingContextHolder } from '@/common/logging/LoggingContext.js';
 import type { SecurityContextDto } from '@tenderpulse/shared-types';
@@ -21,6 +22,8 @@ export interface ExtractedEvidenceChunk {
   clause_reference?: string;
   bounding_box?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
+  /** Dense vector from the AI worker's local model; the model is named in metadata.embedding_model. */
+  embedding?: number[] | null;
 }
 
 export interface AiEvidenceExtractionResult {
@@ -38,6 +41,7 @@ export interface AiEvidenceExtractorConfig {
   internalServiceKey?: string;
   timeoutMs?: number;
   customFetch?: typeof fetch;
+  configService?: ConfigService;
 }
 
 @Injectable()
@@ -48,11 +52,20 @@ export class AiEvidenceExtractor {
   private readonly timeoutMs: number;
   private readonly customFetch?: typeof fetch;
 
-  constructor(@Optional() config: AiEvidenceExtractorConfig = {}) {
-    this.aiBaseUrl = config.aiBaseUrl ?? process.env.AI_ENGINE_URL ?? 'http://localhost:8000';
-    const internalServiceKey = config.internalServiceKey ?? process.env.INTERNAL_SERVICE_KEY;
-    this.internalServiceKey = internalServiceKey ?? 'tenderpulse-internal-secret-2026';
-    this.timeoutMs = config.timeoutMs ?? (process.env.AI_EXTRACTION_TIMEOUT_MS ? parseInt(process.env.AI_EXTRACTION_TIMEOUT_MS, 10) : 60000);
+  constructor(
+    @Optional() config: AiEvidenceExtractorConfig = {},
+    @Optional() configService?: ConfigService,
+  ) {
+    const cs = config.configService ?? configService;
+    this.aiBaseUrl = config.aiBaseUrl ?? cs?.get<string>('AI_ENGINE_URL') ?? '';
+    const internalServiceKey = config.internalServiceKey ?? cs?.get<string>('INTERNAL_SERVICE_KEY');
+    this.internalServiceKey = internalServiceKey ?? '';
+    const rawTimeout = config.timeoutMs ?? cs?.get<string>('AI_EXTRACTION_TIMEOUT_MS');
+    this.timeoutMs = rawTimeout
+      ? typeof rawTimeout === 'number'
+        ? rawTimeout
+        : parseInt(String(rawTimeout), 10)
+      : 60000;
     this.customFetch = config.customFetch;
   }
 
@@ -128,156 +141,20 @@ export class AiEvidenceExtractor {
       return data;
     } catch (err: unknown) {
       this.logger.warn(
-        `Remote AI evidence extraction failed for doc ${document.id}: ${(err as Error)?.message}. Using local deterministic extraction fallback.`,
+        `Remote AI evidence extraction failed for doc ${document.id}: ${(err as Error)?.message}. No attributes were extracted.`,
       );
-      return this.extractEvidenceLocal(document, bufferText);
+      // LLM-only: no local regex extractor. Report the failure; nothing is guessed.
+      return {
+        evidence_document_id: document.id,
+        organization_id: document.organizationId,
+        company_id: document.companyId,
+        status: 'FAILED',
+        extracted_attributes: {},
+        chunks: [],
+        error: (err as Error)?.message || 'AI evidence extraction is unavailable.',
+      };
     } finally {
       clearTimeout(timeoutId);
     }
-  }
-
-  /**
-   * Deterministic in-process fallback extractor for offline test suites and high-availability fallback.
-   */
-  public extractEvidenceLocal(
-    document: CompanyEvidenceDocument,
-    bufferText?: string,
-  ): AiEvidenceExtractionResult {
-    const text = bufferText ?? `${document.fileName} ${document.evidenceType} ${document.issuer ?? ''} ${document.referenceNumber ?? ''}`;
-    const extractedAttributes: Record<string, unknown> = {
-      evidence_category: document.evidenceType,
-    };
-    const chunks: ExtractedEvidenceChunk[] = [];
-
-    const evidenceType = (document.evidenceType || 'OTHER').toUpperCase();
-
-    if (
-      evidenceType.includes('BALANCE_SHEET') ||
-      evidenceType.includes('TURNOVER') ||
-      /turnover|udin|chartered accountant/i.test(text)
-    ) {
-      // 1. UDIN extraction
-      const udinMatch = text.match(/\b([0-9]{2}[0-9A-Z]{6}[A-Z]{6}[0-9]{4}|[0-9A-Z]{18})\b/i);
-      if (udinMatch && udinMatch[1]) {
-        extractedAttributes.udin = udinMatch[1].toUpperCase();
-        extractedAttributes.reference_number = extractedAttributes.udin;
-      }
-
-      // 2. Turnover numbers
-      const avgMatch = text.match(/average(?:\s*annual)?\s*turnover[^\d]*?(?:inr|rs\.?|₹)?\s*(\d+(?:\.\d+)?)\s*(?:cr|crores?)/i);
-      if (avgMatch && avgMatch[1]) {
-        extractedAttributes.average_turnover_inr_cr = parseFloat(avgMatch[1]);
-      }
-
-      const turnoverMatch = text.match(/(?:inr|rs\.?|₹)?\s*(\d+(?:\.\d+)?)\s*(?:cr|crores?)/i);
-      if (turnoverMatch && turnoverMatch[1]) {
-        const val = parseFloat(turnoverMatch[1]);
-        extractedAttributes.latest_turnover_inr_cr = val;
-        if (!extractedAttributes.average_turnover_inr_cr) {
-          extractedAttributes.average_turnover_inr_cr = val;
-        }
-      }
-
-      chunks.push({
-        chunk_index: 0,
-        chunk_type: 'FINANCIAL_TURNOVER',
-        content: `Statutory Financial Audit Certificate (${document.fileName})\n${extractedAttributes.udin ? `UDIN: ${extractedAttributes.udin}\n` : ''}${extractedAttributes.average_turnover_inr_cr ? `Average Turnover: INR ${extractedAttributes.average_turnover_inr_cr} Crores\n` : ''}${text}`,
-        page_number: 1,
-        clause_reference: 'CA Turnover Certificate (Page 1)',
-        metadata: {
-          file_name: document.fileName,
-          fileName: document.fileName,
-          evidence_document_id: document.id,
-          evidenceDocumentId: document.id,
-          udin: extractedAttributes.udin,
-          average_turnover_cr: extractedAttributes.average_turnover_inr_cr,
-        },
-      });
-    } else if (
-      evidenceType.includes('WORK_ORDER') ||
-      evidenceType.includes('COMPLETION') ||
-      /completion|contract value|similar work/i.test(text)
-    ) {
-      const clientMatch = text.match(
-        /\b(National Highways Authority of India|NHAI|Central Public Works Department|CPWD|Public Works Department|PWD|Indian Railways|RVNL|DFCCIL|MMRDA|MahaMetro)\b/i,
-      );
-      if (clientMatch && clientMatch[1]) {
-        let matched = clientMatch[1].trim();
-        if (/national highways authority of india/i.test(matched)) {
-          matched = 'NHAI';
-        } else if (/central public works department/i.test(matched)) {
-          matched = 'CPWD';
-        } else if (/public works department/i.test(matched)) {
-          matched = 'PWD';
-        }
-        extractedAttributes.client = matched;
-        extractedAttributes.client_name = matched;
-        extractedAttributes.issuer = matched;
-      }
-
-      const valMatch = text.match(/(?:inr|rs\.?|₹)?\s*(\d+(?:\.\d+)?)\s*(?:cr|crores?)/i);
-      if (valMatch && valMatch[1]) {
-        extractedAttributes.contract_value_inr_cr = parseFloat(valMatch[1]);
-      }
-
-      chunks.push({
-        chunk_index: 0,
-        chunk_type: 'PROJECT_EXPERIENCE',
-        content: `Project Completion Certificate (${document.fileName})\n${extractedAttributes.client_name ? `Client: ${extractedAttributes.client_name}\n` : ''}${extractedAttributes.contract_value_inr_cr ? `Completed Value: INR ${extractedAttributes.contract_value_inr_cr} Crores\n` : ''}${text}`,
-        page_number: 1,
-        clause_reference: 'Project Completion Certificate (Page 1)',
-        metadata: {
-          file_name: document.fileName,
-          fileName: document.fileName,
-          evidence_document_id: document.id,
-          evidenceDocumentId: document.id,
-          client: extractedAttributes.client_name,
-          contract_value_cr: extractedAttributes.contract_value_inr_cr,
-        },
-      });
-    } else if (
-      evidenceType.includes('ISO') ||
-      evidenceType.includes('ACCREDITATION') ||
-      /iso\s*\d{4,5}/i.test(text)
-    ) {
-      const isoMatch = text.match(/\b(ISO\s*(?:9001|14001|45001|27001)(?::\d{4})?)\b/i);
-      if (isoMatch && isoMatch[1]) {
-        extractedAttributes.standard = isoMatch[1].toUpperCase();
-      }
-      const issuerMatch = text.match(/\b(Bureau Veritas|BSI|TUV|DNV|SGS|Intertek)\b/i);
-      if (issuerMatch && issuerMatch[1]) {
-        extractedAttributes.issuer = issuerMatch[1];
-      }
-
-      chunks.push({
-        chunk_index: 0,
-        chunk_type: 'CERTIFICATION',
-        content: `Statutory Quality Accreditation (${document.fileName})\n${extractedAttributes.standard ? `Standard: ${extractedAttributes.standard}\n` : ''}${extractedAttributes.issuer ? `Registrar: ${extractedAttributes.issuer}\n` : ''}${text}`,
-        page_number: 1,
-        clause_reference: 'Accreditation Certificate (Page 1)',
-        metadata: {
-          standard: extractedAttributes.standard,
-          issuer: extractedAttributes.issuer,
-        },
-      });
-    } else {
-      chunks.push({
-        chunk_index: 0,
-        chunk_type: 'GENERAL',
-        content: `Company Evidence Document (${document.fileName})\nType: ${document.evidenceType}\n${text}`,
-        page_number: 1,
-        clause_reference: 'Document Content (Page 1)',
-        metadata: { fileName: document.fileName },
-      });
-    }
-
-    return {
-      evidence_document_id: document.id,
-      organization_id: document.organizationId,
-      company_id: document.companyId,
-      status: 'COMPLETED',
-      extracted_attributes: extractedAttributes,
-      chunks,
-    };
   }
 }

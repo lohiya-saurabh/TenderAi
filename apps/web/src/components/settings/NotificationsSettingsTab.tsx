@@ -19,7 +19,7 @@ export const NotificationsSettingsTab: React.FC<NotificationsSettingsTabProps> =
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base font-semibold">Tender Alert Preferences</CardTitle>
+          <CardTitle className="text-base font-semibold">Tender alert preferences</CardTitle>
           <CardDescription className="text-xs">
             Control in-app status banners and critical procurement timeline alerts (Persisted to
             Database)
@@ -30,7 +30,7 @@ export const NotificationsSettingsTab: React.FC<NotificationsSettingsTabProps> =
             <div className="flex items-center justify-between gap-4 p-3 rounded-lg bg-muted/20 border border-border">
               <div className="space-y-0.5">
                 <Label htmlFor="notifyDeadlines" className="text-xs font-semibold">
-                  Tender Submission Deadline Warnings
+                  Tender submission deadline warnings
                 </Label>
                 <p className="text-xs text-muted-foreground">
                   Display amber/red alerts when submission deadline is within 7 days or 48 hours
@@ -47,7 +47,7 @@ export const NotificationsSettingsTab: React.FC<NotificationsSettingsTabProps> =
             <div className="flex items-center justify-between gap-4 p-3 rounded-lg bg-muted/20 border border-border">
               <div className="space-y-0.5">
                 <Label htmlFor="notifyEvidenceExpiry" className="text-xs font-semibold">
-                  Company Evidence Expiration Alerts
+                  Company evidence expiration alerts
                 </Label>
                 <p className="text-xs text-muted-foreground">
                   Notify when CA UDIN certificates, solvency letters, or ISO audits are expiring
@@ -65,7 +65,7 @@ export const NotificationsSettingsTab: React.FC<NotificationsSettingsTabProps> =
             <div className="flex items-center justify-between gap-4 p-3 rounded-lg bg-muted/20 border border-border">
               <div className="space-y-0.5">
                 <Label htmlFor="notifyReviewRequests" className="text-xs font-semibold">
-                  Human Review Task Requests
+                  Human review task requests
                 </Label>
                 <p className="text-xs text-muted-foreground">
                   Flag tender clauses requiring manual sign-off by Legal Counsel or Financial
@@ -83,7 +83,7 @@ export const NotificationsSettingsTab: React.FC<NotificationsSettingsTabProps> =
             <div className="flex items-center justify-between gap-4 p-3 rounded-lg bg-muted/20 border border-border">
               <div className="space-y-0.5">
                 <Label htmlFor="notifyHighRiskFlags" className="text-xs font-semibold">
-                  Critical Disqualification Risk Alerts
+                  Critical disqualification risk alerts
                 </Label>
                 <p className="text-xs text-muted-foreground">
                   Highlight Liquidated Damages caps exceeding 10% or non-refundable EMD

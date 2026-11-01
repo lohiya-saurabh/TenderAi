@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
+from tenderpulse_ai.config import settings
 from tenderpulse_ai.infrastructure.queue import (
     DocumentExtractionCompletedEvent,
     HttpCallbackCompletionPublisher,
@@ -83,7 +84,7 @@ async def test_http_callback_completion_publisher():
 
 def test_api_worker_process_message_async_mode():
     client = TestClient(app)
-    headers = {"X-Internal-Service-Key": "tenderpulse-internal-secret-2026"}
+    headers = {"X-Internal-Service-Key": settings.internal_service_key}
 
     payload = {
         "job_id": "job-async-test-01",

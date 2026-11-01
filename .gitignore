@@ -11,6 +11,8 @@ data/
 **/data/
 uploads/
 **/uploads/
+inspection_output/
+node*_output.*
 
 # Environment Variables & Keys
 .env
@@ -59,3 +61,14 @@ graphify-out/
 /e2e/screenshots/
 playwright-screenshots/
 
+# Teamwork Multi-Agent Swarm
+.agents/
+
+
+
+# AI extraction benchmark snapshots and parsed-page cache
+apps/ai/.bench/
+apps/ai/.cache/
+
+# Playwright clause-workspace runs (fresh API database, results, report)
+/.e2e/

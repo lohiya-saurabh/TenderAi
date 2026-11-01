@@ -1,3 +1,3 @@
-# TenderPulse AI Engine
+# TenderPulse AI Worker Service
 
-FastAPI-powered document intelligence and compliance extraction worker service.
+FastAPI intelligence and document compliance extraction worker.

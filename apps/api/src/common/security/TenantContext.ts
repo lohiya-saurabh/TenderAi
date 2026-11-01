@@ -5,6 +5,8 @@ import { UnauthorizedTenantAccessException } from '@/common/domain/DomainExcepti
 export interface TenantContext {
   organizationId: string;
   userId: string;
+  /** Display name from the verified token, recorded on reviews and audit events. */
+  userName?: string;
   role: UserRole;
   requestId?: string;
 }

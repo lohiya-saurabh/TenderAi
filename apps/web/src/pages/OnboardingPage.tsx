@@ -5,13 +5,7 @@ import { useCompany } from '@/context/useCompany.js';
 import { Button } from '@/components/ui/button.js';
 import { Label } from '@/components/ui/label.js';
 import { Badge } from '@/components/ui/badge.js';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card.js';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card.js';
 import {
   Building2,
   CheckCircle2,
@@ -21,7 +15,7 @@ import {
   ShieldCheck,
   Loader2,
 } from 'lucide-react';
-import { verifyGstin, createCompanyProfileVersion } from '@/api/companies.js';
+import { verifyGstin, updateOnboardingPreferences, type TurnoverBand } from '@/api/companies.js';
 
 const SECTORS = [
   'Civil Infrastructure & Highways',
@@ -41,8 +35,9 @@ export const OnboardingPage: React.FC = () => {
   const [selectedSectors, setSelectedSectors] = useState<string[]>([
     'Civil Infrastructure & Highways',
   ]);
-  const [turnoverRange, setTurnoverRange] = useState<string>('50_to_250_cr');
+  const [turnoverRange, setTurnoverRange] = useState<TurnoverBand>('50_to_250_cr');
   const [isFinishing, setIsFinishing] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // IRIS IRP GSTIN Verification during onboarding
   const [gstinInput, setGstinInput] = useState('27AABCU9603R1ZM');
@@ -69,32 +64,35 @@ export const OnboardingPage: React.FC = () => {
   };
 
   const toggleSector = (sec: string) => {
-    if (selectedSectors.includes(sec)) {
-      setSelectedSectors(selectedSectors.filter((s) => s !== sec));
-    } else {
-      setSelectedSectors([...selectedSectors, sec]);
-    }
+    setSelectedSectors((prev) =>
+      prev.includes(sec) ? prev.filter((s) => s !== sec) : [...prev, sec],
+    );
   };
 
+  const goToDashboard = () => navigate('/bids', { replace: true });
+
+  // Sectors and turnover band are self-declared, so they are stored as
+  // onboarding preferences on the company, never as a capability profile
+  // version: the evaluator only reads evidence-backed profile data.
   const handleComplete = async () => {
-    setIsFinishing(true);
-    if (companies.length > 0 && companies[0]) {
-      const compId = companies[0].id;
-      try {
-        await createCompanyProfileVersion(compId, {
-          name: 'Onboarding Capability Baseline',
-          payload: {
-            company_name: companies[0].legalName || 'Enterprise Contractor',
-            operating_regions: selectedSectors,
-          },
-        });
-      } catch (err) {
-        console.warn('[OnboardingPage] Failed to persist initial capabilities profile:', err);
-      }
+    const company = companies[0];
+    if (!company) {
+      goToDashboard();
+      return;
     }
-    setTimeout(() => {
-      navigate('/bids', { replace: true });
-    }, 400);
+    setIsFinishing(true);
+    setSaveError(null);
+    const res = await updateOnboardingPreferences(company.id, {
+      sectors: selectedSectors,
+      turnoverBand: turnoverRange,
+    });
+    if (!res.ok) {
+      setIsFinishing(false);
+      setSaveError(res.error.message);
+      return;
+    }
+    await reloadCompanies();
+    goToDashboard();
   };
 
   return (
@@ -105,7 +103,7 @@ export const OnboardingPage: React.FC = () => {
           <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-primary text-primary-foreground font-bold text-base mb-2 shadow-xs">
             TP
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
             Welcome to TenderPulse AI, {user?.name?.split(' ')[0] || 'Partner'}
           </h1>
           <p className="text-xs text-muted-foreground">
@@ -118,7 +116,7 @@ export const OnboardingPage: React.FC = () => {
               className={`flex items-center gap-1.5 text-xs font-semibold ${step >= 1 ? 'text-primary' : 'text-muted-foreground'}`}
             >
               <span
-                className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${step >= 1 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+                className={`w-5 h-5 rounded-full flex items-center justify-center text-2xs ${step >= 1 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
               >
                 1
               </span>
@@ -129,7 +127,7 @@ export const OnboardingPage: React.FC = () => {
               className={`flex items-center gap-1.5 text-xs font-semibold ${step >= 2 ? 'text-primary' : 'text-muted-foreground'}`}
             >
               <span
-                className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${step >= 2 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+                className={`w-5 h-5 rounded-full flex items-center justify-center text-2xs ${step >= 2 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
               >
                 2
               </span>
@@ -140,7 +138,7 @@ export const OnboardingPage: React.FC = () => {
               className={`flex items-center gap-1.5 text-xs font-semibold ${step >= 3 ? 'text-primary' : 'text-muted-foreground'}`}
             >
               <span
-                className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${step >= 3 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+                className={`w-5 h-5 rounded-full flex items-center justify-center text-2xs ${step >= 3 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
               >
                 3
               </span>
@@ -155,8 +153,8 @@ export const OnboardingPage: React.FC = () => {
           {step === 1 && (
             <>
               <CardHeader>
-                <CardTitle className="text-base font-bold">
-                  Step 1: Workspace &amp; Tenant Boundary
+                <CardTitle className="text-base font-semibold">
+                  Step 1: workspace &amp; tenant boundary
                 </CardTitle>
                 <CardDescription className="text-xs">
                   Your tenant isolation workspace has been initialized with the following
@@ -166,27 +164,27 @@ export const OnboardingPage: React.FC = () => {
               <CardContent className="space-y-5">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                   <div className="p-3 rounded-lg bg-muted/40 border border-border space-y-1">
-                    <span className="text-[10px] text-muted-foreground uppercase font-semibold">
-                      Workspace Name
+                    <span className="text-2xs text-muted-foreground font-semibold">
+                      Workspace name
                     </span>
                     <p className="font-semibold text-foreground">
                       {user?.organizationName || 'My Workspace'}
                     </p>
-                    <p className="text-[10px] text-muted-foreground font-mono">
+                    <p className="text-2xs text-muted-foreground font-mono">
                       Tenant: {user?.organizationId}
                     </p>
                   </div>
                   <div className="p-3 rounded-lg bg-muted/40 border border-border space-y-1">
-                    <span className="text-[10px] text-muted-foreground uppercase font-semibold">
-                      Admin Account
+                    <span className="text-2xs text-muted-foreground font-semibold">
+                      Admin account
                     </span>
                     <p className="font-semibold text-foreground">{user?.name}</p>
-                    <p className="text-[10px] text-muted-foreground">{user?.email}</p>
+                    <p className="text-2xs text-muted-foreground">{user?.email}</p>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold">Registered Company Entities</Label>
+                  <Label className="text-xs font-semibold">Registered company entities</Label>
                   <div className="space-y-2">
                     {companies.map((c) => (
                       <div
@@ -198,7 +196,7 @@ export const OnboardingPage: React.FC = () => {
                           <div>
                             <p className="font-semibold text-xs text-foreground">{c.legalName}</p>
                             {c.gstin && (
-                              <p className="text-[10px] font-mono text-muted-foreground">
+                              <p className="text-2xs font-mono text-muted-foreground">
                                 GSTIN: {c.gstin}
                               </p>
                             )}
@@ -208,13 +206,13 @@ export const OnboardingPage: React.FC = () => {
                           {c.gstinVerifiedAt ? (
                             <Badge
                               variant="default"
-                              className="text-[10px] bg-foreground text-background"
+                              className="text-2xs bg-foreground text-background"
                             >
                               IRIS Verified
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="text-[10px]">
-                              Active Entity
+                            <Badge variant="outline" className="text-2xs">
+                              Active entity
                             </Badge>
                           )}
                         </div>
@@ -229,10 +227,10 @@ export const OnboardingPage: React.FC = () => {
                     <div className="flex items-center gap-1.5">
                       <ShieldCheck className="h-4 w-4 text-primary" />
                       <span className="text-xs font-semibold text-foreground">
-                        Verify Identity via IRIS IRP GSP
+                        Verify identity via IRIS IRP GSP
                       </span>
                     </div>
-                    <span className="text-[10px] text-muted-foreground">
+                    <span className="text-2xs text-muted-foreground">
                       Auto-imports official name &amp; PAN
                     </span>
                   </div>
@@ -265,20 +263,20 @@ export const OnboardingPage: React.FC = () => {
                   </div>
 
                   {gstinVerifySuccess && (
-                    <div className="text-[11px] text-primary flex items-center gap-1 font-medium">
+                    <div className="text-2xs text-primary flex items-center gap-1 font-medium">
                       <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
                       <span>{gstinVerifySuccess}</span>
                     </div>
                   )}
 
                   {gstinVerifyError && (
-                    <div className="text-[11px] text-red-500">{gstinVerifyError}</div>
+                    <div className="text-2xs text-destructive">{gstinVerifyError}</div>
                   )}
                 </div>
 
                 <div className="pt-2 flex justify-end">
                   <Button onClick={() => setStep(2)} className="text-xs gap-1.5 font-semibold">
-                    <span>Continue to Capabilities</span>
+                    <span>Continue to capabilities</span>
                     <ArrowRight className="h-3.5 w-3.5" />
                   </Button>
                 </div>
@@ -290,17 +288,17 @@ export const OnboardingPage: React.FC = () => {
           {step === 2 && (
             <>
               <CardHeader>
-                <CardTitle className="text-base font-bold">
-                  Step 2: Core Sectors &amp; Financial Turnover
+                <CardTitle className="text-base font-semibold">
+                  Step 2: core sectors &amp; financial turnover
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Helps our deterministic engine evaluate financial qualification formulas
-                  accurately.
+                  Used to tailor your workspace. Eligibility checks only use evidence-backed figures
+                  from your Company Dossier.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-5">
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold">Primary Contracting Sectors</Label>
+                  <Label className="text-xs font-semibold">Primary contracting sectors</Label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {SECTORS.map((sec) => {
                       const isSelected = selectedSectors.includes(sec);
@@ -327,19 +325,19 @@ export const OnboardingPage: React.FC = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="turnoverSelect" className="text-xs font-semibold">
-                    Average 3-Year Annual Turnover Range
+                    Average 3-year annual turnover range
                   </Label>
                   <select
                     id="turnoverSelect"
                     value={turnoverRange}
-                    onChange={(e) => setTurnoverRange(e.target.value)}
+                    onChange={(e) => setTurnoverRange(e.target.value as TurnoverBand)}
                     className="w-full h-9 px-3 rounded-md border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                   >
-                    <option value="under_10_cr">Under ₹10 Crores (MSME Micro / Small)</option>
+                    <option value="under_10_cr">Under ₹10 crores (MSME micro / small)</option>
                     <option value="10_to_50_cr">₹10 Crores - ₹50 Crores (Medium Enterprise)</option>
                     <option value="50_to_250_cr">₹50 Crores - ₹250 Crores (Mid-tier EPC)</option>
                     <option value="above_250_cr">
-                      Above ₹250 Crores (Major Infrastructure Contractor)
+                      Above ₹250 crores (major infrastructure contractor)
                     </option>
                   </select>
                 </div>
@@ -349,7 +347,7 @@ export const OnboardingPage: React.FC = () => {
                     Back
                   </Button>
                   <Button onClick={() => setStep(3)} className="text-xs gap-1.5 font-semibold">
-                    <span>Next: Ready to Launch</span>
+                    <span>Next: ready to launch</span>
                     <ArrowRight className="h-3.5 w-3.5" />
                   </Button>
                 </div>
@@ -361,8 +359,8 @@ export const OnboardingPage: React.FC = () => {
           {step === 3 && (
             <>
               <CardHeader>
-                <CardTitle className="text-base font-bold">
-                  Step 3: Setup Complete &amp; Ready
+                <CardTitle className="text-base font-semibold">
+                  Step 3: setup complete &amp; ready
                 </CardTitle>
                 <CardDescription className="text-xs">
                   Your tenant profile is active and ready to ingest public tenders.
@@ -372,9 +370,9 @@ export const OnboardingPage: React.FC = () => {
                 <div className="p-4 rounded-xl bg-primary/10 border border-primary/30 text-primary space-y-2 text-xs">
                   <div className="flex items-center gap-2 font-semibold">
                     <CheckCircle2 className="h-4 w-4 shrink-0" />
-                    <span>Workspace &amp; Company Dossier Initialized</span>
+                    <span>Workspace &amp; company dossier initialized</span>
                   </div>
-                  <p className="text-muted-foreground text-[11px] leading-relaxed">
+                  <p className="text-muted-foreground text-2xs leading-relaxed">
                     You can now upload NIT PDFs or evaluate sample tenders to test clause
                     extraction, missing evidence detection, and compliance scoring.
                   </p>
@@ -384,9 +382,9 @@ export const OnboardingPage: React.FC = () => {
                   <div className="p-3 rounded-lg border border-border bg-muted/20 space-y-1">
                     <div className="flex items-center gap-1.5 font-semibold text-foreground">
                       <FileCheck2 className="h-4 w-4 text-primary" />
-                      <span>Create New Bid</span>
+                      <span>Create new bid</span>
                     </div>
-                    <p className="text-muted-foreground text-[11px]">
+                    <p className="text-muted-foreground text-2xs">
                       Upload your tender NIT or GeM bid document to start analysis.
                     </p>
                   </div>
@@ -394,13 +392,26 @@ export const OnboardingPage: React.FC = () => {
                   <div className="p-3 rounded-lg border border-border bg-muted/20 space-y-1">
                     <div className="flex items-center gap-1.5 font-semibold text-foreground">
                       <Briefcase className="h-4 w-4 text-foreground" />
-                      <span>Company Dossier</span>
+                      <span>Company dossier</span>
                     </div>
-                    <p className="text-muted-foreground text-[11px]">
+                    <p className="text-muted-foreground text-2xs">
                       Add CA certificates and past completion proofs anytime in settings.
                     </p>
                   </div>
                 </div>
+
+                {saveError && (
+                  <div className="p-3 rounded-lg border border-destructive/30 bg-destructive/5 text-2xs text-destructive space-y-1">
+                    <p>We couldn't save your sector and turnover preferences: {saveError}</p>
+                    <button
+                      type="button"
+                      onClick={goToDashboard}
+                      className="underline font-semibold"
+                    >
+                      Continue without saving
+                    </button>
+                  </div>
+                )}
 
                 <div className="pt-2 flex justify-between items-center">
                   <Button variant="ghost" size="sm" onClick={() => setStep(2)} className="text-xs">
@@ -411,7 +422,7 @@ export const OnboardingPage: React.FC = () => {
                     disabled={isFinishing}
                     className="text-xs gap-1.5 font-semibold shadow-xs"
                   >
-                    <span>{isFinishing ? 'Entering Dashboard...' : 'Enter Tender Dashboard'}</span>
+                    <span>{isFinishing ? 'Opening…' : 'Go to bids'}</span>
                     <ArrowRight className="h-3.5 w-3.5" />
                   </Button>
                 </div>

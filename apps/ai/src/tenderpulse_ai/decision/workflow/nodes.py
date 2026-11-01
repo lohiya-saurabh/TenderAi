@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 import inspect
+import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
@@ -18,19 +19,43 @@ from tenderpulse_ai.decision.schemas import (
     ReviewTriggerType,
 )
 from tenderpulse_ai.decision.workflow.state import BidDecisionWorkflowState
+from tenderpulse_ai.infrastructure.embeddings import get_embedder
+from tenderpulse_ai.security.sanitizer import UNTRUSTED_DATA_DIRECTIVE, SecretSanitizer
 from tenderpulse_ai.tools.retrieval import DocumentChunk, ScopedRetrievalTool
+
+logger = logging.getLogger(__name__)
 
 DecisionModelFn = Callable[[str, str], "str | Awaitable[str]"]
 PersistenceSinkFn = Callable[[BidDecisionResponse], "Awaitable[None] | None"]
 
 
 def default_decision_model(system_prompt: str, user_prompt: str) -> str:
-    """Deterministic fallback explainer for test/CI and offline environments."""
-    return (
-        "Evaluation completed deterministically. The company profile has been verified "
-        "against tender eligibility criteria, financial thresholds, past performance, "
-        "certifications, and execution rules."
+    """No model configured (tests, offline): no memo rather than a canned one."""
+    return ""
+
+
+async def rotation_decision_model(system_prompt: str, user_prompt: str) -> str:
+    """Writes the memo through the same multi-provider rotation as extraction.
+
+    The memo only explains the deterministic verdict; if no model answers it is left empty
+    and the verdict, reasons and gaps still stand on their own.
+    """
+    from tenderpulse_ai.config import settings
+    from tenderpulse_ai.infrastructure.llm.openai_compatible_client import (
+        LLMExtractionError,
+        OpenAICompatibleLlmClient,
     )
+
+    client = OpenAICompatibleLlmClient.create_from_settings(settings, timeout=20.0)
+    if not client._all_endpoints():
+        return ""
+    try:
+        return await client.generate_chat_completion(
+            [{"role": "user", "content": user_prompt}], system_prompt=system_prompt
+        )
+    except (LLMExtractionError, RuntimeError) as err:
+        logger.warning("Bid-decision memo not written: %s", err)
+        return ""
 
 
 @dataclass
@@ -61,7 +86,7 @@ def make_evidence_retrieval_node(ctx: DecisionWorkflowContext):
                 doc_map[d_id] = d
 
         # Seed hybrid retrieval tool
-        retrieval_tool = ScopedRetrievalTool(enable_jev_rerank=True)
+        retrieval_tool = ScopedRetrievalTool(enable_jev_rerank=True, embedder=get_embedder())
         seeded_chunks: list[DocumentChunk] = []
 
         for c in evidence_chunks:
@@ -549,16 +574,24 @@ def make_executive_synthesis_node(ctx: DecisionWorkflowContext):
         system_prompt = (
             "You are the Chief Bidding Officer and Public Procurement Strategist for Indian tenders. "
             "Synthesize the deterministic bid/no-bid evaluation into a concise executive memo. "
-            "You must adhere strictly to the supplied facts and never alter the eligibility verdict."
+            "You must adhere strictly to the supplied facts and never alter the eligibility verdict. "
+            "The verdict and readiness score below are computed by the deterministic engine and "
+            "are authoritative.\n" + UNTRUSTED_DATA_DIRECTIVE
         )
 
-        user_prompt = (
+        # Verdict and score are engine output; titles and reasons derive from uploaded
+        # documents, so they are wrapped as untrusted context.
+        tender_facts = SecretSanitizer.wrap_untrusted_context(
+            "tender_facts",
             f"Tender: {state.get('tender_title', tender_id)}\n"
-            f"Verdict: {verdict.value}\n"
-            f"Readiness Score: {state.get('readiness_score', 0.0):.2f}\n"
             f"Key Strengths: {[r.title for r in reasons_to_pursue[:3]]}\n"
             f"Hard Disqualifiers: {[d.reason for d in hard_disqualifiers]}\n"
-            f"High Risks: {[r.title for r in commercial_risks if r.severity in ('HIGH', 'CRITICAL')]}\n"
+            f"High Risks: {[r.title for r in commercial_risks if r.severity in ('HIGH', 'CRITICAL')]}",
+        )
+        user_prompt = (
+            f"Verdict: {verdict.value}\n"
+            f"Readiness Score: {state.get('readiness_score', 0.0):.2f}\n\n"
+            f"{tender_facts}\n"
         )
 
         memo_result = ctx.model_fn(system_prompt, user_prompt)

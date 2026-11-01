@@ -242,7 +242,7 @@ To understand why contractors are desperate for TenderPulse AI, examine these re
 
 ## 8. Procurement Rule Patterns & The 20+ Candidate Detection Categories
 
-TenderPulse AI translates the complex statutory rules of Indian procurement into an automated, high-recall candidate detection and extraction engine (ADR 0028). 
+TenderPulse AI translates the complex statutory rules of Indian procurement into an automated, high-recall candidate detection and extraction engine (ADR 0028).
 
 Because government departments express mandatory obligations across varied vocabularies (sometimes without explicit words like `shall` or `must`), our domain rules map directly to **20+ standardized procurement categories**:
 
@@ -274,20 +274,22 @@ Because government departments express mandatory obligations across varied vocab
 ### 8.1 Debarment & Disqualification Restrictions (P0 Signal)
 
 Under **GFR 2017 Rule 151** and CVC guidelines, a firm can be debarred from public procurement across three tiers:
+
 1. **Departmental Blacklisting**: Specific to a Ministry or state department (e.g. disqualified by CPWD for 2 years).
 2. **Cross-Departmental Debarment**: By Ministry of Finance / Department of Expenditure, binding on all Central Ministries.
 3. **Integrity Pact Violations**: Immediate forfeiture of EMD and 3-year commercial ban.
 
 Crucially, debarment clauses are frequently formulated **without deontic modals**:
-> *"Bids submitted by firms appearing on the debarred list maintained by MoRTH or NHAI will be rejected."*
-> *"Any entity undergoing Corporate Insolvency Resolution Process (CIRP) under the IBC 2016 is ineligible."*
+
+> _"Bids submitted by firms appearing on the debarred list maintained by MoRTH or NHAI will be rejected."_
+> _"Any entity undergoing Corporate Insolvency Resolution Process (CIRP) under the IBC 2016 is ineligible."_
 
 In TenderPulse AI, these passages receive a top-tier **0.95 priority score**, ensuring they are immediately extracted into Packet 1 eligibility checks.
 
 ### 8.2 Execution & Statutory Rules: Stamp Paper, Notarization, and UDIN (P0 Signal)
 
 1. **State Stamp Act Invariants**:
-   Under the **Indian Stamp Act, 1899** and state-specific amendments (e.g., *Maharashtra Stamp Act 1958*, *Karnataka Stamp Act 1957*), legal instruments must bear stamp duty commensurate with state law:
+   Under the **Indian Stamp Act, 1899** and state-specific amendments (e.g., _Maharashtra Stamp Act 1958_, _Karnataka Stamp Act 1957_), legal instruments must bear stamp duty commensurate with state law:
    - Delhi: Minimum ₹100 for affidavits / ₹50 for undertakings.
    - Maharashtra: Minimum ₹500 for Powers of Attorney and Affidavits (Article 4 of Schedule I).
    - Under-stamped documents are legally inadmissible in evidence (Section 35) and cause instant bid rejection.
@@ -297,6 +299,7 @@ In TenderPulse AI, these passages receive a top-tier **0.95 priority score**, en
 ### 8.3 Technical Experience & "Similar Works" Scoring
 
 Tenders structure technical qualification using tiered completion equations:
+
 - **3-2-1 Rule**: 3 works of 40% cost, OR 2 works of 50% cost, OR 1 work of 80% cost.
 - **Lookback Window**: Typically the last 7 years ending on the last day of the month previous to the one in which NIT is invited.
 - **Escalation Factor**: To equalize past projects against inflation, tender authorities allow a compounded annual indexing factor (typically $7\%$ to $10\%$ per annum) on past financial values:
@@ -305,6 +308,7 @@ Tenders structure technical qualification using tiered completion equations:
 ### 8.4 Context Fusion: Bridging Layout Blocks to Document Hierarchy
 
 Tender documents frequently place operative instructions in terse bullet points or table cells:
+
 > Block text: `"₹15,00,000"` (appearing in a table cell or short bullet).
 
 A naive keyword search ignores this block. However, TenderPulse AI's **Context Fusion** links the block to its parent `SectionNode` AST:
@@ -491,6 +495,8 @@ This is the heart of the product. Ten steps, deterministic at every decision poi
 6. **The profile compounds.** Every tender evaluated enriches the profile (past bid evidence, win/loss outcomes), making the next evaluation faster and smarter — the platform moat.
 
 ## 13. Mapping to Today's Codebase
+
+> This mapping was written for the bidder-side pivot ([ADR 0016](adr/0016-bidder-side-pivot-aggregates.md)). Several aggregates listed as missing now exist: company profiles with versions, evidence documents, bid decisions and review status per clause. See [DATABASE.md](DATABASE.md) §3 for the current tables.
 
 | Today (code)                                 | Becomes (domain model)                                                                                                                                                                         |
 | :------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -801,8 +807,8 @@ Section-aware, not blind fixed-size:
 
 | Concern                                         | Deterministic (tier 1–2)                     | LLM (tier 3, fallback only) |
 | :---------------------------------------------- | :------------------------------------------- | :-------------------------- |
-| Text extraction                                 | pdf-parse / pdfjs                            | —                           |
-| OCR                                             | Tesseract / Textract                         | —                           |
+| Text extraction                                 | Docling Parser Engine / PDFium               | —                           |
+| OCR / Table layout                              | Docling layout engine / Tesseract OCR        | —                           |
 | Section segmentation                            | TOC + heading + numbering detection          | —                           |
 | NIT metadata (dates, amounts, EMD)              | regex on short text                          | —                           |
 | Thresholds (₹, %, years, counts)                | numeric regex → structured criteria          | —                           |

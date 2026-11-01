@@ -1,0 +1,1086 @@
+{
+  "jobId": "job_fixture",
+  "organizationId": "org_fixture",
+  "companyId": null,
+  "bidId": "bid_fixture",
+  "documentId": "doc_fixture_nit",
+  "status": "COMPLETED",
+  "items": [
+    {
+      "itemKey": "cl_98ae4b3a1f1c3c483ed70520",
+      "category": "FINANCIAL",
+      "title": "Earnest Money Deposit",
+      "description": "Deposit EMD of Rs 7,500 online; without it the bid is rejected.",
+      "executionRules": {
+        "stampPaperRequired": null,
+        "stampPaperDenominationInr": null,
+        "notarizationRequired": null,
+        "signingAuthorityRank": null,
+        "udinRequired": null,
+        "apostilleRequired": null,
+        "clientCountersignRequired": null
+      },
+      "attributes": {
+        "obligationType": "FINANCIAL_COMMITMENT",
+        "action": "UNDERTAKE",
+        "stage": "WITH_BID_ONLINE",
+        "parties": [],
+        "mandatory": "MANDATORY",
+        "disqualifying": true,
+        "deadline": null,
+        "amount": {
+          "inr": 7500.0,
+          "percent": null,
+          "basis": null
+        },
+        "formRef": null
+      },
+      "provenance": {
+        "sourceDocumentId": "doc_fixture_nit",
+        "sourceFileName": "Fixture_NIT_2026.pdf",
+        "pageNumber": 1,
+        "supportingPages": [],
+        "clauseReference": "2.1",
+        "sourceBlockId": "chk_doc_fixture_nit_p1",
+        "verbatimQuote": "The bidder shall deposit Earnest Money of Rs. 7,500 through online payment, failing which the bid shall be rejected.",
+        "confidenceScore": 1.0
+      },
+      "verificationStatus": "VERIFIED",
+      "docOrder": 0,
+      "flags": [
+        "CONFLICT"
+      ]
+    },
+    {
+      "itemKey": "cl_7711bf446e8445b7c6982f60",
+      "category": "LEGAL",
+      "title": "Physical originals deadline",
+      "description": "Originals of bid security and power of attorney must reach by 28 Nov 2026 11:00.",
+      "executionRules": {
+        "stampPaperRequired": null,
+        "stampPaperDenominationInr": null,
+        "notarizationRequired": null,
+        "signingAuthorityRank": null,
+        "udinRequired": null,
+        "apostilleRequired": null,
+        "clientCountersignRequired": null
+      },
+      "attributes": {
+        "obligationType": "DEADLINE",
+        "action": "ATTACH_DOCUMENT",
+        "stage": "WITH_BID_PHYSICAL",
+        "parties": [],
+        "mandatory": "MANDATORY",
+        "disqualifying": true,
+        "deadline": {
+          "kind": "ABSOLUTE",
+          "date": "28.11.2026 11:00",
+          "anchor": null,
+          "offsetDays": null
+        },
+        "amount": null,
+        "formRef": null
+      },
+      "provenance": {
+        "sourceDocumentId": "doc_fixture_nit",
+        "sourceFileName": "Fixture_NIT_2026.pdf",
+        "pageNumber": 1,
+        "supportingPages": [],
+        "clauseReference": "3.1",
+        "sourceBlockId": "chk_doc_fixture_nit_p2",
+        "verbatimQuote": "The original Bid Security and Power of Attorney shall be submitted so as to reach the Authority on or before 11:00 hours on 28.11.2026, failing which the Bid shall be rejected.",
+        "confidenceScore": 0.8
+      },
+      "verificationStatus": "VERIFIED",
+      "docOrder": 1,
+      "flags": []
+    },
+    {
+      "itemKey": "cl_f24c2117c42a85fe8c48e3c6",
+      "category": "FINANCIAL",
+      "title": "Performance Security",
+      "description": "Furnish performance security of 5% of contract value within 30 days of LOA.",
+      "executionRules": {
+        "stampPaperRequired": null,
+        "stampPaperDenominationInr": null,
+        "notarizationRequired": null,
+        "signingAuthorityRank": null,
+        "udinRequired": null,
+        "apostilleRequired": null,
+        "clientCountersignRequired": null
+      },
+      "attributes": {
+        "obligationType": "FINANCIAL_COMMITMENT",
+        "action": null,
+        "stage": "POST_AWARD",
+        "parties": [
+          "BANK"
+        ],
+        "mandatory": "MANDATORY",
+        "disqualifying": null,
+        "deadline": {
+          "kind": "RELATIVE",
+          "date": null,
+          "anchor": "LOA",
+          "offsetDays": 30
+        },
+        "amount": {
+          "inr": null,
+          "percent": 5.0,
+          "basis": "contract value"
+        },
+        "formRef": null
+      },
+      "provenance": {
+        "sourceDocumentId": "doc_fixture_nit",
+        "sourceFileName": "Fixture_NIT_2026.pdf",
+        "pageNumber": 2,
+        "supportingPages": [],
+        "clauseReference": "4.1",
+        "sourceBlockId": "chk_doc_fixture_nit_p3",
+        "verbatimQuote": "The successful bidder shall furnish a Performance Security of 5% of the contract value within 30 days of issue of the Letter of Acceptance.",
+        "confidenceScore": 1.0
+      },
+      "verificationStatus": "VERIFIED",
+      "docOrder": 2,
+      "flags": [
+        "CONFLICT"
+      ]
+    },
+    {
+      "itemKey": "cl_9fa5d1c01124f88e0e1166ed",
+      "category": "FINANCIAL",
+      "title": "Earnest Money amount",
+      "description": "EMD is Rs 12,500 (2.5% of estimated value).",
+      "executionRules": {
+        "stampPaperRequired": null,
+        "stampPaperDenominationInr": null,
+        "notarizationRequired": null,
+        "signingAuthorityRank": null,
+        "udinRequired": null,
+        "apostilleRequired": null,
+        "clientCountersignRequired": null
+      },
+      "attributes": {
+        "obligationType": "FINANCIAL_COMMITMENT",
+        "action": null,
+        "stage": null,
+        "parties": [],
+        "mandatory": "MANDATORY",
+        "disqualifying": null,
+        "deadline": null,
+        "amount": {
+          "inr": 12500.0,
+          "percent": 2.5,
+          "basis": "estimated value"
+        },
+        "formRef": null
+      },
+      "provenance": {
+        "sourceDocumentId": "doc_fixture_nit",
+        "sourceFileName": "Fixture_NIT_2026.pdf",
+        "pageNumber": 3,
+        "supportingPages": [],
+        "clauseReference": "A1.1",
+        "sourceBlockId": "chk_doc_fixture_nit_p4",
+        "verbatimQuote": "The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value.",
+        "confidenceScore": 0.85
+      },
+      "verificationStatus": "VERIFIED",
+      "docOrder": 3,
+      "flags": [
+        "CONFLICT"
+      ]
+    },
+    {
+      "itemKey": "cl_03b56a14d0ef09f275707cde",
+      "category": "LEGAL",
+      "title": "Non-blacklisting affidavit",
+      "description": "Affidavit on Rs 10 stamp paper, notarised, that the bidder is not blacklisted.",
+      "executionRules": {
+        "stampPaperRequired": true,
+        "stampPaperDenominationInr": 10,
+        "notarizationRequired": true,
+        "signingAuthorityRank": null,
+        "udinRequired": null,
+        "apostilleRequired": null,
+        "clientCountersignRequired": null
+      },
+      "attributes": {
+        "obligationType": "DOCUMENT",
+        "action": "ATTACH_DOCUMENT",
+        "stage": "WITH_BID_PHYSICAL",
+        "parties": [
+          "NOTARY"
+        ],
+        "mandatory": "MANDATORY",
+        "disqualifying": null,
+        "deadline": null,
+        "amount": null,
+        "formRef": null
+      },
+      "provenance": {
+        "sourceDocumentId": "doc_fixture_nit",
+        "sourceFileName": "Fixture_NIT_2026.pdf",
+        "pageNumber": 3,
+        "supportingPages": [],
+        "clauseReference": "A1.2",
+        "sourceBlockId": "chk_doc_fixture_nit_p4",
+        "verbatimQuote": "An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted.",
+        "confidenceScore": 0.85
+      },
+      "verificationStatus": "VERIFIED",
+      "docOrder": 4,
+      "flags": []
+    },
+    {
+      "itemKey": "cl_49e67f5a8636c6adfee61e22",
+      "category": "FINANCIAL",
+      "title": "Turnover certificate with UDIN",
+      "description": "Statutory auditor certifies turnover in Appendix XI format with UDIN.",
+      "executionRules": {
+        "stampPaperRequired": null,
+        "stampPaperDenominationInr": null,
+        "notarizationRequired": null,
+        "signingAuthorityRank": null,
+        "udinRequired": true,
+        "apostilleRequired": null,
+        "clientCountersignRequired": null
+      },
+      "attributes": {
+        "obligationType": "DOCUMENT",
+        "action": "ATTACH_DOCUMENT",
+        "stage": null,
+        "parties": [
+          "CA_AUDITOR"
+        ],
+        "mandatory": "MANDATORY",
+        "disqualifying": null,
+        "deadline": null,
+        "amount": null,
+        "formRef": "Appendix XI"
+      },
+      "provenance": {
+        "sourceDocumentId": "doc_fixture_nit",
+        "sourceFileName": "Fixture_NIT_2026.pdf",
+        "pageNumber": 3,
+        "supportingPages": [],
+        "clauseReference": "A1.3",
+        "sourceBlockId": "chk_doc_fixture_nit_p4",
+        "verbatimQuote": "The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN.",
+        "confidenceScore": 0.85
+      },
+      "verificationStatus": "VERIFIED",
+      "docOrder": 5,
+      "flags": []
+    },
+    {
+      "itemKey": "cl_5287b0cbc80cbdb154204a66",
+      "category": "FINANCIAL",
+      "title": "Performance Security",
+      "description": "Furnish performance security of 3% of contract value.",
+      "executionRules": {
+        "stampPaperRequired": null,
+        "stampPaperDenominationInr": null,
+        "notarizationRequired": null,
+        "signingAuthorityRank": null,
+        "udinRequired": null,
+        "apostilleRequired": null,
+        "clientCountersignRequired": null
+      },
+      "attributes": {
+        "obligationType": "FINANCIAL_COMMITMENT",
+        "action": null,
+        "stage": null,
+        "parties": [],
+        "mandatory": "MANDATORY",
+        "disqualifying": null,
+        "deadline": null,
+        "amount": {
+          "inr": null,
+          "percent": 3.0,
+          "basis": "contract value"
+        },
+        "formRef": null
+      },
+      "provenance": {
+        "sourceDocumentId": "doc_fixture_nit",
+        "sourceFileName": "Fixture_NIT_2026.pdf",
+        "pageNumber": 4,
+        "supportingPages": [],
+        "clauseReference": "SCC 7.1",
+        "sourceBlockId": "chk_doc_fixture_nit_p5",
+        "verbatimQuote": "The Contractor shall furnish a Performance Security of 3% of the contract value.",
+        "confidenceScore": 1.0
+      },
+      "verificationStatus": "VERIFIED",
+      "docOrder": 6,
+      "flags": [
+        "CONFLICT"
+      ]
+    },
+    {
+      "itemKey": "cl_1c0048a055d820d8cb5f5732",
+      "category": "LEGAL",
+      "title": "Bid validity",
+      "description": "Bid must stay valid for 120 days from the bid due date.",
+      "executionRules": {
+        "stampPaperRequired": null,
+        "stampPaperDenominationInr": null,
+        "notarizationRequired": null,
+        "signingAuthorityRank": null,
+        "udinRequired": null,
+        "apostilleRequired": null,
+        "clientCountersignRequired": null
+      },
+      "attributes": {
+        "obligationType": "COVENANT",
+        "action": null,
+        "stage": null,
+        "parties": [],
+        "mandatory": "MANDATORY",
+        "disqualifying": null,
+        "deadline": {
+          "kind": "RELATIVE",
+          "date": null,
+          "anchor": "BID_DUE",
+          "offsetDays": 120
+        },
+        "amount": null,
+        "formRef": null
+      },
+      "provenance": {
+        "sourceDocumentId": "doc_fixture_nit",
+        "sourceFileName": "Fixture_NIT_2026.pdf",
+        "pageNumber": 5,
+        "supportingPages": [],
+        "clauseReference": null,
+        "sourceBlockId": "chk_doc_fixture_nit_p6",
+        "verbatimQuote": "The bid shall remain valid for 120 days from the bid due date.",
+        "confidenceScore": 1.0
+      },
+      "verificationStatus": "VERIFIED",
+      "docOrder": 7,
+      "flags": []
+    },
+    {
+      "itemKey": "cl_45506d75be6027cb0d05e2d3",
+      "category": "EXECUTION",
+      "title": "Defect liability period",
+      "description": "Contractor rectifies defects for 24 months.",
+      "executionRules": {
+        "stampPaperRequired": null,
+        "stampPaperDenominationInr": null,
+        "notarizationRequired": null,
+        "signingAuthorityRank": null,
+        "udinRequired": null,
+        "apostilleRequired": null,
+        "clientCountersignRequired": null
+      },
+      "attributes": {
+        "obligationType": "COVENANT",
+        "action": null,
+        "stage": "EXECUTION",
+        "parties": [],
+        "mandatory": "MANDATORY",
+        "disqualifying": null,
+        "deadline": null,
+        "amount": null,
+        "formRef": null
+      },
+      "provenance": {
+        "sourceDocumentId": "doc_fixture_nit",
+        "sourceFileName": "Fixture_NIT_2026.pdf",
+        "pageNumber": 6,
+        "supportingPages": [],
+        "clauseReference": "9.1",
+        "sourceBlockId": "chk_doc_fixture_nit_p7",
+        "verbatimQuote": "The Contractor shall rectify all defects for a defect liability period of 24 months.",
+        "confidenceScore": 1.0
+      },
+      "verificationStatus": "VERIFIED",
+      "docOrder": 8,
+      "flags": [
+        "NEAR_FAILED_PAGE"
+      ]
+    }
+  ],
+  "chunks": [
+    {
+      "id": "chk_doc_fixture_nit_p0",
+      "chunkId": "chk_doc_fixture_nit_p0",
+      "chunkIndex": 0,
+      "chunkType": "PROSE",
+      "content": "NOTICE INVITING TENDER",
+      "pageNumber": 1,
+      "sectionTitle": null,
+      "clauseReference": null,
+      "parentId": null,
+      "canonicalRefId": null,
+      "tier": "TIER2_PARENT",
+      "verbatimText": "NOTICE INVITING TENDER",
+      "boundingBox": {
+        "bbox": [
+          50.0,
+          20.0,
+          545.0,
+          38.0
+        ]
+      },
+      "metadata": {
+        "document_id": "doc_fixture_nit",
+        "section_path": "",
+        "char_count": 22,
+        "canonical_ref_id": null
+      },
+      "embedding": null
+    },
+    {
+      "id": "chk_doc_fixture_nit_p1",
+      "chunkId": "chk_doc_fixture_nit_p1",
+      "chunkIndex": 1,
+      "chunkType": "CLAUSE",
+      "content": "[Clause 2 Earnest Money Deposit]\nClause 2 Earnest Money Deposit 2.1 The bidder shall deposit Earnest Money of Rs. 7,500 through online payment, failing which the bid shall be rejected.",
+      "pageNumber": 1,
+      "sectionTitle": null,
+      "clauseReference": "2",
+      "parentId": null,
+      "canonicalRefId": null,
+      "tier": "TIER2_PARENT",
+      "verbatimText": "Clause 2 Earnest Money Deposit 2.1 The bidder shall deposit Earnest Money of Rs. 7,500 through online payment, failing which the bid shall be rejected.",
+      "boundingBox": {
+        "bbox": [
+          50.0,
+          40.0,
+          545.0,
+          58.0
+        ]
+      },
+      "metadata": {
+        "document_id": "doc_fixture_nit",
+        "section_path": "Clause 2 Earnest Money Deposit",
+        "char_count": 184,
+        "canonical_ref_id": null
+      },
+      "embedding": null
+    },
+    {
+      "id": "chk_doc_fixture_nit_p2",
+      "chunkId": "chk_doc_fixture_nit_p2",
+      "chunkIndex": 2,
+      "chunkType": "CLAUSE",
+      "content": "[Clause 3 Submission of originals]\nClause 3 Submission of originals 3.1 The original Bid Security and Power of Attorney shall be submitted so as to reach the Authority on or before 11:00 hours on 28.11.2026, failing which the Bid shall be rejected.",
+      "pageNumber": 1,
+      "sectionTitle": null,
+      "clauseReference": "3",
+      "parentId": null,
+      "canonicalRefId": null,
+      "tier": "TIER2_PARENT",
+      "verbatimText": "Clause 3 Submission of originals 3.1 The original Bid Security and Power of Attorney shall be submitted so as to reach the Authority on or before 11:00 hours on 28.11.2026, failing which the Bid shall be rejected.",
+      "boundingBox": {
+        "bbox": [
+          50.0,
+          80.0,
+          545.0,
+          98.0
+        ]
+      },
+      "metadata": {
+        "document_id": "doc_fixture_nit",
+        "section_path": "Clause 3 Submission of originals",
+        "char_count": 248,
+        "canonical_ref_id": null
+      },
+      "embedding": null
+    },
+    {
+      "id": "chk_doc_fixture_nit_p0_c0",
+      "chunkId": "chk_doc_fixture_nit_p0_c0",
+      "chunkIndex": 3,
+      "chunkType": "CLAUSE_CHILD",
+      "content": "NOTICE INVITING TENDER",
+      "pageNumber": 1,
+      "sectionTitle": null,
+      "clauseReference": null,
+      "parentId": "chk_doc_fixture_nit_p0",
+      "canonicalRefId": null,
+      "tier": "TIER3_CHILD",
+      "verbatimText": "NOTICE INVITING TENDER",
+      "boundingBox": {
+        "bbox": [
+          50.0,
+          20.0,
+          545.0,
+          38.0
+        ]
+      },
+      "metadata": {
+        "document_id": "doc_fixture_nit",
+        "section_path": "",
+        "char_count": 22,
+        "canonical_ref_id": null,
+        "parent_id": "chk_doc_fixture_nit_p0"
+      },
+      "embedding": null
+    },
+    {
+      "id": "chk_doc_fixture_nit_p1_c0",
+      "chunkId": "chk_doc_fixture_nit_p1_c0",
+      "chunkIndex": 4,
+      "chunkType": "CLAUSE_CHILD",
+      "content": "[Clause 2 Earnest Money Deposit > 2]\nClause 2 Earnest Money Deposit 2.1 The bidder shall deposit Earnest Money of Rs. 7,500 through online payment, failing which the bid shall be rejected.",
+      "pageNumber": 1,
+      "sectionTitle": null,
+      "clauseReference": "2",
+      "parentId": "chk_doc_fixture_nit_p1",
+      "canonicalRefId": null,
+      "tier": "TIER3_CHILD",
+      "verbatimText": "Clause 2 Earnest Money Deposit 2.1 The bidder shall deposit Earnest Money of Rs. 7,500 through online payment, failing which the bid shall be rejected.",
+      "boundingBox": {
+        "bbox": [
+          50.0,
+          40.0,
+          545.0,
+          58.0
+        ]
+      },
+      "metadata": {
+        "document_id": "doc_fixture_nit",
+        "section_path": "Clause 2 Earnest Money Deposit",
+        "char_count": 151,
+        "canonical_ref_id": null,
+        "parent_id": "chk_doc_fixture_nit_p1"
+      },
+      "embedding": null
+    },
+    {
+      "id": "chk_doc_fixture_nit_p2_c0",
+      "chunkId": "chk_doc_fixture_nit_p2_c0",
+      "chunkIndex": 5,
+      "chunkType": "CLAUSE_CHILD",
+      "content": "[Clause 3 Submission of originals > 3]\nClause 3 Submission of originals 3.1 The original Bid Security and Power of Attorney shall be submitted so as to reach the Authority on or before 11:00 hours on 28.11.2026, failing which the Bid shall be rejected.",
+      "pageNumber": 1,
+      "sectionTitle": null,
+      "clauseReference": "3",
+      "parentId": "chk_doc_fixture_nit_p2",
+      "canonicalRefId": null,
+      "tier": "TIER3_CHILD",
+      "verbatimText": "Clause 3 Submission of originals 3.1 The original Bid Security and Power of Attorney shall be submitted so as to reach the Authority on or before 11:00 hours on 28.11.2026, failing which the Bid shall be rejected.",
+      "boundingBox": {
+        "bbox": [
+          50.0,
+          80.0,
+          545.0,
+          98.0
+        ]
+      },
+      "metadata": {
+        "document_id": "doc_fixture_nit",
+        "section_path": "Clause 3 Submission of originals",
+        "char_count": 213,
+        "canonical_ref_id": null,
+        "parent_id": "chk_doc_fixture_nit_p2"
+      },
+      "embedding": null
+    },
+    {
+      "id": "chk_doc_fixture_nit_sk_sec_node_4",
+      "chunkId": "chk_doc_fixture_nit_sk_sec_node_4",
+      "chunkIndex": 6,
+      "chunkType": "SKELETON",
+      "content": "[SECTION SKELETON: Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN.]\nSection: APPENDIX I - Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN.\nContained Clauses: 9",
+      "pageNumber": 1,
+      "sectionTitle": "Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN.",
+      "clauseReference": "APPENDIX I",
+      "parentId": null,
+      "canonicalRefId": "skeleton:sec_node_4",
+      "tier": "TIER1_SKELETON",
+      "verbatimText": null,
+      "boundingBox": null,
+      "metadata": {
+        "document_id": "doc_fixture_nit",
+        "node_id": "sec_node_4",
+        "level": 1,
+        "is_skeleton": true,
+        "canonical_ref_id": "skeleton:sec_node_4"
+      },
+      "embedding": null
+    },
+    {
+      "id": "chk_doc_fixture_nit_p3",
+      "chunkId": "chk_doc_fixture_nit_p3",
+      "chunkIndex": 7,
+      "chunkType": "CLAUSE",
+      "content": "[Clause 4 Performance Security]\nClause 4 Performance Security 4.1 The successful bidder shall furnish a Performance Security of 5% of the contract value within 30 days of issue of the Letter of Acceptance.",
+      "pageNumber": 2,
+      "sectionTitle": null,
+      "clauseReference": "4",
+      "parentId": null,
+      "canonicalRefId": null,
+      "tier": "TIER2_PARENT",
+      "verbatimText": "Clause 4 Performance Security 4.1 The successful bidder shall furnish a Performance Security of 5% of the contract value within 30 days of issue of the Letter of Acceptance.",
+      "boundingBox": {
+        "bbox": [
+          50.0,
+          120.0,
+          545.0,
+          138.0
+        ]
+      },
+      "metadata": {
+        "document_id": "doc_fixture_nit",
+        "section_path": "Clause 4 Performance Security",
+        "char_count": 205,
+        "canonical_ref_id": null
+      },
+      "embedding": null
+    },
+    {
+      "id": "chk_doc_fixture_nit_p3_c0",
+      "chunkId": "chk_doc_fixture_nit_p3_c0",
+      "chunkIndex": 8,
+      "chunkType": "CLAUSE_CHILD",
+      "content": "[Clause 4 Performance Security > 4]\nClause 4 Performance Security 4.1 The successful bidder shall furnish a Performance Security of 5% of the contract value within 30 days of issue of the Letter of Acceptance.",
+      "pageNumber": 2,
+      "sectionTitle": null,
+      "clauseReference": "4",
+      "parentId": "chk_doc_fixture_nit_p3",
+      "canonicalRefId": null,
+      "tier": "TIER3_CHILD",
+      "verbatimText": "Clause 4 Performance Security 4.1 The successful bidder shall furnish a Performance Security of 5% of the contract value within 30 days of issue of the Letter of Acceptance.",
+      "boundingBox": {
+        "bbox": [
+          50.0,
+          120.0,
+          545.0,
+          138.0
+        ]
+      },
+      "metadata": {
+        "document_id": "doc_fixture_nit",
+        "section_path": "Clause 4 Performance Security",
+        "char_count": 173,
+        "canonical_ref_id": null,
+        "parent_id": "chk_doc_fixture_nit_p3"
+      },
+      "embedding": null
+    },
+    {
+      "id": "chk_doc_fixture_nit_p4",
+      "chunkId": "chk_doc_fixture_nit_p4",
+      "chunkIndex": 9,
+      "chunkType": "PROSE",
+      "content": "[Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN.]\nAppendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN.",
+      "pageNumber": 3,
+      "sectionTitle": "Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN.",
+      "clauseReference": null,
+      "parentId": null,
+      "canonicalRefId": "appendix:1.1",
+      "tier": "TIER2_PARENT",
+      "verbatimText": "Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN.",
+      "boundingBox": {
+        "bbox": [
+          50.0,
+          160.0,
+          545.0,
+          232.0
+        ]
+      },
+      "metadata": {
+        "document_id": "doc_fixture_nit",
+        "section_path": "Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN.",
+        "char_count": 703,
+        "canonical_ref_id": "appendix:1.1"
+      },
+      "embedding": null
+    },
+    {
+      "id": "chk_doc_fixture_nit_p4_c0",
+      "chunkId": "chk_doc_fixture_nit_p4_c0",
+      "chunkIndex": 10,
+      "chunkType": "CLAUSE_CHILD",
+      "content": "[Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN. > Clause]\nAppendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value.",
+      "pageNumber": 3,
+      "sectionTitle": "Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN.",
+      "clauseReference": null,
+      "parentId": "chk_doc_fixture_nit_p4",
+      "canonicalRefId": "appendix:1.1",
+      "tier": "TIER3_CHILD",
+      "verbatimText": "Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value.",
+      "boundingBox": {
+        "bbox": [
+          50.0,
+          160.0,
+          545.0,
+          232.0
+        ]
+      },
+      "metadata": {
+        "document_id": "doc_fixture_nit",
+        "section_path": "Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN.",
+        "char_count": 103,
+        "canonical_ref_id": "appendix:1.1",
+        "parent_id": "chk_doc_fixture_nit_p4"
+      },
+      "embedding": null
+    },
+    {
+      "id": "chk_doc_fixture_nit_p4_c1",
+      "chunkId": "chk_doc_fixture_nit_p4_c1",
+      "chunkIndex": 11,
+      "chunkType": "CLAUSE_CHILD",
+      "content": "[Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN. > Clause]\nA1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted.",
+      "pageNumber": 3,
+      "sectionTitle": "Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN.",
+      "clauseReference": null,
+      "parentId": "chk_doc_fixture_nit_p4",
+      "canonicalRefId": "appendix:1.1",
+      "tier": "TIER3_CHILD",
+      "verbatimText": "A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted.",
+      "boundingBox": {
+        "bbox": [
+          50.0,
+          160.0,
+          545.0,
+          232.0
+        ]
+      },
+      "metadata": {
+        "document_id": "doc_fixture_nit",
+        "section_path": "Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN.",
+        "char_count": 135,
+        "canonical_ref_id": "appendix:1.1",
+        "parent_id": "chk_doc_fixture_nit_p4"
+      },
+      "embedding": null
+    },
+    {
+      "id": "chk_doc_fixture_nit_p4_c2",
+      "chunkId": "chk_doc_fixture_nit_p4_c2",
+      "chunkIndex": 12,
+      "chunkType": "CLAUSE_CHILD",
+      "content": "[Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN. > Clause]\nA1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN.",
+      "pageNumber": 3,
+      "sectionTitle": "Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN.",
+      "clauseReference": null,
+      "parentId": "chk_doc_fixture_nit_p4",
+      "canonicalRefId": "appendix:1.1",
+      "tier": "TIER3_CHILD",
+      "verbatimText": "A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN.",
+      "boundingBox": {
+        "bbox": [
+          50.0,
+          160.0,
+          545.0,
+          232.0
+        ]
+      },
+      "metadata": {
+        "document_id": "doc_fixture_nit",
+        "section_path": "Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN.",
+        "char_count": 110,
+        "canonical_ref_id": "appendix:1.1",
+        "parent_id": "chk_doc_fixture_nit_p4"
+      },
+      "embedding": null
+    },
+    {
+      "id": "chk_doc_fixture_nit_p5",
+      "chunkId": "chk_doc_fixture_nit_p5",
+      "chunkIndex": 13,
+      "chunkType": "PROSE",
+      "content": "[Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN.]\nSpecial Conditions of Contract SCC 7 Performance Security SCC 7.1 The Contractor shall furnish a Performance Security of 3% of the contract value.",
+      "pageNumber": 4,
+      "sectionTitle": "Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN.",
+      "clauseReference": null,
+      "parentId": null,
+      "canonicalRefId": "appendix:1.1",
+      "tier": "TIER2_PARENT",
+      "verbatimText": "Special Conditions of Contract SCC 7 Performance Security SCC 7.1 The Contractor shall furnish a Performance Security of 3% of the contract value.",
+      "boundingBox": {
+        "bbox": [
+          50.0,
+          180.0,
+          545.0,
+          234.0
+        ]
+      },
+      "metadata": {
+        "document_id": "doc_fixture_nit",
+        "section_path": "Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN.",
+        "char_count": 499,
+        "canonical_ref_id": "appendix:1.1"
+      },
+      "embedding": null
+    },
+    {
+      "id": "chk_doc_fixture_nit_p5_c0",
+      "chunkId": "chk_doc_fixture_nit_p5_c0",
+      "chunkIndex": 14,
+      "chunkType": "CLAUSE_CHILD",
+      "content": "[Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN. > Clause]\nSpecial Conditions of Contract SCC 7 Performance Security SCC 7.1 The Contractor shall furnish a Performance Security of 3% of the contract value.",
+      "pageNumber": 4,
+      "sectionTitle": "Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN.",
+      "clauseReference": null,
+      "parentId": "chk_doc_fixture_nit_p5",
+      "canonicalRefId": "appendix:1.1",
+      "tier": "TIER3_CHILD",
+      "verbatimText": "Special Conditions of Contract SCC 7 Performance Security SCC 7.1 The Contractor shall furnish a Performance Security of 3% of the contract value.",
+      "boundingBox": {
+        "bbox": [
+          50.0,
+          180.0,
+          545.0,
+          234.0
+        ]
+      },
+      "metadata": {
+        "document_id": "doc_fixture_nit",
+        "section_path": "Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN.",
+        "char_count": 146,
+        "canonical_ref_id": "appendix:1.1",
+        "parent_id": "chk_doc_fixture_nit_p5"
+      },
+      "embedding": null
+    },
+    {
+      "id": "chk_doc_fixture_nit_p6",
+      "chunkId": "chk_doc_fixture_nit_p6",
+      "chunkIndex": 15,
+      "chunkType": "PROSE",
+      "content": "[Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN.]\nBid validity The bid shall remain valid for 120 days from the bid due date.",
+      "pageNumber": 5,
+      "sectionTitle": "Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN.",
+      "clauseReference": null,
+      "parentId": null,
+      "canonicalRefId": "appendix:1.1",
+      "tier": "TIER2_PARENT",
+      "verbatimText": "Bid validity The bid shall remain valid for 120 days from the bid due date.",
+      "boundingBox": {
+        "bbox": [
+          50.0,
+          200.0,
+          545.0,
+          236.0
+        ]
+      },
+      "metadata": {
+        "document_id": "doc_fixture_nit",
+        "section_path": "Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN.",
+        "char_count": 428,
+        "canonical_ref_id": "appendix:1.1"
+      },
+      "embedding": null
+    },
+    {
+      "id": "chk_doc_fixture_nit_p6_c0",
+      "chunkId": "chk_doc_fixture_nit_p6_c0",
+      "chunkIndex": 16,
+      "chunkType": "CLAUSE_CHILD",
+      "content": "[Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN. > Clause]\nBid validity The bid shall remain valid for 120 days from the bid due date.",
+      "pageNumber": 5,
+      "sectionTitle": "Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN.",
+      "clauseReference": null,
+      "parentId": "chk_doc_fixture_nit_p6",
+      "canonicalRefId": "appendix:1.1",
+      "tier": "TIER3_CHILD",
+      "verbatimText": "Bid validity The bid shall remain valid for 120 days from the bid due date.",
+      "boundingBox": {
+        "bbox": [
+          50.0,
+          200.0,
+          545.0,
+          236.0
+        ]
+      },
+      "metadata": {
+        "document_id": "doc_fixture_nit",
+        "section_path": "Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN.",
+        "char_count": 75,
+        "canonical_ref_id": "appendix:1.1",
+        "parent_id": "chk_doc_fixture_nit_p6"
+      },
+      "embedding": null
+    },
+    {
+      "id": "chk_doc_fixture_nit_p7",
+      "chunkId": "chk_doc_fixture_nit_p7",
+      "chunkIndex": 17,
+      "chunkType": "CLAUSE",
+      "content": "[Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN. > Clause 9 Defect liability]\nClause 9 Defect liability 9.1 The Contractor shall rectify all defects for a defect liability period of 24 months.",
+      "pageNumber": 6,
+      "sectionTitle": "Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN.",
+      "clauseReference": "9",
+      "parentId": null,
+      "canonicalRefId": "appendix:9",
+      "tier": "TIER2_PARENT",
+      "verbatimText": "Clause 9 Defect liability 9.1 The Contractor shall rectify all defects for a defect liability period of 24 months.",
+      "boundingBox": {
+        "bbox": [
+          50.0,
+          220.0,
+          545.0,
+          238.0
+        ]
+      },
+      "metadata": {
+        "document_id": "doc_fixture_nit",
+        "section_path": "Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN. > Clause 9 Defect liability",
+        "char_count": 495,
+        "canonical_ref_id": "appendix:9"
+      },
+      "embedding": null
+    },
+    {
+      "id": "chk_doc_fixture_nit_p7_c0",
+      "chunkId": "chk_doc_fixture_nit_p7_c0",
+      "chunkIndex": 18,
+      "chunkType": "CLAUSE_CHILD",
+      "content": "[Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN. > Clause 9 Defect liability > 9]\nClause 9 Defect liability 9.1 The Contractor shall rectify all defects for a defect liability period of 24 months.",
+      "pageNumber": 6,
+      "sectionTitle": "Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN.",
+      "clauseReference": "9",
+      "parentId": "chk_doc_fixture_nit_p7",
+      "canonicalRefId": "appendix:9",
+      "tier": "TIER3_CHILD",
+      "verbatimText": "Clause 9 Defect liability 9.1 The Contractor shall rectify all defects for a defect liability period of 24 months.",
+      "boundingBox": {
+        "bbox": [
+          50.0,
+          220.0,
+          545.0,
+          238.0
+        ]
+      },
+      "metadata": {
+        "document_id": "doc_fixture_nit",
+        "section_path": "Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN. > Clause 9 Defect liability",
+        "char_count": 114,
+        "canonical_ref_id": "appendix:9",
+        "parent_id": "chk_doc_fixture_nit_p7"
+      },
+      "embedding": null
+    },
+    {
+      "id": "chk_doc_fixture_nit_p8",
+      "chunkId": "chk_doc_fixture_nit_p8",
+      "chunkIndex": 19,
+      "chunkType": "CLAUSE",
+      "content": "[Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN. > Clause 9 Defect liability]\nScanned drawing sheet 7 of 7 The Contractor shall follow the attached drawing for all works on site.",
+      "pageNumber": 7,
+      "sectionTitle": "Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN.",
+      "clauseReference": "9",
+      "parentId": null,
+      "canonicalRefId": "appendix:9",
+      "tier": "TIER2_PARENT",
+      "verbatimText": "Scanned drawing sheet 7 of 7 The Contractor shall follow the attached drawing for all works on site.",
+      "boundingBox": {
+        "bbox": [
+          50.0,
+          260.0,
+          545.0,
+          296.0
+        ]
+      },
+      "metadata": {
+        "document_id": "doc_fixture_nit",
+        "section_path": "Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN. > Clause 9 Defect liability",
+        "char_count": 481,
+        "canonical_ref_id": "appendix:9"
+      },
+      "embedding": null
+    },
+    {
+      "id": "chk_doc_fixture_nit_p8_c0",
+      "chunkId": "chk_doc_fixture_nit_p8_c0",
+      "chunkIndex": 20,
+      "chunkType": "CLAUSE_CHILD",
+      "content": "[Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN. > Clause 9 Defect liability > 9]\nScanned drawing sheet 7 of 7 The Contractor shall follow the attached drawing for all works on site.",
+      "pageNumber": 7,
+      "sectionTitle": "Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN.",
+      "clauseReference": "9",
+      "parentId": "chk_doc_fixture_nit_p8",
+      "canonicalRefId": "appendix:9",
+      "tier": "TIER3_CHILD",
+      "verbatimText": "Scanned drawing sheet 7 of 7 The Contractor shall follow the attached drawing for all works on site.",
+      "boundingBox": {
+        "bbox": [
+          50.0,
+          260.0,
+          545.0,
+          296.0
+        ]
+      },
+      "metadata": {
+        "document_id": "doc_fixture_nit",
+        "section_path": "Appendix I Earnest Money A1.1 The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value. A1.2 An affidavit on non-judicial stamp paper of Rs. 10, duly notarised, shall be furnished stating that the bidder is not blacklisted. A1.3 The turnover certificate shall be issued by the statutory auditor in the format at Appendix XI with UDIN. > Clause 9 Defect liability",
+        "char_count": 100,
+        "canonical_ref_id": "appendix:9",
+        "parent_id": "chk_doc_fixture_nit_p8"
+      },
+      "embedding": null
+    }
+  ],
+  "conflicts": [
+    {
+      "conflictKey": "cf_5f706009adfd55700e30467b",
+      "topic": "Performance Security (PBG) Percentage Conflict",
+      "attribute": "Performance security %",
+      "values": [
+        {
+          "display": "3%",
+          "itemKey": "cl_5287b0cbc80cbdb154204a66",
+          "quote": "The Contractor shall furnish a Performance Security of 3% of the contract value.",
+          "page": 4,
+          "clauseRef": "SCC 7.1"
+        },
+        {
+          "display": "5%",
+          "itemKey": "cl_f24c2117c42a85fe8c48e3c6",
+          "quote": "The successful bidder shall furnish a Performance Security of 5% of the contract value within 30 days of issue of the Letter of Acceptance.",
+          "page": 2,
+          "clauseRef": "4.1"
+        }
+      ],
+      "aiPrecedenceNote": "Per Order of Precedence, specific tender conditions (SCC 7.1 - 3%) govern over general conditions (4.1 - 5%)."
+    },
+    {
+      "conflictKey": "cf_a9c4f7bf4fc01e407c81ff61",
+      "topic": "EMD / Bid Security Amount Conflict",
+      "attribute": "EMD amount",
+      "values": [
+        {
+          "display": "Rs. 7,500",
+          "itemKey": "cl_98ae4b3a1f1c3c483ed70520",
+          "quote": "The bidder shall deposit Earnest Money of Rs. 7,500 through online payment, failing which the bid shall be rejected.",
+          "page": 1,
+          "clauseRef": "2.1"
+        },
+        {
+          "display": "Rs. 12,500",
+          "itemKey": "cl_9fa5d1c01124f88e0e1166ed",
+          "quote": "The Earnest Money shall be Rs. 12,500, being 2.5% of the estimated value.",
+          "page": 3,
+          "clauseRef": "A1.1"
+        }
+      ],
+      "aiPrecedenceNote": null
+    }
+  ],
+  "coverage": {
+    "documentId": "doc_fixture_nit",
+    "pageCount": 7,
+    "failedPages": [
+      {
+        "page": 7,
+        "reason": "LLM_EXTRACTION_FAILED"
+      }
+    ],
+    "status": "PARTIAL"
+  },
+  "error": null,
+  "workflowRunId": null,
+  "traceId": null,
+  "correlationId": null,
+  "timestamp": "2026-10-26T00:00:00+00:00"
+}

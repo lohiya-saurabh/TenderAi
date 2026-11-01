@@ -41,7 +41,7 @@ export const CompaniesSettingsTab: React.FC<CompaniesSettingsTabProps> = ({
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <div>
             <CardTitle className="text-base font-semibold">
-              Registered Company Legal Entities
+              Registered company legal entities
             </CardTitle>
             <CardDescription className="text-xs">
               Legal business entities evaluated under this tenant workspace ({companies.length}{' '}
@@ -56,7 +56,7 @@ export const CompaniesSettingsTab: React.FC<CompaniesSettingsTabProps> = ({
               className="gap-1.5 text-xs"
             >
               <Plus className="h-3.5 w-3.5" />
-              Add Legal Entity
+              Add legal entity
             </Button>
           )}
         </CardHeader>
@@ -69,7 +69,7 @@ export const CompaniesSettingsTab: React.FC<CompaniesSettingsTabProps> = ({
             >
               <div className="flex items-center justify-between">
                 <h4 className="text-xs font-semibold text-foreground">
-                  Register New Legal Business Entity
+                  Register new legal business entity
                 </h4>
                 <Button
                   type="button"
@@ -84,7 +84,7 @@ export const CompaniesSettingsTab: React.FC<CompaniesSettingsTabProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="newLegalName">Legal Company Name *</Label>
+                  <Label htmlFor="newLegalName">Legal company name *</Label>
                   <Input
                     id="newLegalName"
                     value={newCompanyName}
@@ -115,7 +115,7 @@ export const CompaniesSettingsTab: React.FC<CompaniesSettingsTabProps> = ({
                   size="sm"
                   disabled={isSubmittingCompany || !newCompanyName.trim()}
                 >
-                  {isSubmittingCompany ? 'Registering...' : 'Add Business Entity'}
+                  {isSubmittingCompany ? 'Adding…' : 'Add company'}
                 </Button>
               </div>
             </form>
@@ -141,15 +141,15 @@ export const CompaniesSettingsTab: React.FC<CompaniesSettingsTabProps> = ({
                         {company.legalName}
                       </span>
                       {isSelected && (
-                        <Badge variant="default" className="text-[10px]">
-                          Active Context
+                        <Badge variant="default" className="text-2xs">
+                          Active context
                         </Badge>
                       )}
                     </div>
 
                     <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
                       {company.gstin && (
-                        <span className="font-mono bg-muted/60 px-1.5 py-0.5 rounded text-[11px]">
+                        <span className="font-mono bg-muted/60 px-1.5 py-0.5 rounded text-2xs">
                           GST: {company.gstin}
                         </span>
                       )}
@@ -158,7 +158,7 @@ export const CompaniesSettingsTab: React.FC<CompaniesSettingsTabProps> = ({
                           {company.constitution.replace(/_/g, ' ').toLowerCase()}
                         </span>
                       )}
-                      <span className="font-mono text-[10px]">ID: {company.id}</span>
+                      <span className="font-mono text-2xs">ID: {company.id}</span>
                     </div>
                   </div>
 
@@ -175,7 +175,7 @@ export const CompaniesSettingsTab: React.FC<CompaniesSettingsTabProps> = ({
                     )}
                     <Link to="/company-profile">
                       <Button variant="secondary" size="sm" className="gap-1 text-xs">
-                        <span>Capability Dossier</span>
+                        <span>Capability dossier</span>
                         <ExternalLink className="h-3 w-3" />
                       </Button>
                     </Link>

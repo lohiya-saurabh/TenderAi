@@ -8,7 +8,8 @@ describe('AiEvidenceExtractor', () => {
     organizationId: 'org_test_1',
     companyId: 'comp_test_1',
     fileName: 'CA_Turnover_Certificate.pdf',
-    storagePath: 'tenants/org_test_1/companies/comp_test_1/evidence/ev_test_1/CA_Turnover_Certificate.pdf',
+    storagePath:
+      'tenants/org_test_1/companies/comp_test_1/evidence/ev_test_1/CA_Turnover_Certificate.pdf',
     fileSizeBytes: 1024,
     mimeType: 'application/pdf',
     sha256Hash: 'dummyhash',
@@ -74,55 +75,21 @@ describe('AiEvidenceExtractor', () => {
     expect(result.chunks[0]?.chunk_type).toBe('FINANCIAL_TURNOVER');
   });
 
-  it('should fallback to local deterministic extractor when remote service fails', async () => {
-    const customFetch = vi.fn().mockRejectedValue(new Error('Connection refused'));
-
+  it('reports a failed remote extraction instead of extracting locally', async () => {
     const extractor = new AiEvidenceExtractor({
-      aiBaseUrl: 'http://down-service:8000',
-      customFetch: customFetch as unknown as typeof fetch,
+      customFetch: vi
+        .fn()
+        .mockRejectedValue(new Error('connect ECONNREFUSED')) as unknown as typeof fetch,
     });
-
-    const bufferText = 'Audited Financial Statements for FY 2024-25: Turnover INR 320.5 Crores, UDIN: 25089745AAAAAA1234';
-    const result = await extractor.extractEvidence(dummyDoc, undefined, undefined, bufferText);
-
-    expect(result.status).toBe('COMPLETED');
-    expect(result.extracted_attributes.udin).toBe('25089745AAAAAA1234');
-    expect(result.extracted_attributes.average_turnover_inr_cr).toBe(320.5);
-    expect(result.chunks.length).toBe(1);
-    expect(result.chunks[0]?.chunk_type).toBe('FINANCIAL_TURNOVER');
-  });
-
-  it('should extract project experience locally for completion certificates', async () => {
-    const doc: CompanyEvidenceDocument = {
-      ...dummyDoc,
-      fileName: 'NHAI_STRR_Completion.pdf',
-      evidenceType: 'COMPLETION_CERT',
-    };
-    const bufferText = 'NHAI Completion Certificate: Completed Contract Value INR 215.0 Crores for STRR Highway Project';
-
-    const extractor = new AiEvidenceExtractor();
-    const result = extractor.extractEvidenceLocal(doc, bufferText);
-
-    expect(result.status).toBe('COMPLETED');
-    expect(result.extracted_attributes.client_name).toBe('NHAI');
-    expect(result.extracted_attributes.contract_value_inr_cr).toBe(215.0);
-    expect(result.chunks[0]?.chunk_type).toBe('PROJECT_EXPERIENCE');
-  });
-
-  it('should extract ISO certification locally for accreditation documents', async () => {
-    const doc: CompanyEvidenceDocument = {
-      ...dummyDoc,
-      fileName: 'ISO_9001_BV.pdf',
-      evidenceType: 'ISO_CERT',
-    };
-    const bufferText = 'Bureau Veritas ISO 9001:2015 Quality Management System Certification';
-
-    const extractor = new AiEvidenceExtractor();
-    const result = extractor.extractEvidenceLocal(doc, bufferText);
-
-    expect(result.status).toBe('COMPLETED');
-    expect(result.extracted_attributes.standard).toBe('ISO 9001:2015');
-    expect(result.extracted_attributes.issuer).toBe('Bureau Veritas');
-    expect(result.chunks[0]?.chunk_type).toBe('CERTIFICATION');
+    const result = await extractor.extractEvidence(
+      dummyDoc,
+      undefined,
+      undefined,
+      'UDIN: 25089745AAAAAA1234',
+    );
+    expect(result.status).toBe('FAILED');
+    expect(result.extracted_attributes).toEqual({});
+    expect(result.chunks).toEqual([]);
+    expect(result.error).toContain('ECONNREFUSED');
   });
 });

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Badge } from '@/components/common/Badge.js';
 import { Check, FileText } from 'lucide-react';
-import type { FullCompanyProfile } from '@/components/company/companyProfileData.js';
+import { type FullCompanyProfile, isVerified } from '@/components/company/companyProfileData.js';
 
 export interface StatutoryProfileCardProps {
   profile: FullCompanyProfile;
@@ -29,7 +29,7 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
       : null;
 
   const activeSolvency = profile.solvencyRecords.find(
-    (s) => s.status === 'VERIFIED' && new Date(s.validUntil) > new Date(),
+    (s) => isVerified(s.status) && new Date(s.validUntil) > new Date(),
   );
 
   return (
@@ -38,24 +38,20 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
       <div className="bg-card border border-border rounded-xl p-6 sm:p-7 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-5 border-b border-border/80 mb-6">
           <div>
-            <h2 className="text-base font-bold text-foreground font-heading">
-              Statutory Business Profile
+            <h2 className="text-base font-semibold text-foreground font-heading">
+              Statutory business profile
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Authoritative enterprise credentials verified against MCA, GSTN, MSME, and public
-              procurement registers.
+              Registration details for this company. Use the registry checks above to verify them.
             </p>
           </div>
-          <Badge variant="neutral" size="sm" className="font-mono self-start sm:self-auto">
-            Verified Dossier
-          </Badge>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Legal Entity Name */}
           <div className="flex flex-col gap-1.5">
-            <span className="text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
-              Legal Entity Name
+            <span className="text-2xs font-semibold text-muted-foreground">
+              Legal entity name
             </span>
             <span className="text-sm font-semibold text-foreground leading-snug">
               {profile.legalEntityName}
@@ -64,8 +60,8 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
 
           {/* CIN */}
           <div className="flex flex-col gap-1.5">
-            <span className="text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
-              CIN / Registration Number
+            <span className="text-2xs font-semibold text-muted-foreground">
+              CIN / registration number
             </span>
             <span className="text-sm font-mono font-semibold text-foreground">
               {profile.cinNumber}
@@ -74,8 +70,8 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
 
           {/* Incorporation Date */}
           <div className="flex flex-col gap-1.5">
-            <span className="text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
-              Incorporation Date
+            <span className="text-2xs font-semibold text-muted-foreground">
+              Incorporation date
             </span>
             <span className="text-sm font-semibold text-foreground">
               {profile.incorporationDate}
@@ -84,34 +80,44 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
 
           {/* MSME */}
           <div className="flex flex-col gap-1.5">
-            <span className="text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
-              MSME Category
+            <span className="text-2xs font-semibold text-muted-foreground">
+              MSME category
             </span>
             <div className="flex items-center gap-2">
-              <Badge variant="neutral" size="sm" className="font-mono">
-                {profile.msmeCategory}
-              </Badge>
-              <span className="text-xs text-muted-foreground">
-                {profile.msmeType.replace(/_/g, ' ')}
-              </span>
+              {profile.msmeCategory ? (
+                <Badge variant="neutral" size="sm">
+                  {profile.msmeCategory}
+                </Badge>
+              ) : (
+                <span className="text-xs italic text-muted-foreground">Not stated</span>
+              )}
+              {profile.msmeType && (
+                <span className="text-xs text-muted-foreground">
+                  {profile.msmeType.replace(/_/g, ' ').toLowerCase()}
+                </span>
+              )}
             </div>
           </div>
 
           {/* Debarment */}
           <div className="flex flex-col gap-1.5">
-            <span className="text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
-              Statutory Debarment Status
+            <span className="text-2xs font-semibold text-muted-foreground">
+              Debarment status
             </span>
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-              <Check size={14} className="text-foreground shrink-0" />
-              <span>Clean / Not Debarred</span>
-            </div>
+            {profile.isBlacklisted === null ? (
+              <span className="text-xs italic text-muted-foreground">Not stated</span>
+            ) : (
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                {!profile.isBlacklisted && <Check size={14} className="shrink-0 text-success" />}
+                <span>{profile.isBlacklisted ? 'Debarred' : 'Not debarred'}</span>
+              </div>
+            )}
           </div>
 
           {/* Credit Rating */}
           <div className="flex flex-col gap-1.5">
-            <span className="text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
-              External Credit Rating
+            <span className="text-2xs font-semibold text-muted-foreground">
+              External credit rating
             </span>
             {profile.creditRating ? (
               <span className="text-sm font-semibold text-foreground">
@@ -122,7 +128,7 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
               </span>
             ) : (
               <span className="text-sm text-muted-foreground italic">
-                Not Rated / Assessment Pending
+                Not stated
               </span>
             )}
           </div>
@@ -141,7 +147,7 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
               ₹{avgTurnover} Cr
             </div>
           </div>
-          <span className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+          <span className="text-2xs text-muted-foreground flex items-center gap-1.5">
             {allVerified ? (
               <Check size={13} className="text-foreground shrink-0" />
             ) : (
@@ -161,7 +167,7 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
         <div className="bg-card border border-border rounded-xl p-5 shadow-xs flex flex-col justify-between gap-3">
           <div>
             <span className="text-xs font-medium text-muted-foreground">
-              Highest Single Contract
+              Highest single contract
             </span>
             <div className="text-2xl font-bold font-heading text-foreground mt-1">
               {highestContract
@@ -169,7 +175,7 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
                 : '—'}
             </div>
           </div>
-          <span className="text-[11px] text-muted-foreground truncate">
+          <span className="text-2xs text-muted-foreground truncate">
             {highestContract ? highestContract.clientName : 'No verified contracts'}
           </span>
         </div>
@@ -178,7 +184,7 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
         <div className="bg-card border border-border rounded-xl p-5 shadow-xs flex flex-col justify-between gap-3">
           <div>
             <span className="text-xs font-medium text-muted-foreground">
-              Active Bank Solvency
+              Active bank solvency
             </span>
             <div className="text-2xl font-bold font-heading text-foreground mt-1">
               {activeSolvency
@@ -186,7 +192,7 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
                 : '—'}
             </div>
           </div>
-          <span className="text-[11px] text-muted-foreground truncate">
+          <span className="text-2xs text-muted-foreground truncate">
             {activeSolvency ? activeSolvency.bankName : 'No active solvency certificate'}
           </span>
         </div>
@@ -195,13 +201,13 @@ export const StatutoryProfileCard: React.FC<StatutoryProfileCardProps> = ({ prof
         <div className="bg-card border border-border rounded-xl p-5 shadow-xs flex flex-col justify-between gap-3">
           <div>
             <span className="text-xs font-medium text-muted-foreground">
-              Evidence Documents Linked
+              Evidence documents linked
             </span>
             <div className="text-2xl font-bold font-heading text-foreground mt-1">
               {profile.evidenceVault.length} Docs
             </div>
           </div>
-          <span className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+          <span className="text-2xs text-muted-foreground flex items-center gap-1.5">
             <Check size={13} className="text-foreground shrink-0" />
             <span>Tamper-proof hash checked</span>
           </span>

@@ -1,4 +1,4 @@
-import { eq, and, asc, desc, inArray } from 'drizzle-orm';
+import { eq, and, asc, desc, inArray, sql } from 'drizzle-orm';
 import type { DrizzleDb } from '@/common/database/database.module.js';
 import * as schema from '@/common/database/schema.js';
 import type { DemoBid, DemoDocument } from '@/seed/data.js';
@@ -72,14 +72,11 @@ export async function fetchBidsWithRelations(
     return [];
   }
 
-  let allBids = await db
-    .select()
-    .from(schema.bids)
-    .where(eq(schema.bids.organizationId, orgId));
+  // 1. Build SQL WHERE conditions
+  const conditions = [eq(schema.bids.organizationId, orgId)];
 
   if (query?.companyId && typeof query.companyId === 'string' && query.companyId.trim()) {
-    const targetCompanyId = query.companyId.trim();
-    allBids = allBids.filter((b) => b.companyId === targetCompanyId);
+    conditions.push(eq(schema.bids.companyId, query.companyId.trim()));
   }
 
   if (
@@ -88,45 +85,37 @@ export async function fetchBidsWithRelations(
     query.status.trim() &&
     query.status !== 'ALL'
   ) {
-    const targetStatus = query.status.trim().toUpperCase();
-    allBids = allBids.filter((b) => b.status.toUpperCase() === targetStatus);
+    conditions.push(eq(schema.bids.status, query.status.trim().toUpperCase()));
   }
 
   if (query?.search && typeof query.search === 'string' && query.search.trim()) {
-    const q = query.search.trim().toLowerCase();
-    allBids = allBids.filter(
-      (b) =>
-        b.title.toLowerCase().includes(q) ||
-        b.tenderNumber.toLowerCase().includes(q) ||
-        b.tenderingAuthority.toLowerCase().includes(q) ||
-        (b.locationState && b.locationState.toLowerCase().includes(q)),
+    const q = `%${query.search.trim().toLowerCase()}%`;
+    conditions.push(
+      sql`(LOWER(${schema.bids.title}) LIKE ${q} OR LOWER(${schema.bids.tenderNumber}) LIKE ${q} OR LOWER(${schema.bids.tenderingAuthority}) LIKE ${q} OR LOWER(COALESCE(${schema.bids.locationState}, '')) LIKE ${q})`,
     );
   }
 
+  // 2. Build SQL ORDER BY expression
   const sortField = query?.sort || 'createdAt';
   const isAsc = query?.order === 'asc';
 
-  allBids.sort((a, b) => {
-    let comp = 0;
-    if (sortField === 'title') {
-      comp = a.title.localeCompare(b.title);
-    } else if (sortField === 'estimatedValueRupees') {
-      comp = (Number(a.estimatedValueRupees) || 0) - (Number(b.estimatedValueRupees) || 0);
-    } else if (sortField === 'submissionDeadline') {
-      const da = a.submissionDeadline ? new Date(a.submissionDeadline).getTime() : 0;
-      const db = b.submissionDeadline ? new Date(b.submissionDeadline).getTime() : 0;
-      comp = da - db;
-    } else {
-      const da =
-        a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
-      const db =
-        b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
-      comp = da - db;
-    }
-    return isAsc ? comp : -comp;
-  });
+  let orderExpr = isAsc ? asc(schema.bids.createdAt) : desc(schema.bids.createdAt);
+  if (sortField === 'title') {
+    orderExpr = isAsc ? asc(schema.bids.title) : desc(schema.bids.title);
+  } else if (sortField === 'estimatedValueRupees') {
+    orderExpr = isAsc ? asc(schema.bids.estimatedValueRupees) : desc(schema.bids.estimatedValueRupees);
+  } else if (sortField === 'submissionDeadline') {
+    orderExpr = isAsc ? asc(schema.bids.submissionDeadline) : desc(schema.bids.submissionDeadline);
+  }
 
-  const total = allBids.length;
+  // 3. Compute count in SQL
+  const [countRow] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(schema.bids)
+    .where(and(...conditions));
+  const total = countRow?.count ?? 0;
+
+  // 4. Compute pagination parameters
   const isPaginated = query?.page !== undefined || query?.limit !== undefined;
   const page = Math.max(
     1,
@@ -140,7 +129,17 @@ export async function fetchBidsWithRelations(
   );
   const totalPages = Math.ceil(total / limit) || 1;
 
-  const pageBids = isPaginated ? allBids.slice((page - 1) * limit, page * limit) : allBids;
+  // 5. Query the requested slice of bids using SQL LIMIT / OFFSET
+  const baseQuery = db
+    .select()
+    .from(schema.bids)
+    .where(and(...conditions))
+    .orderBy(orderExpr);
+
+  const pageBids = isPaginated
+    ? await baseQuery.limit(limit).offset((page - 1) * limit)
+    : await baseQuery;
+
   const bidIds = pageBids.map((b) => b.id);
 
   const allDocs =

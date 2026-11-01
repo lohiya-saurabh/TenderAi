@@ -24,12 +24,7 @@
  */
 import { Injectable, Inject, Optional } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
-import { eq, and, desc } from 'drizzle-orm';
-import {
-  DRIZZLE_TOKEN,
-  type DrizzleDb,
-  createDrizzle,
-} from '@/common/database/database.module.js';
+import { type DrizzleDb, createDrizzle } from '@/common/database/database.module.js';
 import * as schema from '@/common/database/schema.js';
 import { NotFoundError, ConflictError, BadRequestError } from '@/common/errors/errors.js';
 import { TenantContextHolder } from '@/common/security/TenantContext.js';
@@ -39,7 +34,12 @@ import {
   type AiBidDecisionResponse,
   type AiCompanyProfileSnapshot,
 } from '@/modules/bids/application/AiDecisionClient.js';
-import { toRequirementCandidates, type RequirementSourceItem } from '@/modules/bids/application/RequirementMapper.js';
+import {
+  toRequirementCandidates,
+  type RequirementSourceItem,
+} from '@/modules/bids/application/RequirementMapper.js';
+import { BidsQueries } from '../bids.queries.js';
+import { BidsRepository } from '../bids.repository.js';
 
 export interface BidDecisionEvaluationResult {
   decisionId: string;
@@ -80,15 +80,25 @@ function normalizeCitations(
 
 @Injectable()
 export class GetBidDecisionUseCase {
-  private readonly db: DrizzleDb;
+  private readonly queries: BidsQueries;
+  private readonly repository: BidsRepository;
 
   constructor(
-    @Inject(DRIZZLE_TOKEN) db: DrizzleDb | PGlite,
+    @Inject(BidsQueries) dbOrQueries: BidsQueries | DrizzleDb | PGlite,
     @Optional()
     @Inject(AI_DECISION_CLIENT_TOKEN)
     private readonly aiDecisionClient: AiDecisionClient | null = null,
+    @Optional() @Inject(BidsQueries) bidsQueries?: BidsQueries,
+    @Optional() @Inject(BidsRepository) bidsRepo?: BidsRepository,
   ) {
-    this.db = 'select' in db ? (db as DrizzleDb) : createDrizzle(db as PGlite);
+    if (dbOrQueries instanceof BidsQueries) {
+      this.queries = dbOrQueries;
+      this.repository = bidsRepo ?? new BidsRepository(dbOrQueries.getDb());
+    } else {
+      const db = 'select' in dbOrQueries ? (dbOrQueries as DrizzleDb) : createDrizzle(dbOrQueries as PGlite);
+      this.queries = bidsQueries ?? new BidsQueries(db);
+      this.repository = bidsRepo ?? new BidsRepository(db);
+    }
   }
 
   /** Latest persisted decision for the bid, or null. */
@@ -97,14 +107,7 @@ export class GetBidDecisionUseCase {
 
     await this.requireBid(bidId, orgId);
 
-    const [record] = await this.db
-      .select()
-      .from(schema.bidDecisions)
-      .where(
-        and(eq(schema.bidDecisions.bidId, bidId), eq(schema.bidDecisions.organizationId, orgId)),
-      )
-      .orderBy(desc(schema.bidDecisions.createdAt))
-      .limit(1);
+    const record = await this.queries.findLatestDecision(bidId, orgId);
 
     return record ? this.mapDecisionRecord(record) : null;
   }
@@ -126,15 +129,7 @@ export class GetBidDecisionUseCase {
     }
 
     // 1. Requirements from the stored compliance matrix
-    const complianceItems = await this.db
-      .select()
-      .from(schema.complianceItems)
-      .where(
-        and(
-          eq(schema.complianceItems.bidId, bidId),
-          eq(schema.complianceItems.organizationId, orgId),
-        ),
-      );
+    const complianceItems = await this.queries.listComplianceItemsByBid(bidId, orgId);
     const requirements = toRequirementCandidates(
       // JSONB columns (executionRules, provenance) are stored as
       // parsed objects by PGlite; cast to the structural source shape.
@@ -144,18 +139,10 @@ export class GetBidDecisionUseCase {
     // 2. Pinned company profile for the bid's company
     const targetCompanyId = bid.companyId;
 
-    const pointerCondition = targetCompanyId
-      ? and(
-          eq(schema.companyProfiles.organizationId, orgId),
-          eq(schema.companyProfiles.companyId, targetCompanyId),
-        )
-      : eq(schema.companyProfiles.organizationId, orgId);
-
-    const [pointer] = await this.db
-      .select()
-      .from(schema.companyProfiles)
-      .where(pointerCondition)
-      .limit(1);
+    const { pointer, profileVersion } = await this.queries.findActiveCompanyProfileVersion(
+      orgId,
+      targetCompanyId,
+    );
 
     if (!pointer) {
       throw new ConflictError(
@@ -163,17 +150,6 @@ export class GetBidDecisionUseCase {
           'Pin a profile before evaluating a bid decision.',
       );
     }
-
-    const [profileVersion] = await this.db
-      .select()
-      .from(schema.companyProfileVersions)
-      .where(
-        and(
-          eq(schema.companyProfileVersions.id, pointer.activeVersionId),
-          eq(schema.companyProfileVersions.organizationId, orgId),
-        ),
-      )
-      .limit(1);
 
     if (!profileVersion) {
       throw new ConflictError(
@@ -187,39 +163,12 @@ export class GetBidDecisionUseCase {
         : profileVersion.payload;
 
     // 3. Document allow-list for the security context
-    const documents = await this.db
-      .select({ id: schema.tenderDocuments.id })
-      .from(schema.tenderDocuments)
-      .where(
-        and(
-          eq(schema.tenderDocuments.bidId, bidId),
-          eq(schema.tenderDocuments.organizationId, orgId),
-        ),
-      );
+    const documents = await this.queries.listDocumentIdsByBid(bidId, orgId);
 
     // 3b. Company evidence vault documents & chunks
     const targetCompId = pointer.companyId || orgId;
-    const evidenceDocuments = await this.db
-      .select()
-      .from(schema.companyEvidenceDocuments)
-      .where(
-        and(
-          eq(schema.companyEvidenceDocuments.organizationId, orgId),
-          eq(schema.companyEvidenceDocuments.companyId, targetCompId),
-        ),
-      )
-      .orderBy(desc(schema.companyEvidenceDocuments.createdAt));
-
-    const evidenceChunks = await this.db
-      .select()
-      .from(schema.companyEvidenceChunks)
-      .where(
-        and(
-          eq(schema.companyEvidenceChunks.organizationId, orgId),
-          eq(schema.companyEvidenceChunks.companyId, targetCompId),
-        ),
-      )
-      .orderBy(desc(schema.companyEvidenceChunks.createdAt));
+    const { evidenceDocuments, evidenceChunks } =
+      await this.queries.listCompanyEvidenceWithChunks(orgId, targetCompId);
 
     const docFileNameMap = new Map(evidenceDocuments.map((d) => [d.id, d.fileName]));
     const mappedEvidenceChunks = evidenceChunks.map((chunk) => ({
@@ -291,7 +240,7 @@ export class GetBidDecisionUseCase {
     const decisionId = `bd-${bidId}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
     const now = new Date();
 
-    await this.db.insert(schema.bidDecisions).values({
+    await this.repository.createBidDecision({
       id: decisionId,
       bidId,
       companyId: pointer.companyId,
@@ -324,11 +273,7 @@ export class GetBidDecisionUseCase {
   }
 
   private async requireBid(bidId: string, orgId: string): Promise<schema.Bid> {
-    const [bid] = await this.db
-      .select()
-      .from(schema.bids)
-      .where(and(eq(schema.bids.id, bidId), eq(schema.bids.organizationId, orgId)))
-      .limit(1);
+    const bid = await this.queries.findBidById(bidId, orgId);
 
     if (!bid) {
       throw new NotFoundError(`Bid project '${bidId}' not found.`);

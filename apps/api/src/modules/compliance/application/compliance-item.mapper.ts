@@ -24,15 +24,19 @@ export function deduplicateComplianceItems(
 ): schema.ComplianceItem[] {
   const uniqueMap = new Map<string, schema.ComplianceItem>();
   for (const row of records) {
-    const key = `${row.category}:${row.title.trim().toLowerCase().replace(/\s+/g, ' ')}`;
+    // Clauses with a location identity (Phase 1) are distinct even when titles match; only
+    // legacy rows (no item key) are still merged by title.
+    const key = row.itemKey
+      ? `loc:${row.id}`
+      : `${row.category}:${row.title.trim().toLowerCase().replace(/\s+/g, ' ')}`;
     const existing = uniqueMap.get(key);
     if (!existing) {
       uniqueMap.set(key, row);
     } else {
       const curProv = (row.provenance ?? {}) as ProvenanceJson;
       const exProv = (existing.provenance ?? {}) as ProvenanceJson;
-      const curQuote = curProv.verbatimQuote || '';
-      const exQuote = exProv.verbatimQuote || '';
+      const curQuote = String(curProv.verbatimQuote || '').replace(/\s+/g, ' ').trim();
+      const exQuote = String(exProv.verbatimQuote || '').replace(/\s+/g, ' ').trim();
       const preferCur =
         (!exQuote && Boolean(curQuote)) ||
         (exQuote.length < 50 && curQuote.length >= 50) ||
@@ -95,12 +99,24 @@ export function mapComplianceRecord(record: schema.ComplianceItem): DemoComplian
       : (record.rationale as DemoComplianceItem['rationale']);
 
   const prov = (provenance ?? {}) as Record<string, unknown>;
+  const rawClause = String(prov.clauseReference || prov.sectionOrClause || '').trim();
+  const cleanedClause = rawClause
+    .replace(/\s*\(Pages?\s+[\d,\s]+\)\s*$/i, '') // Strip trailing "(Page 6)" or "(Pages 2, 6)"
+    .replace(/^(?:Clauses?|Sections?)\s+(?:on|across)\s+Pages?\s+[\d,\s]+$/i, '') // Drop generic "Clause on Page 4"
+    .replace(/^Pages?\s+[\d,\s]+$/i, '') // Drop bare "Page 4" or "Pages 2, 6"
+    .replace(/^(?:Clause|Section|Page)\s+/i, '')
+    .trim();
+
+  const tenderClauseRef = cleanedClause || undefined;
+  const cleanQuote = String(prov.verbatimQuote || record.description || '').replace(/\s+/g, ' ').trim();
+
   const sourceCitation = {
     document: String(prov.documentName || 'NIT Tender Document'),
     page: Number(prov.pageNumber || 1),
     section: String(prov.sectionOrClause || prov.clauseReference || ''),
-    verbatimQuote: String(prov.verbatimQuote || record.description || ''),
-    confidenceScore: Number(prov.confidenceScore || 0.9),
+    verbatimQuote: cleanQuote,
+    // null = no score computed (never a default percentage)
+    confidenceScore: typeof prov.confidenceScore === 'number' ? prov.confidenceScore : null,
   };
 
   return {
@@ -110,6 +126,7 @@ export function mapComplianceRecord(record: schema.ComplianceItem): DemoComplian
     title: record.title,
     requirement: record.title,
     description: record.description,
+    tenderClauseRef,
     status: record.status as DemoComplianceItem['status'],
     humanReviewRequired: record.humanReviewRequired,
     reviewNotes: record.reviewNotes,

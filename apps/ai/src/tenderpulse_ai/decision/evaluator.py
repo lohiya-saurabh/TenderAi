@@ -16,6 +16,46 @@ from tenderpulse_ai.decision.schemas import (
     UncertaintyItem,
 )
 
+_CRORE_AMOUNT = re.compile(
+    r"(?:inr|rs\.?|₹)\s*(\d+(?:[.,]\d+)*)\s*(?:cr\b|crores?)|(\d+(?:\.\d+)?)\s*(?:cr\b|crores?)",
+    re.IGNORECASE,
+)
+_PCT_OF_ESTIMATE = re.compile(
+    r"(\d+(?:\.\d+)?)\s*%\s*(?:of\s+)?(?:the\s+)?(?:estimated|tender|project)\s+(?:cost|value|amount)",
+    re.IGNORECASE,
+)
+
+
+def stated_threshold_crores(
+    req: RequirementCandidate, estimated_value_inr_crores: float
+) -> float | None:
+    """The threshold the tender itself states, in crores, or None when it states none we can read.
+
+    Only the structured criterion or the clause's verbatim quote counts: the title and description
+    are model-written. "N% of the estimated cost" uses the bid's estimated value. Never a default.
+    """
+    if req.criterion and req.criterion.threshold is not None:
+        return float(req.criterion.threshold)
+    quote = req.provenance.verbatim_quote or ""
+    pct = _PCT_OF_ESTIMATE.search(quote)
+    if pct and estimated_value_inr_crores > 0:
+        return round(estimated_value_inr_crores * float(pct.group(1)) / 100, 2)
+    amount = _CRORE_AMOUNT.search(quote)
+    if amount:
+        return float((amount.group(1) or amount.group(2)).replace(",", ""))
+    return None
+
+
+def threshold_not_stated_gap(req: RequirementCandidate, citation: EvidenceCitation) -> GapItem:
+    where = req.provenance.clause_reference or f"page {req.provenance.page_number}"
+    return GapItem(
+        requirement_title=req.title,
+        missing_factor="Threshold not stated in a readable form",
+        suggested_action=f"Check the figure in {where} manually; no threshold was assumed.",
+        severity=RiskSeverity.HIGH,
+        evidence=citation,
+    )
+
 
 class DeterministicEvaluationOutcome(NamedTuple):
     verdict: BidDecisionVerdict
@@ -338,21 +378,7 @@ class DeterministicEligibilityEvaluator:
         matched_citations: list[EvidenceCitation] | None = None,
         estimated_value_inr_crores: float = 0.0,
     ) -> None:
-        # Expected threshold in Crores from criterion, title/description, or 40% of estimated tender value
-        expected_crores = None
-        if req.criterion and req.criterion.threshold is not None:
-            expected_crores = float(req.criterion.threshold)
-        else:
-            text = f"{req.title} {req.description}"
-            m = re.search(
-                r"(?:inr|rs\.?|₹)?\s*(\d+(?:\.\d+)?)\s*(?:cr|crores?)", text, re.IGNORECASE
-            )
-            if m:
-                expected_crores = float(m.group(1))
-            elif estimated_value_inr_crores > 0:
-                expected_crores = round(estimated_value_inr_crores * 0.4, 2)
-            else:
-                expected_crores = 10.0
+        expected_crores = stated_threshold_crores(req, estimated_value_inr_crores)
 
         # Calculate turnover using the statutory 3-year average turnover
         turnovers = [t.turnover_inr_crores for t in company.turnover_records]
@@ -395,6 +421,10 @@ class DeterministicEligibilityEvaluator:
                 citation.company_entry_id = matched.company_entry_id
 
         evidence_citations.append(citation)
+
+        if expected_crores is None:
+            missing_information.append(threshold_not_stated_gap(req, citation))
+            return
 
         if not turnovers or avg_turnover == 0.0:
             gap = GapItem(
@@ -510,21 +540,8 @@ class DeterministicEligibilityEvaluator:
 
         evidence_citations.append(citation)
 
-        # Expected experience threshold: req.criterion.threshold, title/desc, or 35% of estimated tender value
-        expected_threshold = None
-        if req.criterion and req.criterion.threshold is not None:
-            expected_threshold = float(req.criterion.threshold)
-        else:
-            text = f"{req.title} {req.description}"
-            m = re.search(
-                r"(?:inr|rs\.?|₹)?\s*(\d+(?:\.\d+)?)\s*(?:cr|crores?)", text, re.IGNORECASE
-            )
-            if m:
-                expected_threshold = float(m.group(1))
-            elif estimated_value_inr_crores > 0:
-                expected_threshold = round(estimated_value_inr_crores * 0.35, 2)
-            else:
-                expected_threshold = 0.0
+        # No stated value means any qualifying similar project counts; nothing is assumed.
+        expected_threshold = stated_threshold_crores(req, estimated_value_inr_crores) or 0.0
 
         if not qualifying_projects:
             detail = f"No completed project experience found within the 7-year window (since {cutoff_year})."

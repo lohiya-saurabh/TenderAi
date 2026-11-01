@@ -103,7 +103,7 @@ The persistent, reusable core of the product. Maintained once, enriched over tim
 2. **Evidence-backed** — every profile attribute links to a stored source document (certificate PDF, CA letter) with expiry tracking.
 3. **Deterministic evaluation** — tender threshold vs. profile value is pure arithmetic (e.g., _required avg. turnover ₹4.5 Cr; profile FY23–25 avg. ₹4.2 Cr → shortfall ₹30 L → INELIGIBLE_). The LLM never computes money.
 4. **Versioned & auditable** — profile changes are logged; bid decisions are reproducible against the profile version used at decision time.
-5. **Confidential** — the profile is the company's crown jewels; tenant isolation and access control are first-class (see `docs/SECURITY_MODEL.md`).
+5. **Confidential** — the profile is the company's crown jewels; tenant isolation and access control are first-class (see `docs/SECURITY.md`).
 
 ---
 

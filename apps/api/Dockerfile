@@ -16,5 +16,8 @@ ENV NODE_ENV=production
 
 COPY --from=builder /app ./
 
+# AWS RDS CA bundle: the API verifies the database's TLS certificate (DATABASE_SSL=verify-full).
+ADD https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem /app/certs/rds-global-bundle.pem
+
 EXPOSE 3000
 CMD ["node", "apps/api/dist/main.js"]

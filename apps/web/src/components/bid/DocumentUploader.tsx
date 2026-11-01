@@ -3,7 +3,8 @@ import { generateUploadUrl, confirmDocumentUpload } from '@/api/bids.js';
 import { resolveUrl } from '@/api/client.js';
 import { Button } from '@/components/common/Button.js';
 import { ErrorBanner } from '@/components/common/ErrorBanner.js';
-import { ProgressBar } from '@/components/progress/ProgressBar.js';
+import { Progress } from '@/components/ui/progress.js';
+import { cn } from '@/lib/utils.js';
 import { Upload, X } from 'lucide-react';
 
 export interface DocumentUploaderProps {
@@ -23,27 +24,27 @@ interface DocTypeOption {
 const DOC_TYPES: readonly DocTypeOption[] = [
   {
     value: 'NIT',
-    label: 'Notice Inviting Tender (NIT)',
+    label: 'Notice inviting tender (NIT)',
     description: 'Core tender notice with eligibility & critical dates',
   },
   {
     value: 'TECHNICAL_SPECS',
-    label: 'Technical Specs & SOW',
+    label: 'Technical specs & SOW',
     description: 'Scope of work, engineering requirements & standards',
   },
   {
     value: 'BOQ',
-    label: 'Bill of Quantities (BOQ)',
+    label: 'Bill of quantities (BOQ)',
     description: 'Schedule of rates and item breakdown',
   },
   {
     value: 'CORRIGENDUM',
-    label: 'Corrigendum / Addendum',
+    label: 'Corrigendum / addendum',
     description: 'Official amendments, date extensions & clause revisions',
   },
   {
     value: 'FINANCIAL_BID',
-    label: 'Financial Bid Guidelines',
+    label: 'Financial bid guidelines',
     description: 'Price evaluation rules & bank guarantee requirements',
   },
 ];
@@ -199,33 +200,16 @@ export const DocumentUploader: React.FC<DocumentUploaderProps> = ({
     }
   };
 
+  const pick = () => !isUploading && fileInputRef.current?.click();
+
   return (
-    <div
-      style={{
-        backgroundColor: 'var(--color-surface-card)',
-        border: '1px solid var(--color-primary-500)',
-        borderRadius: 'var(--radius-lg)',
-        padding: '1.5rem',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '1.25rem',
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div className="flex flex-col gap-5 rounded-lg border border-primary bg-card p-6">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <h3
-            style={{
-              fontSize: 'var(--text-base)',
-              fontWeight: 700,
-              color: 'var(--color-surface-text)',
-              margin: '0 0 0.2rem',
-            }}
-          >
-            Upload Tender Package Document
-          </h3>
-          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-surface-muted)', margin: 0 }}>
-            Upload PDF tender notices, technical specs, or BOQ files for automated clause
-            extraction.
+          <h3 className="mb-1 text-base font-semibold text-foreground">Upload a tender document</h3>
+          <p className="text-xs text-muted-foreground">
+            Upload the tender notice, technical specifications or BOQ as a PDF to extract its
+            requirements.
           </p>
         </div>
         {onCancel && (
@@ -243,178 +227,102 @@ export const DocumentUploader: React.FC<DocumentUploaderProps> = ({
 
       {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
 
-      {/* Document Type Selector */}
-      <div>
-        <label
-          style={{
-            fontSize: 'var(--text-xs)',
-            fontWeight: 600,
-            color: 'var(--color-surface-text)',
-            display: 'block',
-            marginBottom: '0.4rem',
-          }}
-        >
-          Document Classification *
-        </label>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: '0.5rem',
-          }}
-        >
-          {DOC_TYPES.map((dt) => (
-            <button
-              key={dt.value}
-              type="button"
-              disabled={isUploading}
-              onClick={() => setDocType(dt.value)}
-              style={{
-                textAlign: 'left',
-                padding: '0.65rem 0.85rem',
-                borderRadius: 'var(--radius-md)',
-                backgroundColor:
-                  docType === dt.value ? 'rgba(234, 88, 12, 0.08)' : 'var(--color-surface-bg)',
-                border: `1px solid ${docType === dt.value ? 'var(--color-primary-500)' : 'var(--color-surface-border)'}`,
-                cursor: isUploading ? 'default' : 'pointer',
-                transition: 'all var(--transition-fast)',
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 'var(--text-xs)',
-                  fontWeight: 700,
-                  color:
-                    docType === dt.value ? 'var(--color-primary-500)' : 'var(--color-surface-text)',
-                }}
+      <fieldset>
+        <legend className="mb-1.5 text-xs font-semibold text-foreground">Document type</legend>
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(13.75rem,1fr))] gap-2">
+          {DOC_TYPES.map((dt) => {
+            const selected = docType === dt.value;
+            return (
+              <button
+                key={dt.value}
+                type="button"
+                aria-pressed={selected}
+                disabled={isUploading}
+                onClick={() => setDocType(dt.value)}
+                className={cn(
+                  'rounded-md border px-3.5 py-2.5 text-left transition-colors disabled:cursor-default',
+                  selected ? 'border-primary bg-primary/10' : 'border-border bg-background',
+                )}
               >
-                {dt.label}
-              </div>
-              <div
-                style={{
-                  fontSize: 'var(--text-2xs)',
-                  color: 'var(--color-surface-muted)',
-                  marginTop: '0.15rem',
-                }}
-              >
-                {dt.description}
-              </div>
-            </button>
-          ))}
+                <span
+                  className={cn(
+                    'block text-xs font-semibold',
+                    selected ? 'text-primary' : 'text-foreground',
+                  )}
+                >
+                  {dt.label}
+                </span>
+                <span className="mt-0.5 block text-2xs text-muted-foreground">
+                  {dt.description}
+                </span>
+              </button>
+            );
+          })}
         </div>
-      </div>
+      </fieldset>
 
-      {/* Drop Zone */}
       <div
+        role="button"
+        tabIndex={isUploading ? -1 : 0}
+        aria-label={
+          file ? `Selected file ${file.name}. Choose another PDF` : 'Choose a PDF to upload'
+        }
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        onClick={() => !isUploading && fileInputRef.current?.click()}
-        style={{
-          border: `2px dashed ${isDragOver ? 'var(--color-primary-500)' : 'var(--color-surface-border)'}`,
-          backgroundColor: isDragOver ? 'rgba(234, 88, 12, 0.06)' : 'var(--color-surface-bg)',
-          borderRadius: 'var(--radius-md)',
-          padding: '2rem 1.5rem',
-          textAlign: 'center',
-          cursor: isUploading ? 'default' : 'pointer',
-          transition: 'all var(--transition-fast)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '0.5rem',
+        onClick={pick}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            pick();
+          }
         }}
+        className={cn(
+          'flex flex-col items-center gap-2 rounded-md border-2 border-dashed px-6 py-8 text-center transition-colors',
+          isDragOver ? 'border-primary bg-primary/5' : 'border-border bg-background',
+          isUploading ? 'cursor-default' : 'cursor-pointer',
+        )}
       >
         <input
           ref={fileInputRef}
           type="file"
           accept="application/pdf,.pdf"
-          style={{ display: 'none' }}
+          className="hidden"
           onChange={handleFileChange}
           disabled={isUploading}
         />
         <Upload size={36} className="text-primary/70" />
         {file ? (
           <div>
-            <span
-              style={{
-                fontSize: 'var(--text-sm)',
-                fontWeight: 700,
-                color: 'var(--color-surface-text)',
-              }}
-            >
-              {file.name}
-            </span>
-            <span
-              style={{
-                fontSize: 'var(--text-xs)',
-                color: 'var(--color-surface-muted)',
-                display: 'block',
-              }}
-            >
-              {(file.size / (1024 * 1024)).toFixed(2)} MB • PDF Document
+            <span className="break-all text-sm font-semibold text-foreground">{file.name}</span>
+            <span className="block text-xs text-muted-foreground">
+              {(file.size / (1024 * 1024)).toFixed(2)} MB · PDF
             </span>
           </div>
         ) : (
           <div>
-            <span
-              style={{
-                fontSize: 'var(--text-sm)',
-                fontWeight: 600,
-                color: 'var(--color-surface-text)',
-              }}
-            >
-              Drag & Drop tender PDF here, or{' '}
-              <span style={{ color: 'var(--color-primary-400)' }}>browse files</span>
+            <span className="text-sm font-medium text-foreground">
+              Drop the tender PDF here, or <span className="text-primary">browse files</span>
             </span>
-            <span
-              style={{
-                fontSize: 'var(--text-xs)',
-                color: 'var(--color-surface-muted)',
-                display: 'block',
-                marginTop: '0.2rem',
-              }}
-            >
-              Supports PDF documents up to 50MB (Multi-page NIT, Specs, BOQ)
-            </span>
+            <span className="mt-0.5 block text-xs text-muted-foreground">PDF, up to 50 MB</span>
           </div>
         )}
       </div>
 
-      {/* Progress Feedback during Byte Transfer */}
       {isUploading && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-          <div
-            style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-xs)' }}
-          >
-            <span style={{ color: 'var(--color-surface-text)', fontWeight: 600 }}>
-              {uploadMessage}
-            </span>
-            <span
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontWeight: 700,
-                color: 'var(--color-primary-300)',
-              }}
-            >
-              {uploadProgress}%
-            </span>
+        <div className="flex flex-col gap-1.5">
+          <div className="flex justify-between gap-3 text-xs">
+            <span className="font-medium text-foreground">{uploadMessage}</span>
+            <span className="font-semibold tabular-nums text-primary">{uploadProgress}%</span>
           </div>
-          <ProgressBar progress={uploadProgress} height="6px" />
+          <Progress value={uploadProgress} aria-label="Upload progress" className="h-1.5" />
         </div>
       )}
 
-      {/* Action Footer */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'flex-end',
-          gap: '0.75rem',
-          alignItems: 'center',
-        }}
-      >
+      <div className="flex items-center justify-end gap-3">
         {file && !isUploading && (
           <Button variant="ghost" size="sm" onClick={() => setFile(null)}>
-            Clear Selection
+            Clear
           </Button>
         )}
         <Button
@@ -423,7 +331,7 @@ export const DocumentUploader: React.FC<DocumentUploaderProps> = ({
           disabled={!file || isUploading}
           isLoading={isUploading}
         >
-          {isUploading ? 'Transferring File...' : 'Start Document Upload & Analysis'}
+          {isUploading ? 'Uploading…' : 'Upload and extract'}
         </Button>
       </div>
     </div>

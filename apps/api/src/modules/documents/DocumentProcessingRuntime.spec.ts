@@ -11,6 +11,7 @@ import type {
 } from '@/modules/bids/application/IJobQueue.js';
 import { DocumentProcessingRuntime } from '@/modules/documents/DocumentProcessingRuntime.js';
 import { DocumentCompletionService } from '@/modules/documents/DocumentCompletionService.js';
+import type { IStorageService } from '@/modules/bids/application/IStorageService.js';
 import type { DocumentExtractionCompletedEvent } from '@tenderpulse/shared-types';
 
 describe('DocumentProcessingRuntime (Option B: Two-Queue Architecture)', () => {
@@ -117,6 +118,81 @@ describe('DocumentProcessingRuntime (Option B: Two-Queue Architecture)', () => {
 
     // Crucial check: NestJS must NEVER poll or consume from the Ingestion Queue
     expect(ingestionReceiveMock).not.toHaveBeenCalled();
+  });
+
+  it('publishes new jobs while the completion consumer is parked in a long poll, and shutdown aborts the poll', async () => {
+    vi.stubEnv('DOCUMENT_PROCESSING_CONSUMER_ENABLED', 'true');
+    database = new PGlite();
+    await initDatabase(database, {
+      seedUsers: true,
+      seedFullProfile: true,
+      seedBidsAndCompliance: true,
+    });
+    const db = createDrizzle(database);
+    const [bid] = await db.select().from(schema.bids).limit(1);
+    if (!bid) throw new Error('Test database did not seed a bid.');
+
+    const documentId = `doc-longpoll-test-${Date.now()}`;
+    const storageReference = `tenants/${bid.organizationId}/bids/${bid.id}/${documentId}/tender.pdf`;
+    await db.insert(schema.tenderDocuments).values({
+      id: documentId,
+      bidId: bid.id,
+      organizationId: bid.organizationId,
+      fileName: 'tender.pdf',
+      storagePath: storageReference,
+      fileSizeBytes: 2048,
+      mimeType: 'application/pdf',
+      documentType: 'NIT',
+      status: 'QUEUED_FOR_EXTRACTION',
+    });
+
+    let published = 0;
+    let pollAborted = false;
+    const ingestionQueue: IJobQueue = {
+      enqueue: async () => {
+        published += 1;
+      },
+      receiveMessages: async () => [],
+      deleteMessage: async () => {},
+      changeMessageVisibility: async () => {},
+      moveToDeadLetter: async () => {},
+      getDeadLetterMessages: async () => [],
+    };
+    // A long poll that only ends when aborted, like an SQS ReceiveMessage with no traffic.
+    const completionQueue: IJobQueue = {
+      enqueue: async () => {},
+      receiveMessages: (_max, _visibility, options) =>
+        new Promise((_resolve, reject) => {
+          options?.abortSignal?.addEventListener('abort', () => {
+            pollAborted = true;
+            reject(new Error('aborted'));
+          });
+        }),
+      deleteMessage: async () => {},
+      changeMessageVisibility: async () => {},
+      moveToDeadLetter: async () => {},
+      getDeadLetterMessages: async () => [],
+    };
+
+    runtime = new DocumentProcessingRuntime(db, ingestionQueue, completionQueue);
+    runtime.onModuleInit();
+
+    // The job arrives after the consumer is already parked in its long poll.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await db.insert(schema.documentProcessingOutbox).values({
+      id: `outbox-${documentId}`,
+      organizationId: bid.organizationId,
+      documentId,
+      payload: { documentId } as unknown as IngestionJobMessage,
+      status: 'PENDING',
+    });
+    await vi.waitFor(() => expect(published).toBe(1), { timeout: 3000 });
+
+    const started = Date.now();
+    await runtime.onModuleDestroy();
+    runtime = undefined;
+    expect(pollAborted).toBe(true);
+    expect(Date.now() - started).toBeLessThan(1000);
   });
 
   it('consumes completion events from the Completion Queue and atomically persists compliance items', async () => {
@@ -265,17 +341,23 @@ describe('DocumentProcessingRuntime (Option B: Two-Queue Architecture)', () => {
           eq(schema.complianceItems.organizationId, bid.organizationId),
         ),
       );
-    expect(
-      persistedItems.filter((item) => item.provenance.documentId === documentId),
-    ).toHaveLength(1);
+    // Identity is the clause's location (document, page, quote), never its title: the new
+    // text is a new clause, and the reviewed row is kept exactly as the reviewer left it.
+    const forDocument = persistedItems.filter((item) => item.provenance.documentId === documentId);
+    expect(forDocument).toHaveLength(2);
 
-    const refreshed = persistedItems.find((item) => item.id === reviewedComplianceId);
-    expect(refreshed?.provenance.verbatimQuote).toBe(
+    const reviewed = persistedItems.find((item) => item.id === reviewedComplianceId);
+    expect(reviewed?.provenance.verbatimQuote).toBe('The EMD amount will be deposited.');
+    expect(reviewed?.status).toBe('READY');
+    expect(reviewed?.humanReviewRequired).toBe(false);
+    expect(reviewed?.version).toBe(4);
+
+    const extracted = forDocument.find((item) => item.id !== reviewedComplianceId);
+    expect(extracted?.provenance.verbatimQuote).toBe(
       'The bidder must submit earnest money deposit of INR 50,00,000.',
     );
-    expect(refreshed?.status).toBe('READY');
-    expect(refreshed?.humanReviewRequired).toBe(false);
-    expect(refreshed?.version).toBe(4);
+    expect(extracted?.reviewStatus).toBe('UNREVIEWED');
+    expect(extracted?.documentId).toBe(documentId);
   });
 
   it('routes malformed completion messages missing required identifiers to dead-letter queue', async () => {
@@ -668,5 +750,135 @@ describe('DocumentProcessingRuntime (Option B: Two-Queue Architecture)', () => {
     expect(doc2Record?.status).toBe('FAILED');
     expect(doc2Record?.lastProcessingError).toBe('Corrupted PDF stream.');
     expect(doc2Record?.processingCompletedAt).toBeInstanceOf(Date);
+  });
+
+  describe('claim-checked completion events (payload too large for SQS)', () => {
+    async function setup() {
+      database = new PGlite();
+      await initDatabase(database, {
+        seedUsers: true,
+        seedFullProfile: true,
+        seedBidsAndCompliance: true,
+      });
+      const db = createDrizzle(database);
+      const [bid] = await db.select().from(schema.bids).limit(1);
+      if (!bid) throw new Error('Test database did not seed a bid.');
+      const documentId = `doc-claimcheck-${Date.now()}`;
+      await db.insert(schema.tenderDocuments).values({
+        id: documentId,
+        bidId: bid.id,
+        organizationId: bid.organizationId,
+        fileName: 'tender.pdf',
+        storagePath: `tenants/${bid.organizationId}/bids/${bid.id}/${documentId}/tender.pdf`,
+        fileSizeBytes: 2048,
+        mimeType: 'application/pdf',
+        documentType: 'NIT',
+        status: 'QUEUED_FOR_EXTRACTION',
+      });
+      const envelope = {
+        jobId: `job-${documentId}`,
+        organizationId: bid.organizationId,
+        bidId: bid.id,
+        documentId,
+        status: 'FAILED',
+        payloadStorageReference: `tenants/${bid.organizationId}/bids/${bid.id}/${documentId}/completion-events/job-${documentId}.json`,
+      };
+      // The error text exists only in the stored payload, so seeing it proves the load.
+      const stored = {
+        ...envelope,
+        payloadStorageReference: undefined,
+        error: 'From the stored payload.',
+        items: [],
+      };
+      const objects = new Map<string, string>([
+        [envelope.payloadStorageReference, JSON.stringify(stored)],
+      ]);
+      const storage = {
+        getObject: vi.fn(async (path: string) => objects.get(path) ?? null),
+        deleteObject: vi.fn(async (path: string) => {
+          objects.delete(path);
+        }),
+      };
+      const deleted: string[] = [];
+      const queue: IJobQueue = {
+        enqueue: async () => {},
+        receiveMessages: async () => [],
+        deleteMessage: async (handle) => {
+          deleted.push(handle);
+        },
+        changeMessageVisibility: async () => {},
+        moveToDeadLetter: async () => {},
+        getDeadLetterMessages: async () => [],
+      };
+      runtime = new DocumentProcessingRuntime(
+        db,
+        queue,
+        queue,
+        undefined,
+        undefined,
+        undefined,
+        storage as unknown as IStorageService,
+      );
+      const documentStatus = async () =>
+        (
+          await db
+            .select({
+              status: schema.tenderDocuments.status,
+              error: schema.tenderDocuments.lastProcessingError,
+            })
+            .from(schema.tenderDocuments)
+            .where(eq(schema.tenderDocuments.id, documentId))
+        )[0];
+      return { envelope, storage, objects, deleted, documentStatus };
+    }
+
+    it('loads the full event from storage, persists it, then cleans up', async () => {
+      const { envelope, storage, objects, deleted, documentStatus } = await setup();
+
+      await runtime!.processCompletionMessage({
+        receiptHandle: 'r1',
+        body: envelope,
+        receiveCount: 1,
+      });
+
+      expect(await documentStatus()).toEqual({
+        status: 'FAILED',
+        error: 'From the stored payload.',
+      });
+      expect(deleted).toEqual(['r1']);
+      expect(storage.deleteObject).toHaveBeenCalledWith(envelope.payloadStorageReference);
+      expect(objects.size).toBe(0);
+    });
+
+    it('refuses a reference outside the tenant prefix and leaves the message for retry', async () => {
+      const { envelope, storage, deleted, documentStatus } = await setup();
+
+      await runtime!.processCompletionMessage({
+        receiptHandle: 'r2',
+        body: { ...envelope, payloadStorageReference: 'tenants/another-org/secret.json' },
+        receiveCount: 1,
+      });
+
+      expect(storage.getObject).not.toHaveBeenCalled();
+      expect(deleted).toEqual([]);
+      expect((await documentStatus())?.status).toBe('QUEUED_FOR_EXTRACTION');
+    });
+
+    it('refuses a stored payload whose identifiers do not match the envelope', async () => {
+      const { envelope, objects, deleted, documentStatus } = await setup();
+      objects.set(
+        envelope.payloadStorageReference,
+        JSON.stringify({ ...envelope, documentId: 'doc-someone-else', error: 'x' }),
+      );
+
+      await runtime!.processCompletionMessage({
+        receiptHandle: 'r3',
+        body: envelope,
+        receiveCount: 1,
+      });
+
+      expect(deleted).toEqual([]);
+      expect((await documentStatus())?.status).toBe('QUEUED_FOR_EXTRACTION');
+    });
   });
 });

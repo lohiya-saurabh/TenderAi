@@ -38,6 +38,7 @@ class SecurityContext(BaseModel):
         "CORRIGENDUM_ANALYSIS",
         "PROPOSAL_DRAFTING",
         "BID_DECISION",
+        "CHAT_COPILOT",
     ] = Field(
         default="COMPLIANCE_EXTRACTION",
         description="Explicit business purpose of the AI invocation",

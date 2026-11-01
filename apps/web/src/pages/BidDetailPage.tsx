@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
+import { Page } from '@/components/ui/page.js';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   getBid,
@@ -11,11 +12,7 @@ import {
   type BidDetail,
   type BidDocument,
 } from '@/api/bids.js';
-import {
-  listComplianceItems,
-  reviewComplianceItem,
-  type ComplianceItem,
-} from '@/api/compliance.js';
+import { listComplianceItems, type ComplianceItem } from '@/api/compliance.js';
 import { useApi } from '@/hooks/useApi.js';
 import { useAuth } from '@/auth/useAuth.js';
 import { PERMISSIONS } from '@/utils/permissions.js';
@@ -23,20 +20,27 @@ import { Button } from '@/components/common/Button.js';
 import { ErrorBanner } from '@/components/common/ErrorBanner.js';
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton.js';
 import { Modal } from '@/components/common/Modal.js';
-import { PlusCircleIcon, ChevronRightIcon } from '@/components/common/Icons.js';
+import { PlusCircleIcon } from '@/components/common/Icons.js';
 import { ExtractionProgress } from '@/components/progress/ExtractionProgress.js';
-import { ComplianceTable } from '@/components/compliance/ComplianceTable.js';
-import { TenderInfoHeader } from '@/components/bid/detail/TenderInfoHeader.js';
 import { BidVerdictCard } from '@/components/bid/detail/BidVerdictCard.js';
 import { ObligationsCard } from '@/components/bid/detail/ObligationsCard.js';
 import { IngestedDocumentsSection } from '@/components/bid/detail/IngestedDocumentsSection.js';
-import { BidSignoffDock } from '@/components/bid/detail/BidSignoffDock.js';
-import { MissingDataCallout } from '@/components/bid/detail/MissingDataCallout.js';
-import { formatCurrency, formatCompactINR } from '@/utils/formatCurrency.js';
 import {
   mapApiDecisionToBidDecision,
   type ApiBidDecisionSummary,
 } from '@/components/bid/detail/bidDetailData.js';
+import { Sparkles } from 'lucide-react';
+import { ChatCopilotDrawer } from '@/components/chat/index.js';
+import type { BidClauseSummary } from '@tenderpulse/shared-types';
+import { getClauseSummary } from '@/api/clauses.js';
+import {
+  AttentionTiles,
+  BidOverviewHeader,
+  DeadlineTimeline,
+  KeyFacts,
+  MoneyAtStake,
+} from '@/components/bid/overview/BidOverview.js';
+import { useSetBidBreadcrumbTitle } from '@/components/layout/BreadcrumbTitle.js';
 
 /**
  * Tender Detail — "Should I bid on this tender?"
@@ -56,7 +60,7 @@ import {
  *
  * Every section renders from existing APIs. Nothing is
  * fabricated — missing backend capabilities are documented
- * in MissingDataCallout and inline per section.
+ * inline per section.
  */
 export const BidDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -80,9 +84,10 @@ export const BidDetailPage: React.FC = () => {
   const [docToDelete, setDocToDelete] = useState<BidDocument | null>(null);
   const [isDeletingDoc, setIsDeletingDoc] = useState<boolean>(false);
   const [reprocessingDocId, setReprocessingDocId] = useState<string | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState<boolean>(false);
 
   // Fetch Bid details
-  const fetchBid = useCallback(() => getBid(bidId), [bidId]);
+  const fetchBid = useCallback((signal: AbortSignal) => getBid(bidId, { signal }), [bidId]);
   const {
     data: bid,
     isLoading: bidLoading,
@@ -91,14 +96,25 @@ export const BidDetailPage: React.FC = () => {
   } = useApi<BidDetail>(fetchBid, [bidId]);
 
   // Fetch Compliance items
-  const fetchCompliance = useCallback(() => listComplianceItems(bidId), [bidId]);
+  const fetchCompliance = useCallback(
+    (signal: AbortSignal) => listComplianceItems(bidId, { signal }),
+    [bidId],
+  );
   const {
     data: complianceItems,
-    isLoading: complianceLoading,
     error: complianceError,
     refetch: refetchCompliance,
-    setData: setComplianceItems,
   } = useApi<ComplianceItem[]>(fetchCompliance, [bidId]);
+
+  useSetBidBreadcrumbTitle(bidId, bid?.title);
+
+  // Clause summary: review progress, attention counts, amounts and deadlines
+  const fetchSummary = useCallback(() => getClauseSummary(bidId), [bidId]);
+  const {
+    data: summary,
+    error: summaryError,
+    refetch: refetchSummary,
+  } = useApi<BidClauseSummary>(fetchSummary, [bidId]);
 
   // Memoized & deduplicated compliance items (unconditionally declared before any early returns)
   const items = useMemo(() => {
@@ -184,10 +200,11 @@ export const BidDetailPage: React.FC = () => {
     const interval = setInterval(() => {
       refetchBid();
       refetchCompliance();
+      refetchSummary();
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [hasInFlightProcessing, refetchBid, refetchCompliance]);
+  }, [hasInFlightProcessing, refetchBid, refetchCompliance, refetchSummary]);
 
   const handleReevaluate = useCallback(async () => {
     setDecisionLoading(true);
@@ -236,63 +253,6 @@ export const BidDetailPage: React.FC = () => {
     }
   };
 
-  // Review Item handler (optimistic concurrency control)
-  const handleReviewItem = async (
-    itemId: string,
-    status: ComplianceItem['status'],
-    notes?: string,
-  ) => {
-    setActionError(null);
-    const targetItem = complianceItems?.find((i) => i.id === itemId);
-    const expectedVersion = targetItem?.version;
-
-    // Optimistic UI update
-    setComplianceItems((prev) =>
-      prev
-        ? prev.map((item) =>
-            item.id === itemId
-              ? {
-                  ...item,
-                  status,
-                  reviewNotes: notes || item.reviewNotes,
-                  version: item.version + 1,
-                }
-              : item,
-          )
-        : null,
-    );
-
-    const res = await reviewComplianceItem(bidId, itemId, {
-      status,
-      notes,
-      expectedVersion,
-    });
-
-    if (!res.ok) {
-      setActionError(res.error.message || 'Failed to update compliance review status.');
-      refetchCompliance();
-    } else {
-      refetchBid();
-    }
-  };
-
-  // Inspect handlers for the new ComplianceTable
-  const handleInspectEvidence = useCallback(
-    (item: ComplianceItem) => {
-      // Navigate to the detailed review page for evidence inspection
-      window.open(`/bids/${bidId}/compliance/${item.id}`, '_blank');
-    },
-    [bidId],
-  );
-
-  const handleInspectAssessment = useCallback(
-    (item: ComplianceItem) => {
-      // Navigate to the detailed review page for assessment inspection
-      window.open(`/bids/${bidId}/compliance/${item.id}`, '_blank');
-    },
-    [bidId],
-  );
-
   const handleDeleteBid = async () => {
     setIsDeleting(true);
     setActionError(null);
@@ -340,7 +300,7 @@ export const BidDetailPage: React.FC = () => {
   // -------------------------------------------------------------------------
   if (bidLoading && !bid) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <div className="flex flex-col gap-6">
         <LoadingSkeleton height="40px" />
         <LoadingSkeleton height="140px" />
         <LoadingSkeleton height="220px" />
@@ -354,92 +314,71 @@ export const BidDetailPage: React.FC = () => {
   // -------------------------------------------------------------------------
   if (bidError || !bid) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <Link to="/bids" style={{ color: 'var(--color-surface-muted)', fontSize: '0.9rem' }}>
-          ← Back to Bids Dashboard
-        </Link>
+      <div className="flex flex-col gap-4">
         <ErrorBanner message={bidError?.message || 'Bid project not found.'} onRetry={refetchBid} />
       </div>
     );
   }
 
-  const scoreNum = decision?.readinessScore
-    ? Math.round(
-        Number(decision.readinessScore) > 1
-          ? Number(decision.readinessScore)
-          : Number(decision.readinessScore) * 100,
-      )
-    : 84;
+  const actionButton =
+    'inline-flex items-center gap-1.5 min-h-10 rounded-lg border border-primary/40 bg-card px-3.5 text-sm font-semibold text-foreground no-underline hover:border-primary';
 
-  const verdictLabel = decision?.verdict
-    ? decision.verdict.replace(/_/g, ' ')
-    : bid.status === 'REVIEW_READY'
-      ? 'PURSUE BID'
-      : 'REVIEW REQUIRED';
-  const verdictColor =
-    verdictLabel.includes('PURSUE') || verdictLabel === 'GO'
-      ? 'text-emerald-600 dark:text-emerald-400'
-      : 'text-vermilion';
+  const headerActions = (
+    <>
+      {canViewAudit && (
+        <Link to={`/bids/${bidId}/audit`} className={actionButton}>
+          Audit trail
+        </Link>
+      )}
+      <button
+        type="button"
+        onClick={() => setIsChatOpen(!isChatOpen)}
+        className={actionButton}
+        aria-pressed={isChatOpen}
+      >
+        <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+        {isChatOpen ? 'Close copilot' : 'Ask copilot'}
+      </button>
+      {canUploadDoc && (
+        <button
+          type="button"
+          onClick={() => setShowUploader(!showUploader)}
+          className={actionButton}
+          aria-expanded={showUploader}
+        >
+          <PlusCircleIcon size={13} />
+          {showUploader ? 'Close uploader' : 'Upload document'}
+        </button>
+      )}
+      {canUploadDoc && (
+        <button
+          type="button"
+          onClick={handleReevaluate}
+          disabled={decisionLoading}
+          className={actionButton}
+        >
+          {decisionLoading ? 'Evaluating…' : 'Re-evaluate'}
+        </button>
+      )}
+      <Link to={`/bids/${bidId}/checklist`} className={actionButton}>
+        Documents checklist
+      </Link>
+      <Link
+        to={`/bids/${bidId}/clauses`}
+        className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-primary bg-primary px-3.5 text-sm font-semibold text-primary-foreground no-underline hover:bg-primary"
+      >
+        Open clause workspace{summary ? ` (${summary.clauses})` : ''}
+      </Link>
+    </>
+  );
 
   return (
-    <div className="space-y-6">
-      {/* Top Toolbar */}
-      <div className="flex justify-between items-center flex-wrap gap-3 pb-2 border-b border-border/60">
-        <Link
-          to="/bids"
-          className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-        >
-          ← Back to Bids Dashboard
-        </Link>
-        <div className="flex gap-2 items-center">
-          {canViewAudit && (
-            <Link to={`/bids/${bidId}/audit`}>
-              <Button variant="outline" size="sm" className="h-8 text-xs border-border">
-                Audit Trail
-              </Button>
-            </Link>
-          )}
-          {canUploadDoc && (
-            <Button
-              variant={showUploader ? 'secondary' : 'outline'}
-              size="sm"
-              onClick={() => setShowUploader(!showUploader)}
-              className="h-8 text-xs border-border gap-1"
-            >
-              <PlusCircleIcon size={13} />
-              <span>{showUploader ? 'Close Uploader' : 'Upload Document'}</span>
-            </Button>
-          )}
-          {canUploadDoc && (
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={handleReevaluate}
-              disabled={decisionLoading}
-              className="h-8 text-xs gap-1"
-            >
-              <ChevronRightIcon size={13} />
-              <span>{decisionLoading ? 'Evaluating…' : 'Re-evaluate'}</span>
-            </Button>
-          )}
-          {canDeleteBid && (
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={() => setShowDeleteModal(true)}
-              className="h-8 text-xs"
-            >
-              Delete Tender
-            </Button>
-          )}
-        </div>
-      </div>
-
+    <Page className="min-w-0">
       {actionError && <ErrorBanner message={actionError} onDismiss={() => setActionError(null)} />}
       {reprocessNotice && (
         <div
           role="status"
-          className="p-3 rounded-md bg-muted/60 text-foreground text-xs border border-border"
+          className="rounded-md border border-border bg-muted/60 p-3 text-xs text-foreground"
         >
           {reprocessNotice}
         </div>
@@ -454,6 +393,7 @@ export const BidDetailPage: React.FC = () => {
             setIsProcessing(false);
             refetchBid();
             refetchCompliance();
+            refetchSummary();
             fetchDecision();
           }}
           onRetry={() => {
@@ -463,192 +403,72 @@ export const BidDetailPage: React.FC = () => {
         />
       )}
 
-      {/* ========================================================================= */}
-      {/* 1. SOLE AUTHORITATIVE TENDER HEADER (Rendered ONLY ONCE here) */}
-      {/* ========================================================================= */}
-      <div id="memo-header">
-        <TenderInfoHeader bid={bid} decision={decision} />
+      <BidOverviewHeader bid={bid} summary={summary} actions={headerActions} />
+
+      <div className="flex flex-wrap items-stretch gap-5">
+        <KeyFacts bid={bid} verdict={decision?.verdict ?? null} />
+        {summary && (
+          <div className="flex min-w-0 flex-[1_1_380px] flex-col gap-3">
+            <AttentionTiles bidId={bidId} summary={summary} />
+            <MoneyAtStake bidId={bidId} summary={summary} />
+          </div>
+        )}
       </div>
 
-      {/* Top Grid: Executive Overview (KPIs + Verdict) alongside Sign-Off Dock */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        <div className="lg:col-span-8 xl:col-span-9 space-y-6">
-          {/* ===================================================================== */}
-          {/* 2. EXECUTIVE 4-COLUMN KPI METRIC CARDS */}
-          {/* ===================================================================== */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="p-5 border border-border rounded-lg bg-card shadow-xs transition-colors">
-              <div className="mono text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                ACTIVE BIDS TRACKED
-              </div>
-              <div className="mt-2 text-3xl font-bold tracking-tight text-foreground">01</div>
-              <div className="mt-2 text-xs font-medium text-foreground/80 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-                <span className="text-emerald-700 dark:text-emerald-400 font-semibold mono">
-                  100% evaluated
-                </span>
-              </div>
-            </div>
+      {summary && <DeadlineTimeline bidId={bidId} summary={summary} />}
+      {summaryError && !summary && (
+        <ErrorBanner message={`Clause summary unavailable: ${summaryError.message}`} />
+      )}
+      {complianceError && (
+        <ErrorBanner
+          message={`Compliance items unavailable: ${complianceError.message}`}
+          onRetry={refetchCompliance}
+        />
+      )}
 
-            <div className="p-5 border border-border rounded-lg bg-card shadow-xs transition-colors">
-              <div className="mono text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                PIPELINE CONTRACT VALUE
-              </div>
-              <div
-                className="mt-2 text-3xl font-bold tracking-tight text-foreground"
-                title={bid.estimatedValueRupees ? formatCurrency(bid.estimatedValueRupees) : '—'}
-              >
-                {bid.estimatedValueRupees
-                  ? formatCompactINR(bid.estimatedValueRupees)
-                  : '₹1,250.00 Cr'}
-              </div>
-              <div
-                className="mt-2 text-xs font-medium text-muted-foreground truncate"
-                title={
-                  bid.estimatedValueRupees ? formatCurrency(bid.estimatedValueRupees) : undefined
-                }
-              >
-                {bid.tenderingAuthority || 'NHAI'} BOT Highway
-              </div>
-            </div>
-
-            <div className="p-5 border border-border rounded-lg bg-card shadow-xs transition-colors">
-              <div className="mono text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                EVIDENCE STATUS
-              </div>
-              <div className="mt-2 text-3xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
-                Verified
-              </div>
-              <div className="mt-2 text-xs font-medium text-foreground/80 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-                <span className="text-emerald-700 dark:text-emerald-400 font-medium">
-                  IRIS GST &amp; MCA RoC Active
-                </span>
-              </div>
-            </div>
-
-            <div className="p-5 border border-border rounded-lg bg-card shadow-xs transition-colors">
-              <div className="mono text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                DECISION RECOMMENDATION
-              </div>
-              <div className={`mt-2 text-2xl font-bold tracking-tight ${verdictColor}`}>
-                {verdictLabel}
-              </div>
-              <div className="mt-2 text-xs font-medium text-foreground/80">
-                Readiness Score:{' '}
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                  {scoreNum} / 100
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* ===================================================================== */}
-          {/* 3. DETERMINISTIC ELIGIBILITY VERDICT CARD (No duplicate title header) */}
-          {/* ===================================================================== */}
-          <div id="eligibility-verdict">
-            <BidVerdictCard bid={bid} complianceItems={items} decision={decision} />
-          </div>
-        </div>
-
-        {/* ===================================================================== */}
-        {/* RIGHT COLUMN: Sticky Sign-Off & Outline Dock (3-4 Cols) */}
-        {/* ===================================================================== */}
-        <div className="hidden lg:block lg:col-span-4 xl:col-span-3 space-y-6 lg:sticky lg:top-20">
-          <BidSignoffDock
-            onApproveBid={() => alert('Bid submission marked as approved for executive board.')}
-            onSubmitPreBidQuery={() => alert('Pre-bid query drafted for Clause 15.2 LD Cap.')}
-          />
-        </div>
+      <div id="eligibility-verdict">
+        <BidVerdictCard bid={bid} complianceItems={items} decision={decision} />
       </div>
 
-      {/* ========================================================================= */}
-      {/* LOWER SECTIONS: Full-Width Dossier Modules */}
-      {/* ========================================================================= */}
-      <div className="space-y-8 pt-2">
-        {/* ===================================================================== */}
-        {/* 4. INGESTED TENDER DOCUMENTS (Dedicated Clean Section) */}
-        {/* ===================================================================== */}
-        <div id="ingested-documents">
-          <IngestedDocumentsSection
-            bidId={bidId}
-            documents={bid.documents}
-            totalClauses={items.length}
-            canUploadDoc={canUploadDoc}
-            showUploader={showUploader}
-            onToggleUploader={() => setShowUploader(!showUploader)}
-            onUploadSuccess={(_id, docName) => {
-              setShowUploader(false);
-              setUploadedDocName(docName);
-              setIsProcessing(true);
-              refetchBid();
-            }}
-            onDownload={handleDownload}
-            onReprocess={handleReprocessDocument}
-            onDeleteDoc={(doc) => setDocToDelete(doc)}
-            reprocessingDocId={reprocessingDocId}
-          />
-        </div>
-
-        {/* ===================================================================== */}
-        {/* 5. HIGH-RISK LIABILITY ANALYSIS CARD */}
-        {/* ===================================================================== */}
-        <div id="liability-analysis">
-          {(!complianceLoading || items.length > 0) && !complianceError && (
-            <ObligationsCard items={items} />
-          )}
-        </div>
-
-        {/* ===================================================================== */}
-        {/* 6. EXTRACTED COMPLIANCE MATRIX (Full-Width Clean & Categorized) */}
-        {/* ===================================================================== */}
-        <div id="compliance-matrix" className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-base font-bold tracking-tight text-foreground">
-                5. Extracted Compliance Matrix
-              </h2>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Complete catalog of {items.length} candidate requirements parsed from ingested
-                documents
-              </p>
-            </div>
-            <span className="mono text-xs font-semibold text-muted-foreground">
-              Showing {items.length} Extracted Clauses
-            </span>
-          </div>
-
-          {complianceLoading && items.length === 0 ? (
-            <div className="flex flex-col gap-3">
-              <LoadingSkeleton height="80px" />
-              <LoadingSkeleton height="80px" />
-              <LoadingSkeleton height="80px" />
-            </div>
-          ) : complianceError ? (
-            <ErrorBanner message={complianceError.message} onRetry={refetchCompliance} />
-          ) : (
-            <div className="border border-border rounded-xl overflow-hidden bg-card shadow-xs">
-              <ComplianceTable
-                items={items}
-                onReviewItem={handleReviewItem}
-                onInspectEvidence={handleInspectEvidence}
-                onInspectAssessment={handleInspectAssessment}
-              />
-            </div>
-          )}
-        </div>
-
-        {/* 7. Documented data sources & missing endpoints */}
-        <MissingDataCallout />
+      <div id="ingested-documents">
+        <IngestedDocumentsSection
+          bidId={bidId}
+          documents={bid.documents}
+          canUploadDoc={canUploadDoc}
+          showUploader={showUploader}
+          onToggleUploader={() => setShowUploader(!showUploader)}
+          onUploadSuccess={(_id, docName) => {
+            setShowUploader(false);
+            setUploadedDocName(docName);
+            setIsProcessing(true);
+            refetchBid();
+          }}
+          onDownload={handleDownload}
+          onReprocess={handleReprocessDocument}
+          onDeleteDoc={(doc) => setDocToDelete(doc)}
+          reprocessingDocId={reprocessingDocId}
+        />
       </div>
+
+      <div id="high-risk-liability">
+        <ObligationsCard items={items} />
+      </div>
+
+      {canDeleteBid && (
+        <div className="flex justify-end">
+          <Button variant="danger" size="sm" onClick={() => setShowDeleteModal(true)}>
+            Delete tender
+          </Button>
+        </div>
+      )}
 
       {/* Delete Tender Confirmation Modal */}
       <Modal
         isOpen={showDeleteModal}
         onClose={() => !isDeleting && setShowDeleteModal(false)}
-        title="Delete Tender Project"
+        title="Delete this bid?"
         footer={
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+          <div className="flex justify-end gap-3">
             <Button
               variant="secondary"
               onClick={() => setShowDeleteModal(false)}
@@ -657,35 +477,19 @@ export const BidDetailPage: React.FC = () => {
               Cancel
             </Button>
             <Button variant="danger" onClick={handleDeleteBid} isLoading={isDeleting}>
-              Yes, Delete Permanently
+              Delete bid
             </Button>
           </div>
         }
       >
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1rem',
-            color: 'var(--color-surface-text)',
-          }}
-        >
-          <p style={{ margin: 0 }}>
+        <div className="flex flex-col gap-4 text-foreground">
+          <p>
             Are you sure you want to delete <strong>{bid.title}</strong> (
             <em>{bid.tenderNumber}</em>)?
           </p>
-          <div
-            style={{
-              padding: '0.85rem 1rem',
-              backgroundColor: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid var(--color-danger)',
-              borderRadius: 'var(--radius-md)',
-              fontSize: '0.85rem',
-              color: 'var(--color-danger)',
-            }}
-          >
-            <strong>Warning:</strong> This operation will permanently delete all uploaded documents
-            and extracted compliance requirements.
+          <div className="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3.5 text-sm text-foreground">
+            This permanently deletes the bid, its uploaded documents and every extracted
+            requirement.
           </div>
         </div>
       </Modal>
@@ -694,9 +498,9 @@ export const BidDetailPage: React.FC = () => {
       <Modal
         isOpen={Boolean(docToDelete)}
         onClose={() => !isDeletingDoc && setDocToDelete(null)}
-        title="Remove Tender Document"
+        title="Remove this document?"
         footer={
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+          <div className="flex justify-end gap-3">
             <Button
               variant="secondary"
               onClick={() => setDocToDelete(null)}
@@ -705,37 +509,29 @@ export const BidDetailPage: React.FC = () => {
               Cancel
             </Button>
             <Button variant="danger" onClick={handleDeleteDocument} isLoading={isDeletingDoc}>
-              Yes, Remove Document
+              Remove document
             </Button>
           </div>
         }
       >
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1rem',
-            color: 'var(--color-surface-text)',
-          }}
-        >
-          <p style={{ margin: 0 }}>
+        <div className="flex flex-col gap-4 text-foreground">
+          <p>
             Are you sure you want to remove <strong>{docToDelete?.fileName}</strong>?
           </p>
-          <div
-            style={{
-              padding: '0.85rem 1rem',
-              backgroundColor: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid var(--color-danger)',
-              borderRadius: 'var(--radius-md)',
-              fontSize: '0.85rem',
-              color: 'var(--color-danger)',
-            }}
-          >
-            <strong>Warning:</strong> Removing this document will delete all associated compliance
-            items derived from it.
+          <div className="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3.5 text-sm text-foreground">
+            This also deletes every requirement extracted from this document.
           </div>
         </div>
       </Modal>
-    </div>
+
+      {/* Chat Copilot Drawer */}
+      <ChatCopilotDrawer
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        bidId={bidId}
+        companyId={bid?.companyId}
+        tenderTitle={bid?.title}
+      />
+    </Page>
   );
 };

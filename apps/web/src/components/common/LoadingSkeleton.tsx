@@ -1,4 +1,5 @@
 import React from 'react';
+import { cn } from '@/lib/utils.js';
 
 export interface LoadingSkeletonProps {
   height?: string;
@@ -16,14 +17,14 @@ export const LoadingSkeleton: React.FC<LoadingSkeletonProps> = ({
   borderRadius,
   variant = 'text',
   count = 1,
-  className = '',
+  className,
   style,
 }) => {
   const getRadius = () => {
     if (borderRadius) return borderRadius;
-    if (variant === 'circle') return 'var(--radius-full)';
-    if (variant === 'rect') return 'var(--radius-md)';
-    return 'var(--radius-sm)';
+    if (variant === 'circle') return '9999px';
+    if (variant === 'rect') return '0.5rem';
+    return '0.25rem';
   };
 
   const getDimensions = () => {
@@ -42,7 +43,7 @@ export const LoadingSkeleton: React.FC<LoadingSkeletonProps> = ({
         {Array.from({ length: count }).map((_, i) => (
           <div
             key={i}
-            className={`skeleton ${className}`}
+            className={cn('animate-pulse bg-muted', className)}
             style={{
               height: dims.height,
               width: i === count - 1 && variant === 'text' ? '70%' : dims.width,
@@ -57,7 +58,7 @@ export const LoadingSkeleton: React.FC<LoadingSkeletonProps> = ({
 
   return (
     <div
-      className={`skeleton ${className}`}
+      className={cn('animate-pulse bg-muted', className)}
       style={{
         height: dims.height,
         width: dims.width,

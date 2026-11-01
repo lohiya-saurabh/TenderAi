@@ -113,10 +113,10 @@ export const NotificationBell: React.FC = () => {
   const renderCategoryIcon = (category: string) => {
     switch (category) {
       case 'DEADLINE':
-        return <Clock className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />;
+        return <Clock className="w-4 h-4 text-warning shrink-0 mt-0.5" />;
       case 'REVIEW_REQUEST':
       case 'HIGH_RISK_FLAG':
-        return <TriangleAlert className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />;
+        return <TriangleAlert className="w-4 h-4 text-destructive shrink-0 mt-0.5" />;
       case 'EVIDENCE_EXPIRY':
         return <ShieldCheck className="w-4 h-4 text-primary shrink-0 mt-0.5" />;
       default:
@@ -147,7 +147,7 @@ export const NotificationBell: React.FC = () => {
         >
           <Bell className="h-4 w-4 text-muted-foreground" />
           {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground shadow-sm">
+            <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-2xs font-bold text-primary-foreground shadow-sm">
               {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}
@@ -232,7 +232,7 @@ export const NotificationBell: React.FC = () => {
                     >
                       {notif.title}
                     </p>
-                    <span className="text-[10px] text-muted-foreground shrink-0">
+                    <span className="text-2xs text-muted-foreground shrink-0">
                       {formatTimeAgo(notif.createdAt)}
                     </span>
                   </div>

@@ -1,7 +1,7 @@
 /**
  * TeamsController — Endpoints for managing team members within a Tenant.
  */
-import { Controller, Get, Post, Body, HttpCode } from '@nestjs/common';
+import { Controller, Get, Post, Body, HttpCode, Param } from '@nestjs/common';
 import { TeamsService, type InviteMemberDto } from '@/modules/teams/teams.service.js';
 import { RequirePermission } from '@/common/security/decorators/permissions.decorator.js';
 import { Permissions } from '@/common/security/permissions.js';
@@ -21,5 +21,12 @@ export class TeamsController {
   @RequirePermission(Permissions.ORG_USERS_MANAGE)
   async inviteMember(@Body() body: InviteMemberDto) {
     return this.teamsService.inviteMember(body);
+  }
+
+  @Post('members/:id/invite-link')
+  @HttpCode(201)
+  @RequirePermission(Permissions.ORG_USERS_MANAGE)
+  async reissueInvite(@Param('id') id: string) {
+    return this.teamsService.reissueInvite(id);
   }
 }

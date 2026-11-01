@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest';
 import {
   computeProfileHealth,
   getDaysUntilExpiry,
-  ENTERPRISE_COMPANY_PROFILE,
   type FullCompanyProfile,
 } from '@/components/company/companyProfileData.js';
+import { ENTERPRISE_COMPANY_PROFILE } from './enterpriseProfile.fixture.js';
 
 describe('Company Profile Data & Derivations', () => {
   it('computes profile health accurately for complete enterprise profile', () => {

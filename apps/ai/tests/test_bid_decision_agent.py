@@ -16,6 +16,7 @@ from tenderpulse_ai.agent.schemas import (
     RequirementCriticality,
     RequirementKind,
 )
+from tenderpulse_ai.config import settings
 from tenderpulse_ai.decision import (
     BidDecisionAgent,
     BidDecisionRequest,
@@ -422,7 +423,7 @@ def test_api_bid_decision_endpoint_unauthorized():
 
 def test_api_bid_decision_endpoint_authorized():
     client = TestClient(app)
-    headers = {"X-Internal-Service-Key": "tenderpulse-internal-secret-2026"}
+    headers = {"X-Internal-Service-Key": settings.internal_service_key}
     request = make_request()
 
     response = client.post(
@@ -550,7 +551,7 @@ async def test_bid_decision_turnover_statutory_average_and_forty_percent_fallbac
 async def test_bid_decision_experience_thirty_five_percent_threshold():
     agent = BidDecisionAgent()
 
-    # Tender value = 500 Cr -> 35% threshold = 175 Cr
+    # The clause states 35% of the estimated cost: 500 Cr -> 175 Cr
     # Company largest project is 120 Cr (from make_company_profile)
     # Experience requirement with HARD_ELIGIBILITY
     exp_req = RequirementCandidate(
@@ -564,7 +565,7 @@ async def test_bid_decision_experience_thirty_five_percent_threshold():
             source_file_name="NIT.pdf",
             page_number=1,
             clause_reference="Clause 5.1",
-            verbatim_quote="Similar work execution track record required.",
+            verbatim_quote="Similar work of value not less than 35% of the estimated cost completed in the last 7 years.",
             confidence_score=0.98,
         ),
     )
@@ -578,3 +579,21 @@ async def test_bid_decision_experience_thirty_five_percent_threshold():
     # 120 Cr < 175 Cr (35% of 500 Cr) -> Hard disqualifier
     assert resp.verdict == BidDecisionVerdict.NO_GO
     assert any("experience" in d.requirement_title.lower() for d in resp.hard_disqualifiers)
+
+
+@pytest.mark.asyncio
+async def test_unstated_turnover_threshold_is_a_gap_never_a_default():
+    """No figure in the clause: no 40%-of-value or fixed default; the verdict cannot be a clean GO."""
+    from tenderpulse_ai.decision.evaluator import stated_threshold_crores
+
+    req = make_standard_requirements()[0].model_copy(deep=True)
+    req.criterion = None
+    req.title = "Turnover requirement of INR 999 Crores"  # model-written text must not be read
+    req.provenance.verbatim_quote = "The Bidder shall meet the turnover criteria of Clause 4.2."
+    assert stated_threshold_crores(req, 500.0) is None
+    req.provenance.verbatim_quote = (
+        "Average annual turnover not less than 30% of the estimated cost."
+    )
+    assert stated_threshold_crores(req, 500.0) == 150.0
+    req.provenance.verbatim_quote = "Minimum average annual turnover of Rs. 45.50 Crore."
+    assert stated_threshold_crores(req, 0.0) == 45.5

@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Headers, HttpCode, HttpStatus, Logger } from '@nestjs/common';
+import { Controller, Post, Body, Headers, HttpCode, HttpStatus, Logger, Inject } from '@nestjs/common';
 import type { DocumentExtractionCompletedEvent } from '@tenderpulse/shared-types';
 import { Public } from '@/common/security/decorators/public.decorator.js';
 import { InternalServiceGuard } from '@/common/security/InternalServiceGuard.js';
@@ -12,7 +12,10 @@ export class CompletionWebhookController {
   private readonly logger = new Logger(CompletionWebhookController.name);
   private readonly serviceGuard = new InternalServiceGuard();
 
-  constructor(private readonly completionService: DocumentCompletionService) {}
+  constructor(
+    @Inject(DocumentCompletionService)
+    private readonly completionService: DocumentCompletionService,
+  ) {}
 
   @Public()
   @Post('extraction-completed')

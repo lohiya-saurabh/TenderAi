@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { Page, PageHeader } from '@/components/ui/page.js';
 import { Link } from 'react-router-dom';
 import { listBids, type BidSummary } from '@/api/bids.js';
 import { useApi } from '@/hooks/useApi.js';
@@ -15,11 +16,14 @@ import { CompanyReadinessCard } from '@/components/dashboard/CompanyReadinessCar
 import { UpcomingDeadlinesCard } from '@/components/dashboard/UpcomingDeadlinesCard.js';
 import { BidPipelineCard } from '@/components/dashboard/BidPipelineCard.js';
 import { TenderListSection } from '@/components/dashboard/TenderListSection.js';
-import { MissingApiCallout } from '@/components/dashboard/MissingApiCallout.js';
 import { computePipelineStages } from '@/components/dashboard/dashboardData.js';
 
+// Module-level so the reference is stable, and so useApi's AbortSignal
+// argument is never passed through as listBids' optional query.
+const fetchBids = () => listBids();
+
 export const DashboardPage: React.FC = () => {
-  const { data: bids, isLoading, error, refetch } = useApi<BidSummary[]>(listBids);
+  const { data: bids, isLoading, error, refetch } = useApi<BidSummary[]>(fetchBids);
   const { hasPermission } = useAuth();
 
   const { itemsByBid, isLoading: complianceLoading } = useBidComplianceItems(bids);
@@ -40,30 +44,21 @@ export const DashboardPage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-6 lg:gap-8">
-      {/* 1. Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Bid Dashboard</h1>
-          </div>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-            What is happening with my bids — blockers, pipeline stage, deadlines, and tender
-            readiness at a glance
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2.5 shrink-0">
-          {canCreateBid && (
-            <Link to="/bids/new" className="no-underline shrink-0">
-              <Button variant="default" size="sm" className="gap-1.5 shadow-sm">
+    <Page>
+      <PageHeader
+        title="Bid dashboard"
+        description="Blockers, pipeline stage, deadlines and readiness across your bids."
+        actions={
+          canCreateBid && (
+            <Link to="/bids/new" className="no-underline">
+              <Button variant="default" size="sm" className="gap-1.5">
                 <Plus className="h-4 w-4" />
-                New Bid Project
+                New bid
               </Button>
             </Link>
-          )}
-        </div>
-      </div>
+          )
+        }
+      />
 
       {error && <ErrorBanner message={error.message} onRetry={refetch} />}
 
@@ -128,11 +123,8 @@ export const DashboardPage: React.FC = () => {
 
           {/* 6. Company Readiness */}
           {!isLoading && <CompanyReadinessCard />}
-
-          {/* 7. Documented Missing APIs Disclosure */}
-          <MissingApiCallout />
         </>
       )}
-    </div>
+    </Page>
   );
 };

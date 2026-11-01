@@ -4,7 +4,7 @@
  * CRUD operations and upload workflow for tender bid projects.
  */
 
-import { apiGet, apiPost, apiDelete, type ApiResult } from '@/api/client.js';
+import { apiGet, apiPost, apiDelete, type ApiResult, type RequestOptions } from '@/api/client.js';
 
 export type { ApiResult } from '@/api/client.js';
 
@@ -142,8 +142,8 @@ export function listBids(
 }
 
 /** Get a single bid by ID with document list */
-export function getBid(bidId: string): Promise<ApiResult<BidDetail>> {
-  return apiGet<BidDetail>(`/api/v1/bids/${bidId}`);
+export function getBid(bidId: string, options?: RequestOptions): Promise<ApiResult<BidDetail>> {
+  return apiGet<BidDetail>(`/api/v1/bids/${bidId}`, options);
 }
 
 /** Create a new bid project */
@@ -207,8 +207,7 @@ export type BidDecisionState = 'AI_PROPOSED' | 'UNDER_REVIEW' | 'CONFIRMED' | 'O
  * The verdict is computed deterministically against the pinned
  * Company Capability Profile — the AI engine cannot alter it.
  * `readinessScore` is 0.0–1.0. A bid with no evaluated decision
- * returns 404 (Not Found), which is the expected "not evaluated"
- * state, not an error.
+ * returns 204, which `getBidDecision` turns into `null`.
  */
 export interface BidDecisionSummary {
   decisionId: string;
@@ -230,10 +229,11 @@ export interface BidDecisionSummary {
 
 /**
  * Latest persisted bid/no-bid decision for a tender.
- * Requires BIDS_READ. 404 when the tender has never been evaluated.
+ * Requires BIDS_READ. `null` when the tender has never been evaluated.
  */
-export function getBidDecision(bidId: string): Promise<ApiResult<BidDecisionSummary>> {
-  return apiGet<BidDecisionSummary>(`/api/v1/bids/${bidId}/bid-decision`);
+export async function getBidDecision(bidId: string): Promise<ApiResult<BidDecisionSummary | null>> {
+  const res = await apiGet<BidDecisionSummary | undefined>(`/api/v1/bids/${bidId}/bid-decision`);
+  return res.ok ? { ok: true, data: res.data ?? null } : res;
 }
 
 /**
@@ -431,7 +431,7 @@ export interface TenderAmendmentItem {
   tenderNumber: string;
   tenderTitle: string;
   tenderingAuthority: string;
-  corrigendumNumber: string;
+  corrigendumNumber: string | null;
   documentId: string;
   documentName: string;
   publishedAt: string;
@@ -440,17 +440,18 @@ export interface TenderAmendmentItem {
     | 'TECHNICAL_SPEC_CHANGE'
     | 'EMD_AMENDMENT'
     | 'ELIGIBILITY_REVISION'
-    | 'GENERAL_CLARIFICATION';
-  summary: string;
+    | 'GENERAL_CLARIFICATION'
+    | 'UNCLASSIFIED';
+  summary: string | null;
   impact: {
-    deadlineChanged: boolean;
+    deadlineChanged: boolean | null;
     previousDeadline: string | null;
     revisedDeadline: string | null;
     daysExtended: number | null;
     affectedRequirementsCount: number;
     requiresReEvaluation: boolean;
   };
-  status: 'PROCESSED' | 'EVALUATED' | 'REQUIRES_CONFIRMATION';
+  status: 'PROCESSED' | 'EVALUATED' | 'REQUIRES_CONFIRMATION' | 'RECEIVED';
 }
 
 export interface TenderAmendmentsResponse {

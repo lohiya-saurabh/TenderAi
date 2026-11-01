@@ -4,6 +4,7 @@ import {
   IStorageService,
   HeadObjectResult,
 } from '@/modules/bids/application/IStorageService.js';
+import { ConfigService } from '@nestjs/config';
 import { StructuredLogger } from '@/common/logging/StructuredLogger.js';
 
 // Tune stream pipeline listener headroom for GCS chunked streams
@@ -25,13 +26,14 @@ export class GcsStorageService implements IStorageService {
   private readonly bucketName: string;
   private readonly logger = new StructuredLogger('GcsStorageService', 'api');
 
-  constructor(config: GcsStorageConfig) {
+  constructor(config: GcsStorageConfig, configService?: ConfigService) {
+    const cfg = configService ?? new ConfigService();
     this.bucketName = config.bucketName;
 
     const storageOptions: StorageOptions = {
-      projectId: config.projectId || process.env.GCP_PROJECT_ID || undefined,
-      keyFilename: config.keyFilename || process.env.GOOGLE_APPLICATION_CREDENTIALS || undefined,
-      apiEndpoint: config.apiEndpoint || process.env.GCS_ENDPOINT || undefined,
+      projectId: config.projectId || cfg.get<string>('GCP_PROJECT_ID') || undefined,
+      keyFilename: config.keyFilename || cfg.get<string>('GOOGLE_APPLICATION_CREDENTIALS') || undefined,
+      apiEndpoint: config.apiEndpoint || cfg.get<string>('GCS_ENDPOINT') || undefined,
     };
 
     if (config.credentials) {

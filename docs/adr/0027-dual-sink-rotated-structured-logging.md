@@ -62,20 +62,23 @@ Every log emission is decoupled into two independent sinks based on consumer pur
 
 ### 2. Zero-Dependency Atomic Rotating File Stream for Node.js
 
-Rather than importing heavyweight npm packages (such as Winston or Pino) that introduce deep dependency trees and breaking changes to existing test suites, we implemented [`RotatingLogStream.ts`](file:///Users/belikesaurabh/main/TenderAi/apps/api/src/common/logging/RotatingLogStream.ts) using native Node.js APIs (`node:fs`, `node:path`):
+Rather than importing heavyweight npm packages (such as Winston or Pino) that introduce deep dependency trees and breaking changes to existing test suites, we implemented [`RotatingLogStream.ts`](../../apps/api/src/common/logging/RotatingLogStream.ts) using native Node.js APIs (`node:fs`, `node:path`):
+
 - Uses synchronous atomic file descriptors (`fs.openSync`, `fs.writeSync`, `fs.fstatSync`) with restrictive permissions (`0o600`, owner read/write only).
 - Avoids asynchronous stream creation races that cause `ENOENT` during rapid log rotation.
 - Rotation rolls files atomically: `.5` is pruned, `.4` -> `.5`, `.3` -> `.4`, `.2` -> `.3`, `.1` -> `.2`, and active `.log` -> `.1`.
 
 ### 3. Python AI Engine Native Rotation
 
-In [`apps/ai/src/tenderpulse_ai/main.py`](file:///Users/belikesaurabh/main/TenderAi/apps/ai/src/tenderpulse_ai/main.py), the root logger utilizes the Python standard library `logging.handlers.RotatingFileHandler`:
-- File handler writes structured JSON via [`JSONLogFormatter`](file:///Users/belikesaurabh/main/TenderAi/apps/ai/src/tenderpulse_ai/logging/formatter.py) directly to `logs/ai.log` (`maxBytes=10MB`, `backupCount=5`).
-- Console handler writes clean single-line summaries via [`ConsoleLogFormatter`](file:///Users/belikesaurabh/main/TenderAi/apps/ai/src/tenderpulse_ai/logging/formatter.py).
+In [`apps/ai/src/tenderpulse_ai/main.py`](../../apps/ai/src/tenderpulse_ai/main.py), the root logger utilizes the Python standard library `logging.handlers.RotatingFileHandler`:
+
+- File handler writes structured JSON via [`JSONLogFormatter`](../../apps/ai/src/tenderpulse_ai/logging/formatter.py) directly to `logs/ai.log` (`maxBytes=10MB`, `backupCount=5`).
+- Console handler writes clean single-line summaries via [`ConsoleLogFormatter`](../../apps/ai/src/tenderpulse_ai/logging/formatter.py).
 
 ### 4. Zero-Trust Content Truncation Boundary
 
-Both [`LogSanitizer.ts`](file:///Users/belikesaurabh/main/TenderAi/apps/api/src/common/logging/LogSanitizer.ts) and [`sanitizer.py`](file:///Users/belikesaurabh/main/TenderAi/apps/ai/src/tenderpulse_ai/security/sanitizer.py) enforce safety boundaries on large text payloads:
+Both [`LogSanitizer.ts`](../../apps/api/src/common/logging/LogSanitizer.ts) and [`sanitizer.py`](../../apps/ai/src/tenderpulse_ai/security/sanitizer.py) enforce safety boundaries on large text payloads:
+
 - Keys matching `prompt`, `full_prompt`, `system_prompt`, `user_prompt`, `document_content`, `raw_page_text`, `page_text`, `extracted_text`, or `file_content` are truncated at 250 characters with an explicit suffix: `... [TRUNCATED: N chars omitted for log safety]`.
 - Generic string values are bounded at 3,000 characters to prevent multi-megabyte JSON allocations.
 
@@ -83,41 +86,46 @@ Both [`LogSanitizer.ts`](file:///Users/belikesaurabh/main/TenderAi/apps/api/src/
 
 Configured via environment variables with production-grade defaults:
 
-| Variable | Default | Purpose |
-| :--- | :--- | :--- |
-| `LOG_DIR` | `logs` | Directory path where log files are stored (relative to workspace root). |
-| `LOG_LEVEL_CONSOLE` | `INFO` | Minimum severity logged to the terminal terminal (`INFO`, `WARN`, `ERROR`). |
-| `LOG_LEVEL_FILE` | `DEBUG` | Minimum severity persisted to rotated log files (`DEBUG`, `INFO`). |
-| `LOG_MAX_BYTES` | `10485760` (10MB) | File size threshold triggering log rotation. |
-| `LOG_MAX_FILES` | `5` | Number of rotated backup archives retained before pruning. |
-| `LOG_TO_FILE` | `true` | Allows explicitly disabling file logging (e.g. in test runners). |
-| `LOG_TO_CONSOLE` | `true` | Allows disabling console stdout in non-interactive production environments. |
+| Variable            | Default           | Purpose                                                                     |
+| :------------------ | :---------------- | :-------------------------------------------------------------------------- |
+| `LOG_DIR`           | `logs`            | Directory path where log files are stored (relative to workspace root).     |
+| `LOG_LEVEL_CONSOLE` | `INFO`            | Minimum severity logged to the terminal terminal (`INFO`, `WARN`, `ERROR`). |
+| `LOG_LEVEL_FILE`    | `DEBUG`           | Minimum severity persisted to rotated log files (`DEBUG`, `INFO`).          |
+| `LOG_MAX_BYTES`     | `10485760` (10MB) | File size threshold triggering log rotation.                                |
+| `LOG_MAX_FILES`     | `5`               | Number of rotated backup archives retained before pruning.                  |
+| `LOG_TO_FILE`       | `true`            | Allows explicitly disabling file logging (e.g. in test runners).            |
+| `LOG_TO_CONSOLE`    | `true`            | Allows disabling console stdout in non-interactive production environments. |
 
 ## How to Locate and Analyze Logs
 
 ### File Locations
+
 - **NestJS API Gateway**: `logs/api.log` (backups: `logs/api.log.1` through `logs/api.log.5`)
 - **FastAPI AI Worker**: `logs/ai.log` (backups: `logs/ai.log.1` through `logs/ai.log.5`)
 
 ### Practical Analysis Commands
 
 1. **Live Stream of Formatted Logs**:
+
    ```bash
    tail -f logs/api.log | jq -r '"[\(.timestamp[11:19])] \(.level) [\(.service)] \(.message) \(.duration_ms // "")"'
    tail -f logs/ai.log | jq -r '"[\(.timestamp[11:19])] \(.level) \(.event): \(.message)"'
    ```
 
 2. **Filter by Tenant**:
+
    ```bash
    grep '"tenant_id":"org_acme_infra"' logs/api.log | jq .
    ```
 
 3. **Trace a Single Request or Job Across Services**:
+
    ```bash
    grep 'job-test-101' logs/*.log | jq '{service: .service, event: .event, duration_ms: .duration_ms, message: .message}'
    ```
 
 4. **Locate Extraction Failures & Warnings**:
+
    ```bash
    jq 'select(.level=="ERROR" or .level=="WARN")' logs/ai.log
    ```

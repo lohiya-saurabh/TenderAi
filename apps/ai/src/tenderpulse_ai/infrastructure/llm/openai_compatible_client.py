@@ -1,62 +1,838 @@
 import asyncio
 import json
 import logging
+import random
 import re
 import time
-from typing import Any
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from typing import Any, TypeVar
 
 import httpx
 
+from tenderpulse_ai.agent.validation import (
+    EXTRACTION_CATEGORIES,
+    clean_whitespace,
+    normalize_category,
+)
 from tenderpulse_ai.domain.models import (
     CandidateComplianceItem,
     ExecutionRulesProps,
     ProvenanceProps,
 )
+from tenderpulse_ai.domain.requirement_attributes import (
+    ACTIONS,
+    DEADLINE_ANCHORS,
+    MANDATORY,
+    OBLIGATION_TYPES,
+    PARTIES,
+    STAGES,
+    parse_attributes,
+)
+from tenderpulse_ai.security.sanitizer import UNTRUSTED_DATA_DIRECTIVE, SecretSanitizer
 
 logger = logging.getLogger("tenderpulse_ai.infrastructure.llm")
+
+T = TypeVar("T")
+
+# Providers whose json_schema mode constrains decoding, so an off-list category cannot be
+# generated. Groq checks the schema only after generating and answers HTTP 400 instead, so
+# the other providers keep json_object and rely on the category re-ask.
+STRICT_SCHEMA_PROVIDERS = frozenset({"cerebras"})
+
+
+def _strict_object(properties: dict[str, Any], required: tuple[str, ...] = ()) -> dict[str, Any]:
+    return {
+        "type": "object",
+        "properties": properties,
+        "required": list(required),
+        "additionalProperties": False,
+    }
+
+
+def _enum(values: Any) -> dict[str, Any]:
+    return {"type": "string", "enum": sorted(values)}
+
+
+# The extraction output format of the prompt, as a strict JSON schema (optional keys stay
+# optional, so the model still omits what the quote does not state).
+CANDIDATES_SCHEMA = _strict_object(
+    {
+        "candidates": {
+            "type": "array",
+            "items": _strict_object(
+                {
+                    "block_id": {"type": "string"},
+                    "category": _enum(EXTRACTION_CATEGORIES),
+                    "title": {"type": "string"},
+                    "description": {"type": "string"},
+                    "quote": {"type": "string"},
+                    "execution_rules": _strict_object(
+                        {
+                            "stamp_paper_required": {"type": "boolean"},
+                            "stamp_paper_denomination_inr": {"type": "number"},
+                            "notarization_required": {"type": "boolean"},
+                            "udin_required": {"type": "boolean"},
+                            "apostille_required": {"type": "boolean"},
+                            "client_countersign_required": {"type": "boolean"},
+                            "signing_authority_rank": {"type": "string"},
+                        }
+                    ),
+                    "obligation": _enum(OBLIGATION_TYPES),
+                    "action": _enum(ACTIONS),
+                    "stage": _enum(STAGES),
+                    "parties": {"type": "array", "items": _enum(PARTIES)},
+                    "mandatory": _enum(MANDATORY),
+                    "disqualifying": {"type": "boolean"},
+                    "deadline": _strict_object(
+                        {
+                            "date": {"type": "string"},
+                            "anchor": _enum(DEADLINE_ANCHORS),
+                            "offset_days": {"type": "integer"},
+                        }
+                    ),
+                    "amount": _strict_object(
+                        {
+                            "inr": {"type": "number"},
+                            "percent": {"type": "number"},
+                            "basis": {"type": "string"},
+                        }
+                    ),
+                    "form_ref": {"type": "string"},
+                },
+                required=("block_id", "category", "title", "description", "quote"),
+            ),
+        }
+    },
+    required=("candidates",),
+)
+
+
+class LLMExtractionError(RuntimeError):
+    """No model produced a valid structured answer (unreachable, blocked, invalid output)."""
+
+
+@dataclass
+class LlmEndpoint:
+    provider: str  # "gemini", "groq", "cerebras", "sambanova", "openrouter", "custom"
+    base_url: str
+    api_key: str
+    model: str
+    extra_headers: dict[str, str] = field(default_factory=dict)
+
+
+# Curated rotation pool of reliable, active free models on OpenRouter
+FALLBACK_FREE_MODELS: list[str] = [
+    "nvidia/nemotron-3.5-lightning:free",
+    "nvidia/nemotron-3.5-super-vl:free",
+    "liquid/lfm-2.5-2.6b:free",
+    "openrouter/free",
+]
+
+# Option C: High-speed, high-rate-limit free tier provider specs.
+# Free-tier catalogues change often; these were checked against each provider's /models
+# endpoint (and a JSON-mode request) on 2026-10-27. Retired models return HTTP 404/410.
+PROVIDER_SPECS: dict[str, dict[str, Any]] = {
+    "gemini": {
+        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
+        "models": ["gemini-3.5-flash", "gemini-3.1-flash-lite"],
+        "extra_headers": {},
+    },
+    "groq": {
+        "base_url": "https://api.groq.com/openai/v1",
+        "models": ["openai/gpt-oss-120b", "openai/gpt-oss-20b"],
+        "extra_headers": {},
+    },
+    "cerebras": {
+        "base_url": "https://api.cerebras.ai/v1",
+        # No qwen (here or on Groq): despite 450 req/min it missed core obligations (turnover,
+        # performance security) that gpt-oss / Gemini runs agree on; see
+        # docs/audits/MODEL_ROTATION_QUALITY_BENCHMARK.md.
+        "models": ["gpt-oss-120b"],
+        "extra_headers": {},
+    },
+    "sambanova": {
+        "base_url": "https://api.sambanova.ai/v1",
+        "models": ["DeepSeek-V3.2", "gpt-oss-120b"],
+        "extra_headers": {},
+    },
+    "openrouter": {
+        "base_url": "https://openrouter.ai/api/v1",
+        # Concrete models first: the "openrouter/free" router forwards to arbitrary free models
+        # (some reject reasoning-off with HTTP 400, some are safety classifiers).
+        "models": [
+            "nvidia/nemotron-3.5-lightning:free",
+            "nvidia/nemotron-3.5-super-vl:free",
+            "liquid/lfm-2.5-2.6b:free",
+            "openrouter/free",
+        ],
+        "extra_headers": {
+            "HTTP-Referer": "https://tenderpulse.ai",
+            "X-Title": "TenderPulse Intelligence Engine",
+        },
+    },
+}
+
+
+def reasoning_effort_for(ep: LlmEndpoint) -> str | None:
+    """
+    Lowest reasoning setting each non-OpenRouter model accepts. JSON extraction needs no
+    chain-of-thought, and left at the default these models spend most (sometimes all) of
+    max_tokens on hidden reasoning. Measured 2026-10-27 on a real tender page: gpt-oss
+    369 -> 38 reasoning tokens ("none" is not accepted), Qwen 683 -> 0, Gemini 8.0s -> 2.9s.
+    """
+    model = ep.model.lower()
+    if "gpt-oss" in model:
+        return "low"
+    if "qwen" in model or "generativelanguage.googleapis.com" in ep.base_url:
+        return "none"
+    return None
+
+
+def apply_reasoning_controls(payload: dict[str, Any], ep: LlmEndpoint) -> None:
+    """Sets the endpoint's reasoning control, clearing any left by a previous endpoint."""
+    payload.pop("reasoning", None)
+    payload.pop("reasoning_effort", None)
+    if "openrouter.ai" in ep.base_url:
+        payload["reasoning"] = {"effort": "none", "exclude": True}
+        return
+    effort = reasoning_effort_for(ep)
+    if effort:
+        payload["reasoning_effort"] = effort
+
+
+# In-memory cooldown registry to prevent hammer-retrying rate-limited endpoints (endpoint_key -> unban_timestamp)
+_MODEL_COOLDOWNS: dict[str, float] = {}
+
+# Provider-level (base URL) circuit breaker. Free-tier rate limits are per API key/account,
+# not per model: once one model on a provider returns 429, every model on that provider is
+# locked out for the cooldown and all callers skip it in 0ms (no sequential 429 storm).
+_PROVIDER_BLOCKED_UNTIL: dict[str, float] = {}
+
+
+def is_provider_blocked(base_url: str) -> bool:
+    return time.time() < _PROVIDER_BLOCKED_UNTIL.get(base_url.rstrip("/"), 0.0)
+
+
+def block_provider(base_url: str, duration: float = 60.0) -> None:
+    _PROVIDER_BLOCKED_UNTIL[base_url.rstrip("/")] = time.time() + duration
+
+
+# Groq, Cerebras, Gemini and SambaNova meter their free tiers per model, not per key: on
+# 2026-10-27 their x-ratelimit headers showed e.g. Cerebras qwen-3.8-27b at 450 req/min and
+# 150k tokens/min while gpt-oss-120b on the same key allows 5 req/min. A 429 there rests only
+# that model; locking the whole provider threw away most of the available capacity.
+# OpenRouter's free tier is per key, so it (and unknown "custom" endpoints) keep the lockout.
+PER_MODEL_RATE_LIMIT_PROVIDERS = frozenset({"groq", "cerebras", "gemini", "sambanova"})
+
+# Model-scoped 429 lockouts: "base_url::model" -> unix time it frees up.
+_RATE_LIMITED_UNTIL: dict[str, float] = {}
+
+
+def is_rate_limited(ep: LlmEndpoint) -> bool:
+    return is_provider_blocked(ep.base_url) or time.time() < _RATE_LIMITED_UNTIL.get(
+        f"{ep.base_url}::{ep.model}", 0.0
+    )
+
+
+def mark_rate_limited(ep: LlmEndpoint, seconds: float) -> str:
+    """Records a 429 at the right scope; returns "model" or "provider" for logging."""
+    if ep.provider in PER_MODEL_RATE_LIMIT_PROVIDERS:
+        _RATE_LIMITED_UNTIL[f"{ep.base_url}::{ep.model}"] = time.time() + seconds
+        return "model"
+    block_provider(ep.base_url, seconds)
+    return "provider"
+
+
+TRANSIENT_ERROR_COOLDOWN_SECONDS = 30.0
+
+
+def cool_down(ep: LlmEndpoint, seconds: float) -> None:
+    """Cools an endpoint for at least `seconds`, never shortening a longer cooldown."""
+    until = time.time() + seconds
+    for key in (ep.model, f"{ep.base_url}::{ep.model}"):
+        _MODEL_COOLDOWNS[key] = max(_MODEL_COOLDOWNS.get(key, 0.0), until)
+
+
+def describe_error(exc: BaseException) -> str:
+    """Timeouts often stringify to '', which made 'last error:' messages blank."""
+    text = str(exc)
+    return f"{type(exc).__name__}: {text}" if text else type(exc).__name__
+
+
+def rate_limit_cooldown_seconds(response: Any) -> float:
+    """Seconds to back off after a 429: the provider's Retry-After when given, else 60s."""
+    raw = (getattr(response, "headers", None) or {}).get("retry-after")
+    try:
+        seconds = float(raw)
+    except (TypeError, ValueError):
+        return 60.0
+    return min(max(seconds, 1.0), 60.0)
+
+
+def seconds_until_an_endpoint_frees(
+    endpoints: list[LlmEndpoint], rate_limited_only: bool = False
+) -> float | None:
+    """
+    Time until the soonest rate-limited endpoint can be tried again, or None when none
+    of them will ever free up (all permanently unavailable, or no endpoints at all).
+    With rate_limited_only, only endpoints whose provider is blocked by a 429 count.
+    """
+    now = time.time()
+    soonest: float | None = None
+    for ep in endpoints:
+        if rate_limited_only and not is_rate_limited(ep):
+            continue
+        model_until = max(
+            _MODEL_COOLDOWNS.get(ep.model, 0.0),
+            _MODEL_COOLDOWNS.get(f"{ep.base_url}::{ep.model}", 0.0),
+        )
+        if model_until == float("inf"):
+            continue
+        free_at = max(
+            _PROVIDER_BLOCKED_UNTIL.get(ep.base_url.rstrip("/"), 0.0),
+            _RATE_LIMITED_UNTIL.get(f"{ep.base_url}::{ep.model}", 0.0),
+            model_until,
+            now,
+        )
+        soonest = free_at if soonest is None else min(soonest, free_at)
+    return None if soonest is None else soonest - now
+
+
+def _recover_truncated_json(content: str) -> list[dict[str, Any]]:
+    """
+    Salvages completed candidate JSON objects from an output stream that was
+    truncated mid-generation (e.g. at max token limit).
+    """
+    items: list[dict[str, Any]] = []
+    for match in re.finditer(r"\{", content):
+        start_idx = match.start()
+        # Skip the root container object if it was truncated
+        if start_idx == 0 and any(
+            k in content[:40] for k in ("candidates", "items", "requirements")
+        ):
+            continue
+        brace_count = 0
+        end_idx = -1
+        in_string = False
+        escape = False
+        for i in range(start_idx, len(content)):
+            char = content[i]
+            if escape:
+                escape = False
+                continue
+            if char == "\\":
+                escape = True
+                continue
+            if char == '"':
+                in_string = not in_string
+                continue
+            if not in_string:
+                if char == "{":
+                    brace_count += 1
+                elif char == "}":
+                    brace_count -= 1
+                    if brace_count == 0:
+                        end_idx = i + 1
+                        break
+        if end_idx != -1:
+            snippet = content[start_idx:end_idx]
+            try:
+                obj = json.loads(snippet)
+                if isinstance(obj, dict) and any(
+                    k in obj
+                    for k in ("title", "category", "requirement", "description", "name", "quote")
+                ):
+                    items.append(obj)
+            except Exception:
+                pass
+
+    unique: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for it in items:
+        k = json.dumps(it, sort_keys=True)
+        if k not in seen:
+            seen.add(k)
+            unique.append(it)
+    return unique
 
 
 class OpenAICompatibleLlmClient:
     """
-    High-performance asynchronous HTTP client for OpenAI-compatible LLM gateways (OpenRouter, OpenAI, vLLM, Groq).
-    Enforces structured JSON extraction, exponential backoff for transient errors, and robust Pydantic parsing.
+    High-performance asynchronous HTTP client for OpenAI-compatible LLM gateways (Groq, Gemini, Cerebras, SambaNova, OpenRouter).
+    Enforces dynamic multi-provider rotation across free tiers on rate-limits (HTTP 429), structured JSON extraction,
+    token-saving block-based provenance, exponential backoff for transient errors, and robust Pydantic parsing.
     """
 
     def __init__(
         self,
-        api_key: str,
+        api_key: str | None = None,
         base_url: str = "https://openrouter.ai/api/v1",
-        model: str = "google/gemini-2.5-flash",
+        model: str = "openrouter/free",
         timeout: float = 45.0,
-        max_tokens: int = 2048,
+        max_tokens: int = 1200,
         client: httpx.AsyncClient | None = None,
+        endpoints: list[LlmEndpoint] | None = None,
+        provider: str = "rotation",
+        rate_limit_max_wait_seconds: float = 180.0,
     ):
-        self.api_key = api_key
+        self.api_key = api_key or ""
+        self.rate_limit_max_wait_seconds = rate_limit_max_wait_seconds
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.timeout = timeout
         self.max_tokens = max_tokens
         self._custom_client = client
+        self.provider = provider
+
+        if endpoints:
+            self.endpoints = list(endpoints)
+        elif api_key:
+            extra = {}
+            if "openrouter.ai" in self.base_url:
+                extra = {
+                    "HTTP-Referer": "https://tenderpulse.ai",
+                    "X-Title": "TenderPulse Intelligence Engine",
+                }
+            self.endpoints = [
+                LlmEndpoint(
+                    provider="custom",
+                    base_url=self.base_url,
+                    api_key=self.api_key,
+                    model=self.model,
+                    extra_headers=extra,
+                )
+            ]
+            if "openrouter.ai" in self.base_url:
+                for fb in FALLBACK_FREE_MODELS:
+                    if fb != self.model:
+                        self.endpoints.append(
+                            LlmEndpoint(
+                                provider="openrouter",
+                                base_url=self.base_url,
+                                api_key=self.api_key,
+                                model=fb,
+                                extra_headers=extra,
+                            )
+                        )
+        else:
+            self.endpoints = []
+
+    @classmethod
+    def create_from_settings(
+        cls,
+        settings: Any,
+        timeout: float | None = None,
+        max_tokens: int | None = None,
+        client: httpx.AsyncClient | None = None,
+    ) -> "OpenAICompatibleLlmClient":
+        provider = getattr(settings, "llm_provider", "rotation").lower().strip()
+        t = timeout if timeout is not None else getattr(settings, "llm_timeout_seconds", 45.0)
+        if max_tokens is None:
+            max_tokens = getattr(settings, "llm_max_tokens", 4096)
+        endpoints: list[LlmEndpoint] = []
+
+        def _add_provider_endpoints(p_name: str, key: str, custom_model: str | None = None):
+            spec = PROVIDER_SPECS.get(p_name)
+            if not spec:
+                return
+            models = [custom_model] if custom_model else spec["models"]
+            for m in models:
+                if m:
+                    endpoints.append(
+                        LlmEndpoint(
+                            provider=p_name,
+                            base_url=spec["base_url"],
+                            api_key=key,
+                            model=m,
+                            extra_headers=dict(spec["extra_headers"]),
+                        )
+                    )
+
+        # 1. Direct provider selection (e.g. LLM_PROVIDER=openrouter, gemini, groq)
+        if provider == "openrouter":
+            or_key = getattr(settings, "openrouter_api_key", None) or getattr(
+                settings, "llm_api_key", None
+            )
+            if or_key:
+                or_model = getattr(settings, "llm_model", "openrouter/free")
+                _add_provider_endpoints("openrouter", or_key, or_model)
+        elif provider == "gemini":
+            g_key = getattr(settings, "gemini_api_key", None) or getattr(
+                settings, "llm_api_key", None
+            )
+            if g_key:
+                _add_provider_endpoints("gemini", g_key)
+        elif provider == "groq":
+            groq_key = getattr(settings, "groq_api_key", None) or getattr(
+                settings, "llm_api_key", None
+            )
+            if groq_key:
+                _add_provider_endpoints("groq", groq_key)
+        elif provider == "cerebras":
+            c_key = getattr(settings, "cerebras_api_key", None) or getattr(
+                settings, "llm_api_key", None
+            )
+            if c_key:
+                _add_provider_endpoints("cerebras", c_key)
+        elif provider == "sambanova":
+            s_key = getattr(settings, "sambanova_api_key", None) or getattr(
+                settings, "llm_api_key", None
+            )
+            if s_key:
+                _add_provider_endpoints("sambanova", s_key)
+        else:
+            # Option C: Multi-Provider Free Rotation, highest free-tier capacity first
+            # (Cerebras gpt-oss 30k tok/min, Groq 8k tok/min per model, Gemini ~3s,
+            # SambaNova often overloaded, then OpenRouter)
+            if getattr(settings, "cerebras_api_key", None):
+                _add_provider_endpoints("cerebras", settings.cerebras_api_key)
+            if getattr(settings, "groq_api_key", None):
+                _add_provider_endpoints("groq", settings.groq_api_key)
+            if getattr(settings, "gemini_api_key", None):
+                _add_provider_endpoints("gemini", settings.gemini_api_key)
+            if getattr(settings, "sambanova_api_key", None):
+                _add_provider_endpoints("sambanova", settings.sambanova_api_key)
+            if getattr(settings, "openrouter_api_key", None):
+                _add_provider_endpoints("openrouter", settings.openrouter_api_key)
+
+            # If no provider-specific keys were configured, check generic llm_api_key and llm_base_url
+            if not endpoints and getattr(settings, "llm_api_key", None):
+                base = getattr(settings, "llm_base_url", "https://openrouter.ai/api/v1").rstrip("/")
+                key = settings.llm_api_key
+                model = getattr(settings, "llm_model", "openrouter/free")
+                if "googleapis.com" in base:
+                    _add_provider_endpoints("gemini", key, model)
+                elif "groq.com" in base:
+                    _add_provider_endpoints("groq", key, model)
+                elif "cerebras.ai" in base:
+                    _add_provider_endpoints("cerebras", key, model)
+                elif "sambanova.ai" in base:
+                    _add_provider_endpoints("sambanova", key, model)
+                elif "openrouter.ai" in base:
+                    _add_provider_endpoints("openrouter", key, model)
+                else:
+                    endpoints.append(
+                        LlmEndpoint(
+                            provider="custom",
+                            base_url=base,
+                            api_key=key,
+                            model=model,
+                        )
+                    )
+
+        primary_ep = endpoints[0] if endpoints else None
+        return cls(
+            api_key=primary_ep.api_key
+            if primary_ep
+            else (getattr(settings, "llm_api_key", "") or ""),
+            base_url=primary_ep.base_url
+            if primary_ep
+            else getattr(settings, "llm_base_url", "https://openrouter.ai/api/v1"),
+            model=primary_ep.model
+            if primary_ep
+            else getattr(settings, "llm_model", "openrouter/free"),
+            timeout=t,
+            max_tokens=max_tokens,
+            client=client,
+            endpoints=endpoints,
+            provider=provider,
+            rate_limit_max_wait_seconds=float(
+                getattr(settings, "llm_rate_limit_max_wait_seconds", 180.0)
+            ),
+        )
+
+    def _all_endpoints(self) -> list[LlmEndpoint]:
+        """Every configured endpoint, whether or not it is currently cooling down."""
+        # No key, no endpoint: an unconfigured client must fail fast (LLMExtractionError),
+        # not send an unauthenticated request.
+        return self.endpoints or (
+            [
+                LlmEndpoint(
+                    provider="custom",
+                    base_url=self.base_url,
+                    api_key=self.api_key,
+                    model=self.model,
+                )
+            ]
+            if self.api_key
+            else []
+        )
+
+    def _get_candidate_endpoints(self) -> list[LlmEndpoint]:
+        """
+        Returns a prioritized list of candidate endpoints for rotation.
+        Uncooled endpoints appear first; cooled endpoints appear last.
+        Permanently unavailable (inf) endpoints are omitted.
+        """
+        now = time.time()
+        expired = [
+            k for k, expiry in _MODEL_COOLDOWNS.items() if expiry < float("inf") and now >= expiry
+        ]
+        for k in expired:
+            _MODEL_COOLDOWNS.pop(k, None)
+
+        endpoints = self._all_endpoints()
+
+        active: list[LlmEndpoint] = []
+        cooling: list[LlmEndpoint] = []
+
+        for ep in endpoints:
+            if is_rate_limited(ep):
+                continue
+            expiry = _MODEL_COOLDOWNS.get(ep.model) or _MODEL_COOLDOWNS.get(
+                f"{ep.base_url}::{ep.model}"
+            )
+            if expiry is None:
+                active.append(ep)
+            elif expiry < float("inf"):
+                cooling.append(ep)
+
+        return active + cooling
+
+    def _get_candidate_models(self) -> list[str]:
+        """
+        Returns model identifiers for active endpoints (backward compatibility).
+        """
+        return [ep.model for ep in self._get_candidate_endpoints()]
 
     def _get_client(self) -> httpx.AsyncClient:
         if self._custom_client is not None:
             return self._custom_client
         return httpx.AsyncClient(timeout=self.timeout)
 
+    async def generate_chat_completion(
+        self,
+        messages: list[dict[str, str]],
+        system_prompt: str | None = None,
+        max_retries: int = 2,
+        temperature: float = 0.2,
+    ) -> str:
+        """
+        Generates a fluid conversational chat completion with automated multi-provider failover.
+        """
+        full_messages = []
+        if system_prompt:
+            full_messages.append({"role": "system", "content": system_prompt})
+        full_messages.extend(messages)
+
+        payload: dict[str, Any] = {
+            "model": self.model,
+            "messages": full_messages,
+            "max_tokens": self.max_tokens,
+            "temperature": temperature,
+        }
+
+        endpoints_to_try = self._get_candidate_endpoints()
+        last_error: Exception | None = None
+
+        for ep in endpoints_to_try:
+            k = f"{ep.base_url}::{ep.model}"
+            endpoint_url = f"{ep.base_url}/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {ep.api_key}",
+                "Content-Type": "application/json",
+            }
+            if ep.extra_headers:
+                headers.update(ep.extra_headers)
+
+            payload["model"] = ep.model
+            apply_reasoning_controls(payload, ep)
+            if is_rate_limited(ep):
+                continue
+
+            for attempt in range(max_retries + 1):
+                try:
+                    client = self._get_client()
+                    if self._custom_client is not None:
+                        response = await client.post(endpoint_url, headers=headers, json=payload)
+                    else:
+                        async with client:
+                            response = await client.post(
+                                endpoint_url, headers=headers, json=payload
+                            )
+
+                    # HTTP 429: 60-second cooldown on this provider endpoint; rotate immediately
+                    if response.status_code == 429:
+                        cooldown = rate_limit_cooldown_seconds(response)
+                        cool_down(ep, cooldown)
+                        scope = mark_rate_limited(ep, cooldown)
+                        logger.warning(
+                            "[OpenAICompatibleClient] Endpoint '%s' (%s) rate-limited (429). Resting this %s for %.0fs and rotating...",
+                            ep.model,
+                            ep.provider,
+                            scope,
+                            cooldown,
+                        )
+                        break
+
+                    # HTTP 404: Permanent unavailability for this model
+                    if response.status_code == 404:
+                        _MODEL_COOLDOWNS[ep.model] = float("inf")
+                        _MODEL_COOLDOWNS[k] = float("inf")
+                        logger.warning(
+                            "[OpenAICompatibleClient] Endpoint '%s' (%s) returned 404. Marking model permanently unavailable and rotating...",
+                            ep.model,
+                            ep.provider,
+                        )
+                        break
+
+                    # HTTP 401 / 403: the key is bad for every model on this provider.
+                    if response.status_code in (401, 403):
+                        block_provider(ep.base_url, float("inf"))
+                        response.raise_for_status()
+
+                    # HTTP 400 / 402: Configuration or quota
+                    if response.status_code in (400, 402):
+                        if response.status_code == 402 and "in-flight" in response.text.lower():
+                            logger.info(
+                                "[OpenAICompatibleClient] Model '%s' hit in-flight reserve limit. Backing off 1.5s...",
+                                ep.model,
+                            )
+                            if attempt < max_retries:
+                                await asyncio.sleep(1.5 * (attempt + 1))
+                                continue
+                        _MODEL_COOLDOWNS[ep.model] = time.time() + 300.0
+                        _MODEL_COOLDOWNS[k] = time.time() + 300.0
+                        logger.warning(
+                            "[OpenAICompatibleClient] Endpoint '%s' (%s) returned HTTP %d: %s. Rotating...",
+                            ep.model,
+                            ep.provider,
+                            response.status_code,
+                            response.text[:200],
+                        )
+                        break
+
+                    if response.status_code in (500, 502, 503, 504):
+                        if attempt < max_retries:
+                            await asyncio.sleep(0.5 * (2**attempt))
+                            continue
+                        break
+
+                    response.raise_for_status()
+                    data = response.json()
+                    choices = data.get("choices", [])
+                    if choices:
+                        res_content = str(choices[0].get("message", {}).get("content", "")).strip()
+                        # A success never clears a cooldown another call set meanwhile.
+                        if res_content:
+                            return res_content
+                    break
+                except (httpx.RequestError, httpx.HTTPStatusError) as exc:
+                    last_error = exc
+                    if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code in (
+                        400,
+                        401,
+                        402,
+                        403,
+                        404,
+                        429,
+                    ):
+                        break
+                    if attempt < max_retries:
+                        await asyncio.sleep(0.5 * (2**attempt))
+                        continue
+                    break
+                except Exception as exc:  # noqa: BLE001
+                    last_error = exc
+                    break
+
+        if last_error:
+            logger.warning(
+                "[OpenAICompatibleClient] Chat completion failed across available endpoints: %s",
+                last_error,
+            )
+        return ""
+
     async def extract_compliance(
         self,
         system_prompt: str,
         user_prompt: str,
-        max_retries: int = 2,
+        max_retries: int = 1,
+        block_map: dict[str, Any] | None = None,
     ) -> list[CandidateComplianceItem]:
-        endpoint = f"{self.base_url}/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
-            "HTTP-Referer": "https://tenderpulse.ai",
-            "X-Title": "TenderPulse Intelligence Engine",
-        }
+        """Structured compliance candidates (block_map resolves source_block_id provenance)."""
+        off_list: list[dict[str, Any]] = []
+        candidates = await self.complete_structured(
+            system_prompt,
+            user_prompt,
+            parse=lambda data: self._parse_response(data, block_map=block_map, off_list=off_list),
+            max_retries=max_retries,
+            json_schema=CANDIDATES_SCHEMA,
+        )
+        if off_list:
+            candidates += await self._recategorize(off_list, block_map, max_retries)
+        return candidates
 
+    async def _recategorize(
+        self,
+        items: list[dict[str, Any]],
+        block_map: dict[str, Any] | None,
+        max_retries: int,
+    ) -> list[CandidateComplianceItem]:
+        """Re-asks for the category of items the model put outside the taxonomy.
+
+        Dropping them lost real obligations (a model filing an eligibility criterion under
+        "ELIGIBILITY"); mapping them in code would be a guess. Items still off the list
+        after the re-ask, or a failed re-ask, are dropped as before.
+        """
+        logger.info(
+            "[OpenAICompatibleClient] Re-asking the category of %d item(s) outside the taxonomy",
+            len(items),
+        )
+        system_prompt = (
+            'You correct the "category" of tender compliance items. Allowed categories: '
+            + "|".join(EXTRACTION_CATEGORIES)
+            + '. Return {"candidates":[...]} with every listed item, each unchanged except '
+            '"category", which must be the allowed category that fits it best. '
+            + UNTRUSTED_DATA_DIRECTIVE
+        )
+        # The items echo model output, which may echo document text.
+        user_prompt = SecretSanitizer.wrap_untrusted_context(
+            "off_taxonomy_items", json.dumps({"candidates": items}, ensure_ascii=False)
+        )
+        still_off: list[dict[str, Any]] = []
+        try:
+            fixed = await self.complete_structured(
+                system_prompt,
+                user_prompt,
+                parse=lambda data: self._parse_response(
+                    data, block_map=block_map, off_list=still_off
+                ),
+                max_retries=max_retries,
+                json_schema=CANDIDATES_SCHEMA,
+            )
+        except LLMExtractionError as err:
+            logger.warning(
+                "[OpenAICompatibleClient] Category re-ask failed; dropping %d item(s): %s",
+                len(items),
+                err,
+            )
+            return []
+        if still_off:
+            logger.warning(
+                "[OpenAICompatibleClient] Dropping %d item(s) still outside the taxonomy: %s",
+                len(still_off),
+                sorted({str(raw.get("category")) for raw in still_off}),
+            )
+        return fixed
+
+    async def complete_structured(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        parse: Callable[[dict[str, Any]], T],
+        max_retries: int = 1,
+        json_schema: dict[str, Any] | None = None,
+    ) -> T:
+        """JSON-mode completion with multi-provider rotation on 429 / unavailability.
+
+        ``parse`` turns the raw chat-completion response into the result; when it raises
+        (empty or invalid output) the next model is tried. Honours LLM_REPLAY_MODE.
+        ``json_schema`` (strict) is sent to providers that enforce it while decoding
+        (STRICT_SCHEMA_PROVIDERS); the others get plain JSON mode.
+        Raises LLMExtractionError when no model produced a parseable answer.
+        """
         payload: dict[str, Any] = {
             "model": self.model,
             "messages": [
@@ -68,155 +844,383 @@ class OpenAICompatibleLlmClient:
             "temperature": 0.0,
         }
 
+        from tenderpulse_ai.infrastructure.llm import replay
+
+        if replay.mode() == "replay":
+            return parse(replay.load(payload["messages"]))
+
         last_error: Exception | None = None
-        for attempt in range(max_retries + 1):
-            start_time = time.perf_counter()
-            logger.info(
-                "Dispatching LLM inference request to %s (model=%s, attempt=%d)",
-                self.base_url,
-                self.model,
-                attempt + 1,
-                extra={
-                    "event": "llm.request.started",
-                    "metadata": {"model": self.model, "attempt": attempt + 1},
-                },
-            )
-            try:
-                client = self._get_client()
-                # If custom client passed in, don't close it as context manager
-                if self._custom_client is not None:
-                    response = await client.post(endpoint, headers=headers, json=payload)
-                else:
-                    async with client:
-                        response = await client.post(endpoint, headers=headers, json=payload)
+        call_started = time.monotonic()
+        budget = self.rate_limit_max_wait_seconds
 
-                duration_ms = round((time.perf_counter() - start_time) * 1000, 1)
+        # Free tiers rate-limit every provider at once on long tenders. Instead of failing
+        # the page, wait for the soonest endpoint to free up, within a total budget.
+        while True:
+            # The rotation budget limits chaining slow models within one round; time spent
+            # waiting for a rate limit to clear must not count against it.
+            request_started = time.perf_counter()
+            round_cut_short = False
+            endpoints_to_try = self._get_candidate_endpoints()
 
-                if response.status_code in (429, 500, 502, 503, 504):
-                    response_text = response.text
+            for ep in endpoints_to_try:
+                k = f"{ep.base_url}::{ep.model}"
+                endpoint_url = f"{ep.base_url}/chat/completions"
+                headers = {
+                    "Authorization": f"Bearer {ep.api_key}",
+                    "Content-Type": "application/json",
+                }
+                if ep.extra_headers:
+                    headers.update(ep.extra_headers)
+
+                payload["model"] = ep.model
+                payload["response_format"] = (
+                    {
+                        "type": "json_schema",
+                        "json_schema": {"name": "output", "strict": True, "schema": json_schema},
+                    }
+                    if json_schema and ep.provider in STRICT_SCHEMA_PROVIDERS
+                    else {"type": "json_object"}
+                )
+                # Structured JSON extraction needs no chain-of-thought: reasoning models otherwise
+                # spend max_tokens on hidden reasoning and return empty content (finish="length").
+                apply_reasoning_controls(payload, ep)
+                if is_rate_limited(ep):
+                    continue
+                # Rotation budget: never chain slow models past the client timeout (the
+                # window then fails with LLMExtractionError; there is no fallback).
+                if last_error is not None and time.perf_counter() - request_started > self.timeout:
                     logger.warning(
-                        "[OpenAICompatibleClient] Transient upstream error %d on attempt %d: %s",
-                        response.status_code,
+                        "[OpenAICompatibleClient] Rotation budget of %.0fs exhausted; skipping remaining endpoints.",
+                        self.timeout,
+                    )
+                    round_cut_short = True
+                    break
+
+                for attempt in range(max_retries + 1):
+                    start_time = time.perf_counter()
+                    logger.info(
+                        "Dispatching LLM inference request to %s (provider=%s, model=%s, attempt=%d)",
+                        ep.base_url,
+                        ep.provider,
+                        ep.model,
                         attempt + 1,
-                        response_text[:200],
                         extra={
-                            "event": "llm.request.retry",
-                            "duration_ms": duration_ms,
-                            "error_code": f"HTTP_{response.status_code}",
+                            "event": "llm.request.started",
+                            "metadata": {
+                                "provider": ep.provider,
+                                "model": ep.model,
+                                "attempt": attempt + 1,
+                            },
                         },
                     )
-                    if attempt < max_retries:
-                        await asyncio.sleep(1.0 * (2**attempt))
-                        continue
-                    response.raise_for_status()
+                    try:
+                        client = self._get_client()
+                        if self._custom_client is not None:
+                            response = await client.post(
+                                endpoint_url, headers=headers, json=payload
+                            )
+                        else:
+                            async with client:
+                                response = await client.post(
+                                    endpoint_url, headers=headers, json=payload
+                                )
 
-                response.raise_for_status()
-                data = response.json()
-                usage = data.get("usage", {})
-                logger.info(
-                    "LLM extraction completed in %.1fms (prompt_tokens=%s, completion_tokens=%s)",
-                    duration_ms,
-                    usage.get("prompt_tokens"),
-                    usage.get("completion_tokens"),
-                    extra={
-                        "event": "llm.request.completed",
-                        "duration_ms": duration_ms,
-                        "metadata": {
-                            "model": data.get("model", self.model),
-                            "prompt_tokens": usage.get("prompt_tokens"),
-                            "completion_tokens": usage.get("completion_tokens"),
-                            "total_tokens": usage.get("total_tokens"),
-                            "attempt": attempt + 1,
-                        },
-                    },
+                        duration_ms = round((time.perf_counter() - start_time) * 1000, 1)
+
+                        # HTTP 429: cool down for the provider's Retry-After (else 60s) and rotate
+                        if response.status_code == 429:
+                            cooldown = rate_limit_cooldown_seconds(response)
+                            _MODEL_COOLDOWNS[ep.model] = time.time() + cooldown
+                            _MODEL_COOLDOWNS[k] = time.time() + cooldown
+                            scope = mark_rate_limited(ep, cooldown)
+                            logger.warning(
+                                "[OpenAICompatibleClient] Endpoint '%s' (%s) rate-limited (429). Resting this %s for %.0fs and rotating...",
+                                ep.model,
+                                ep.provider,
+                                scope,
+                                cooldown,
+                                extra={
+                                    "event": "llm.request.rate_limited",
+                                    "duration_ms": duration_ms,
+                                    "model": ep.model,
+                                },
+                            )
+                            break
+
+                        # HTTP 404: Permanent unavailability
+                        if response.status_code == 404:
+                            _MODEL_COOLDOWNS[ep.model] = float("inf")
+                            _MODEL_COOLDOWNS[k] = float("inf")
+                            logger.warning(
+                                "[OpenAICompatibleClient] Endpoint '%s' (%s) returned 404. Marking permanently unavailable and rotating...",
+                                ep.model,
+                                ep.provider,
+                                extra={
+                                    "event": "llm.request.model_unavailable",
+                                    "duration_ms": duration_ms,
+                                    "model": ep.model,
+                                },
+                            )
+                            break
+
+                        # HTTP 401 / 403: Re-raise immediately
+                        if response.status_code in (401, 403):
+                            block_provider(ep.base_url, float("inf"))
+                            response.raise_for_status()
+
+                        # HTTP 400 / 402:
+                        if response.status_code in (400, 402):
+                            if response.status_code == 402 and "in-flight" in response.text.lower():
+                                logger.info(
+                                    "[OpenAICompatibleClient] Model '%s' hit in-flight concurrency reserve limit. Backing off 1.5s...",
+                                    ep.model,
+                                )
+                                if attempt < max_retries:
+                                    await asyncio.sleep(1.5 * (attempt + 1))
+                                    continue
+                            # A model that cannot run with reasoning disabled never will.
+                            permanent = "reasoning is mandatory" in response.text.lower()
+                            cooldown = 3600.0 if permanent else 300.0
+                            _MODEL_COOLDOWNS[ep.model] = time.time() + cooldown
+                            _MODEL_COOLDOWNS[k] = time.time() + cooldown
+                            logger.warning(
+                                "[OpenAICompatibleClient] Endpoint '%s' (%s) returned HTTP %d: %s. Rotating...",
+                                ep.model,
+                                ep.provider,
+                                response.status_code,
+                                response.text[:200],
+                                extra={
+                                    "event": "llm.request.model_unavailable",
+                                    "duration_ms": duration_ms,
+                                    "model": ep.model,
+                                },
+                            )
+                            break
+
+                        if response.status_code in (500, 502, 503, 504):
+                            response_text = response.text
+                            last_error = httpx.HTTPStatusError(
+                                f"HTTP {response.status_code}: {response_text[:200]}",
+                                request=response.request,
+                                response=response,
+                            )
+                            logger.warning(
+                                "[OpenAICompatibleClient] Transient upstream error %d on %s (%s) attempt %d: %s",
+                                response.status_code,
+                                ep.model,
+                                ep.provider,
+                                attempt + 1,
+                                response_text[:200],
+                                extra={
+                                    "event": "llm.request.retry",
+                                    "duration_ms": duration_ms,
+                                    "error_code": f"HTTP_{response.status_code}",
+                                },
+                            )
+                            if attempt < max_retries:
+                                await asyncio.sleep(0.5 * (2**attempt))
+                                continue
+                            break
+
+                        response.raise_for_status()
+                        data = response.json()
+                        usage = data.get("usage", {})
+                        logger.info(
+                            "LLM extraction completed in %.1fms with provider %s model %s (prompt_tokens=%s, completion_tokens=%s)",
+                            duration_ms,
+                            ep.provider,
+                            ep.model,
+                            usage.get("prompt_tokens"),
+                            usage.get("completion_tokens"),
+                            extra={
+                                "event": "llm.request.completed",
+                                "duration_ms": duration_ms,
+                                "metadata": {
+                                    "provider": ep.provider,
+                                    "model": data.get("model", ep.model),
+                                    "prompt_tokens": usage.get("prompt_tokens"),
+                                    "completion_tokens": usage.get("completion_tokens"),
+                                    "total_tokens": usage.get("total_tokens"),
+                                    "attempt": attempt + 1,
+                                },
+                            },
+                        )
+                        choice = (data.get("choices") or [{}])[0]
+                        content = str((choice.get("message") or {}).get("content") or "").strip()
+                        if not content and choice.get("finish_reason") == "length":
+                            reasoning_tokens = (usage.get("completion_tokens_details") or {}).get(
+                                "reasoning_tokens"
+                            )
+                            _MODEL_COOLDOWNS[ep.model] = time.time() + 600.0
+                            _MODEL_COOLDOWNS[k] = time.time() + 600.0
+                            last_error = RuntimeError(
+                                f"Model '{ep.model}' exhausted max_tokens={self.max_tokens} "
+                                f"(reasoning_tokens={reasoning_tokens}) with empty output"
+                            )
+                            logger.warning(
+                                "[OpenAICompatibleClient] %s. Cooling the model down for 10 minutes and rotating...",
+                                last_error,
+                                extra={"event": "llm.request.truncated", "model": ep.model},
+                            )
+                            break
+                        # A valid answer may legitimately hold no obligations ([]); only an
+                        # unparseable one rotates to the next model (raised by _parse_response).
+                        result = parse(data)
+                        if replay.mode() == "record":
+                            replay.save(payload["messages"], data)
+                        return result
+
+                    except (httpx.RequestError, httpx.HTTPStatusError) as exc:
+                        duration_ms = round((time.perf_counter() - start_time) * 1000, 1)
+                        last_error = exc
+                        if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code in (
+                            401,
+                            403,
+                        ):
+                            other_providers = [
+                                e for e in endpoints_to_try if e.base_url != ep.base_url
+                            ]
+                            if not other_providers:
+                                raise LLMExtractionError(
+                                    f"LLM provider rejected the API key: {describe_error(exc)}"
+                                ) from exc
+                        logger.warning(
+                            "[OpenAICompatibleClient] Network/HTTP error on %s (%s) attempt %d/%d: %s",
+                            ep.model,
+                            ep.provider,
+                            attempt + 1,
+                            max_retries + 1,
+                            str(exc),
+                            extra={
+                                "event": "llm.request.failed",
+                                "duration_ms": duration_ms,
+                                "error_code": "ERR_LLM_NETWORK",
+                            },
+                        )
+                        if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code in (
+                            400,
+                            401,
+                            402,
+                            403,
+                            404,
+                            429,
+                        ):
+                            cool_down(ep, TRANSIENT_ERROR_COOLDOWN_SECONDS)
+                            break
+                        # A timed-out endpoint is usually overloaded: retrying it wastes a full
+                        # timeout per attempt, so rotate to the next provider straight away.
+                        if attempt < max_retries and not isinstance(exc, httpx.TimeoutException):
+                            await asyncio.sleep(0.5 * (2**attempt))
+                            continue
+                        # Retries spent: rest this endpoint briefly so the others go first.
+                        cool_down(ep, TRANSIENT_ERROR_COOLDOWN_SECONDS)
+                        break
+                    except Exception as exc:  # noqa: BLE001
+                        duration_ms = round((time.perf_counter() - start_time) * 1000, 1)
+                        last_error = exc
+                        # Unusable output (not JSON, wrong shape): try other models first next time.
+                        _MODEL_COOLDOWNS[ep.model] = time.time() + 300.0
+                        _MODEL_COOLDOWNS[k] = time.time() + 300.0
+                        logger.error(
+                            "[OpenAICompatibleClient] Unhandled error during extraction on %s: %s",
+                            ep.model,
+                            str(exc),
+                            extra={
+                                "event": "llm.request.failed",
+                                "duration_ms": duration_ms,
+                                "error_code": "ERR_LLM_UNHANDLED",
+                            },
+                        )
+                        break
+
+            # One provider timing out is no reason to fail the page while others are only
+            # rate-limited: keep going while one frees up within the budget. With no
+            # rate-limited provider left (a real outage), fail fast as before.
+            elapsed = time.monotonic() - call_started
+            # The rotation budget skipped endpoints that may be usable right now: try them.
+            if round_cut_short and elapsed < budget:
+                continue
+            wait = seconds_until_an_endpoint_frees(
+                self._all_endpoints(), rate_limited_only=last_error is not None
+            )
+            if wait is None or elapsed + wait > budget:
+                if last_error:
+                    raise LLMExtractionError(
+                        f"All LLM endpoints failed; last error: {describe_error(last_error)}"
+                    ) from last_error
+                raise LLMExtractionError(
+                    "No LLM endpoint available (none configured, or all providers blocked/cooling"
+                    f" down; {elapsed:.0f}s spent of a {budget:.0f}s budget)."
                 )
-                return self._parse_response(data)
+            pause = wait + random.uniform(
+                0.2, 1.5
+            )  # jitter: parallel windows do not retry in lockstep
+            logger.warning(
+                "[OpenAICompatibleClient] All LLM providers are rate-limited; waiting %.1fs before retrying.",
+                pause,
+                extra={
+                    "event": "llm.request.waiting_for_rate_limit",
+                    "metadata": {"wait_s": pause},
+                },
+            )
+            await asyncio.sleep(pause)
 
-            except (httpx.RequestError, httpx.HTTPStatusError) as exc:
-                duration_ms = round((time.perf_counter() - start_time) * 1000, 1)
-                last_error = exc
-                logger.warning(
-                    "[OpenAICompatibleClient] Network/HTTP error on attempt %d/%d: %s",
-                    attempt + 1,
-                    max_retries + 1,
-                    str(exc),
-                    extra={
-                        "event": "llm.request.failed",
-                        "duration_ms": duration_ms,
-                        "error_code": "ERR_LLM_NETWORK",
-                    },
-                )
-                # Never retry client/auth/payment errors (400, 401, 402, 403, 404)
-                if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code in (
-                    400,
-                    401,
-                    402,
-                    403,
-                    404,
-                ):
-                    break
-                if attempt < max_retries:
-                    await asyncio.sleep(1.0 * (2**attempt))
-                    continue
-                break
-            except Exception as exc:  # noqa: BLE001
-                duration_ms = round((time.perf_counter() - start_time) * 1000, 1)
-                last_error = exc
-                logger.error(
-                    "[OpenAICompatibleClient] Unhandled error during extraction: %s",
-                    str(exc),
-                    extra={
-                        "event": "llm.request.failed",
-                        "duration_ms": duration_ms,
-                        "error_code": "ERR_LLM_UNHANDLED",
-                    },
-                )
-                break
-
-        if last_error:
-            raise last_error
-        return []
-
-    def _parse_response(self, data: dict[str, Any]) -> list[CandidateComplianceItem]:
+    def _parse_response(
+        self,
+        data: dict[str, Any],
+        block_map: dict[str, Any] | None = None,
+        off_list: list[dict[str, Any]] | None = None,
+    ) -> list[CandidateComplianceItem]:
+        """Parses candidates; items with an off-taxonomy category are collected in off_list."""
+        if off_list is not None:
+            off_list.clear()  # a retry on another model parses a fresh answer
         choices = data.get("choices", [])
         if not choices:
-            logger.warning("[OpenAICompatibleClient] Upstream response contained 0 choices.")
-            return []
+            raise RuntimeError("[OpenAICompatibleClient] Upstream response contained 0 choices.")
 
         message = choices[0].get("message", {})
         content = message.get("content", "")
-        if not content:
-            return []
+        if not content or not str(content).strip():
+            raise RuntimeError(
+                "[OpenAICompatibleClient] Upstream response contained empty message content."
+            )
 
         # If model returned markdown fenced json, strip fences
         cleaned_content = re.sub(r"^```(?:json)?\s*", "", content.strip(), flags=re.IGNORECASE)
         cleaned_content = re.sub(r"\s*```$", "", cleaned_content.strip())
 
+        raw_items: list[dict[str, Any]] | None = None
         try:
             parsed = json.loads(cleaned_content)
+            if isinstance(parsed, list):
+                raw_items = parsed
+            elif isinstance(parsed, dict):
+                for key in ("candidates", "items", "requirements"):
+                    if isinstance(parsed.get(key), list):
+                        raw_items = parsed[key]
+                        break
         except json.JSONDecodeError as err:
-            logger.error(
-                "[OpenAICompatibleClient] Failed to decode JSON response from model: %s. Content: %s",
+            logger.warning(
+                "[OpenAICompatibleClient] Primary JSON decode failed (%s). Attempting truncated JSON recovery. Snippet: %s",
                 err,
-                cleaned_content[:300],
+                cleaned_content[:200],
             )
-            return []
-
-        raw_items: list[dict[str, Any]] = []
-        if isinstance(parsed, list):
-            raw_items = parsed
-        elif isinstance(parsed, dict):
-            if "candidates" in parsed and isinstance(parsed["candidates"], list):
-                raw_items = parsed["candidates"]
-            elif "items" in parsed and isinstance(parsed["items"], list):
-                raw_items = parsed["items"]
-            elif "requirements" in parsed and isinstance(parsed["requirements"], list):
-                raw_items = parsed["requirements"]
+            raw_items = _recover_truncated_json(cleaned_content) or None
+            if raw_items:
+                logger.info(
+                    "[OpenAICompatibleClient] Successfully recovered %d candidate items from truncated output stream.",
+                    len(raw_items),
+                )
+        if raw_items is None:
+            raise RuntimeError(
+                "[OpenAICompatibleClient] Response is not a JSON candidates array: "
+                f"{cleaned_content[:200]!r}"
+            )
 
         candidates: list[CandidateComplianceItem] = []
         for raw in raw_items:
             try:
-                candidate = self._build_candidate(raw)
+                candidate = self._build_candidate(raw, block_map=block_map, off_list=off_list)
                 if candidate:
                     candidates.append(candidate)
             except (KeyError, ValueError, TypeError, AttributeError) as build_err:
@@ -226,10 +1230,40 @@ class OpenAICompatibleLlmClient:
 
         return candidates
 
-    def _build_candidate(self, raw: dict[str, Any]) -> CandidateComplianceItem | None:
-        title = raw.get("title") or raw.get("name") or "Extracted Requirement"
-        category = raw.get("category", "STATUTORY").upper()
-        description = raw.get("description", "")
+    def _build_candidate(
+        self,
+        raw: dict[str, Any],
+        block_map: dict[str, Any] | None = None,
+        off_list: list[dict[str, Any]] | None = None,
+    ) -> CandidateComplianceItem | None:
+        raw_title = (
+            raw.get("title")
+            or raw.get("name")
+            or raw.get("requirement")
+            or raw.get("obligation_type")
+            or ""
+        )
+        title = clean_whitespace(str(raw_title))
+        if not title:
+            return None
+        raw_cat = str(
+            raw.get("category") or raw.get("obligation_category") or raw.get("type") or ""
+        )
+        try:
+            category = normalize_category(raw_cat)
+        except Exception:
+            logger.debug("[OpenAICompatibleClient] Item with unknown category %r", raw_cat)
+            if off_list is not None:
+                off_list.append(raw)
+            return None
+
+        description = clean_whitespace(
+            raw.get("description")
+            or raw.get("summary")
+            or raw.get("requirement")
+            or raw.get("details")
+            or ""
+        )
 
         # Execution Rules mapping
         raw_rules = raw.get("execution_rules") or raw.get("executionRules") or {}
@@ -243,54 +1277,101 @@ class OpenAICompatibleLlmClient:
             except (ValueError, TypeError):
                 denom = None
 
-        signing_rank = (
-            raw_rules.get("signing_authority_rank")
-            or raw_rules.get("signingAuthorityRank")
-            or "Authorized Signatory"
-        )
+        def _tri(*keys: str) -> bool | None:
+            """True/False only when the model states it; absent = not stated (None)."""
+            for k in keys:
+                v = raw_rules.get(k)
+                if isinstance(v, bool):
+                    return v
+            return None
+
+        signing_rank = str(
+            raw_rules.get("signing_authority_rank") or raw_rules.get("signingAuthorityRank") or ""
+        ).strip()
 
         execution_rules = ExecutionRulesProps(
-            stamp_paper_required=bool(
-                raw_rules.get("stamp_paper_required") or raw_rules.get("stampPaperRequired")
-            ),
+            stamp_paper_required=_tri("stamp_paper_required", "stampPaperRequired"),
             stamp_paper_denomination_inr=denom,
-            notarization_required=bool(
-                raw_rules.get("notarization_required") or raw_rules.get("notarizationRequired")
+            notarization_required=_tri("notarization_required", "notarizationRequired"),
+            udin_required=_tri("udin_required", "udinRequired"),
+            apostille_required=_tri("apostille_required", "apostilleRequired"),
+            client_countersign_required=_tri(
+                "client_countersign_required", "clientCountersignRequired"
             ),
-            udin_required=bool(raw_rules.get("udin_required") or raw_rules.get("udinRequired")),
-            signing_authority_rank=str(signing_rank),
+            signing_authority_rank=signing_rank or None,
         )
 
-        # Provenance mapping
+        # Provenance mapping & Token-Saving Block Resolution
         raw_prov = raw.get("provenance") or {}
+        b_id = (
+            raw_prov.get("source_block_id")
+            or raw_prov.get("sourceBlockId")
+            or raw_prov.get("block_id")
+            or raw.get("source_block_id")
+            or raw.get("sourceBlockId")
+            or raw.get("block_id")
+        )
+
+        matched_block: dict[str, Any] | None = None
+        if b_id and block_map:
+            clean_b_id = re.sub(r"[\[\]\s]", "", str(b_id)).upper()
+            matched_block = block_map.get(clean_b_id) or block_map.get(str(b_id).strip())
+
         doc_id = (
             raw_prov.get("source_document_id")
             or raw_prov.get("sourceDocumentId")
             or raw.get("source_document_id")
+            or (matched_block.get("document_id") if matched_block else None)
             or "doc_source"
         )
         file_name = (
             raw_prov.get("source_file_name")
             or raw_prov.get("sourceFileName")
             or raw.get("source_file_name")
+            or (matched_block.get("file_name") if matched_block else None)
             or "uploaded_document.pdf"
         )
-        page_num = raw_prov.get("page_number") or raw_prov.get("pageNumber") or 1
+        page_num = (
+            raw_prov.get("page_number")
+            or raw_prov.get("pageNumber")
+            or raw_prov.get("page")
+            or raw.get("page_number")
+            or raw.get("page")
+            or (matched_block.get("page_number") if matched_block else None)
+            or 1
+        )
+        # Only a clause number the tender states (block heading); never a "Page N" placeholder.
         clause_ref = (
             raw_prov.get("clause_reference")
             or raw_prov.get("clauseReference")
-            or f"Page {page_num}"
+            or raw_prov.get("clause")
+            or raw.get("clause_reference")
+            or raw.get("clause")
+            or (matched_block.get("clause_reference") if matched_block else None)
         )
-        quote = raw_prov.get("verbatim_quote") or raw_prov.get("verbatimQuote") or ""
-        conf = float(raw_prov.get("confidence_score") or raw_prov.get("confidenceScore") or 0.95)
+        quote = (
+            raw_prov.get("verbatim_quote")
+            or raw_prov.get("verbatimQuote")
+            or raw_prov.get("quote")
+            or raw.get("verbatim_quote")
+            or raw.get("quote")
+            or raw.get("text")
+            or ""
+        )
+        clean_quote = clean_whitespace(str(quote))
 
+        if not clean_quote:
+            return None
         provenance = ProvenanceProps(
             source_document_id=str(doc_id),
             source_file_name=str(file_name),
             page_number=int(page_num),
-            clause_reference=str(clause_ref),
-            verbatim_quote=str(quote) if quote else "Operative Requirement",
-            confidence_score=conf,
+            clause_reference=clause_ref,
+            # The persisted tender chunk id when the block came from one (B1.. ids are
+            # prompt-local and meaningless outside this call).
+            source_block_id=(matched_block.get("chunk_id") if matched_block else None),
+            verbatim_quote=clean_quote,
+            confidence_score=None,  # set by deterministic validation once verified
         )
 
         return CandidateComplianceItem(
@@ -299,4 +1380,5 @@ class OpenAICompatibleLlmClient:
             description=description,
             execution_rules=execution_rules,
             provenance=provenance,
+            attributes=parse_attributes(raw, clean_quote),
         )

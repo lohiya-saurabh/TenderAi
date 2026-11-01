@@ -9,6 +9,7 @@ import { EventEmitter } from 'node:events';
 import fs from 'node:fs';
 import path from 'node:path';
 import { NestFactory } from '@nestjs/core';
+import { ConfigService } from '@nestjs/config';
 import { AppModule } from '@/app.module.js';
 import { AllExceptionsFilter } from '@/common/filters/all-exceptions.filter.js';
 
@@ -39,19 +40,16 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger,
   });
+  // Lets DatabaseModule close the PostgreSQL pool cleanly on SIGTERM (ECS task stop).
+  app.enableShutdownHooks();
 
   // Global HTTP Logging Interceptor for request tracing and latency metrics
   app.useGlobalInterceptors(new HttpLoggingInterceptor());
 
-  // Global CORS — configured for secure credentials & cookie handling
-  const allowedOrigins = process.env.APP_BASE_URL
-    ? [
-        process.env.APP_BASE_URL,
-        'http://localhost:5173',
-        'http://localhost:3000',
-        'http://127.0.0.1:5173',
-      ]
-    : ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'];
+  const configService = app.get(ConfigService);
+  const appBaseUrl = configService.get<string>('APP_BASE_URL');
+  const allowedOrigins = appBaseUrl ? [appBaseUrl] : [];
+  const nodeEnv = configService.get<string>('NODE_ENV');
 
   app.enableCors({
     origin: (
@@ -64,7 +62,7 @@ async function bootstrap() {
         allowedOrigins.includes(origin) ||
         origin.includes('.s3-website.ap-south-1.amazonaws.com') ||
         origin.includes('.cloudfront.net') ||
-        process.env.NODE_ENV !== 'production'
+        nodeEnv !== 'production'
       ) {
         callback(null, true);
       } else {
@@ -84,7 +82,7 @@ async function bootstrap() {
   // Express body-parser is auto-included by NestJS; configure limit
   app.use(await import('express').then((m) => m.json({ limit: '1mb' })));
 
-  const port = Number(process.env.PORT) || 3000;
+  const port = Number(configService.get<string>('PORT')) || 3000;
   await app.listen(port);
 
   logger.info(
@@ -92,7 +90,7 @@ async function bootstrap() {
     `🚀 TenderPulse AI API Server running at http://localhost:${port}`,
     {
       port,
-      persistence: 'PostgreSQL 16 (PGlite in ./data/postgres)',
+      persistence: process.env.PGLITE_DATA_DIR ? 'PGlite (test)' : 'PostgreSQL (DATABASE_URL)',
       logLevels: resolveLogLevels().join(', '),
     },
   );

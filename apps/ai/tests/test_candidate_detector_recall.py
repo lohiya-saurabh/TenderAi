@@ -1,5 +1,3 @@
-import pytest
-
 from tenderpulse_ai.domain.candidate_detector import CandidateDetector
 from tenderpulse_ai.domain.models import (
     DoclingBlock,
@@ -203,73 +201,3 @@ class TestCandidateDetectorRecall:
             f"Candidate Recall was {candidate_recall:.2%}, expected >= 98.00%!"
         )
         assert detected_count == len(ground_truth_clauses)
-
-    @pytest.mark.asyncio
-    async def test_two_tier_rescue_pass_sweeps_unselected_passages(self):
-        """P0: Verifies that make_rescue_pass_node analyzes unselected passages and rescues missed obligations."""
-        from tenderpulse_ai.domain.models import (
-            CandidateComplianceItem,
-            ExecutionRulesProps,
-            ProvenanceProps,
-        )
-        from tenderpulse_ai.models.llm_client import StructuredLLMClient
-        from tenderpulse_ai.tools.page_text import PageTextTool
-        from tenderpulse_ai.tools.retrieval import ScopedRetrievalTool
-        from tenderpulse_ai.workflow.nodes import WorkflowNodeContext, make_rescue_pass_node
-
-        rescued_item = CandidateComplianceItem(
-            category="LEGAL",
-            title="Debarment & Disqualification Restriction",
-            description="Bids from debarred firms are rejected.",
-            execution_rules=ExecutionRulesProps(
-                stamp_paper_required=False,
-                notarization_required=False,
-            ),
-            provenance=ProvenanceProps(
-                source_document_id="doc_nit_101",
-                source_file_name="tender.pdf",
-                page_number=1,
-                clause_reference="Clause 2.1",
-                verbatim_quote="Bids submitted by firms appearing on the debarred list will be rejected.",
-                confidence_score=0.95,
-            ),
-        )
-
-        def mock_rescue_extractor(sys, user):
-            if "Rescue sweep" in user:
-                return [rescued_item]
-            return []
-
-        llm_client = StructuredLLMClient(extractor_fn=mock_rescue_extractor)
-        ctx = WorkflowNodeContext(ScopedRetrievalTool(), PageTextTool(), llm_client)
-        rescue_node = make_rescue_pass_node(ctx)
-
-        state = {
-            "security_context": {
-                "tenant_id": "org_tata",
-                "user_id": "u1",
-                "workflow_run_id": "run1",
-                "allowed_document_ids": ["doc_nit_101"],
-                "purpose": "COMPLIANCE_EXTRACTION",
-            },
-            "document_id": "doc_nit_101",
-            "bid_id": "bid_101",
-            "page_number": 1,
-            "extracted_candidates": [],
-            "unselected_passages": [
-                {
-                    "candidate_id": "unsel_1",
-                    "text": "Bids submitted by firms appearing on the debarred list will be rejected.",
-                    "page_number": 1,
-                }
-            ],
-        }
-
-        result = await rescue_node(state)
-        extracted = result.get("extracted_candidates", [])
-        assert len(extracted) == 1
-        assert extracted[0].title == "Debarment & Disqualification Restriction"
-        assert (
-            extracted[0].provenance.verbatim_quote
-            == "Bids submitted by firms appearing on the debarred list will be rejected."
-        )

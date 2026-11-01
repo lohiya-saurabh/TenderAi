@@ -10,15 +10,10 @@
  * 6. Multi-state verification lifecycle (IMPORTED -> EXTRACTED -> SOURCE_VERIFIED -> NEEDS_REVIEW -> EXPIRED -> REJECTED)
  * 7. Immutable verification history logging
  */
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Optional } from '@nestjs/common';
 import { PGlite } from '@electric-sql/pglite';
-import { eq, and, desc } from 'drizzle-orm';
 import crypto from 'node:crypto';
-import {
-  DRIZZLE_TOKEN,
-  type DrizzleDb,
-  createDrizzle,
-} from '@/common/database/database.module.js';
+import { type DrizzleDb } from '@/common/database/database.module.js';
 import * as schema from '@/common/database/schema.js';
 import { NotFoundError, BadRequestError } from '@/common/errors/errors.js';
 import { TenantContextHolder } from '@/common/security/TenantContext.js';
@@ -40,6 +35,7 @@ import {
   DIGITAL_DOCUMENT_PROVIDER,
   type DigitalDocumentProvider,
 } from '@/modules/company-verification/domain/ports/DigitalDocumentProvider.js';
+import { CompanyVerificationRepository } from '@/modules/company-verification/company-verification.repository.js';
 
 export interface VerificationResultView {
   companyId: string;
@@ -52,10 +48,11 @@ export interface VerificationResultView {
 
 @Injectable()
 export class EvidenceVerificationService {
-  private readonly db: DrizzleDb;
+  private readonly repository: CompanyVerificationRepository;
 
   constructor(
-    @Inject(DRIZZLE_TOKEN) db: DrizzleDb | PGlite,
+    @Inject(CompanyVerificationRepository)
+    repoOrDb: CompanyVerificationRepository | DrizzleDb | PGlite,
     @Inject(CompanyProfileService)
     private readonly companyProfileService: CompanyProfileService,
     @Inject(CompanyEvidenceService)
@@ -68,8 +65,17 @@ export class EvidenceVerificationService {
     private readonly msmeVerificationPort: IMsmeVerificationPort,
     @Inject(DIGITAL_DOCUMENT_PROVIDER)
     private readonly digitalDocumentProvider: DigitalDocumentProvider,
+    @Optional()
+    @Inject(CompanyVerificationRepository)
+    repository?: CompanyVerificationRepository,
   ) {
-    this.db = 'select' in db ? (db as DrizzleDb) : createDrizzle(db as PGlite);
+    if (repoOrDb instanceof CompanyVerificationRepository) {
+      this.repository = repoOrDb;
+    } else if (repository) {
+      this.repository = repository;
+    } else {
+      this.repository = new CompanyVerificationRepository(repoOrDb);
+    }
   }
 
   /**
@@ -110,18 +116,15 @@ export class EvidenceVerificationService {
     const now = new Date();
 
     // 3. Update companies table
-    await this.db
-      .update(schema.companies)
-      .set({
-        gstin: taxpayer.gstin,
-        pan: taxpayer.pan,
-        legalName: discrepancies.length === 0 ? taxpayer.legalName : company.legalName,
-        constitution: taxpayer.constitution || company.constitution,
-        gstinVerifiedAt: now,
-        gstinVerificationData: taxpayer as unknown as Record<string, unknown>,
-        updatedAt: now,
-      })
-      .where(eq(schema.companies.id, companyId));
+    await this.repository.updateCompany(companyId, {
+      gstin: taxpayer.gstin,
+      pan: taxpayer.pan,
+      legalName: discrepancies.length === 0 ? taxpayer.legalName : company.legalName,
+      constitution: taxpayer.constitution || company.constitution,
+      gstinVerifiedAt: now,
+      gstinVerificationData: taxpayer as unknown as Record<string, unknown>,
+      updatedAt: now,
+    });
 
     // 4. Update or create GST registration evidence document
     await this.recordEvidenceDocument(companyId, orgId, {
@@ -197,16 +200,13 @@ export class EvidenceVerificationService {
 
     const now = new Date();
 
-    await this.db
-      .update(schema.companies)
-      .set({
-        cin: mca.cinOrLlpin,
-        legalName: discrepancies.length === 0 ? mca.companyName : company.legalName,
-        mcaVerifiedAt: now,
-        mcaVerificationData: mca as unknown as Record<string, unknown>,
-        updatedAt: now,
-      })
-      .where(eq(schema.companies.id, companyId));
+    await this.repository.updateCompany(companyId, {
+      cin: mca.cinOrLlpin,
+      legalName: discrepancies.length === 0 ? mca.companyName : company.legalName,
+      mcaVerifiedAt: now,
+      mcaVerificationData: mca as unknown as Record<string, unknown>,
+      updatedAt: now,
+    });
 
     await this.recordEvidenceDocument(companyId, orgId, {
       evidenceType: 'INCORPORATION_CERT',
@@ -275,15 +275,12 @@ export class EvidenceVerificationService {
 
     const now = new Date();
 
-    await this.db
-      .update(schema.companies)
-      .set({
-        udyamId: msme.udyamRegistrationNumber,
-        udyamVerifiedAt: now,
-        udyamVerificationData: msme as unknown as Record<string, unknown>,
-        updatedAt: now,
-      })
-      .where(eq(schema.companies.id, companyId));
+    await this.repository.updateCompany(companyId, {
+      udyamId: msme.udyamRegistrationNumber,
+      udyamVerifiedAt: now,
+      udyamVerificationData: msme as unknown as Record<string, unknown>,
+      updatedAt: now,
+    });
 
     await this.recordEvidenceDocument(companyId, orgId, {
       evidenceType: 'UDYAM_CERT',
@@ -367,19 +364,15 @@ export class EvidenceVerificationService {
       });
 
       // Update to SOURCE_VERIFIED with DigiLocker provenance
-      const [updated] = await this.db
-        .update(schema.companyEvidenceDocuments)
-        .set({
-          sourceProvider: 'DIGILOCKER',
-          sourceReference: doc.uri,
-          verificationStatus: 'SOURCE_VERIFIED',
-          verificationMethod: 'DIGITAL_SIGNATURE',
-          verifiedAt: now,
-          verifiedBy: 'DIGILOCKER_NATIONAL_DEPOSITORY',
-          updatedAt: now,
-        })
-        .where(eq(schema.companyEvidenceDocuments.id, evidence.id))
-        .returning();
+      const updated = await this.repository.updateEvidenceDocumentVerification(evidence.id, {
+        sourceProvider: 'DIGILOCKER',
+        sourceReference: doc.uri,
+        verificationStatus: 'SOURCE_VERIFIED',
+        verificationMethod: 'DIGITAL_SIGNATURE',
+        verifiedAt: now,
+        verifiedBy: 'DIGILOCKER_NATIONAL_DEPOSITORY',
+        updatedAt: now,
+      });
 
       // Log verification history
       await this.logVerificationHistory(
@@ -396,18 +389,15 @@ export class EvidenceVerificationService {
       importedRecords.push(updated || evidence);
     }
 
-    await this.db
-      .update(schema.companies)
-      .set({
-        digilockerLinkedAt: now,
-        digilockerMetadata: {
-          digiLockerId: tokenRes.digiLockerId,
-          signatoryName: tokenRes.name,
-          importedDocumentsCount: importedRecords.length,
-        },
-        updatedAt: now,
-      })
-      .where(eq(schema.companies.id, companyId));
+    await this.repository.updateCompany(companyId, {
+      digilockerLinkedAt: now,
+      digilockerMetadata: {
+        digiLockerId: tokenRes.digiLockerId,
+        signatoryName: tokenRes.name,
+        importedDocumentsCount: importedRecords.length,
+      },
+      updatedAt: now,
+    });
 
     return importedRecords;
   }
@@ -435,18 +425,14 @@ export class EvidenceVerificationService {
         : schema.EvidenceVerificationStatus.SOURCE_VERIFIED;
 
     const now = new Date();
-    const [updated] = await this.db
-      .update(schema.companyEvidenceDocuments)
-      .set({
-        verificationStatus: newStatus,
-        verificationMethod: 'MANUAL_REVIEW',
-        verifiedAt: now,
-        verifiedBy: userId,
-        discrepancyNotes: notes ? `Reviewed [${decision}]: ${notes}` : `Reviewed [${decision}]`,
-        updatedAt: now,
-      })
-      .where(eq(schema.companyEvidenceDocuments.id, evidenceDocumentId))
-      .returning();
+    const updated = await this.repository.updateEvidenceDocumentById(evidenceDocumentId, {
+      verificationStatus: newStatus,
+      verificationMethod: 'MANUAL_REVIEW',
+      verifiedAt: now,
+      verifiedBy: userId,
+      discrepancyNotes: notes ? `Reviewed [${decision}]: ${notes}` : `Reviewed [${decision}]`,
+      updatedAt: now,
+    });
 
     await this.logVerificationHistory(
       orgId,
@@ -472,16 +458,7 @@ export class EvidenceVerificationService {
     const orgId = this.requireOrg();
     await this.getCompany(companyId, orgId);
 
-    return this.db
-      .select()
-      .from(schema.evidenceVerificationHistory)
-      .where(
-        and(
-          eq(schema.evidenceVerificationHistory.organizationId, orgId),
-          eq(schema.evidenceVerificationHistory.companyId, companyId),
-        ),
-      )
-      .orderBy(desc(schema.evidenceVerificationHistory.timestamp));
+    return this.repository.listVerificationHistory(companyId, orgId);
   }
 
   // --- Helper Methods ---
@@ -515,18 +492,15 @@ export class EvidenceVerificationService {
     });
 
     const now = new Date();
-    await this.db
-      .update(schema.companyEvidenceDocuments)
-      .set({
-        verificationStatus: item.verificationStatus,
-        verificationMethod: item.verificationMethod,
-        verifiedAt: item.verificationStatus === 'SOURCE_VERIFIED' ? now : null,
-        verifiedBy: `SYSTEM_${item.issuer.toUpperCase().replace(/\s+/g, '_')}`,
-        discrepancyNotes: item.discrepancies.length > 0 ? item.discrepancies.join(' | ') : null,
-        metadata: item.rawPayload,
-        updatedAt: now,
-      })
-      .where(eq(schema.companyEvidenceDocuments.id, created.id));
+    await this.repository.updateEvidenceDocumentById(created.id, {
+      verificationStatus: item.verificationStatus,
+      verificationMethod: item.verificationMethod,
+      verifiedAt: item.verificationStatus === 'SOURCE_VERIFIED' ? now : null,
+      verifiedBy: `SYSTEM_${item.issuer.toUpperCase().replace(/\s+/g, '_')}`,
+      discrepancyNotes: item.discrepancies.length > 0 ? item.discrepancies.join(' | ') : null,
+      metadata: item.rawPayload,
+      updatedAt: now,
+    });
 
     await this.logVerificationHistory(
       orgId,
@@ -583,7 +557,7 @@ export class EvidenceVerificationService {
     payload?: Record<string, unknown>,
     notes?: string,
   ) {
-    await this.db.insert(schema.evidenceVerificationHistory).values({
+    await this.repository.insertVerificationHistory({
       id: `evh_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`,
       organizationId: orgId,
       companyId,
@@ -612,11 +586,7 @@ export class EvidenceVerificationService {
   }
 
   private async getCompany(companyId: string, orgId: string): Promise<schema.Company> {
-    const [comp] = await this.db
-      .select()
-      .from(schema.companies)
-      .where(and(eq(schema.companies.id, companyId), eq(schema.companies.organizationId, orgId)))
-      .limit(1);
+    const comp = await this.repository.findCompany(companyId, orgId);
 
     if (!comp) {
       throw new NotFoundError(`Company '${companyId}' not found in your organization.`);
