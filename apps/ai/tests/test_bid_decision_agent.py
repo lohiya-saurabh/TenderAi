@@ -16,6 +16,7 @@ from tenderpulse_ai.agent.schemas import (
     RequirementCriticality,
     RequirementKind,
 )
+from tenderpulse_ai.config import settings
 from tenderpulse_ai.decision import (
     BidDecisionAgent,
     BidDecisionRequest,
@@ -422,7 +423,7 @@ def test_api_bid_decision_endpoint_unauthorized():
 
 def test_api_bid_decision_endpoint_authorized():
     client = TestClient(app)
-    headers = {"X-Internal-Service-Key": "tenderpulse-internal-secret-2026"}
+    headers = {"X-Internal-Service-Key": settings.internal_service_key}
     request = make_request()
 
     response = client.post(

@@ -2,6 +2,7 @@ import pytest
 from fakes import fake_llm_client, use_fake_llm
 from fastapi.testclient import TestClient
 
+from tenderpulse_ai.config import settings
 from tenderpulse_ai.main import app
 from tenderpulse_ai.security.context import SecurityContext
 
@@ -21,7 +22,7 @@ def valid_sec_context():
 def test_api_extract_endpoint_returns_503_when_no_llm_answers(valid_sec_context):
     """LLM-only: with no provider configured there is no result, never a regex fallback."""
     client = TestClient(app)
-    headers = {"X-Internal-Service-Key": "tenderpulse-internal-secret-2026"}
+    headers = {"X-Internal-Service-Key": settings.internal_service_key}
     payload = {
         "security_context": valid_sec_context.model_dump(),
         "bid_id": "bid_railway_12",
@@ -47,7 +48,7 @@ def test_api_extract_endpoint_unauthorized():
 def test_api_extract_endpoint_authorized(valid_sec_context, monkeypatch):
     use_fake_llm(monkeypatch)
     client = TestClient(app)
-    headers = {"X-Internal-Service-Key": "tenderpulse-internal-secret-2026"}
+    headers = {"X-Internal-Service-Key": settings.internal_service_key}
 
     payload = {
         "security_context": valid_sec_context.model_dump(),
@@ -74,7 +75,7 @@ def test_api_extract_endpoint_authorized(valid_sec_context, monkeypatch):
 def test_api_worker_process_message_authorized(monkeypatch):
     use_fake_llm(monkeypatch)
     client = TestClient(app)
-    headers = {"X-Internal-Service-Key": "tenderpulse-internal-secret-2026"}
+    headers = {"X-Internal-Service-Key": settings.internal_service_key}
 
     payload = {
         "job_id": "job-worker-001",
@@ -108,7 +109,7 @@ def test_api_worker_process_message_authorized(monkeypatch):
 def test_api_worker_process_message_fetches_document_from_storage_reference(tmp_path, monkeypatch):
     use_fake_llm(monkeypatch)
     client = TestClient(app)
-    headers = {"X-Internal-Service-Key": "tenderpulse-internal-secret-2026"}
+    headers = {"X-Internal-Service-Key": settings.internal_service_key}
 
     doc_file = tmp_path / "NIT_Fetch_Package.txt"
     doc_file.write_text(

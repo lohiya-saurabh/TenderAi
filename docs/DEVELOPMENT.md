@@ -20,7 +20,7 @@ cp .env.example .env              # API and web settings
 cp apps/ai/.env.example apps/ai/.env   # AI worker settings
 ```
 
-`npm install` also installs the git pre-commit hook (`.githooks/pre-commit`). The hook scans for secrets, then runs ESLint, the type-check and ruff.
+`npm install` also installs the git pre-commit hook (`.githooks/pre-commit`). The hook scans for secrets using Gitleaks (configured by `.gitleaks.toml` and `.gitleaksignore`), then runs ESLint, the type-check and ruff.
 
 ## 3. Database
 
